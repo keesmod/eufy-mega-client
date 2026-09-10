@@ -10,6 +10,36 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 | T8160 camera     | 3.4.3.0           | 3        |
 | T8213 doorbell   | 0.2.1.8           | 1        |
 
+## S220 discovery, 0.1.1
+
+Discovery now includes both cameras sold as S220 when paired with T8030:
+
+| Camera                        | Model | Protocol device type | Validation                       |
+| ----------------------------- | ----- | -------------------- | -------------------------------- |
+| eufyCam S220 / eufyCam 2C Pro | T8142 | 15                   | Automated only; hardware pending |
+| SoloCam S220                  | T8134 | 63                   | Automated only; hardware pending |
+
+Eufy's [camera comparison](https://support.nz.eufy.com/support/solutions/articles/154000241616-differences-between-all-add-on-eufycams)
+identifies the 2C Pro as T8142; its [SoloCam S220 documentation](https://support.nz.eufy.com/support/solutions/articles/154000242066-introducing-eufy-s220-solocam)
+identifies T8134. S220 alone does not identify the reporter's camera.
+
+The released 0.1.0 model filter silently excluded both. The candidate retains
+unknown-model exclusion and requires a discovered T8030 parent. The existing
+protocol selects different livestream commands for these two device types.
+Standalone SoloCam connections remain unsupported.
+
+Before claiming hardware support, record backend, integration/bridge versions,
+model and camera/HomeBase firmware; confirm the bridge account can see the camera
+in the Eufy app. With one controlling bridge, verify discovery after restart,
+battery updates, stored snapshots, live video/audio and confirmed stop, recording
+list/playback and cancellation, and one real motion event without duplicates.
+Record pass/fail and redacted errors; no credentials or footage are needed.
+
+Use the candidate package in a test bridge and keep its previous package and
+lockfile for rollback. The production bridge still pins released client 0.1.0;
+installing or editing this library alone does not upgrade that bridge. Publish
+and pin the candidate in a bridge release only through the normal release process.
+
 ## Verified on the test HA installation
 
 The original production and test bridges were stopped. These checks used one
