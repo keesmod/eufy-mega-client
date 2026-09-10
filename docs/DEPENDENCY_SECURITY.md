@@ -25,11 +25,25 @@ without repository activity. Check the workflow's enabled state after a long
 pause and re-enable it when needed. Dependabot alerts operate independently of
 the Actions schedule. See [GitHub's schedule policy](https://docs.github.com/en/enterprise-cloud@latest/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
 
-The configuration groups npm security fixes into PRs.
-`open-pull-requests-limit: 0` disables routine version-update PRs and does
-not disable security-update PRs. Updates are not automatically merged or deployed.
+The configuration groups npm security fixes into PRs. Security updates remain
+independent of the weekly version-update schedule, its cooldown and PR limit.
 
-For a security PR, review the advisory and changed packages, preserve exact
+## Weekly version updates
+
+Dependabot checks the npm package root every Monday at 09:00 `Europe/Amsterdam`.
+It groups patch and minor updates that have been published for at least seven
+days, with at most five open version-update PRs. Regular major upgrades require
+separate manual review and are not proposed by this flow.
+
+Security fixes keep their existing group. The `allow.update-types` restriction
+and cooldown apply only to ordinary version updates; they do not suppress a
+security fix that requires a major upgrade. See [GitHub's Dependabot options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
+
+PR creation and CI are automatic. Merging, release publication and installation
+on Home Assistant remain controlled steps. Neither the daily security audit nor
+the required CI and release gates are relaxed for Dependabot.
+
+For any dependency PR, review the changes and applicable advisories, preserve exact
 lockfile integrity, and complete [the normal release requirements](RELEASING.md).
 Production dependency changes require a library version bump, changelog and
 appropriate acceptance tests. After releasing a library fix, update the exact
