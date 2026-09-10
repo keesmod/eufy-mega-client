@@ -9,7 +9,8 @@ doorbell through Home Assistant. See [compatibility results](docs/COMPATIBILITY.
 for firmware, verified features and the limits of the overnight observation.
 
 Version 0.1.1 adds discovery for S220 T8142 and T8134 cameras
-paired with T8030. Hardware validation is pending; see the compatibility document.
+paired with T8030. Hardware validation is incomplete. See the compatibility document for partial
+T8134 reporter results and unresolved live-view and recovery failures.
 
 Install the compiled GitHub release with Node.js 24:
 
