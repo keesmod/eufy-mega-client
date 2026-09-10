@@ -17,6 +17,9 @@ MIT-licensed protocol code and research are reused from bropat/eufy-security-cli
 
 Source: https://github.com/bropat/eufy-security-client/tree/d75e7996d4cbce3839a6075bed95b752ccc3ee43
 
+The inherited Firebase client API key used by the FCM transport is documented
+in [Firebase key provenance and security assessment](docs/FIREBASE_KEY.md).
+
 The original MIT notice is preserved in LICENSE. New implementation copyright
 2026 keesmod, also under the MIT license. This project is independent of Eufy,
 Anker, and the community's separate Mega successor effort.

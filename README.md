@@ -75,6 +75,7 @@ viewer leases and Home Assistant entities belong in the consuming bridge.
 - [Sanitized diagnostics](docs/DIAGNOSTICS.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [Upstream attribution](NOTICE.md)
+- [Firebase key provenance and security assessment](docs/FIREBASE_KEY.md)
 
 Maintainers: use the [validated release flow](docs/RELEASING.md) for version checks,
 package verification, a rehearsal and explicit GitHub publication.
