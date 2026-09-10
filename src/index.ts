@@ -28,6 +28,8 @@ export type {
   SecurityModule,
   MowerModule,
   MowerOptions,
+  MowerDevice,
+  MowerHomeOptions,
   MowerAdapter,
   MowerAdapterContext,
   MowerSession,

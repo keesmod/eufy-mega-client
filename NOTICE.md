@@ -35,3 +35,17 @@ sharing concurrent transport-close operations; and a separate startup deadline
 that preserves the shorter timeout for stalled media; and a three-second
 audio-discovery window for delayed first AAC packets. Those changes
 must not be attributed to the original upstream release.
+
+## Home and Tuya adapter
+
+`src/mowers/home.ts` and `src/mowers/protocol.ts` adapt Apache-2.0 protocol work
+from 8none1/robovac, commit `2e3280609e469f37a7b7d312b587841213367a9c`.
+Copyright 2022 Brendan McCluskey. The source credits original work by Andre Borie.
+Modified 2026 by keesmod for bounded, private, independent module ownership.
+The app profile also uses MIT-licensed 8none1/eufy-x8, commit
+`98e0d6506f457a2e2119e09a12cb7824d945804b`. Copyright 2026 Will Cooke.
+
+The complete [Apache-2.0 licence](docs/licenses/Apache-2.0.txt) and
+[x8 MIT notice](docs/licenses/eufy-x8-MIT.txt) are distributed with this package.
+The adapted files retain Apache-2.0 terms. Other existing files retain their
+MIT terms. See [component provenance and validation limits](docs/MOWER_AUTH_PROVENANCE.md).
