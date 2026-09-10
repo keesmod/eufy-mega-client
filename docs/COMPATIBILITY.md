@@ -32,12 +32,13 @@ The model matrix and its hardware claims are unchanged by this API boundary.
 
 ## E15 portable-session research, 2026-09-10
 
-The [#48 progress receipt](research/E15_PORTABLE_SESSION_2026-09-10.md) records
-10 passing synthetic policy tests on Linux x64 / Node 24.21.0. No standalone
-peer authentication, read-only E15 response or portable map transport is proven.
-Identifier binding and selected transport framing remain unresolved. The next
-structural observation requires resolution of a tool-level approval block.
-Independent account/device inputs remain owned by #40. #48 and E4 stay open.
+The [#48 completion receipt](research/E15_SESSION_BINDING_2026-09-10.md) records
+10 passing synthetic policy tests on Linux x64 / Node 24.21.0, observed incoming
+signaling correlation and normal helper recovery after one bounded observation.
+#40 independently proves account/device binding. No standalone peer authentication,
+read-only E15 response or portable map transport is proven. Follow-ups #77 and #78
+own the remaining native transport contract and authenticated Linux response.
+Research completion does not close E4 or unlock map transfer before #78 passes.
 
 ## S220 discovery, 0.1.1
 
