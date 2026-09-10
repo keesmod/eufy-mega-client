@@ -1,5 +1,11 @@
 # E15 signaling validation receipt
 
+The [authorized follow-up observation](E15_MAP_OBSERVATION_2026-09-10.md)
+supersedes the remaining-evidence status below. The owner confirmed firmware
+6.9.28, two bounded helper cycles verified the RTC method and credential
+binding, and primary-artifact analysis established the native authorization
+buffer. The older findings below are retained as historical evidence.
+
 Read-only follow-up to [#47](https://github.com/keesmod/eufy-mega-client/issues/47)
 and merged [PR #68](https://github.com/keesmod/eufy-mega-client/pull/68), observed
 2026-09-10. Change class: documentation patch. The

@@ -1,5 +1,11 @@
 # E15 map signaling research
 
+The [authorized follow-up observation](E15_MAP_OBSERVATION_2026-09-10.md)
+supersedes the remaining-evidence status below. The owner confirmed firmware
+6.9.28, two bounded helper cycles verified the RTC method and credential
+binding, and primary-artifact analysis established the native authorization
+buffer. The older findings below are retained as historical evidence.
+
 Research for [#47](https://github.com/keesmod/eufy-mega-client/issues/47), reviewed
 2026-09-10. Change class: documentation patch. No transport is implemented here.
 

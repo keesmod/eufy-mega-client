@@ -166,8 +166,9 @@ task-specific approvals, required checks and acceptance gates to those actions.
 
 - [E15 map signaling research](research/E15_MAP_SIGNALING.md) records the
   historical helper evidence, primary Tuya contracts and proposed #48
-  experiment. Current-firmware equivalence and portable peer authentication
-  remain unvalidated. The E4 map capability remains open.
+  experiment. The [authorized observation](research/E15_MAP_OBSERVATION_2026-09-10.md)
+  adds owner-confirmed firmware, runtime credential binding and the native
+  authorization buffer. Portable peer authentication remains unvalidated. The E4 map capability remains open.
 - [Client compatibility](COMPATIBILITY.md), [public API](API.md),
   [diagnostics](DIAGNOSTICS.md) and [attribution](../NOTICE.md).
 - [Existing mower functionality](https://github.com/keesmod/eufy-robomow-ha/blob/main/README.md),
