@@ -1,30 +1,61 @@
 name: Validate
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      manifest_sha256:
+        description: Digest of the verified package manifest
+        value: ${{ jobs.package.outputs.manifest_sha256 }}
 permissions:
   contents: read
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 jobs:
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      manifest_sha256: ${{ steps.bundle.outputs.manifest_sha256 }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
+      - run: python3 scripts/check_workflows.py
+      - run: python3 -m unittest discover -s scripts/tests -v
+      - name: Check versions, release notes and changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/release.py check
       - run: npm ci --ignore-scripts
       - run: npm run format:check
       - run: npm test
       - run: npm audit --omit=dev
-      - run: mkdir -p artifacts && npm pack --pack-destination artifacts
-      - name: Check the compiled package in a clean consumer
-        run: |
-          package=$(realpath artifacts/*.tgz)
-          consumer=$(mktemp -d)
-          cd "$consumer"
-          npm init -y
-          npm install --ignore-scripts "$package"
-          node --input-type=module -e 'import {EufyMegaClient, FileSessionStore} from "@keesmod/eufy-mega-client"; const client = new EufyMegaClient({credentials:{email:"fixture",password:"fixture",country:"NL"},sessionStore:{load:async()=>undefined,save:async()=>{}}}); await client.shutdown(); if (typeof FileSessionStore !== "function") process.exit(1);'
-      - uses: actions/upload-artifact@v4
+      - name: Build and test the compiled tarball in a clean consumer
+        id: bundle
+        run: python3 scripts/release.py build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: compiled-package
-          path: artifacts/*.tgz
+          name: release-package
+          path: artifacts/release/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+  ci:
+    if: ${{ always() }}
+    needs: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every check to succeed
+        env:
+          RESULTS: ${{ toJson(needs) }}
+        run: python3 -c 'import json,os; assert all(j["result"] == "success" for j in json.loads(os.environ["RESULTS"]).values())'
