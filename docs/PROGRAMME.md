@@ -1,8 +1,8 @@
 # Eufy platform programme
 
 The goal is one modular Eufy client for all known camera families and the E15
-mower, including settings and portable maps without Android. The existing camera
-and mower Home Assistant integrations remain the consumers.
+mower, including settings and portable maps without Android. Each purpose has
+its own bridge and Home Assistant integration. Both bridges consume the library.
 
 The [programme issue](https://github.com/keesmod/eufy-mega-client/issues/7) owns
 scope coverage. GitHub issues and the [Eufy platform Project](https://github.com/users/keesmod/projects/1) own current work
@@ -15,7 +15,8 @@ status. This document records decisions and working rules, not a second backlog.
   `security` and `mowers` modules.
 - Share public error, lifecycle and diagnostics conventions. Keep Mega security
   authentication and Eufy Home/Tuya authentication and sessions separate.
-  Camera-only, mower-only and combined clients must work independently.
+  Camera-only, mower-only and combined library clients must work independently.
+  A combined library API does not require a combined bridge service.
 - Camera scope is discovery, available status and battery, stored snapshots,
   live video/audio, supported events and recordings. PTZ, talkback and the full
   set of app settings are outside this first expansion.
@@ -48,6 +49,29 @@ status. This document records decisions and working rules, not a second backlog.
   behavior, separate session stores and explicit rollback. One selected backend
   owns a device during a transition.
 
+## Separate bridges and integrations
+
+The user confirmed this boundary on 2026-09-10. Each purpose owns its complete
+bridge and Home Assistant integration. The shared component is the
+`@keesmod/eufy-mega-client` library.
+
+| Repository         | Responsibility                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `eufy-mega-client` | Reusable client API, security and mower protocol adapters, capability evidence and library tests |
+| `ha-eufy-cam`      | Camera bridge, camera API, camera integration and camera installation/release artifacts          |
+| `eufy-robomow-ha`  | Dedicated mower bridge, mower API, mower integration and mower installation/release artifacts    |
+
+Each bridge instantiates the library independently. Camera and mower installations
+have separate endpoints, credentials, sessions, persistent data, lifecycle and
+upgrade/rollback paths. Either installation must work when the other is absent
+or stopped. The library does not host an HTTP service or Home Assistant entities.
+Mower routes and runtime dependencies belong in the mower repository.
+
+[E5](https://github.com/keesmod/eufy-mega-client/issues/12) covers the separate
+consumer paths. E5-01 through E5-03 create the dedicated mower bridge and its
+API. E5-08 packages that bridge independently. Camera work remains in E5-04.
+The mower integration connects to its own bridge in E5-05 through E5-07.
+
 ## Ownership and goal coverage
 
 | Goal                                                           | Owner                         | Tracking                                                    |
@@ -56,7 +80,7 @@ status. This document records decisions and working rules, not a second backlog.
 | Camera family and topology coverage                            | Client                        | [E2](https://github.com/keesmod/eufy-mega-client/issues/9)  |
 | E15 discovery, telemetry, control and settings                 | Client                        | [E3](https://github.com/keesmod/eufy-mega-client/issues/10) |
 | Portable Linux map acquisition, decoding and lifecycle         | Client                        | [E4](https://github.com/keesmod/eufy-mega-client/issues/11) |
-| Bridge and both Home Assistant consumers                       | Camera and mower repositories | [E5](https://github.com/keesmod/eufy-mega-client/issues/12) |
+| Separate bridges and Home Assistant integrations               | Camera and mower repositories | [E5](https://github.com/keesmod/eufy-mega-client/issues/12) |
 | Hardware claims, migration and release preparation             | Owning repository             | [E6](https://github.com/keesmod/eufy-mega-client/issues/13) |
 
 Implementation stories live in the repository that owns the change. All epics
