@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 - Unreleased
+
+- Add the bounded read-only `PortableMapAcquisition` library adapter for the three
+  independently evidenced E15 streams, using Node built-ins and explicit private
+  RTC provisioning. No Android or remote helper runs in the acquisition path.
+- Preserve complete transport files across partial, oversized, unordered or
+  contradictory replacements. Demand expiry, abort, disconnect and shutdown
+  close owned resources and report peer cancellation separately.
+- Keep camera and mower credentials separate and preserve existing public APIs.
+  Synthetic lifecycle coverage does not establish new hardware support.
+- See [acquisition contract and evidence](docs/MAP_ACQUISITION.md). This version
+  is unreleased. No persisted-session migration is required. Retain the previous
+  package and original map source for rollback.
+
 ## 0.3.1 - Unreleased
 
 - Accept the independently observed EU appliances Home endpoint without widening
