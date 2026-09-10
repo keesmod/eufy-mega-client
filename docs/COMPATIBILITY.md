@@ -1,5 +1,9 @@
 # Compatibility and limitations
 
+See the [model, topology and feature matrix](MODEL_MATRIX.md) for the full pinned
+camera catalogue, current reporter discussion and open implementation/hardware
+obligations. The dated baseline below applies only to its stated hardware.
+
 Baseline acceptance for version 0.1.0, 2026-09-10. Feature tests and the agreed overnight observation
 passed on the isolated HA VM. The production HA migration and feature acceptance
 also passed, with the same fifteen entity identities and one controlling bridge.
@@ -39,9 +43,16 @@ The [T8134 reporter update from 2026-09-10](https://github.com/keesmod/ha-eufy-c
 reports discovery, stored snapshots, battery, person events and recording
 video/audio working after reinstallation. Live view fails. The reporter also
 describes failed session recovery after an unspecified settings change. The
-requested event idle-state behavior is an open semantics question. These are
+requested event idle-state behavior concerns event-entity semantics. These are
 partial reporter observations, not full hardware acceptance. Exact installed
 versions, stream stop/reopen and recovery checks still need confirmation.
+
+The [later maintainer response](https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5619797793)
+explains that the event entity retains the last event. It reports two reproduced
+consumer defects, separately from the hardware observations. The
+[0.6.3 delivery update](https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5620098054)
+announces fixes for video-only audio conversion and session-recovery retries.
+A T8134 hardware retest remains pending in the original issue.
 
 At the programme handover, both the [bridge manifest](https://github.com/keesmod/ha-eufy-cam/blob/5e4e82715e76667e6026bd9d7f5f27758e832c2d/bridge/package.json)
 and [HA app manifest](https://github.com/keesmod/ha-eufy-cam/blob/5e4e82715e76667e6026bd9d7f5f27758e832c2d/ha_app/package.json)

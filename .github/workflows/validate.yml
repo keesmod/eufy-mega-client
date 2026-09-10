@@ -33,6 +33,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: python3 scripts/check_workflows.py
+      - run: python3 scripts/check_model_matrix.py
       - run: python3 -m unittest discover -s scripts/tests -v
       - name: Check versions, release notes and changes
         env:
