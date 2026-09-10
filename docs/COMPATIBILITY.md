@@ -30,6 +30,15 @@ owns authentication and discovery. E3/E4 retain the remaining mower feature
 obligations. E5 owns real bridge integration and E6 owns hardware acceptance.
 The model matrix and its hardware claims are unchanged by this API boundary.
 
+## E15 portable-session research, 2026-09-10
+
+The [#48 progress receipt](research/E15_PORTABLE_SESSION_2026-09-10.md) records
+10 passing synthetic policy tests on Linux x64 / Node 24.21.0. No standalone
+peer authentication, read-only E15 response or portable map transport is proven.
+Identifier binding and selected transport framing remain unresolved. The next
+structural observation requires resolution of a tool-level approval block.
+Independent account/device inputs remain owned by #40. #48 and E4 stay open.
+
 ## S220 discovery, 0.1.1
 
 Discovery now includes both cameras sold as S220 when paired with T8030:
