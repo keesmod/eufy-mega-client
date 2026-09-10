@@ -2,6 +2,24 @@
 // Protocol reference: https://github.com/skywind3000/kcp/blob/master/ikcp.c
 // No application retry or retransmission is performed by this one-attempt trial.
 export class TrialKcp {
+  #channel;
+  #sendLimit;
+  #messageLimit;
+  constructor({ channel = 0, sendLimit = 2, messageLimit = 16 } = {}) {
+    if (
+      ![0, 5].includes(channel) ||
+      !Number.isInteger(sendLimit) ||
+      sendLimit < 0 ||
+      sendLimit > 5 ||
+      !Number.isInteger(messageLimit) ||
+      messageLimit < 1 ||
+      messageLimit > 16384
+    )
+      throw new Error('invalid-kcp-budget');
+    this.#channel = channel;
+    this.#sendLimit = sendLimit;
+    this.#messageLimit = messageLimit;
+  }
   #sendNext = 0;
   #receiveNext = 0;
   #pending = new Map();
@@ -11,6 +29,7 @@ export class TrialKcp {
   #messages = 0;
   #packet(command, fragment, timestamp, sequence, payload = Buffer.alloc(0)) {
     const b = Buffer.alloc(24 + payload.length);
+    b.writeUInt32LE(this.#channel);
     b[4] = command;
     b[5] = fragment;
     b.writeUInt16LE(128, 6);
@@ -22,7 +41,12 @@ export class TrialKcp {
     return b;
   }
   send(payload, now) {
-    if (this.#closed || this.#sendNext >= 2 || payload.length > 1328 || !payload.length)
+    if (
+      this.#closed ||
+      this.#sendNext >= this.#sendLimit ||
+      payload.length > 1328 ||
+      !payload.length
+    )
       throw new Error('trial-send-limit');
     return this.#packet(81, 0, now, this.#sendNext++, payload);
   }
@@ -31,7 +55,8 @@ export class TrialKcp {
     const output = [],
       messages = [];
     while (bytes.length) {
-      if (bytes.length < 24 || bytes.readUInt32LE() !== 0) throw new Error('invalid-kcp-channel');
+      if (bytes.length < 24 || bytes.readUInt32LE() !== this.#channel)
+        throw new Error('invalid-kcp-channel');
       const cmd = bytes[4],
         fragment = bytes[5],
         stamp = bytes.readUInt32LE(8),
@@ -63,7 +88,7 @@ export class TrialKcp {
           this.#remaining = part.fragment;
           this.#fragments.push(part.payload);
           if (part.fragment === 0) {
-            if (++this.#messages > 16) throw new Error('trial-message-limit');
+            if (++this.#messages > this.#messageLimit) throw new Error('trial-message-limit');
             messages.push(Buffer.concat(this.#fragments));
             this.#fragments = [];
             this.#remaining = undefined;
