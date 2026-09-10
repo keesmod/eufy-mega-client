@@ -43,6 +43,7 @@ interface Session {
   identitySalt: string;
   userId: string;
   uid: string;
+  accountUid: string;
   token: string;
   sid: string;
   region: Region;
@@ -292,6 +293,7 @@ export class EufyHomeAdapter implements MowerAdapter {
         identitySalt: previous?.identitySalt ?? randomBytes(32).toString('hex'),
         userId,
         uid: `eh-${userId}`,
+        accountUid: '',
         token: string(response.access_token),
         sid: '',
         region: selectedRegion,
@@ -331,6 +333,7 @@ export class EufyHomeAdapter implements MowerAdapter {
         ),
       );
       session.sid = string(login.sid);
+      session.accountUid = string(login.uid);
       session.origin = mobileOrigin(object(login.domain).mobileApiUrl);
       session.region = Object.entries(REGIONS).find(
         ([, origin]) => origin === session.origin,
@@ -348,7 +351,11 @@ export class EufyHomeAdapter implements MowerAdapter {
   }
   #homeOrigin(value: unknown): string {
     const host = string(value);
-    if (host !== 'https://api.eufylife.com' && host !== 'https://home-api.eufylife.com')
+    if (
+      host !== 'https://api.eufylife.com' &&
+      host !== 'https://home-api.eufylife.com' &&
+      host !== 'https://appliances-api-eu.eufylife.com'
+    )
       throw new EufyError('mower_region_unsupported');
     return host;
   }
@@ -360,6 +367,7 @@ export class EufyHomeAdapter implements MowerAdapter {
       'identitySalt',
       'userId',
       'uid',
+      'accountUid',
       'token',
       'sid',
       'timezone',
@@ -435,7 +443,7 @@ export class EufyHomeAdapter implements MowerAdapter {
       const lease = AbortSignal.any([abort, expiry, this.#bindingLifetime.signal]);
       const result = await use(
         Object.freeze({
-          accountUid: session.uid,
+          accountUid: session.accountUid,
           ...binding,
           region: session.region,
           expiresAt: session.expiresAt,

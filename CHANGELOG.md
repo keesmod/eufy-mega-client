@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.1 - Unreleased
+
+- Accept the independently observed EU appliances Home endpoint without widening
+  the host allowlist to arbitrary subdomains.
+- Keep the Home login name and native Tuya account UID separate. Internal private
+  connections now use the UID returned by the authenticated Tuya session.
+- Verify E15 discovery, local-key equality and SID reuse with the compiled library
+  on the account owner host. Public results remain free of connection secrets.
+- Existing 0.3.0 prototype stores without the native UID fail closed. Reconnect
+  with a fresh private mower store after retaining its backup. No production
+  store migration, release publication or deployment is included.
+
 ## 0.3.0 - Unreleased
 
 - Add an independent Home/Tuya mower authentication adapter and E15 discovery
