@@ -62,7 +62,11 @@ function fixture({
       });
     if (action === 'tuya.m.user.uid.password.login.reg')
       return response({
-        result: { sid, domain: { mobileApiUrl: origin ?? `https://${parsed.hostname}` } },
+        result: {
+          sid,
+          uid: 'PRIVATE-TUYA-UID',
+          domain: { mobileApiUrl: origin ?? `https://${parsed.hostname}` },
+        },
       });
     if (action === 'tuya.m.location.list') return response({ result: [] });
     if (action === '/v1/device/list/devices-and-groups')
@@ -288,7 +292,7 @@ test('private connection is only available after discovery and is revoked at shu
     async (connection, signal) => {
       assert.equal(connection.deviceId, privateId);
       assert.equal(connection.localKey, key);
-      assert.equal(connection.accountUid, 'eh-1234');
+      assert.equal(connection.accountUid, 'PRIVATE-TUYA-UID');
       assert.equal(signal.aborted, false);
       lease = signal;
     },
@@ -449,5 +453,58 @@ test('HTTP authorization failure revokes the connected session', async () => {
   await client.mowers.connect();
   await assert.rejects(client.mowers.discover(), { code: 'authentication_required' });
   assert.equal(client.mowers.connected, false);
+  await client.close();
+});
+
+test('observed EU appliances profile binds native Tuya UID rather than Home login name', async () => {
+  const f = fixture({
+    hook: ({ action }) =>
+      action === '/v1/user/email/login'
+        ? response({
+            access_token: 'PRIVATE-TOKEN',
+            user_info: {
+              id: '1234',
+              phone_code: '31',
+              timezone: 'Europe/Amsterdam',
+              request_host: 'https://appliances-api-eu.eufylife.com',
+            },
+          })
+        : undefined,
+  });
+  const owner = new EufyHomeAdapter(f.options, f.options.home);
+  const signal = new AbortController().signal;
+  await owner.connect(undefined, signal);
+  const [device] = await owner.discover(signal);
+  assert.equal(
+    f.calls.find((c) => c.action === '/v1/user/setting').host,
+    'appliances-api-eu.eufylife.com',
+  );
+  assert.equal(
+    f.calls.find((c) => c.action === '/v1/device/list/devices-and-groups').host,
+    'appliances-api-eu.eufylife.com',
+  );
+  await owner.withConnection(device.id, signal, async (connection) => {
+    assert.equal(connection.accountUid, 'PRIVATE-TUYA-UID');
+    assert.notEqual(connection.accountUid, 'eh-1234');
+  });
+  await owner.shutdown();
+});
+
+test('Home regional endpoint allowlist rejects a lookalike host before forwarding token', async () => {
+  const f = fixture({
+    hook: ({ action }) =>
+      action === '/v1/user/email/login'
+        ? response({
+            access_token: 'PRIVATE-TOKEN',
+            user_info: {
+              id: '1234',
+              request_host: 'https://appliances-api-eu.eufylife.com.attacker.invalid',
+            },
+          })
+        : undefined,
+  });
+  const client = new EufyClient({ mowers: f.options });
+  await assert.rejects(client.mowers.connect(), { code: 'mower_region_unsupported' });
+  assert.equal(f.calls.length, 1);
   await client.close();
 });
