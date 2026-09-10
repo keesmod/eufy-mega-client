@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 - Unreleased
+
+- Add an independent Home/Tuya mower authentication adapter and E15 discovery
+  profile to the modular API. Public device results exclude connection secrets.
+- Bound requests and session reuse, validate regional hosts and revoke private
+  connection access on cancellation, shutdown and renewed discovery.
+- Preserve EufyMegaClient compatibility and separate camera/mower stores.
+  Default mower authentication now uses Home/Tuya when no custom adapter is set.
+- Include Apache-2.0 protocol attribution and the inherited MIT app-profile notice.
+- Live E15 account binding remains pending explicit approval of the prepared
+  experiment. This version is unreleased and adds no hardware support claim.
+- Keep each mower store private. A custom adapter retains its own session format.
+  To roll back, retain the previous package and its private store backup.
+
 ## 0.2.1 - Unreleased
 
 - Preserve duplicate-event suppression when a saved event cache is restored in

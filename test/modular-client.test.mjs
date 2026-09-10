@@ -177,7 +177,7 @@ test('mower authentication failure is sanitized and cannot invalidate security',
   await client.shutdown();
 });
 
-test('missing or failing lazy mower factory is explicit and isolated', async () => {
+test('default or failing lazy mower factory is explicit and isolated', async () => {
   for (const factory of [
     undefined,
     () => {
@@ -186,10 +186,15 @@ test('missing or failing lazy mower factory is explicit and isolated', async () 
   ]) {
     const options = mowerOptions().options;
     options.adapter = factory;
+    options.home = {
+      fetch: async () => {
+        throw Error('PRIVATE-TRANSPORT');
+      },
+    };
     const client = new EufyClient({ security: cameraOptions().options, mowers: options });
     await client.security.connect();
     await assert.rejects(client.mowers.connect(), {
-      code: factory ? 'mower_authentication_failed' : 'mower_protocol_unavailable',
+      code: factory ? 'mower_authentication_failed' : 'mower_request_failed',
     });
     assert.equal(client.security.connected, true);
     await client.shutdown();
