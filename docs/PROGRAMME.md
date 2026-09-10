@@ -88,7 +88,8 @@ live in the client repository and are children of the programme issue. The
 existing [S220 report](https://github.com/keesmod/ha-eufy-cam/issues/10) remains
 the original reporter's issue and is linked into E2 without a duplicate.
 
-The detailed model/topology/feature matrix is delivered by
+The [model/topology/feature evidence matrix](MODEL_MATRIX.md) records the pinned
+catalogue, primary model sources and outstanding obligations from
 [E1-02](https://github.com/keesmod/eufy-mega-client/issues/15). Every row must link
 implementation, evidence and any blocker. Newly discovered protocol work gets
 bounded follow-up stories rather than silently dropping the affected model.
