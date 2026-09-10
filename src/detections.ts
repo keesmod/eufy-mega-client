@@ -274,7 +274,7 @@ export class Detections {
         /^[a-f0-9]{64}$/.test(key) &&
         Number.isFinite(expiry) &&
         expiry > Date.now() &&
-        expiry < Date.now() + 300000
+        expiry <= Date.now() + 300000
       )
         this.seen.set(key, expiry);
   }
