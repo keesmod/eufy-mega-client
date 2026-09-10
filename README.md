@@ -68,6 +68,7 @@ make the system independent of Eufy. There is no legacy cloud fallback.
 The library returns device operations and raw media streams. FFmpeg, playback,
 viewer leases and Home Assistant entities belong in the consuming bridge.
 
+- [Eufy platform programme and backlog](docs/PROGRAMME.md)
 - [API guide](docs/API.md)
 - [Compatibility and limitations](docs/COMPATIBILITY.md)
 - [Sanitized diagnostics](docs/DIAGNOSTICS.md)
