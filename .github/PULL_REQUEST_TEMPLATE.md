@@ -18,4 +18,4 @@ After a release-impacting merge:
 - [ ] Supply sanitized acceptance evidence and explicitly run publication.
 - [ ] Confirm public tag, assets, checksums and any separately authorized deployment.
 
-See [the release flow](../docs/RELEASING.md).
+See [the release flow](https://github.com/keesmod/eufy-mega-client/blob/main/docs/RELEASING.md).
