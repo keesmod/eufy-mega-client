@@ -1,6 +1,6 @@
 # Compatibility and limitations
 
-Version 0.1.0, 2026-09-10. Feature tests and the agreed overnight observation
+Baseline acceptance for version 0.1.0, 2026-09-10. Feature tests and the agreed overnight observation
 passed on the isolated HA VM. The production HA migration and feature acceptance
 also passed, with the same fifteen entity identities and one controlling bridge.
 
@@ -14,31 +14,41 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 
 Discovery now includes both cameras sold as S220 when paired with T8030:
 
-| Camera                        | Model | Protocol device type | Validation                       |
-| ----------------------------- | ----- | -------------------- | -------------------------------- |
-| eufyCam S220 / eufyCam 2C Pro | T8142 | 15                   | Automated only; hardware pending |
-| SoloCam S220                  | T8134 | 63                   | Automated only; hardware pending |
+| Camera                        | Model | Protocol device type | Validation                                |
+| ----------------------------- | ----- | -------------------- | ----------------------------------------- |
+| eufyCam S220 / eufyCam 2C Pro | T8142 | 15                   | Automated only. Hardware pending          |
+| SoloCam S220                  | T8134 | 63                   | Partial reporter results. Live view fails |
 
 Eufy's [camera comparison](https://support.nz.eufy.com/support/solutions/articles/154000241616-differences-between-all-add-on-eufycams)
-identifies the 2C Pro as T8142; its [SoloCam S220 documentation](https://support.nz.eufy.com/support/solutions/articles/154000242066-introducing-eufy-s220-solocam)
+identifies the 2C Pro as T8142. Its [SoloCam S220 documentation](https://support.nz.eufy.com/support/solutions/articles/154000242066-introducing-eufy-s220-solocam)
 identifies T8134. S220 alone does not identify the reporter's camera.
 
-The released 0.1.0 model filter silently excluded both. The candidate retains
+The released 0.1.0 model filter silently excluded both. Version 0.1.1 retains
 unknown-model exclusion and requires a discovered T8030 parent. The existing
 protocol selects different livestream commands for these two device types.
 Standalone SoloCam connections remain unsupported.
 
 Before claiming hardware support, record backend, integration/bridge versions,
-model and camera/HomeBase firmware; confirm the bridge account can see the camera
+model and camera/HomeBase firmware. Confirm the bridge account can see the camera
 in the Eufy app. With one controlling bridge, verify discovery after restart,
 battery updates, stored snapshots, live video/audio and confirmed stop, recording
 list/playback and cancellation, and one real motion event without duplicates.
-Record pass/fail and redacted errors; no credentials or footage are needed.
+Record pass/fail and redacted errors. No credentials or footage are needed.
 
-Use the candidate package in a test bridge and keep its previous package and
-lockfile for rollback. The production bridge still pins released client 0.1.0;
-installing or editing this library alone does not upgrade that bridge. Publish
-and pin the candidate in a bridge release only through the normal release process.
+The [T8134 reporter update from 2026-09-10](https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5619177924)
+reports discovery, stored snapshots, battery, person events and recording
+video/audio working after reinstallation. Live view fails. The reporter also
+describes failed session recovery after an unspecified settings change. The
+requested event idle-state behavior is an open semantics question. These are
+partial reporter observations, not full hardware acceptance. Exact installed
+versions, stream stop/reopen and recovery checks still need confirmation.
+
+At the programme handover, both the [bridge manifest](https://github.com/keesmod/ha-eufy-cam/blob/5e4e82715e76667e6026bd9d7f5f27758e832c2d/bridge/package.json)
+and [HA app manifest](https://github.com/keesmod/ha-eufy-cam/blob/5e4e82715e76667e6026bd9d7f5f27758e832c2d/ha_app/package.json)
+pin released client 0.1.1. This records the repository dependency, not the current
+state of every deployed bridge. Installing or editing this library alone does
+not upgrade a bridge. Keep the previous package and lockfile for rollback, and
+publish future client updates through the normal bridge release process.
 
 ## Verified on the test HA installation
 
