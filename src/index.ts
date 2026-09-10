@@ -20,3 +20,16 @@ export type {
   DetectionEvent,
   EventSession,
 } from './types.js';
+export { EufyClient } from './eufy-client.js';
+export type {
+  EufyClientOptions,
+  ModuleLifecycle,
+  ModuleLifecycleState,
+  SecurityModule,
+  MowerModule,
+  MowerOptions,
+  MowerAdapter,
+  MowerAdapterContext,
+  MowerSession,
+  MowerSessionStore,
+} from './modular-types.js';
