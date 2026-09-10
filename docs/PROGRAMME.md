@@ -164,6 +164,10 @@ task-specific approvals, required checks and acceptance gates to those actions.
 
 ## Starting evidence
 
+- [E15 map signaling research](research/E15_MAP_SIGNALING.md) records the
+  historical helper evidence, primary Tuya contracts and proposed #48
+  experiment. Current-firmware equivalence and portable peer authentication
+  remain unvalidated. The E4 map capability remains open.
 - [Client compatibility](COMPATIBILITY.md), [public API](API.md),
   [diagnostics](DIAGNOSTICS.md) and [attribution](../NOTICE.md).
 - [Existing mower functionality](https://github.com/keesmod/eufy-robomow-ha/blob/main/README.md),
