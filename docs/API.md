@@ -85,7 +85,7 @@ separate. There is no shared service, HTTP server or dependency on the other
 bridge. Neither module shuts down the other installation.
 
 The default Home/Tuya authentication and discovery profile is described in
-[Mower authentication](MOWER_AUTH_PROVENANCE.md). Live #40 acceptance remains pending.
+[Mower authentication](MOWER_AUTH_PROVENANCE.md). The EU E15 binding has a [live validation receipt](research/E15_AUTH_VALIDATION_2026-09-10.md).
 Telemetry, commands, settings and maps remain in their E3/E4 stories. The adapter
 contract adds no physical control methods and makes no E15 hardware claims.
 
@@ -201,7 +201,7 @@ Await `shutdown()` (alias `close()`) to stop owned media, close device and event
 transports and flush sessions. Shutdown is idempotent. A closed client cannot
 be reopened; construct another client with the same session store.
 
-## Home/Tuya mower profile, 0.3.0
+## Home/Tuya mower profile, 0.3.1
 
 `EufyClient({ mowers: { credentials, sessionStore } })` now uses the independent
 Home/Tuya adapter. `home.requestTimeoutMs` bounds each request, default 15000 ms.
@@ -220,5 +220,6 @@ Discovery does not log in, refresh or replay a failed request. On
 Unknown regions or unapproved regional hosts report `mower_region_unsupported`.
 A mismatched cloud/device binding reports `mower_binding_unavailable`.
 Concurrent discovery reports `mower_discovery_busy`. Neither operation issues
-physical commands. This source-based E15 profile still needs independent live
-account binding before hardware acceptance.
+physical commands. The EU E15 authentication, discovery and private key binding are independently
+validated. This does not establish command, telemetry or map support. Other
+regions have synthetic coverage only.

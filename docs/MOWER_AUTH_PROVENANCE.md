@@ -71,15 +71,19 @@ Discovery follows the licensed nested Home device projection and queries only
 exact T2880 candidates through `tuya.m.device.get`. It requires the returned
 `devId` to match the selected Home ID and a present local key. E18 and unknown
 products do not become E15 devices. This is software coverage of a source-based
-profile, pending independent account/device evidence.
+profile. The EU E15 account/device binding is independently confirmed in the
+[live receipt](research/E15_AUTH_VALIDATION_2026-09-10.md). Other regions retain
+software-only coverage.
 
 The internal `EufyHomeAdapter.withConnection(id, signal, callback)` gives trusted
-library code a private account UID, device ID, local key, region and expiry. It
+library code the native Tuya session `uid` as `accountUid`, device ID, local key,
+region and expiry. The Home login name `eh-{Home user ID}` is a separate value
+and must not be used as the native Tuya UID. It
 requires a successful discovery. Cancellation, shutdown, expiry and a subsequent
 discovery revoke the supplied signal. Callbacks must honor that signal and must
 not retain or serialize connection values. This method and its connection type
 are not exported by the public package entry point. #48 may extend the internal
-owner after live binding is proved. No generic cloud or RTC request API is
+owner using the verified EU binding contract. No generic cloud or RTC request API is
 exposed in #40.
 
 ## Software evidence and remaining acceptance
@@ -96,14 +100,10 @@ Existing modular tests continue to verify camera/mower failure and shutdown
 isolation. The legacy EufyMegaClient exports and camera tests remain intact.
 Software tests do not establish current E15 protocol or physical support.
 
-The prepared live login/discovery experiment was rejected before execution by
-automatic approval review. It requires direct user approval for credentials
-from the existing HA owner to be sent to Eufy/Tuya. No credentials were sent,
-no cloud session was created and no service was changed by this story.
-
-Remaining #40 acceptance: run the bounded independent experiment, verify the
-actual Home profile and exact E15/Tuya binding, compare the independently fetched
-local key with the configured key in memory, retain only safe booleans and
-structural evidence, and validate recovery. Correct any profile differences
-before marking #40 passed. #40 and parent E3 remain open. #48 must not treat the
-source-based internal connection contract as a verified live binding.
+The initial automatic approval block was resolved by direct user approval on
+2026-09-10. Independent Python and compiled Node trials subsequently confirmed
+the EU Home/Tuya profile, exact E15 identity, private local-key equality and
+SID reuse. The [live receipt](research/E15_AUTH_VALIDATION_2026-09-10.md) records
+what was tested and the recovery evidence. #40 does not implement or validate
+local transport, commands, firmware control, RTC or map delivery. Those remain
+with #41 through #46 and #48 under the open E3/E4 epics.

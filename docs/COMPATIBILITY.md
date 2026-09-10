@@ -177,15 +177,16 @@ outside version 0.1.0's target. Eufy Mega authentication and Google push
 infrastructure remain external dependencies. No service or FFmpeg conversion is
 included in the library.
 
-## Mower authentication software profile, 0.3.0
+## Mower authentication and discovery evidence, 0.3.1
 
 The independent Home/Tuya adapter has synthetic regional, authentication,
 session, cancellation, privacy and discovery coverage. The exact T2880 profile
-recognizes the E15 product association, but live discovery and private key
-binding have not been independently validated. No mower hardware support,
+recognizes the E15 product association. The EU E15 discovery and private key
+binding were independently validated on 2026-09-10, including the compiled
+library and SID reuse. This is authentication/discovery evidence only. No
 telemetry, local transport, commands or maps are claimed.
 
 [Provenance and remaining #40 acceptance](MOWER_AUTH_PROVENANCE.md) record the
-source revisions, tests and prepared live experiment. #40 retains the account
-binding obligation. #41 owns local transport, #42 telemetry, and #48 the
+source revisions, tests and completed live experiment. The
+[live receipt](research/E15_AUTH_VALIDATION_2026-09-10.md) bounds that evidence. #41 owns local transport, #42 telemetry, and #48 the
 portable session research. E3 and E4 remain open.
