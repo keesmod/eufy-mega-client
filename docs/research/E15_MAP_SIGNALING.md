@@ -11,6 +11,10 @@ subject also to independent mower authentication in
 The functional [E4 obligation](https://github.com/keesmod/eufy-mega-client/issues/11)
 remains open.
 
+The [read-only validation receipt](E15_MAP_VALIDATION_2026-09-10.md) identifies
+the currently installed helper and matching native artifacts. It records the
+remaining firmware and protocol blockers and bounded follow-up obligations.
+
 ## Evidence levels and version boundary
 
 - **Observed, historical** means a retained description of an owned-device
@@ -32,7 +36,7 @@ inspection of the existing mower config entry returned no firmware value.
 These metadata checks do not establish current firmware or current helper
 health. No session was opened, helper restarted, app instrumented or device
 command issued. Current-firmware equivalence therefore remains unvalidated.
-Keep #47 in Validation until a dated firmware baseline and the remaining
+The follow-up receipt moves #47 to Blocked until a dated firmware baseline and the remaining
 signaling evidence have been reconciled. A documentation merge alone does not
 satisfy that gate.
 
