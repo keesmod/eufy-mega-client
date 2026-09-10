@@ -7,7 +7,16 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+  albumRequest,
+  downloadRequest,
+  cancelRequest,
+  albumFiles,
+  CommandReader,
+  MapFileReader,
+} from './e15-map-transfer.mjs';
 import { pathToFileURL } from 'node:url';
 import { ownedTrial } from './e15-owned-trial.mjs';
 import { connectMqtt } from './e15-trial-mqtt.mjs';
@@ -108,7 +117,7 @@ export function matchingToken(actual, expected) {
     actual.urls.every((url, index) => url === expected.urls[index])
   );
 }
-export async function linuxPeer(inputs, signal) {
+export async function linuxPeer(inputs, signal, mapsDirectory) {
   const events = [],
     key = randomBytes(16),
     localKey = Buffer.from(typeof inputs?.localKey === 'string' ? inputs.localKey : '');
@@ -269,10 +278,35 @@ export async function linuxPeer(inputs, signal) {
         throw new Error('carrier-complete-invalid');
       owner.negotiated();
       event('carrier-authenticated');
-      const kcp = new TrialKcp();
+      const kcp = new TrialKcp(mapsDirectory ? { sendLimit: 5, messageLimit: 16384 } : {});
+      const filesKcp = mapsDirectory
+        ? new TrialKcp({ channel: 5, sendLimit: 0, messageLimit: 16384 })
+        : undefined;
+      const commands = new CommandReader();
+      const fileReader = new MapFileReader(1);
+      const completedFiles = new Map();
+      let stage = 'version',
+        settleTimer,
+        downloadAccepted = false;
+      const albumId = 0x10001,
+        downloadId = 0x10002,
+        cancelId = 0x10003;
+      const sendCommand = (plain) => {
+        io.write(
+          dataRecord(
+            key,
+            kcp.send(cbcEncrypt(key, randomBytes(16), plain), Math.floor(performance.now())),
+          ),
+        );
+        plain.fill(0);
+      };
       owner.own({
         close: async () => {
+          clearTimeout(settleTimer);
           kcp.close();
+          filesKcp?.close();
+          commands.close();
+          fileReader.close();
           return true;
         },
       });
@@ -291,27 +325,87 @@ export async function linuxPeer(inputs, signal) {
       }
       event('authorization-and-version-sent');
       let application = Buffer.alloc(0);
-      for (let count = 0; count < 128; count++) {
+      for (let count = 0; count < (mapsDirectory ? 32768 : 128); count++) {
         const record = await owner.track(receiveRecord);
         if (record.readUInt16BE() === 0xf500) continue;
         const inner = decodeData(key, record);
         const conversation = inner.readUInt32LE();
-        if (conversation !== 0) {
-          event('nonapplication-channel-' + conversation);
-          if (conversation === 0x010000f3) continue;
-          throw new Error('unexpected-kcp-channel');
-        }
-        const incoming = kcp.receive(inner);
+        if (conversation === 0x010000f3) continue;
+        const receiver = conversation === 0 ? kcp : conversation === 5 ? filesKcp : undefined;
+        if (!receiver) throw new Error('unexpected-kcp-channel');
+        const incoming = receiver.receive(inner);
         for (const ack of incoming.output) io.write(dataRecord(key, ack));
         for (const message of incoming.messages) {
-          application = Buffer.concat([application, cbcDecrypt(key, message)]);
-          if (application.length > 4096) throw new Error('application-limit');
-          if (application.length >= 24) {
+          const clear = cbcDecrypt(key, message);
+          if (conversation === 5) {
+            if (!['download', 'cancel'].includes(stage)) throw new Error('early-file-data');
+            for (const file of fileReader.push(clear)) {
+              if (file.name) {
+                completedFiles.set(file.name, file.data);
+                event('complete-' + file.name);
+              }
+            }
+            clear.fill(0);
+            if (fileReader.ready && stage === 'download') {
+              clearTimeout(settleTimer);
+              settleTimer = setTimeout(() => {
+                if (owner.signal.aborted || stage !== 'download' || !fileReader.settled) return;
+                try {
+                  stage = 'cancel';
+                  sendCommand(cancelRequest(cancelId));
+                  event('cancel-sent');
+                } catch {
+                  /* Socket ownership and the active deadline still close the trial. */
+                }
+              }, 750);
+            }
+            continue;
+          }
+          if (stage === 'version') {
+            application = Buffer.concat([application, clear]);
+            clear.fill(0);
+            if (application.length > 4096) throw new Error('application-limit');
+            if (application.length < 24) continue;
             const version = versionResponse(application, request);
-            if (version.major === 0) throw new Error('invalid-peer-version');
+            if (!version.major) throw new Error('invalid-peer-version');
             application.fill(0);
             event('correlated-version-response');
-            return { authenticatedReadOnly: true };
+            if (!mapsDirectory) return { authenticatedReadOnly: true };
+            stage = 'album';
+            sendCommand(albumRequest(albumId));
+            event('album-sent');
+            continue;
+          }
+          const replies = commands.push(clear);
+          clear.fill(0);
+          for (const reply of replies) {
+            if (reply.main !== 100) throw new Error('unexpected-command');
+            if (stage === 'album' && reply.request === albumId && reply.sub === 12) {
+              const files = albumFiles(reply.payload);
+              stage = 'download';
+              sendCommand(downloadRequest(downloadId, files));
+              event('allowlisted-download-sent');
+            } else if (
+              reply.request === downloadId &&
+              reply.sub === 13 &&
+              reply.payload.length === 8 &&
+              reply.payload.readUInt32LE(4) === 1
+            ) {
+              downloadAccepted = true;
+              event('download-accepted');
+            } else if (
+              stage === 'cancel' &&
+              reply.request === cancelId &&
+              reply.sub === 13 &&
+              reply.payload.length === 8 &&
+              [1, 3].includes(reply.payload.readUInt32LE(4))
+            ) {
+              if (!downloadAccepted || !fileReader.settled) throw new Error('map-proof-missing');
+              event('cancel-confirmed');
+              for (const [name, data] of completedFiles)
+                await writeFile(join(mapsDirectory, name), data, { mode: 0o600, flag: 'wx' });
+              return { authenticatedReadOnly: true };
+            } else throw new Error('uncorrelated-map-command');
           }
         }
       }
@@ -331,7 +425,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const raw = await readFile(process.argv[2]);
     if (raw.length > 65536) throw new Error('input-limit');
-    result = await linuxPeer(JSON.parse(raw.toString('utf8')), abort.signal);
+    result = await linuxPeer(JSON.parse(raw.toString('utf8')), abort.signal, process.argv[3]);
   } catch {
     result = { success: false, reason: 'private-input-unreadable' };
   }

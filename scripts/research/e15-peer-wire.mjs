@@ -66,7 +66,7 @@ export class RecordReader {
       let wanted = 4 - this.#buffer.length;
       if (this.#buffer.length >= 4) {
         const size = this.#buffer.readUInt16BE(2) + 4;
-        if (size > 4096 || size <= 4) fail();
+        if (size > 4096 || (size === 4 && this.#buffer.readUInt16BE() !== 0xf500)) fail();
         wanted = size - this.#buffer.length;
       }
       const n = Math.min(wanted, chunk.length);
@@ -74,7 +74,7 @@ export class RecordReader {
       chunk = chunk.subarray(n);
       if (this.#buffer.length >= 4) {
         const size = this.#buffer.readUInt16BE(2) + 4;
-        if (size > 4096 || size <= 4) fail();
+        if (size > 4096 || (size === 4 && this.#buffer.readUInt16BE() !== 0xf500)) fail();
         if (this.#buffer.length === size) {
           records.push(this.#buffer);
           this.#buffer = Buffer.alloc(0);

@@ -170,7 +170,9 @@ task-specific approvals, required checks and acceptance gates to those actions.
   adds owner-confirmed firmware, runtime credential binding and the native
   authorization buffer. The [standalone Linux receipt](research/E15_LINUX_PEER_RESPONSE_2026-09-10.md)
   now proves a correlated authenticated E15 read-only version response. Portable
-  map/file transfer remains #49, and the E4 map capability remains open.
+  [map/file transfer](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md) now passes
+  #49 with exact private comparison and confirmed cancellation. Library lifecycle,
+  decoding, deltas and consumer acceptance remain open under E4.
 - [Client compatibility](COMPATIBILITY.md), [public API](API.md),
   [diagnostics](DIAGNOSTICS.md) and [attribution](../NOTICE.md).
 - [Existing mower functionality](https://github.com/keesmod/eufy-robomow-ha/blob/main/README.md),
