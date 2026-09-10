@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.2 - Unreleased
+## 0.2.1 - Unreleased
 
 - Preserve duplicate-event suppression when a saved event cache is restored in
   the same millisecond it was exported. Keep the five-minute expiry bound.
@@ -8,6 +8,17 @@
   These establish software behavior only. They do not add model support.
 - Consumers can update to this library version when it is published. No session
   migration is required. Retain the previous package for rollback.
+
+## 0.2.0 - 2026-09-10
+
+- Add `EufyClient` with optional, independent security and mower modules. Keep
+  `EufyMegaClient` and all existing exports compatible.
+- Give each module its own authentication state, cancellation and shutdown.
+  Separate bridge consumers use separate instances and private session stores.
+- Define the mower adapter and opaque session contracts. No mower protocol ships
+  in this version. Without an adapter, login reports `mower_protocol_unavailable`.
+- Validate module isolation and public TypeScript consumers with synthetic
+  fixtures. This adds no hardware support claims or bridge deployment.
 
 ## 0.1.1 - 2026-09-10
 
