@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2 - Unreleased
+
+- Preserve duplicate-event suppression when a saved event cache is restored in
+  the same millisecond it was exported. Keep the five-minute expiry bound.
+- Add synthetic family, topology, command and media lifecycle regression fixtures.
+  These establish software behavior only. They do not add model support.
+- Consumers can update to this library version when it is published. No session
+  migration is required. Retain the previous package for rollback.
+
 ## 0.1.1 - 2026-09-10
 
 - Include eufyCam S220 / 2C Pro T8142 and SoloCam S220 T8134 in Mega

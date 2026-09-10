@@ -281,6 +281,15 @@ physical completion. Generic [live tests][Live-tests], [recording tests][Recordi
 [event tests][Event-tests] and [protocol lifecycle tests][Lifecycle-tests] cover
 software contracts, not another model/firmware/topology tuple.
 
+## Synthetic family regression evidence
+
+[Family fixtures](FAMILY_FIXTURES.md), delivered by [#18], cover each recorded
+family at its existing admission boundary. They distinguish public discovery
+and H3 lifecycle checks from isolated vendor command selection and unsupported
+model rejection. Synthetic firmware cases exercise the existing command branch.
+They do not upgrade any feature cell or establish hardware support. Per-row
+implementation and hardware obligations below remain unchanged.
+
 ## Connection owners in the catalogue
 
 These types remain visible in the accounting even though they are not camera
