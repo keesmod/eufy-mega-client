@@ -27,7 +27,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsc -p vendor/tsconfig.json && tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "build": "tsc -p vendor/tsconfig.json && node scripts/copy-assets.mjs && tsc -p tsconfig.json",
     "test": "npm run build && node --test --test-timeout=15000 test/*.test.mjs",
     "prepack": "npm run build",
     "format": "prettier --write src test scripts docs *.md *.json .github",
