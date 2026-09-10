@@ -20,7 +20,11 @@ physical actions, arrange recovery and restore Guard Mode. A successful command
 call is not proof of a physical result. Report missing features and uncertain
 history explicitly. Adding another model requires its own compatibility evidence.
 
-Releases require the complete target-hardware and HA acceptance matrix, 24 hours
-of observation, rollback instructions and inspection of downloaded release
-assets. Publish the compiled package through GitHub Releases, then pin its exact
-URL and integrity in the consuming bridge. npm publication is not part of 0.1.0.
+Follow [the release flow](docs/RELEASING.md). Protocol/device/media changes need
+acceptance on the declared hardware and HA routes; document observation duration
+and unproven behavior. The first release used an explicitly agreed 11-hour-26-minute
+window, not a 24-hour test. CI-only changes do not need a physical device test.
+
+Publish and verify the compiled package through GitHub Releases, then pin its
+exact URL and integrity in the consuming bridge and validate that repository.
+Do not publish a new library version solely for CI/documentation changes.

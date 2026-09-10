@@ -1,0 +1,109 @@
+# Releases
+
+Releases use **Actions → Release → Run workflow** on `main`. The default is a
+full rehearsal. Publishing is a separate, explicit selection on the same form.
+Stable `X.Y.Z` versions are supported; this flow does not create npm releases.
+
+## Prepare a pull request
+
+Keep `package.json`, the lockfile's root version and its root package entry
+aligned. Runtime changes under `src`/`vendor`, dependency changes and public API
+changes require a new library version. Preserve the MIT license, NOTICE and the
+upstream source attribution. Update API and compatibility documentation where the
+behavior changes.
+
+Update the release's `CHANGELOG.md` section with the user-visible behavior,
+upgrade steps, compatibility limits and rollback instructions. Runtime changes
+must advance the affected versions. CI/documentation-only changes can retain the
+current versions and state that no product release is needed.
+
+All Validate checks must pass on the current PR commit. The final **ci** check
+fails if any prerequisite failed, timed out, was cancelled or skipped. Protect
+`main` by requiring a pull request, up-to-date branches, resolved conversations
+and the GitHub Actions `ci` check; disallow force pushes and branch deletion.
+No second maintainer approval is required for this single-maintainer project.
+
+After merge, check `ci` on the resulting `main` commit. Branch CI alone is not
+release evidence. Each Release run calls the same complete Validate workflow
+from its own commit, so the release cannot use an older green run.
+
+## Rehearse and publish
+
+1. Merge the version/notes PR and wait for `main` CI.
+2. Open **Actions → Release → Run workflow**, select `main`, enter the version
+   without `v`, and leave **publish** unchecked.
+3. Inspect the successful run and download its `release-package` artifact. It
+   contains the compiled `.tgz`, `SHA256SUMS` and
+   `release-manifest.json` with source commit, component versions and file hashes.
+4. Complete validation appropriate to the change. Protocol, device commands and
+   media changes need bounded tests on the declared hardware and HA routes, with
+   one controlling bridge, preserved private state and verified cleanup. Record
+   the observation duration and anything unproven. CI uses synthetic fixtures;
+   it cannot prove physical sound, battery life or a live migration. For changes
+   that do not affect hardware, record why those tests are unnecessary.
+5. Run **Release** again on the same `main` commit and version, tick **publish**,
+   and supply a sanitized acceptance summary or evidence link. The summary is
+   included in the public release notes. Never include credentials, serials,
+   recognized names, private footage or raw diagnostic logs.
+6. The pipeline repeats validation, checks the requested version and current
+   `main`, creates the exact tag and a draft, uploads the tested files, downloads
+   and verifies them, then publishes. It downloads and verifies the public assets
+   once more. Only the publish job has repository write access.
+
+The main branch must still point at the candidate when publication begins and
+immediately before the draft becomes public. If it advanced, rerun from current
+main. New stable versions must be newer than the latest stable release. Reusing
+an existing tag at another commit is rejected. A merge or a pushed tag alone
+does not publish a release. Releases do not deploy to a Home Assistant instance.
+
+## Failure and recovery
+
+A failed or cancelled build cannot publish. A download, checksum or package
+mismatch leaves the candidate as a draft. Rerunning the same commit can resume
+missing uploads; reuse the original acceptance summary. Draft notes must match
+the candidate before publication. Existing assets are verified and never overwritten. A mismatched
+existing asset or an unrelated manual draft requires inspection, not automatic
+deletion. Preserve valid published releases and tags.
+
+If a failure occurs after the release became public, inspect the published
+assets and run the verification again. The pipeline reports failure; it does not
+silently remove a version users may already have installed. An identical already
+published candidate is only verified, without uploading or publishing it again.
+
+For a faulty product release, publish a corrected newer version and document
+rollback. Do not move its old tag or replace a released file. The consuming
+bridge's lockfile must continue to identify the exact library bytes it tested.
+
+## Local checks
+
+Use Python 3.11+ and Node.js 24. GitHub uses bounded Ubuntu jobs.
+
+```sh
+python3 scripts/check_workflows.py
+python3 -m unittest discover -s scripts/tests -v
+python3 scripts/release.py check
+```
+
+Install development dependencies with `npm ci --ignore-scripts`. From a clean
+committed checkout, build the complete bundle into a new empty directory:
+
+```sh
+python3 scripts/release.py build --directory /tmp/eufy-mega-release-candidate
+python3 scripts/release.py verify --directory /tmp/eufy-mega-release-candidate
+```
+
+The builder clears generated output, compiles the ESM API and vendored CommonJS
+protocol code, and checks the tarball's exact file list, declarations, protocol
+assets, version and attribution. It installs that actual tarball in a temporary
+consumer and tests public imports and shutdown without contacting Eufy.
+
+A library release does not change Home Assistant automatically. After publication,
+update its exact release URL and lockfile integrity in `keesmod/ha-eufy-cam`, run
+that repository's checks and release the bridge/integration separately. npm
+publication and cross-repository auto-merging are not part of this process.
+
+Actionlint and GitHub Actions are pinned to verified versions/checksums. Update
+the pins deliberately and run the workflow validator. The common `release.py`,
+`check_workflows.py` and `scripts/tests/test_release.py` are maintained in both
+repositories; apply common fixes to both. Project-specific metadata and package
+checks live in `release_project.py`.

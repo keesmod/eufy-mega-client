@@ -9,3 +9,5 @@ session.json
 credentials.json
 private/
 artifacts/
+
+__pycache__/
