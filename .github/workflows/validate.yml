@@ -15,7 +15,10 @@ concurrency:
   group: validate-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 jobs:
+  dependency-security:
+    uses: ./.github/workflows/dependency-security.yml
   package:
+    needs: dependency-security
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -38,7 +41,6 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run format:check
       - run: npm test
-      - run: npm audit --omit=dev
       - name: Build and test the compiled tarball in a clean consumer
         id: bundle
         run: python3 scripts/release.py build
@@ -51,7 +53,7 @@ jobs:
           compression-level: 0
   ci:
     if: ${{ always() }}
-    needs: package
+    needs: [dependency-security, package]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
