@@ -179,7 +179,8 @@ def build(root, folder):
             "--input-type=module",
             "-e",
             """
-import { EufyClient, EufyMegaClient, FileSessionStore } from '@keesmod/eufy-mega-client';
+import { EufyClient, EufyMegaClient, FileSessionStore, PortableMapAcquisition } from '@keesmod/eufy-mega-client';
+if (typeof PortableMapAcquisition !== 'function') throw Error('Missing portable map adapter');
 if (typeof FileSessionStore !== 'function') throw Error('Missing public export');
 const client = new EufyMegaClient({credentials:{email:'fixture',password:'fixture',country:'NL'},
   sessionStore:{load:async()=>undefined,save:async()=>{}}});

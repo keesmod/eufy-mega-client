@@ -223,3 +223,12 @@ Concurrent discovery reports `mower_discovery_busy`. Neither operation issues
 physical commands. The EU E15 authentication, discovery and private key binding are independently
 validated. This does not establish command, telemetry or map support. Other
 regions have synthetic coverage only.
+
+## Portable map acquisition
+
+`PortableMapAcquisition` owns one bounded read-only acquisition session for one
+verified mower binding. It accepts private `MapSessionProvisioning`, exposes
+copied `lastComplete` transport files and supports `acquire`, `disconnect`,
+`shutdown` and `clearLastComplete`. This independent adapter uses Node built-ins
+and preserves the existing camera and mower module interfaces. See the
+[full contract, bounds and feature evidence](MAP_ACQUISITION.md).
