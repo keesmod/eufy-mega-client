@@ -32,13 +32,17 @@ The model matrix and its hardware claims are unchanged by this API boundary.
 
 ## E15 portable-session research, 2026-09-10
 
-The [#48 completion receipt](research/E15_SESSION_BINDING_2026-09-10.md) records
-10 passing synthetic policy tests on Linux x64 / Node 24.21.0, observed incoming
-signaling correlation and normal helper recovery after one bounded observation.
-#40 independently proves account/device binding. No standalone peer authentication,
-read-only E15 response or portable map transport is proven. Follow-ups #77 and #78
-own the remaining native transport contract and authenticated Linux response.
-Research completion does not close E4 or unlock map transfer before #78 passes.
+The [standalone authentication receipt](research/E15_LINUX_PEER_RESPONSE_2026-09-10.md)
+proves a correlated E15 peer response on Node 24 Linux. The
+[#49 transfer receipt](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md) now proves
+an allowed album query and all three current map/path files, with exact private
+byte equality against fresh native callbacks and the normal bundle. The peer
+confirmed transfer cancellation and normal acquisition was restored afterwards.
+
+This is isolated research for the #40-bound E15 on owner-reported firmware
+6.9.28. It does not deliver a public map API or migrate the Android source.
+Library lifecycle #50, decoding #51, deltas #52, consumer compatibility #53 and
+architecture/shutdown acceptance #54 remain open under E4.
 
 ## S220 discovery, 0.1.1
 
