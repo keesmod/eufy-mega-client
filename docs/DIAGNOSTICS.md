@@ -10,6 +10,10 @@ library and Node versions, operation, duration, whether cleanup was confirmed,
 and whether the problem occurred after a reconnect. Include synthetic fixtures
 and a minimal reproducer when possible.
 
+The [synthetic family diagnostic checks](FAMILY_FIXTURES.md#diagnostics) verify
+the allowlist with successful discovery, failed HTTP responses and vendor
+connection errors. They do not expose a new diagnostics API.
+
 Never upload a session file, credentials, raw push payload, recording, image,
 device inventory response or unrestricted debug log. Recognized names and media
 are private. Raw vendored protocol logging is deliberately disabled.
