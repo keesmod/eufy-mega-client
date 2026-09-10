@@ -50,14 +50,14 @@ status. This document records decisions and working rules, not a second backlog.
 
 ## Ownership and goal coverage
 
-| Goal | Owner | Tracking |
-| --- | --- | --- |
-| Shared public API, independent modules and capability evidence | Client | [E1](https://github.com/keesmod/eufy-mega-client/issues/8) |
-| Camera family and topology coverage | Client | [E2](https://github.com/keesmod/eufy-mega-client/issues/9) |
-| E15 discovery, telemetry, control and settings | Client | [E3](https://github.com/keesmod/eufy-mega-client/issues/10) |
-| Portable Linux map acquisition, decoding and lifecycle | Client | [E4](https://github.com/keesmod/eufy-mega-client/issues/11) |
-| Bridge and both Home Assistant consumers | Camera and mower repositories | [E5](https://github.com/keesmod/eufy-mega-client/issues/12) |
-| Hardware claims, migration and release preparation | Owning repository | [E6](https://github.com/keesmod/eufy-mega-client/issues/13) |
+| Goal                                                           | Owner                         | Tracking                                                    |
+| -------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------- |
+| Shared public API, independent modules and capability evidence | Client                        | [E1](https://github.com/keesmod/eufy-mega-client/issues/8)  |
+| Camera family and topology coverage                            | Client                        | [E2](https://github.com/keesmod/eufy-mega-client/issues/9)  |
+| E15 discovery, telemetry, control and settings                 | Client                        | [E3](https://github.com/keesmod/eufy-mega-client/issues/10) |
+| Portable Linux map acquisition, decoding and lifecycle         | Client                        | [E4](https://github.com/keesmod/eufy-mega-client/issues/11) |
+| Bridge and both Home Assistant consumers                       | Camera and mower repositories | [E5](https://github.com/keesmod/eufy-mega-client/issues/12) |
+| Hardware claims, migration and release preparation             | Owning repository             | [E6](https://github.com/keesmod/eufy-mega-client/issues/13) |
 
 Implementation stories live in the repository that owns the change. All epics
 live in the client repository and are children of the programme issue. The
@@ -89,15 +89,15 @@ Do not close a parent goal just because its research children are closed.
 
 Use these Project statuses:
 
-| Status | Meaning |
-| --- | --- |
-| Backlog | Scoped obligation with unresolved prerequisites or not yet selected |
-| Ready | Dependencies resolved and safely executable within the stated effort |
-| In progress | One explicitly selected item is being worked |
-| Review | The change and applicable software evidence are ready for review |
-| Validation | Required integration, hardware or observation evidence is pending |
-| Done | All acceptance criteria and evidence requirements are satisfied |
-| Blocked | A specific external or protocol blocker prevents meaningful progress |
+| Status      | Meaning                                                              |
+| ----------- | -------------------------------------------------------------------- |
+| Backlog     | Scoped obligation with unresolved prerequisites or not yet selected  |
+| Ready       | Dependencies resolved and safely executable within the stated effort |
+| In progress | One explicitly selected item is being worked                         |
+| Review      | The change and applicable software evidence are ready for review     |
+| Validation  | Required integration, hardware or observation evidence is pending    |
+| Done        | All acceptance criteria and evidence requirements are satisfied      |
+| Blocked     | A specific external or protocol blocker prevents meaningful progress |
 
 At the start of each session, read the live issue, dependencies, programme
 decisions and nearest repository instructions. Check the exact current head.
