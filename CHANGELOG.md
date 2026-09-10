@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0 - 2026-09-10
+
+- Add `EufyClient` with optional, independent security and mower modules. Keep
+  `EufyMegaClient` and all existing exports compatible.
+- Give each module its own authentication state, cancellation and shutdown.
+  Separate bridge consumers use separate instances and private session stores.
+- Define the mower adapter and opaque session contracts. No mower protocol ships
+  in this version. Without an adapter, login reports `mower_protocol_unavailable`.
+- Validate module isolation and public TypeScript consumers with synthetic
+  fixtures. This adds no hardware support claims or bridge deployment.
+
 ## 0.1.1 - 2026-09-10
 
 - Include eufyCam S220 / 2C Pro T8142 and SoloCam S220 T8134 in Mega

@@ -179,10 +179,23 @@ def build(root, folder):
             "--input-type=module",
             "-e",
             """
-import { EufyMegaClient, FileSessionStore } from '@keesmod/eufy-mega-client';
+import { EufyClient, EufyMegaClient, FileSessionStore } from '@keesmod/eufy-mega-client';
 if (typeof FileSessionStore !== 'function') throw Error('Missing public export');
 const client = new EufyMegaClient({credentials:{email:'fixture',password:'fixture',country:'NL'},
   sessionStore:{load:async()=>undefined,save:async()=>{}}});
 await client.shutdown();
+const camera = new EufyClient({security:{credentials:{email:'fixture',password:'fixture',country:'NL'},
+  sessionStore:{load:async()=>undefined,save:async()=>{}}}});
+let connected = false;
+const mower = new EufyClient({mowers:{credentials:{email:'mower',password:'fixture',country:'NL'},
+  sessionStore:{load:async()=>undefined,save:async()=>{}},
+  adapter:()=>({get connected(){return connected},
+    connect:async()=>{connected=true;return {state:'connected'}},
+    shutdown:async()=>{connected=false}})}});
+if (camera.mowers || mower.security) throw Error('Module isolation failed');
+await mower.mowers.connect();
+await camera.shutdown();
+if (!mower.mowers.connected) throw Error('Cross-consumer shutdown');
+await mower.shutdown();
 """,
         )

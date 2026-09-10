@@ -3,6 +3,91 @@
 All imports below come from `@keesmod/eufy-mega-client`. Public results and events
 use library-owned types. Protocol SDK objects are private implementation details.
 
+## Modular clients
+
+`EufyClient` adds optional `security` and `mowers` modules. Existing
+`EufyMegaClient` imports, constructor options, methods and events remain valid.
+Omitting a module or setting it to `false` leaves its property `undefined` and
+requires no credentials or session store for that purpose. An empty client is
+inert. Construction does not authenticate or start network activity.
+
+Each bridge constructs its own library client. For the camera bridge:
+
+```ts
+import { EufyClient, FileSessionStore } from '@keesmod/eufy-mega-client';
+
+const camera = new EufyClient({
+  security: {
+    credentials: cameraCredentials,
+    sessionStore: new FileSessionStore('/private/camera/session.json'),
+  },
+});
+await camera.security!.connect();
+const devices = await camera.security!.listDevices();
+await camera.shutdown();
+```
+
+The security module retains the complete camera API below, including typed
+events. Both modules expose `authState`, `connected`, `lifecycle`,
+`connect(answer?, signal?)`, `shutdown()` and `close()`. `lifecycle` moves from
+`open` to `closing` to `closed`. Authentication state describes the individual
+module, with no shared authenticated flag. `connected` accounts for session
+expiry reported by the owner. Auth-state results are copied and exclude extra
+adapter fields.
+
+Call authentication explicitly on the desired module. A failure in one module
+does not authenticate, close or invalidate the other. Closing one module is
+terminal for that module. To reopen it, create a new client with its own store.
+`EufyClient.shutdown()` closes every configured module, awaits their cleanup and
+reports `shutdown_incomplete` if any cleanup fails. Repeated shutdown calls reuse
+the same result. There is no automatic retry of authentication or physical work.
+
+### Mower adapter boundary
+
+This version defines a lifecycle contract and does **not** implement Eufy
+Home/Tuya authentication or a mower protocol. A mower-only client can be
+constructed without camera credentials. Until a protocol adapter is supplied,
+`mowers.connect()` rejects with `mower_protocol_unavailable`.
+
+```ts
+const mower = new EufyClient({
+  mowers: {
+    credentials: mowerCredentials,
+    sessionStore: mowerSessionStore,
+    adapter: createMowerAdapter,
+  },
+});
+await mower.mowers!.connect();
+await mower.shutdown();
+```
+
+`createMowerAdapter` is an implementation of the exported `MowerAdapter` contract,
+not a bundled protocol factory. The module calls the factory lazily, once after
+its first login request, with only its credentials and `MowerSessionStore`.
+Return a fresh adapter for each client. Adapters expose library-owned `AuthState`
+results and a current `connected` getter. They must bind restored sessions to the
+account, report expiry, honor the supplied `AbortSignal`, and cancel activity and
+flush persistence in `shutdown()`. Adapter failures expose known error codes or
+`mower_authentication_failed`, without upstream messages, causes or objects.
+
+A `MowerSessionStore` implements `load()` and `save(session)` for
+`MowerSession`, an opaque `{ version: 1, data: string }` secret. Its data encoding
+belongs to the adapter. It is deliberately separate from the existing security
+`Session` and `FileSessionStore` formats. Protect the whole value with private
+storage permissions. Session values are persistence inputs only, never device
+identifiers, API results or diagnostics.
+
+Use distinct credentials, stores and backing files for camera and mower
+installations. A combined library client rejects the same store object assigned
+to both modules with `shared_session_store`. Custom stores and different store
+objects can still target the same file, so the caller must keep backing storage
+separate. There is no shared service, HTTP server or dependency on the other
+bridge. Neither module shuts down the other installation.
+
+Mower authentication and discovery remain in [E3-01](https://github.com/keesmod/eufy-mega-client/issues/40).
+Telemetry, commands, settings and maps remain in their E3/E4 stories. The adapter
+contract adds no physical control methods and makes no E15 hardware claims.
+
 ## Authentication and sessions
 
 Construct `EufyMegaClient` with `credentials` and a `SessionStore`. A custom store

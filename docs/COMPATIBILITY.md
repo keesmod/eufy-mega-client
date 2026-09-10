@@ -14,6 +14,22 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 | T8160 camera     | 3.4.3.0           | 3        |
 | T8213 doorbell   | 0.2.1.8           | 1        |
 
+## Modular API software evidence, 0.2.0
+
+[E1-03](https://github.com/keesmod/eufy-mega-client/issues/16) adds independent
+module interfaces. [API tests](../test/modular-client.test.mjs) cover existing
+imports, security-only and mower-only configuration, authentication failure in
+either direction, challenge states, expiry, cancellation, idempotent shutdown,
+error redaction and separate bridge-consumer instances with separate persisted
+sessions. A [TypeScript consumer](../test/fixtures/modular-consumer.ts) checks
+existing types and rejects access to private owners and cross-module sessions.
+
+The mower tests use a synthetic lifecycle adapter. No mower protocol or hardware
+support is delivered. [E3-01](https://github.com/keesmod/eufy-mega-client/issues/40)
+owns authentication and discovery. E3/E4 retain the remaining mower feature
+obligations. E5 owns real bridge integration and E6 owns hardware acceptance.
+The model matrix and its hardware claims are unchanged by this API boundary.
+
 ## S220 discovery, 0.1.1
 
 Discovery now includes both cameras sold as S220 when paired with T8030:

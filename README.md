@@ -79,3 +79,13 @@ viewer leases and Home Assistant entities belong in the consuming bridge.
 
 Maintainers: use the [validated release flow](docs/RELEASING.md) for version checks,
 package verification, a rehearsal and explicit GitHub publication.
+
+## Independent module API
+
+`EufyClient` adds optional `security` and `mowers` modules while preserving
+`EufyMegaClient` and existing exports. Each bridge constructs its own client,
+with separate credentials, session storage and lifecycle. See the
+[modular API guide](docs/API.md#modular-clients).
+
+The mower module currently provides an adapter contract only. No mower protocol
+is bundled. Its synthetic tests establish API isolation, not physical support.
