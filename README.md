@@ -8,6 +8,9 @@ Version 0.1.0 is tested with HomeBase 3 T8030, three T8160 cameras and a T8213
 doorbell through Home Assistant. See [compatibility results](docs/COMPATIBILITY.md)
 for firmware, verified features and the limits of the overnight observation.
 
+Version 0.1.1 adds discovery for S220 T8142 and T8134 cameras
+paired with T8030. Hardware validation is pending; see the compatibility document.
+
 Install the compiled GitHub release with Node.js 24:
 
 ```sh

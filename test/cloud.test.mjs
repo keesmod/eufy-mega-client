@@ -339,3 +339,73 @@ test('a failing diagnostic consumer cannot break login', async () => {
     c.close();
   }
 });
+
+for (const [model, type] of [
+  ['T8142', 15],
+  ['T8134', 63],
+]) {
+  test(`${model} S220 is discovered beside existing cameras, with its HomeBase relationship`, async () => {
+    const base = {
+      category: 'eufy_security',
+      device_sn: 'HBTEST',
+      parent_sn: '',
+      device_model: 'T8030',
+      device_type: 18,
+    };
+    const camera = {
+      category: 'eufy_security',
+      device_sn: 'S220TEST',
+      parent_sn: 'HBTEST',
+      device_model: model,
+      device_type: type,
+      device_name: 'S220',
+      main_sw_version: 'fixture',
+    };
+    const f = fixture({
+      inventory: [
+        base,
+        camera,
+        { ...camera, device_sn: 'EXISTING', device_model: 'T8160', device_type: 19 },
+        { ...camera, device_sn: 'UNKNOWN', device_model: 'T9999' },
+        { ...camera, device_sn: 'OTHER', category: 'other' },
+      ],
+    });
+    const c = new EufyMegaClient(f.options);
+    try {
+      await c.connect();
+      const devices = await c.listDevices();
+      assert.deepEqual(
+        devices.map((d) => d.model),
+        ['T8030', model, 'T8160'],
+      );
+      assert.equal(devices[1].kind, 'camera');
+      assert.equal(devices[1].stationId, 'HBTEST');
+      assert.equal(devices[1].firmware, 'fixture');
+      assert.equal(f.calls.at(-1).path, '/app/house/get_devs_list');
+    } finally {
+      await c.close();
+    }
+  });
+  test(`${model} cannot introduce standalone or missing-parent operation`, async () => {
+    for (const parent of ['', 'MISSING']) {
+      const f = fixture({
+        inventory: [
+          {
+            category: 'eufy_security',
+            device_sn: 'S220TEST',
+            parent_sn: parent,
+            device_model: model,
+            device_type: type,
+          },
+        ],
+      });
+      const c = new EufyMegaClient(f.options);
+      try {
+        await c.connect();
+        await assert.rejects(c.listDevices(), { code: 'unsupported_station' });
+      } finally {
+        await c.close();
+      }
+    }
+  });
+}
