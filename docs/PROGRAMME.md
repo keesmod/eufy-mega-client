@@ -182,3 +182,7 @@ task-specific approvals, required checks and acceptance gates to those actions.
   establishes the SDK behavior, not a complete portable E15 wire specification.
 - Local deployment evidence and source conversations are indexed in the private
   Codex workspace context. They remain historical evidence until revalidated.
+
+- [Portable map acquisition](MAP_ACQUISITION.md) records the #50 library adapter,
+  bounded demand and last-complete behavior. Its software evidence is separate
+  from the #49 hardware research and the existing #51 through #54 obligations.

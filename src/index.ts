@@ -35,3 +35,12 @@ export type {
   MowerSession,
   MowerSessionStore,
 } from './modular-types.js';
+export { PortableMapAcquisition } from './mowers/maps/acquisition.js';
+export type {
+  MapSessionProvisioning,
+  MapStreamName,
+  MapAcquisitionSnapshot,
+  MapAcquisitionDemand,
+  MapAcquisitionResult,
+  MapAcquisitionEnd,
+} from './mowers/maps/types.js';
