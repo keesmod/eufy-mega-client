@@ -43,15 +43,32 @@ export interface MowerAdapter {
   readonly connected: boolean;
   connect(answer: AuthAnswer | undefined, signal: AbortSignal): Promise<AuthState>;
   shutdown(): Promise<void>;
+  discover?(signal: AbortSignal): Promise<MowerDevice[]>;
+}
+
+export interface MowerHomeOptions {
+  requestTimeoutMs?: number;
+  /** Injectable for deterministic tests. Receives private HTTP data. */
+  fetch?: typeof fetch;
+}
+
+export interface MowerDevice {
+  id: string;
+  kind: 'mower';
+  model: 'E15';
+  productCode: 'T2880';
 }
 
 export interface MowerOptions extends MowerAdapterContext {
+  home?: MowerHomeOptions;
   /** Created lazily once per module. Return a fresh adapter for each client. */
   adapter?: (context: MowerAdapterContext) => MowerAdapter;
 }
 
 /** Protocol features will be added by their owning stories after evidence review. */
-export interface MowerModule extends ModuleLifecycle {}
+export interface MowerModule extends ModuleLifecycle {
+  discover(signal?: AbortSignal): Promise<MowerDevice[]>;
+}
 
 export interface EufyClientOptions {
   /** Omit or set false when this installation has no security module. */

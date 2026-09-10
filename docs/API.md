@@ -44,10 +44,10 @@ the same result. There is no automatic retry of authentication or physical work.
 
 ### Mower adapter boundary
 
-This version defines a lifecycle contract and does **not** implement Eufy
-Home/Tuya authentication or a mower protocol. A mower-only client can be
-constructed without camera credentials. Until a protocol adapter is supplied,
-`mowers.connect()` rejects with `mower_protocol_unavailable`.
+A mower-only client can be constructed without camera credentials. Version 0.3.0
+uses the independent Home/Tuya adapter by default. Existing custom lifecycle
+adapters remain supported. A custom adapter without discovery reports
+`mower_protocol_unavailable` when discovery is requested.
 
 ```ts
 const mower = new EufyClient({
@@ -84,7 +84,8 @@ objects can still target the same file, so the caller must keep backing storage
 separate. There is no shared service, HTTP server or dependency on the other
 bridge. Neither module shuts down the other installation.
 
-Mower authentication and discovery remain in [E3-01](https://github.com/keesmod/eufy-mega-client/issues/40).
+The default Home/Tuya authentication and discovery profile is described in
+[Mower authentication](MOWER_AUTH_PROVENANCE.md). Live #40 acceptance remains pending.
 Telemetry, commands, settings and maps remain in their E3/E4 stories. The adapter
 contract adds no physical control methods and makes no E15 hardware claims.
 
@@ -199,3 +200,25 @@ device/service result. Do not log session contents or upstream objects.
 Await `shutdown()` (alias `close()`) to stop owned media, close device and event
 transports and flush sessions. Shutdown is idempotent. A closed client cannot
 be reopened; construct another client with the same session store.
+
+## Home/Tuya mower profile, 0.3.0
+
+`EufyClient({ mowers: { credentials, sessionStore } })` now uses the independent
+Home/Tuya adapter. `home.requestTimeoutMs` bounds each request, default 15000 ms.
+`home.fetch` injects a trusted private HTTP transport for synthetic tests. Existing
+custom `adapter` factories retain precedence. Omitting the mower module makes
+no Home/Tuya request.
+
+Call `await client.mowers.connect()` explicitly, then
+`await client.mowers.discover(signal)`. Results are copied `MowerDevice` values:
+`{ id, kind: 'mower', model: 'E15', productCode: 'T2880' }`. The ID is opaque and
+account-scoped. It is stable only while the same private identity salt is kept.
+No local key, real device identifier, user name, token or SDK object is returned.
+
+Discovery does not log in, refresh or replay a failed request. On
+`authentication_required`, the caller decides when to call `connect()` again.
+Unknown regions or unapproved regional hosts report `mower_region_unsupported`.
+A mismatched cloud/device binding reports `mower_binding_unavailable`.
+Concurrent discovery reports `mower_discovery_busy`. Neither operation issues
+physical commands. This source-based E15 profile still needs independent live
+account binding before hardware acceptance.

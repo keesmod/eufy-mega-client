@@ -35,7 +35,7 @@ def metadata(root):
     if (
         package["name"] != "@keesmod/eufy-mega-client"
         or package["type"] != "module"
-        or package["license"] != "MIT"
+        or package["license"] != "(MIT AND Apache-2.0)"
     ):
         raise ValueError("Unexpected library package identity")
     for value in (lock, lock["packages"][""]):

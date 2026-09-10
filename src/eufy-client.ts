@@ -1,9 +1,11 @@
+import { EufyHomeAdapter } from './mowers/home.js';
 import { EufyMegaClient } from './client.js';
 import { EufyError, type AuthAnswer, type AuthState, type ClientOptions } from './types.js';
 import type {
   EufyClientOptions,
   ModuleLifecycleState,
   MowerAdapter,
+  MowerDevice,
   MowerModule,
   MowerOptions,
   SecurityModule,
@@ -72,6 +74,12 @@ function mowerError(error: unknown): EufyError {
     'invalid_auth_state',
     'mower_protocol_unavailable',
     'client_closed',
+    'mower_region_unsupported',
+    'mower_invalid_response',
+    'mower_invalid_options',
+    'mower_request_failed',
+    'mower_binding_unavailable',
+    'mower_discovery_busy',
   ];
   return new EufyError(
     error instanceof EufyError && codes.includes(error.code)
@@ -94,6 +102,7 @@ class Mowers implements MowerModule {
       credentials: { ...options.credentials },
       sessionStore: options.sessionStore,
       adapter: options.adapter,
+      home: options.home ? { ...options.home } : undefined,
     };
   }
 
@@ -121,8 +130,10 @@ class Mowers implements MowerModule {
       try {
         if (abort.aborted) throw new EufyError('request_aborted');
         if (!this.#adapter) {
-          if (!this.#options.adapter) throw new EufyError('mower_protocol_unavailable');
-          this.#adapter = this.#options.adapter({
+          const factory =
+            this.#options.adapter ??
+            ((context) => new EufyHomeAdapter(context, this.#options.home));
+          this.#adapter = factory({
             credentials: { ...this.#options.credentials },
             sessionStore: this.#options.sessionStore,
           });
@@ -142,6 +153,30 @@ class Mowers implements MowerModule {
     return operation.finally(() => {
       if (this.#authentication === operation) this.#authentication = undefined;
     });
+  }
+
+  async discover(signal?: AbortSignal): Promise<MowerDevice[]> {
+    if (this.#lifecycle !== 'open') throw new EufyError('client_closed');
+    const abort = AbortSignal.any([this.#lifetime.signal, ...(signal ? [signal] : [])]);
+    try {
+      if (abort.aborted) throw new EufyError('request_aborted');
+      if (!this.connected) throw new EufyError('authentication_required');
+      if (!this.#adapter?.discover) throw new EufyError('mower_protocol_unavailable');
+      const devices = await this.#adapter.discover(abort);
+      if (abort.aborted) throw new EufyError('request_aborted');
+      return devices.map((device) => {
+        if (
+          !/^[a-f0-9]{64}$/.test(device.id) ||
+          device.kind !== 'mower' ||
+          device.model !== 'E15' ||
+          device.productCode !== 'T2880'
+        )
+          throw new EufyError('mower_invalid_response');
+        return { id: device.id, kind: 'mower', model: 'E15', productCode: 'T2880' };
+      });
+    } catch (error) {
+      throw mowerError(error);
+    }
   }
 
   shutdown(): Promise<void> {
