@@ -68,7 +68,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
       const raw = responseObject(item);
       if (
         raw.category !== 'eufy_security' ||
-        !['T8030', 'T8160', 'T8213'].includes(String(raw.device_model))
+        !['T8030', 'T8160', 'T8213', 'T8142', 'T8134'].includes(String(raw.device_model))
       )
         continue;
       if (
