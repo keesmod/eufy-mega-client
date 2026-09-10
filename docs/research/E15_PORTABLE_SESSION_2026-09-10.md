@@ -1,5 +1,10 @@
 # E15 portable session research
 
+The later [binding and recovery receipt](E15_SESSION_BINDING_2026-09-10.md)
+supersedes the authorization and pending-observation status below. It records
+the successful bounded observation, normal helper recovery and linked remaining
+transport obligations. This checkpoint is retained as historical evidence.
+
 Progress evidence for [#48](https://github.com/keesmod/eufy-mega-client/issues/48),
 2026-09-10, based on main `1489c62610998ab92535f5326674eec3d02034c2`.
 Change class: research patch. The experiment policy is original offline code,
