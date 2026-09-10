@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+.env*
+*.session.json
+mega-session.json
+session.json
+credentials.json
+private/
+artifacts/

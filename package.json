@@ -1,0 +1,58 @@
+{
+  "name": "@keesmod/eufy-mega-client",
+  "version": "0.1.0",
+  "description": "Independent Eufy Mega client for HomeBase 3 cameras",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/keesmod/eufy-mega-client.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE.md",
+    "README.md",
+    "docs",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p vendor/tsconfig.json && tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "test": "npm run build && node --test --test-timeout=15000 test/*.test.mjs",
+    "prepack": "npm run build",
+    "format": "prettier --write src test scripts docs *.md *.json .github",
+    "format:check": "prettier --check src test scripts docs *.md *.json .github"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/node-rsa": "^1.1.4",
+    "@types/qs": "^6.9.16",
+    "prettier": "3.6.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "date-and-time": "^4.3.0",
+    "got": "^14.4.2",
+    "image-type": "^6.1.0",
+    "long": "^5.2.3",
+    "node-rsa": "^1.1.1",
+    "protobufjs": "^8.0.0",
+    "qs": "^6.15.0",
+    "sweet-collections": "^1.1.0",
+    "tiny-typed-emitter": "^2.1.0",
+    "typescript-logging": "^2.2.0"
+  },
+  "optionalDependencies": {
+    "jpeg-js": "^0.4.4"
+  }
+}

@@ -1,0 +1,30 @@
+name: Validate
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run format:check
+      - run: npm test
+      - run: npm audit --omit=dev
+      - run: mkdir -p artifacts && npm pack --pack-destination artifacts
+      - name: Check the compiled package in a clean consumer
+        run: |
+          package=$(realpath artifacts/*.tgz)
+          consumer=$(mktemp -d)
+          cd "$consumer"
+          npm init -y
+          npm install --ignore-scripts "$package"
+          node --input-type=module -e 'import {EufyMegaClient, FileSessionStore} from "@keesmod/eufy-mega-client"; const client = new EufyMegaClient({credentials:{email:"fixture",password:"fixture",country:"NL"},sessionStore:{load:async()=>undefined,save:async()=>{}}}); await client.shutdown(); if (typeof FileSessionStore !== "function") process.exit(1);'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compiled-package
+          path: artifacts/*.tgz
