@@ -38,8 +38,11 @@ checked on 2026-09-11, does not list these garage models. Absence is not proof
 of incompatibility, and it cannot establish a usable H3 command route.
 
 The library's existing owner uses H3 LAN-derived credentials and local-only
-transport. Non-H3 recording paths in the vendor require a cipher provider that
-the library deliberately does not implement through the legacy security cloud.
+transport. Non-H3 recording paths in the vendor can require a cipher provider,
+depending on the observed recording metadata. A recording with `cipher_id`
+uses `getCipher`, while the vendor also has a path without a cipher. The library
+does not obtain missing ciphers through the legacy security cloud. Neither path
+establishes a working garage recording route.
 A garage-class serializer alone cannot supply the missing Mega descriptor,
 authentication and media/recording route. No guessed credentials or fallback
 are introduced.
@@ -64,4 +67,4 @@ No device was contacted and no live support claim is made.
 
 Garage-door commands, calibration, settings and other physical controls remain
 outside the public API. No new migration is required. Retain the previous
-package, lockfile and private store for rollback. The README remains short.
+package, lockfile and private store for rollback.
