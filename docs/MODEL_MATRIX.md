@@ -313,7 +313,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | Type  | Model / evaluated topology                           | Discovery | Available state | Battery   | Stored snapshot | Live video | Live audio | Events   | Recordings    | Evidence                                            | Remaining work                   |
 | ----- | ---------------------------------------------------- | --------- | --------------- | --------- | --------------- | ---------- | ---------- | -------- | ------------- | --------------------------------------------------- | -------------------------------- |
 | 1     | T8111 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#96]                            |
-| 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
+| 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
 | 4     | T8112 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#97]                            |
 | 5     | T8200 / T8201 / T8202 / listed topologies            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]              |
 | 7     | T8210 / T8212 candidates / listed topologies         | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#108], [#109]                   |
@@ -332,9 +332,9 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 33    | T8131 / H3 only                                      | X         | X               | X         | X               | X          | X          | X        | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]              |
 | 34    | T8401 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 35    | T8411 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
-| 37    | T8422 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
-| 38    | T8423 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
-| 39    | T8424 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
+| 37    | T8422 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
+| 38    | T8423 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
+| 39    | T8424 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
 | 44    | T8440 candidate / listed topologies                  | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 45    | T8441 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 46    | T8442 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
@@ -405,7 +405,8 @@ not applicable, and availability remains unknown because the attributed model
 properties have no such field. Standalone recognition retains an explicit
 transport blocker and does not inherit H3 media or event coverage. Other owners
 remain blocked. T8420/X, T8422, T8423 and T8424 retain their entry barriers.
-H3 storage compatibility alone does not establish command ownership.
+H3 storage compatibility alone does not establish command ownership. [E2]
+retains that model work after scoped software acceptance of [#29]/[#30].
 
 ## Dated device evidence and failures
 
