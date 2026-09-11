@@ -11,6 +11,7 @@ import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { indoorMedia } from './fixtures/indoor-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
 import { floodlightMedia } from './fixtures/floodlight-media.mjs';
+import { integratedMedia } from './fixtures/integrated-media.mjs';
 import { lteMedia } from './fixtures/lte-media.mjs';
 const profiles = [
   ...eufycamMedia,
@@ -18,6 +19,7 @@ const profiles = [
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
   ...lteMedia,
   ...indoorMedia,
 ];
@@ -113,18 +115,27 @@ for (const p of profiles) {
         p.liveEnvelope ?? (['T8172', 'T8214'].includes(p.model) ? 'doorbell' : 'payload');
       for (const codec of [VideoCodec.H264, VideoCodec.H265]) {
         station.startLivestream(camera, codec);
-        const command = sent.pop(),
-          payload = JSON.parse(command.value);
+        const command = sent.pop();
+        if (envelope === 'int') {
+          assert.deepEqual(command, {
+            commandType: CommandType.CMD_START_REALTIME_MEDIA,
+            value: 2,
+            strValue: 'abcd',
+            channel: 2,
+          });
+          continue;
+        }
+        const payload = JSON.parse(command.value);
         assert.equal(
           command.commandType,
-          !['payload', 'indoor-h3'].includes(envelope)
+          !['payload', 'smartdrop', 'indoor-h3'].includes(envelope)
             ? CommandType.CMD_DOORBELL_SET_PAYLOAD
             : CommandType.CMD_SET_PAYLOAD,
         );
         assert.equal(command.channel, 2);
         assert.deepEqual(
           payload,
-          !['payload', 'indoor-h3'].includes(envelope)
+          !['payload', 'smartdrop', 'indoor-h3'].includes(envelope)
             ? {
                 commandType: 1000,
                 data: {
@@ -139,11 +150,12 @@ for (const p of profiles) {
             : {
                 account_id: 'synthetic',
                 cmd: CommandType.CMD_START_REALTIME_MEDIA,
+                ...(envelope === 'smartdrop' ? { mChannel: 0 } : {}),
                 mValue3: CommandType.CMD_START_REALTIME_MEDIA,
                 ...(envelope === 'indoor-h3' ? { mChannel: 2 } : {}),
                 payload: {
                   ClientOS: 'Android',
-                  ...(p.model === 'T8600' || envelope === 'indoor-h3'
+                  ...(p.model === 'T8600' || ['indoor-h3', 'smartdrop'].includes(envelope)
                     ? { camera_type: 0, entrytype: 0 }
                     : {}),
                   ...(envelope === 'indoor-h3' ? { accountId: 'synthetic' } : {}),
@@ -323,11 +335,13 @@ for (const p of profiles) {
 
 for (const p of [
   eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
   ...indoorMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
   ...lteMedia,
 ])
   test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
@@ -440,10 +454,12 @@ for (const p of profiles) {
 
 for (const p of [
   eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
   ...batteryDoorbellMedia,
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
   ...lteMedia,
   ...indoorMedia,
 ])
@@ -493,11 +509,13 @@ for (const p of [
 
 for (const p of [
   eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
   ...indoorMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
   ...lteMedia,
 ])
   test(`${p.model}: the new profile admits the existing additional-H3 firmware boundary`, async () => {

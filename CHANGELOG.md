@@ -2,6 +2,18 @@
 
 ## 0.12.0 - Unreleased
 
+- Add the missing exact eufyCam C35 T8110/type 10035 H3 profile through the
+  existing generic camera class and Solo live envelope. Test observed state,
+  H3 motion/person events and core media. Other owners, variants and hardware
+  evidence remain under #39. No new adapter or physical support claim.
+
+- Add experimental camera-only coverage for exact T8530/55, T8790/90 and
+  T85V0/203 profiles with an actual T8030 H3 parent. Reuse existing camera
+  classes, native events, stored snapshots, live media and recording paths.
+  Ignore native lock and parcel-state notifications. Expose no physical lock,
+  lid or user-management controls. [Integrated camera evidence](docs/INTEGRATED_CAMERAS.md)
+  retains unresolved E330, catalogue, owner and hardware obligations under #39.
+
 - Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
 - Recognize exact T8200/T8201/T8202 type 5 and T8203 type 93 wired doorbells
   with their received inventory state and real standalone identity. Reject

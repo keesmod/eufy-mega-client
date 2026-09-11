@@ -14,7 +14,7 @@ const profiles = new Map<
   {
     type: number;
     kind: Device['kind'];
-    family?: 'solo' | 'indoor' | 'floodlight';
+    family?: 'solo' | 'indoor' | 'floodlight' | 'integrated';
     standalone?: boolean;
     h3?: boolean;
   }
@@ -31,6 +31,7 @@ const profiles = new Map<
   ['T8030', { type: 18, kind: 'station' }],
   ['T86P2', { type: 111, kind: 'camera', standalone: true }],
   ['T8111', { type: 1, kind: 'camera' }],
+  ['T8110', { type: 10035, kind: 'camera', standalone: true }],
   ['T8112', { type: 4, kind: 'camera' }],
   ['T8113', { type: 8, kind: 'camera' }],
   ['T8114', { type: 9, kind: 'camera' }],
@@ -66,6 +67,9 @@ const profiles = new Map<
   ['T81A0', { type: 10005, kind: 'camera', standalone: true }],
   ['T8425', { type: 47, kind: 'camera', family: 'floodlight', standalone: true }],
   ['T8426', { type: 87, kind: 'camera', family: 'floodlight', standalone: true }],
+  ['T8530', { type: 55, kind: 'camera', family: 'integrated', standalone: true }],
+  ['T8790', { type: 90, kind: 'camera', family: 'integrated', standalone: true }],
+  ['T85V0', { type: 203, kind: 'camera', family: 'integrated', standalone: true }],
 ]);
 // The upstream family predicate also includes eufyCam S4 and LTE models.
 // Keep adapter selection tied to the exact family recorded in our catalogue.
@@ -84,6 +88,10 @@ export const isFloodlightCamera = (raw: WireDevice): boolean => {
 };
 export const isStation = (raw: WireDevice): boolean =>
   profiles.get(raw.device_model)?.kind === 'station';
+export const isIntegratedCamera = (raw: WireDevice): boolean => {
+  const profile = profiles.get(raw.device_model);
+  return profile?.family === 'integrated' && profile.type === raw.device_type;
+};
 export interface ConnectionOwner {
   kind: 'station' | 'standalone';
   id: string;
