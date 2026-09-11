@@ -2,6 +2,13 @@
 
 ## 0.12.0 - Unreleased
 
+- Add nine exact Indoor model/type pairs with native event routing and
+  experimental media on the existing actual-parent T8030 H3 profile. Battery
+  and availability remain unknown where no observed property exists.
+  See [Indoor evidence](docs/INDOOR.md) for exact models, command branches and
+  exclusions. Standalone connections and unresolved C210/C220 aliases stay
+  explicit. Hardware validation remains separate.
+
 - Enable stored snapshots, live video/audio and recordings for the nine additional
   exact SoloCam pairs on the existing T8030 H3 LAN-derived media profile. Reuse
   existing command envelopes, stop/cancel and independent-owner cleanup.
