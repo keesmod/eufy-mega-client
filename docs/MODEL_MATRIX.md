@@ -150,7 +150,7 @@ audio is resolved.
 for exact T8530/55, T8790/90 and T85V0/203 pairs on their actual T8030 H3 parent.
 The existing private camera classes and three distinct native live envelopes are
 covered by software tests. Snapshot, separate video/audio forwarding, recordings
-and acknowledged stop/cancel reuse the established H3 route. No slot, lid, parcel
+and acknowledged stop/cancel reuse the established H3 route. No lock, lid, parcel
 mechanism or user-management control is exposed. Non-camera pushes are excluded.
 
 These three feature rows supersede their historical B1/U software cells only for
