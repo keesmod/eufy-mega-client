@@ -6,6 +6,8 @@ import { Station, CommandName } from '../dist/vendor/http/index.js';
 import { CommandType, VideoCodec } from '../dist/vendor/p2p/types.js';
 import { mediaFixture } from './fixtures/media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
+import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
+const profiles = [...eufycamMedia, ...batteryDoorbellMedia];
 
 const jpeg = Buffer.from([255, 216, 255, 0, 255, 217]);
 const day = '2026-09-11';
@@ -44,7 +46,7 @@ function records(f) {
   f.station.cancelDownload = () => {};
   return row;
 }
-for (const p of eufycamMedia) {
+for (const p of profiles) {
   test(`${p.model}: exact vendor H3 command branches and channel ownership`, async () => {
     const f = await mediaFixture(p);
     try {
@@ -78,12 +80,14 @@ for (const p of eufycamMedia) {
           payload = JSON.parse(command.value);
         assert.equal(
           command.commandType,
-          p.model === 'T8172' ? CommandType.CMD_DOORBELL_SET_PAYLOAD : CommandType.CMD_SET_PAYLOAD,
+          ['T8172', 'T8214'].includes(p.model)
+            ? CommandType.CMD_DOORBELL_SET_PAYLOAD
+            : CommandType.CMD_SET_PAYLOAD,
         );
         assert.equal(command.channel, 2);
         assert.deepEqual(
           payload,
-          p.model === 'T8172'
+          ['T8172', 'T8214'].includes(p.model)
             ? {
                 commandType: 1000,
                 data: {
@@ -275,42 +279,42 @@ for (const p of eufycamMedia) {
   });
 }
 
-test('new media profile rejects unknown tuple, owner and firmware before any command', async () => {
-  const p = eufycamMedia[0];
-  for (const change of [
-    (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = undefined),
-    (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = 'bad'),
-    (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = '99999999999999999.0.0.0'),
-    (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = '2.0.9.6'),
-    (f) => (f.transport.raw.get(f.camera.parent_sn).device_type = 0),
-    (f) => (f.transport.raw.get(f.camera.parent_sn).device_model = 'T8010'),
-    (f) => (f.transport.raw.get(f.camera.device_sn).device_type = 19),
-    (f) => (f.transport.raw.get(f.camera.device_sn).device_model = 'T8142R'),
-  ]) {
-    const f = await mediaFixture(p);
-    try {
-      records(f);
-      change(f);
-      await assert.rejects(f.transport.snapshot(f.camera.device_sn), {
-        code: 'camera_media_unverified',
-      });
-      await assert.rejects(f.transport.startLive(f.camera.device_sn), {
-        code: 'camera_media_unverified',
-      });
-      const { recordings: clips } = await f.transport.recordings.list(f.camera.parent_sn, day);
-      await assert.rejects(f.transport.recordings.download(clips[0].id), {
-        code: 'camera_media_unverified',
-      });
-      await assert.rejects(f.transport.recordings.thumbnail(clips[0].id), {
-        code: 'camera_media_unverified',
-      });
-      assert.equal(f.transport.recordings.active, false);
-      assert.equal(f.counts.starts, 0);
-    } finally {
-      await f.close();
+for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1)])
+  test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
+    for (const change of [
+      (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = undefined),
+      (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = 'bad'),
+      (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = '99999999999999999.0.0.0'),
+      (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = '2.0.9.6'),
+      (f) => (f.transport.raw.get(f.camera.parent_sn).device_type = 0),
+      (f) => (f.transport.raw.get(f.camera.parent_sn).device_model = 'T8010'),
+      (f) => (f.transport.raw.get(f.camera.device_sn).device_type = 19),
+      (f) => (f.transport.raw.get(f.camera.device_sn).device_model = 'T8142R'),
+    ]) {
+      const f = await mediaFixture(p);
+      try {
+        records(f);
+        change(f);
+        await assert.rejects(f.transport.snapshot(f.camera.device_sn), {
+          code: 'camera_media_unverified',
+        });
+        await assert.rejects(f.transport.startLive(f.camera.device_sn), {
+          code: 'camera_media_unverified',
+        });
+        const { recordings: clips } = await f.transport.recordings.list(f.camera.parent_sn, day);
+        await assert.rejects(f.transport.recordings.download(clips[0].id), {
+          code: 'camera_media_unverified',
+        });
+        await assert.rejects(f.transport.recordings.thumbnail(clips[0].id), {
+          code: 'camera_media_unverified',
+        });
+        assert.equal(f.transport.recordings.active, false);
+        assert.equal(f.counts.starts, 0);
+      } finally {
+        await f.close();
+      }
     }
-  }
-});
+  });
 
 test('wrong-channel local stop cannot combine with a correct ACK to finish the live session', async () => {
   const f = await mediaFixture(eufycamMedia[0]);
@@ -331,7 +335,7 @@ test('wrong-channel local stop cannot combine with a correct ACK to finish the l
   }
 });
 
-for (const p of eufycamMedia) {
+for (const p of profiles) {
   for (const reason of ['missing', 'rejected']) {
     test(`${p.model}: ${reason} download cancel ACK cannot report successful cleanup`, async (t) => {
       const f = await mediaFixture(p);
@@ -384,64 +388,65 @@ for (const p of eufycamMedia) {
   }
 }
 
-test('one failed HomeBase stream leaves a simultaneous second owner and audio stream intact', async () => {
-  const f = await mediaFixture(eufycamMedia[0]);
-  const g = await mediaFixture(
-    eufycamMedia.find((p) => p.model === 'T8600'),
-    { parent: 'T8030_SECOND' },
-  );
-  try {
-    for (const [id, raw] of g.transport.raw) f.transport.raw.set(id, raw);
-    for (const [id, camera] of g.transport.cameras) f.transport.cameras.set(id, camera);
-    g.transport.cameras.clear();
-    g.transport.stations.clear();
-    g.station.removeAllListeners();
-    f.transport.stations.set(g.camera.parent_sn, g.station);
-    f.transport.encryption.set(g.camera.parent_sn, 'lan-derived');
-    f.transport.bind(g.station);
-    const first = f.transport.startLive(f.camera.device_sn),
-      second = f.transport.startLive(g.camera.device_sn);
-    await turn();
-    f.startEvent();
-    const sources = g.startEvent();
-    const a = await first,
-      b = await second;
-    assert.equal(f.transport.lives.size, 2);
-    const stop = a.stop();
-    f.ack(-1);
-    assert.equal((await stop).confirmed, false);
-    assert.equal(f.transport.lives.size, 1);
-    assert.equal(g.counts.closes, 0);
-    const audio = [];
-    b.audio.on('data', (data) => audio.push(data));
-    sources.audio.push(Buffer.from('still-active'));
-    await turn();
-    assert.equal(Buffer.concat(audio).toString(), 'still-active');
-    const done = b.stop();
-    g.ack();
-    assert.equal((await done).confirmed, true);
-    assert.equal(f.transport.lives.size, 0);
-  } finally {
-    await f.close();
-    g.station.removeAllListeners();
-    await g.close();
-  }
-});
-
-test('the new profile admits the existing payload firmware boundary without an integer fallback', async () => {
-  const p = eufycamMedia[0];
-  for (const firmware of ['2.0.9.7', '3.8.6.0']) {
-    const f = await mediaFixture({ ...p, owner: { ...p.owner, firmware } });
+for (const p of [eufycamMedia[0], ...batteryDoorbellMedia])
+  test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
+    const f = await mediaFixture(p);
+    const g = await mediaFixture(
+      eufycamMedia.find((p) => p.model === 'T8600'),
+      { parent: 'T8030_SECOND' },
+    );
     try {
-      const opening = f.transport.startLive(f.camera.device_sn);
+      for (const [id, raw] of g.transport.raw) f.transport.raw.set(id, raw);
+      for (const [id, camera] of g.transport.cameras) f.transport.cameras.set(id, camera);
+      g.transport.cameras.clear();
+      g.transport.stations.clear();
+      g.station.removeAllListeners();
+      f.transport.stations.set(g.camera.parent_sn, g.station);
+      f.transport.encryption.set(g.camera.parent_sn, 'lan-derived');
+      f.transport.bind(g.station);
+      const first = f.transport.startLive(f.camera.device_sn),
+        second = f.transport.startLive(g.camera.device_sn);
       await turn();
       f.startEvent();
-      const live = await opening;
-      const stop = live.stop();
-      f.ack();
-      assert.equal((await stop).confirmed, true);
+      const sources = g.startEvent();
+      const a = await first,
+        b = await second;
+      assert.equal(f.transport.lives.size, 2);
+      const stop = a.stop();
+      f.ack(-1);
+      assert.equal((await stop).confirmed, false);
+      assert.equal(f.transport.lives.size, 1);
+      assert.equal(g.counts.closes, 0);
+      const audio = [];
+      b.audio.on('data', (data) => audio.push(data));
+      sources.audio.push(Buffer.from('still-active'));
+      await turn();
+      assert.equal(Buffer.concat(audio).toString(), 'still-active');
+      const done = b.stop();
+      g.ack();
+      assert.equal((await done).confirmed, true);
+      assert.equal(f.transport.lives.size, 0);
     } finally {
       await f.close();
+      g.station.removeAllListeners();
+      await g.close();
     }
-  }
-});
+  });
+
+for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1)])
+  test(`${p.model}: the new profile admits the existing payload firmware boundary without an integer fallback`, async () => {
+    for (const firmware of ['2.0.9.7', '3.8.6.0']) {
+      const f = await mediaFixture({ ...p, owner: { ...p.owner, firmware } });
+      try {
+        const opening = f.transport.startLive(f.camera.device_sn);
+        await turn();
+        f.startEvent();
+        const live = await opening;
+        const stop = live.stop();
+        f.ack();
+        assert.equal((await stop).confirmed, true);
+      } finally {
+        await f.close();
+      }
+    }
+  });

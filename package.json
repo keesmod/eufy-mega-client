@@ -1,6 +1,6 @@
 {
   "name": "@keesmod/eufy-mega-client",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Independent Eufy Mega client for HomeBase 3 cameras",
   "type": "module",
   "license": "(MIT AND Apache-2.0)",
