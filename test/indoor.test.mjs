@@ -97,6 +97,8 @@ for (const [model, type] of models) {
       sdk.emit('motion detected', sdk, true);
       sdk.emit('person detected', sdk, true, 'Synthetic person');
       assert.deepEqual(detections, ['motion', 'person']);
+      assert.equal(t.cameraCapabilities(raw.device_sn).live.available, true);
+      t.raw.get('T8030_SECOND').main_sw_version = undefined;
       assert.equal(t.cameraCapabilities(raw.device_sn).live.reason, 'camera_media_unverified');
       await assert.rejects(t.startLive(raw.device_sn), { code: 'camera_media_unverified' });
     });
@@ -144,6 +146,21 @@ for (const [model, type] of models) {
       } finally {
         await events.close();
       }
+    });
+  });
+
+  test(`${model}/${type} native Indoor extra events use the owner-aware property map`, async () => {
+    const raw = camera(model, type);
+    await fixture([owner(), raw], async (t) => {
+      const received = [];
+      t.on('detection', (e) => received.push(e.type));
+      assert.equal(t.supportsEvent(raw.device_sn, 'sound'), true);
+      assert.equal(t.supportsEvent(raw.device_sn, 'pet'), true);
+      assert.equal(t.supportsEvent(raw.device_sn, 'crying'), true);
+      assert.equal(t.supportsEvent(raw.device_sn, 'vehicle'), true);
+      for (const event_type of [3106, 3105, 3104, 3107])
+        t.processPush({ device_sn: raw.device_sn, station_sn: raw.parent_sn, type, event_type });
+      assert.deepEqual(received, ['pet', 'sound', 'crying']);
     });
   });
 
