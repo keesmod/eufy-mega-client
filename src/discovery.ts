@@ -11,7 +11,12 @@ import {
 // Exact model/type pairs already evidenced by the client. Family stories extend this registry.
 const profiles = new Map<
   string,
-  { type: number; kind: Device['kind']; family?: 'solo' | 'indoor'; standalone?: boolean }
+  {
+    type: number;
+    kind: Device['kind'];
+    family?: 'solo' | 'indoor' | 'floodlight';
+    standalone?: boolean;
+  }
 >([
   ['T8400', { type: 30, kind: 'camera', family: 'indoor', standalone: true }],
   ['T8410', { type: 31, kind: 'camera', family: 'indoor', standalone: true }],
@@ -49,6 +54,10 @@ const profiles = new Map<
   ['T8B00', { type: 64, kind: 'camera', family: 'solo', standalone: true }],
   ['T8171', { type: 88, kind: 'camera', family: 'solo', standalone: true }],
   ['T8173', { type: 98, kind: 'camera', family: 'solo', standalone: true }],
+  ['T84A1', { type: 151, kind: 'camera', standalone: true }],
+  ['T81A0', { type: 10005, kind: 'camera', standalone: true }],
+  ['T8425', { type: 47, kind: 'camera', family: 'floodlight', standalone: true }],
+  ['T8426', { type: 87, kind: 'camera', family: 'floodlight', standalone: true }],
 ]);
 // The upstream family predicate also includes eufyCam S4 and LTE models.
 // Keep adapter selection tied to the exact family recorded in our catalogue.
@@ -59,6 +68,11 @@ export const isSoloCamera = (raw: WireDevice): boolean => {
 export const isIndoorCamera = (raw: WireDevice): boolean => {
   const profile = profiles.get(raw.device_model);
   return profile?.family === 'indoor' && profile.type === raw.device_type;
+};
+// Storage-only Floodlight variants are deliberately outside this command-owner profile.
+export const isFloodlightCamera = (raw: WireDevice): boolean => {
+  const profile = profiles.get(raw.device_model);
+  return profile?.family === 'floodlight' && profile.type === raw.device_type;
 };
 export const isStation = (raw: WireDevice): boolean =>
   profiles.get(raw.device_model)?.kind === 'station';
