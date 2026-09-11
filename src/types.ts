@@ -72,6 +72,15 @@ export interface DiscoveryIssue {
   deviceModel?: string;
   /** Unsupported-device diagnostics only. Integer in 0..65535, never coerced. */
   deviceType?: number;
+  /** Bounded received context. parentId is private, like deviceId. Never log either ID. */
+  context?: {
+    firmware?: string;
+    hardware?: string;
+    parentStatus: 'none' | 'self' | 'present' | 'missing' | 'ambiguous' | 'invalid';
+    parentId?: string;
+    parentModel?: string;
+    parentFirmware?: string;
+  };
   code:
     | 'invalid_device_identity'
     | 'invalid_device_relationship'

@@ -115,8 +115,72 @@ export function discover(items: unknown): Inventory {
     if (item && typeof item === 'object' && identity(item.device_sn))
       identities.set(item.device_sn, (identities.get(item.device_sn) ?? 0) + 1);
   }
+  const diagnosticVersion = (value: unknown): string | undefined =>
+    typeof value === 'string' &&
+    value.length <= 19 &&
+    !/[^0-9.]/.test(value) &&
+    /^[0-9]{1,4}(?:\.[0-9]{1,4}){0,3}$/.test(value)
+      ? value
+      : undefined;
+  const context = (item: Record<string, unknown>): DiscoveryIssue['context'] => {
+    const parent = item.parent_sn;
+    const valid =
+      typeof parent === 'string' && parent.length <= 64 && !/[^A-Za-z0-9_-]/.test(parent);
+    const matches =
+      valid && parent !== ''
+        ? items.filter(
+            (row) =>
+              row &&
+              typeof row === 'object' &&
+              !Array.isArray(row) &&
+              row.category === 'eufy_security' &&
+              row.device_sn === parent,
+          )
+        : [];
+    const parentStatus = !valid
+      ? 'invalid'
+      : parent === ''
+        ? 'none'
+        : parent === item.device_sn
+          ? 'self'
+          : matches.length > 1
+            ? 'ambiguous'
+            : matches.length === 1
+              ? 'present'
+              : 'missing';
+    const owner = parentStatus === 'present' ? matches[0] : undefined;
+    const parentModel = owner?.device_model;
+    return {
+      ...(diagnosticVersion(item.main_sw_version)
+        ? { firmware: diagnosticVersion(item.main_sw_version) }
+        : {}),
+      ...(diagnosticVersion(item.main_hw_version)
+        ? { hardware: diagnosticVersion(item.main_hw_version) }
+        : {}),
+      parentStatus,
+      ...(owner ? { parentId: parent as string } : {}),
+      ...(typeof parentModel === 'string' &&
+      parentModel.length === 5 &&
+      /^T[A-Z0-9]{4}$/.test(parentModel)
+        ? { parentModel }
+        : {}),
+      ...(diagnosticVersion(owner?.main_sw_version)
+        ? { parentFirmware: diagnosticVersion(owner.main_sw_version) }
+        : {}),
+    };
+  };
   const reject = (index: number, deviceId: string | null, code: DiscoveryIssue['code']) =>
-    issues.push({ index, deviceId, code });
+    issues.push({
+      index,
+      deviceId,
+      code,
+      ...(items[index] &&
+      typeof items[index] === 'object' &&
+      !Array.isArray(items[index]) &&
+      items[index].category === 'eufy_security'
+        ? { context: context(items[index]) }
+        : {}),
+    });
   items.forEach((item, index) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       reject(index, null, 'invalid_device_identity');
@@ -143,6 +207,7 @@ export function discover(items: unknown): Inventory {
         index,
         deviceId: item.device_sn,
         code: 'unsupported_device',
+        context: context(item),
         ...(typeof item.device_model === 'string' &&
         item.device_model.length === 5 &&
         /^T[A-Z0-9]{4}$/.test(item.device_model)
