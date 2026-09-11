@@ -12,6 +12,7 @@ import { indoorMedia } from './fixtures/indoor-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
 import { floodlightMedia } from './fixtures/floodlight-media.mjs';
 import { integratedMedia } from './fixtures/integrated-media.mjs';
+import { lteMedia } from './fixtures/lte-media.mjs';
 const profiles = [
   ...eufycamMedia,
   ...batteryDoorbellMedia,
@@ -19,6 +20,7 @@ const profiles = [
   ...walllightMedia,
   ...floodlightMedia,
   ...integratedMedia,
+  ...lteMedia,
   ...indoorMedia,
 ];
 const newlyAdmittedSolo = solocamMedia.filter((p) => p.model !== 'T8134');
@@ -340,6 +342,7 @@ for (const p of [
   ...walllightMedia,
   ...floodlightMedia,
   ...integratedMedia,
+  ...lteMedia,
 ])
   test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
     for (const change of [
@@ -457,6 +460,7 @@ for (const p of [
   ...walllightMedia,
   ...floodlightMedia,
   ...integratedMedia,
+  ...lteMedia,
   ...indoorMedia,
 ])
   test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
@@ -512,6 +516,7 @@ for (const p of [
   ...walllightMedia,
   ...floodlightMedia,
   ...integratedMedia,
+  ...lteMedia,
 ])
   test(`${p.model}: the new profile admits the existing additional-H3 firmware boundary`, async () => {
     for (const firmware of ['2.0.9.7', '3.8.6.0']) {

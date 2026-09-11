@@ -382,7 +382,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 104   | T8416 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
 | 105   | T8417 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
 | 110   | T8150 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#37], [E2], [E6]                 |
-| 111   | T86P2 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#37], [E2], [E6]                 |
+| 111   | T86P2 / actual H3 parent in Wi-Fi mode only          | X         | X                   | X         | X               | X          | X          | X               | X             | [LTE0], [Catalogue], [HB3]                          | [#37], [#36], [#35], [E2], [E6]   |
 | 131   | T8453 candidate / listed topologies                  | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
 | 132   | T8452 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
 | 133   | T8453 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
@@ -666,6 +666,7 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Solo-software]: SOLOCAM.md
 [Wall-software]: WALLLIGHT.md
 [Floodlight-software]: FLOODLIGHT.md
+[LTE0]: LTE.md
 [Indoor-software]: INDOOR.md
 [Integrated-software]: INTEGRATED_CAMERAS.md
 [NVR-research]: research/NVR_TRANSPORT.md
