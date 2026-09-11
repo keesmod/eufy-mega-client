@@ -238,3 +238,82 @@ test('bad camera initialization is isolated and never leaks protocol errors', as
     await t.close();
   }
 });
+
+test('unsupported discovery includes only bounded model and numeric type diagnostics', () => {
+  const issue = (model, type = 95) =>
+    discover([
+      base(),
+      camera(),
+      {
+        ...camera('PRIVATE_SERIAL'),
+        device_model: model,
+        device_type: type,
+        token: 'PRIVATE_TOKEN',
+        device_name: 'PRIVATE_NAME',
+        address: '192.0.2.1',
+      },
+    ]).result;
+  const result = issue('T9999');
+  assert.deepEqual(result.issues, [
+    {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'unsupported_device',
+      deviceModel: 'T9999',
+      deviceType: 95,
+    },
+  ]);
+  assert.deepEqual(
+    result.devices.map((d) => d.id),
+    ['HB', 'CAM'],
+  );
+  assert.deepEqual(issue('T8224', 96).issues[0], {
+    index: 2,
+    deviceId: 'PRIVATE_SERIAL',
+    code: 'unsupported_device',
+    deviceModel: 'T8224',
+    deviceType: 96,
+  });
+  // Recognition is unchanged. A valid C30 pair still passes with its real parent.
+  assert.equal(issue('T8224').devices.length, 3);
+  for (const model of [
+    undefined,
+    null,
+    8224,
+    {},
+    [],
+    'T8224PRIVATE_SERIAL',
+    'T8224\nPRIVATE_TOKEN',
+    'T8224\r',
+    'T8224\u001b[31m',
+    ' T8224',
+    't8224',
+    '192.0.2.1',
+    'PRIVATE_NAME',
+    'T9999'.repeat(1000),
+  ]) {
+    const rejection = issue(model).issues[0];
+    assert.deepEqual(rejection, {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'unsupported_device',
+      deviceType: 95,
+    });
+  }
+  for (const type of [0, 65535]) assert.equal(issue('T9999', type).issues[0].deviceType, type);
+  for (const type of [-1, 65536, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.deepEqual(issue('T9999', type).issues[0], {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'unsupported_device',
+      deviceModel: 'T9999',
+    });
+  }
+  for (const type of ['95', null, {}, [], 1.5, NaN, Infinity]) {
+    assert.deepEqual(issue('T9999', type).issues[0], {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'invalid_device_relationship',
+    });
+  }
+});

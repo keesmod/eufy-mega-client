@@ -68,6 +68,10 @@ export type DeviceRelationship =
 export interface DiscoveryIssue {
   index: number;
   deviceId: string | null;
+  /** Unsupported-device diagnostics only. Exact T + four uppercase ASCII letters/digits. */
+  deviceModel?: string;
+  /** Unsupported-device diagnostics only. Integer in 0..65535, never coerced. */
+  deviceType?: number;
   code:
     | 'invalid_device_identity'
     | 'invalid_device_relationship'

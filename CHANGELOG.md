@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.1 - Unreleased
+
+- Add optional bounded `deviceModel` and `deviceType` diagnostics to
+  `unsupported_device` discovery issues. Omit invalid values without coercion
+  or truncation. Keep existing error codes, identities and model admission.
+- Allow consumers to diagnose unknown model/type pairs without logging raw
+  inventory. Consumers must still exclude the existing private `deviceId` field.
+- This diagnostic patch follows [camera issue #40](https://github.com/keesmod/ha-eufy-cam/issues/40).
+  It does not establish why the reported C30 is missing or add hardware support.
+
 ## 0.12.0 - Unreleased
 
 - Combine the unpublished SoloCam discovery/media work with exact H3 profiles
