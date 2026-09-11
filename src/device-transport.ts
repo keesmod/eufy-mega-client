@@ -1,6 +1,6 @@
 import { hasCameraMedia } from './camera-media.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
-import { isFloodlightCamera, isSoloCamera, isStation, type Inventory } from './discovery.js';
+import { isFloodlightCamera, isIntegratedCamera, isSoloCamera, isStation, type Inventory } from './discovery.js';
 import { lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
@@ -15,6 +15,8 @@ import {
   WallLightCam,
   FloodlightCamera,
   BatteryDoorbellCamera,
+  DoorbellCamera,
+  SmartDrop,
   PropertyName,
 } from './vendor/http/index.js';
 import type { Device as ProtocolDevice } from './vendor/http/device.js';
@@ -166,7 +168,11 @@ export class DeviceTransport extends EventEmitter {
             continue;
           }
           // Discovery admits exact pairs. Family selection does not grant media access.
-          const factory = Camera.isBatteryDoorbell(device.device_type)
+          const factory = Camera.isSmartDrop(device.device_type)
+            ? SmartDrop
+            : Camera.isLockWifiVideo(device.device_type)
+              ? DoorbellCamera
+              : Camera.isBatteryDoorbell(device.device_type)
             ? BatteryDoorbellCamera
             : isFloodlightCamera(device)
               ? FloodlightCamera
@@ -319,6 +325,9 @@ export class DeviceTransport extends EventEmitter {
     if (!camera || this.failures.has(id) || this.failures.has(camera.getStationSerial()))
       return false;
     if (type === 'notification') return true;
+    // Integrated products expose camera detections only, not lock/lid or parcel state.
+    if (isIntegratedCamera(this.raw.get(id)!) && !['motion', 'person', 'ring'].includes(type))
+      return false;
     const properties: Record<string, PropertyName> = {
       motion: PropertyName.DeviceMotionDetected,
       person: PropertyName.DevicePersonDetected,
@@ -340,6 +349,8 @@ export class DeviceTransport extends EventEmitter {
     return property !== undefined && camera.hasProperty(property);
   }
   acceptPush(message: PushMessage): boolean {
+    const raw = this.raw.get(message.device_sn);
+    if (raw && isIntegratedCamera(raw) && pushEventType(message) === 'notification') return false;
     if (
       (!message.device_sn || message.device_sn === message.station_sn) &&
       this.stations.has(message.station_sn) &&
