@@ -2,6 +2,10 @@
 
 ## 0.12.0 - Unreleased
 
+- Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
+  motion/person events. Admit S120 media only with its actual T8030 H3 parent.
+  S100 media and standalone transport remain unverified. See
+  [Wall-light software evidence](docs/WALLLIGHT.md). No new hardware claim.
 - Add experimental Floodlight E340 (T8425) and E30 (T8426) discovery, native
   motion/person events and HomeBase 3 stored snapshots, live video/audio and
   recordings. Preserve exact owners and acknowledged stop/cancel. Other

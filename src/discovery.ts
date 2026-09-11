@@ -40,6 +40,8 @@ const profiles = new Map<
   ['T8B00', { type: 64, kind: 'camera', family: 'solo', standalone: true }],
   ['T8171', { type: 88, kind: 'camera', family: 'solo', standalone: true }],
   ['T8173', { type: 98, kind: 'camera', family: 'solo', standalone: true }],
+  ['T84A1', { type: 151, kind: 'camera', standalone: true }],
+  ['T81A0', { type: 10005, kind: 'camera', standalone: true }],
   ['T8425', { type: 47, kind: 'camera', family: 'floodlight', standalone: true }],
   ['T8426', { type: 87, kind: 'camera', family: 'floodlight', standalone: true }],
 ]);
