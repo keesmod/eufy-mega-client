@@ -42,3 +42,15 @@ unknown pairs must remain visible. Keep the existing code when either field is
 absent. Other rejection codes have no new fields. Usable devices in a mixed
 inventory remain available. This does not add device support or diagnose the
 reported C30 without its actual received pair.
+
+## Rejected-device context, 0.12.2
+
+Security discovery issues may include `context` with numeric dotted firmware and
+hardware versions, each bounded to 19 characters. Missing or malformed values
+are omitted. `parentStatus` describes the received relation as `none`, `self`,
+`present`, `missing`, `ambiguous` or `invalid`. A unique matching security row
+may supply `parentModel`, `parentFirmware` and the private `parentId` for anonymous
+consumer correlation. A present row does not imply a supported or connected
+HomeBase. No field is guessed from a serial. Consumers must construct an allowlist
+and omit both `deviceId` and `context.parentId` from logs or shared downloads.
+No extra requests, model admission changes or device commands are involved.
