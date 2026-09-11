@@ -64,6 +64,64 @@ def production_lock(lock):
     }
 
 
+def check_unpublished_candidate(root, meta):
+    """Allow an explicitly tracked batch only while its version is unused."""
+    path = root / "release-candidate.json"
+    if not path.is_file():
+        raise ValueError(
+            "Library runtime changes require a version bump or an explicit unpublished candidate"
+        )
+    candidate = json.loads(path.read_text())
+    if (
+        not isinstance(candidate, dict)
+        or set(candidate) != {"version", "issue"}
+        or candidate["version"] != meta["version"]
+        or not isinstance(candidate["issue"], str)
+        or not re.fullmatch(
+            r"https://github\.com/keesmod/eufy-mega-client/issues/[1-9][0-9]*",
+            candidate["issue"],
+        )
+    ):
+        raise ValueError(
+            "Candidate must name the current version and its library tracking issue"
+        )
+    tag = "v" + meta["version"]
+    # Check the canonical remote, including lightweight and annotated tags.
+    if run(
+        root,
+        "git",
+        "ls-remote",
+        "--tags",
+        "https://github.com/" + REPOSITORY + ".git",
+        "refs/tags/" + tag,
+    ).strip():
+        raise ValueError("Candidate version already has a remote tag")
+    # Authenticated pagination includes drafts. Network/auth failures are fatal.
+    pages = json.loads(
+        run(
+            root,
+            "gh",
+            "api",
+            "--paginate",
+            "--slurp",
+            "repos/" + REPOSITORY + "/releases?per_page=100",
+        )
+    )
+    if (
+        not isinstance(pages, list)
+        or not pages
+        or any(not isinstance(page, list) for page in pages)
+    ):
+        raise ValueError("Invalid release inventory")
+    for release in (item for page in pages for item in page):
+        if not isinstance(release, dict) or not isinstance(
+            release.get("tag_name"), str
+        ):
+            raise ValueError("Invalid release inventory")
+        if release["tag_name"] == tag:
+            raise ValueError("Candidate version already has a release or draft")
+
+
 def check_changes(root, base, meta):
     paths = run(root, "git", "diff", "--name-only", base, "HEAD").splitlines()
     previous = json.loads(run(root, "git", "show", base + ":package.json"))
@@ -84,10 +142,14 @@ def check_changes(root, base, meta):
     old_lock = json.loads(run(root, "git", "show", base + ":package-lock.json"))
     new_lock = json.loads((root / "package-lock.json").read_text())
     changed |= production_lock(old_lock) != production_lock(new_lock)
-    if changed and tuple(map(int, meta["version"].split("."))) <= tuple(
-        map(int, previous["version"].split("."))
-    ):
-        raise ValueError("Library runtime changes require a version bump and changelog")
+    current_version = tuple(map(int, meta["version"].split(".")))
+    previous_version = tuple(map(int, previous["version"].split(".")))
+    if current_version < previous_version:
+        raise ValueError("Library version cannot decrease")
+    if changed and current_version == previous_version:
+        if "CHANGELOG.md" not in paths:
+            raise ValueError("Runtime candidate changes require updated release notes")
+        check_unpublished_candidate(root, meta)
 
 
 def asset_names(meta):
