@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0 - Unreleased
+
+- Admit twelve exact eufyCam model/type pairs behind the existing HomeBase 3 owner.
+  Keep unsupported owners and unresolved model variants explicit and isolated.
+- Add optional `Device.availability` and `getDeviceState()`. Report observed battery
+  and status values without SDK numeric coercion. Preserve existing identifiers.
+- Filter detections by camera properties and actual owner, retaining event identity,
+  duplicate suppression and existing doorbell ring semantics.
+- Newly admitted models reject media with `camera_media_unverified` pending #20.
+  Existing media routes remain unchanged. No new hardware support is claimed.
+- See [eufyCam software evidence](docs/EUFYCAM.md). No session migration is needed.
+  Retain the previous package and private store for rollback. This version is unreleased.
+
 ## 0.5.0 - Unreleased
 
 - Add typed discovery relationships and per-device reasons through `discoverDevices()`.
