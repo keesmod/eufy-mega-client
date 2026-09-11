@@ -370,7 +370,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 151   | T84A1 / H3 state and events, W descriptor            | X         | X                   | U         | U               | U          | U          | X               | U             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
 | 189   | T8531 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
 | 203   | T85V0 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
-| 301   | T8E00 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#38], [E2], [E6]                 |
+| 301   | T8E00 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [NVR-research]                   | [#38], [E2], [E6]                 |
 | 10005 | T81A0 / H3 media, W descriptor                       | X         | X                   | X         | X               | X          | X          | X               | X             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
 | 10008 | T8W11C candidate / listed topologies                 | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
 | 10009 | T8419 / T8W11P candidate / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
@@ -648,3 +648,4 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Wall-software]: WALLLIGHT.md
 [Floodlight-software]: FLOODLIGHT.md
 [Indoor-software]: INDOOR.md
+[NVR-research]: research/NVR_TRANSPORT.md
