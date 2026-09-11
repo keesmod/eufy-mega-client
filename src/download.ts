@@ -28,6 +28,7 @@ export function downloadRecording(
     let stopTimer: NodeJS.Timeout | undefined;
     const source: Readable[] = [];
     const counters = new Map<Readable, (chunk: Buffer) => void>();
+    const drainListeners = new Map<Readable, () => void>();
     const video = new PassThrough(),
       audio = new PassThrough();
     let finish!: (result: DownloadResult) => void;
@@ -44,6 +45,8 @@ export function downloadRecording(
       station.off('download complete', confirmed);
       station.off('command result', command);
       station.off('close', closed);
+      for (const [stream, drained] of drainListeners) stream.off('end', drained);
+      drainListeners.clear();
       for (const stream of source) {
         stream.off('error', closed);
         stream.off('data', counters.get(stream)!);
@@ -138,21 +141,31 @@ export function downloadRecording(
     };
     const ended = (_station: Station, channel: number) => {
       if (channel !== device.getChannel()) return;
+      if (localFinished) return;
       localFinished = true;
-      // Source EOF is queued before this local event. Drain buffered bytes first.
-      if (source.length)
-        Promise.all(
-          source.map((s) =>
-            s.readableEnded
-              ? Promise.resolve()
-              : new Promise<void>((resolve) => s.once('end', resolve)),
-          ),
-        ).then(() => {
-          drained = true;
-          maybeComplete();
-        });
-      else if (!stopping) void stop('rejected');
+      // Track EOF listeners so cancellation can remove them even if a source never ends.
+      if (source.length) {
+        let remaining = source.filter((s) => !s.readableEnded).length;
+        const check = () => {
+          if (remaining === 0) {
+            drained = true;
+            maybeComplete();
+          }
+        };
+        for (const stream of source) {
+          if (stream.readableEnded) continue;
+          const onEnd = () => {
+            drainListeners.delete(stream);
+            remaining--;
+            check();
+          };
+          drainListeners.set(stream, onEnd);
+          stream.once('end', onEnd);
+        }
+        check();
+      } else if (!stopping) void stop('rejected');
     };
+
     const confirmed = (_station: Station, channel: number) => {
       if (channel === device.getChannel()) {
         deviceComplete = true;

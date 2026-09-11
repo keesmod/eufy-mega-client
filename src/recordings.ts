@@ -204,6 +204,7 @@ export class RecordingAccess {
       path = ref.row.thumb_path;
     if (typeof path !== 'string' || !path || path.length > 2048)
       throw new EufyError('thumbnail_unavailable');
+    this.connection.camera(ref.row.device_sn);
     return this.run(ref.stationId, signal, (station, abort) =>
       awaitEvent(
         station,
@@ -231,6 +232,7 @@ export class RecordingAccess {
       stationId = ref.stationId;
     if (this.operations.has(stationId) || this.connection.busy(stationId))
       throw new EufyError('station_busy');
+    const camera = this.connection.camera(ref.row.device_sn);
     this.operations.add(stationId);
     const abort = AbortSignal.any([
       this.lifetime,
@@ -240,12 +242,7 @@ export class RecordingAccess {
     let station: Station | undefined;
     try {
       station = await this.connection.station(stationId, abort);
-      const transfer = await downloadRecording(
-        station,
-        this.connection.camera(ref.row.device_sn),
-        ref.row,
-        abort,
-      );
+      const transfer = await downloadRecording(station, camera, ref.row, abort);
       const cleanup = transfer.completed
         .then(async (result) => {
           if (!result.complete) await station?.close();

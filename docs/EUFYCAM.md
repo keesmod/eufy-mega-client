@@ -1,4 +1,4 @@
-# eufyCam discovery, state and events
+# eufyCam software evidence
 
 Story [#19](https://github.com/keesmod/eufy-mega-client/issues/19) adds software
 coverage in unreleased 0.6.0. The independently authored
@@ -77,16 +77,16 @@ HomeBase-only push messages still reach its state processor. They do not become
 camera detections. The software tests include two distinct doorbell rings, one
 person seen through two transports, replay suppression and invalid owner input.
 
-Newly admitted models reject snapshots, live starts and camera-bound recording
-access with `camera_media_unverified`. Their factory classification is not an
-assertion about media encryption or wire compatibility. Existing T8160, T8142,
-T8134 and T8213 routes are preserved. No settings or non-camera controls are added.
+The 0.6.0 discovery slice rejected newly admitted model media. The 0.7.0
+profile below supersedes that guard only for its exact tuples and owner branch.
+Factory classification remains separate from media evidence. Existing T8160,
+T8142, T8134 and T8213 routes are preserved. No settings or non-camera controls
+are added.
 
 ## Remaining obligations
 
-- [#20](https://github.com/keesmod/eufy-mega-client/issues/20) owns eufyCam snapshots,
-  live video/audio, confirmed stop, recording playback and cancellation on an
-  evidenced transport profile. This story does not activate those routes for new models.
+- [#20](https://github.com/keesmod/eufy-mega-client/issues/20) delivers the software
+  media profile below. Additional owner/encryption profiles remain outside it.
 - [#55](https://github.com/keesmod/eufy-mega-client/issues/55), E2 and E6 retain
   model/firmware/topology-specific hardware acceptance, including discovery,
   observed state, real events, media and recovery. Fixture success adds no H cells.
@@ -97,5 +97,89 @@ T8134 and T8213 routes are preserved. No settings or non-camera controls are add
 
 No publication, deployment or physical device operation is required for #19.
 For package rollback, retain the preceding version and private session store.
-There is no store migration. The next media story must read these guards before
-claiming expanded functionality.
+There is no store migration. Read the exact profile below before claiming
+expanded functionality.
+
+## H3 core media, 0.7.0
+
+[#20](https://github.com/keesmod/eufy-mega-client/issues/20) extends the existing
+local-only T8030/type 18 transport with explicit LAN-derived command credentials.
+The [Ready scope](https://github.com/keesmod/eufy-mega-client/issues/20#issuecomment-5630826309)
+and its [command correction](https://github.com/keesmod/eufy-mega-client/issues/20#issuecomment-5630862712)
+precede acceptance. Exact command evidence comes from the repository's attributed
+MIT camera adapter at `b5e030b0bcf954678a877a666f6bc862ad588f4e`, especially
+`Station.startLivestream`, `stopLivestream`, `startDownload`, `cancelDownload`,
+`databaseQueryLatestInfo`, `downloadImage`, `databaseQueryByDate` and
+`databaseCountByDate`. No vendor wire implementation changes in this story.
+
+The additional model gate requires the exact pairs below, a T8030/type 18 owner
+whose serial follows the existing T8030 branch, and a four-part numeric owner
+firmware at or above 2.0.9.7. This is the existing payload branch threshold,
+not a firmware-support claim. Fixtures use owner firmware 3.8.6.0 and camera
+firmware 1.2.3. Unknown, malformed and earlier owner versions retain
+`EufyError` code `camera_media_unverified`. Existing baseline model behavior is
+preserved. Command credentials, connections and media stay with the actual owner.
+
+| Model/type | Live command branch       | Stored snapshot | Live video/audio + stop | Recordings + cancel |
+| ---------- | ------------------------- | --------------- | ----------------------- | ------------------- |
+| T8111/1    | Generic payload           | Software        | Software                | Software            |
+| T8112/4    | Generic payload           | Software        | Software                | Software            |
+| T8113/8    | Generic payload           | Software        | Software                | Software            |
+| T8114/9    | Generic payload           | Software        | Software                | Software            |
+| T8140/14   | Generic payload           | Software        | Software                | Software            |
+| T8142/15   | Generic payload, existing | Software        | Software                | Software            |
+| T8160/19   | Generic payload, existing | Software        | Software                | Software            |
+| T8161/23   | Generic payload           | Software        | Software                | Software            |
+| T8600/24   | Professional payload      | Software        | Software                | Software            |
+| T8162/26   | Generic payload           | Software        | Software                | Software            |
+| T8144/49   | Generic payload           | Software        | Software                | Software            |
+| T8172/89   | Outdoor pan/tilt envelope | Software        | Software                | Software            |
+
+Generic live commands use `CMD_SET_PAYLOAD` containing
+`CMD_START_REALTIME_MEDIA`, `ClientOS`, public `key` and `streamtype` 1/2 for
+H.264/H.265. T8600 selects `isCameraProfessional247`, adding `camera_type=0`
+and `entrytype=0`. T8172/type 89 selects the earlier
+`isOutdoorPanAndTiltCamera` branch. It uses `CMD_DOORBELL_SET_PAYLOAD` with
+`commandType=1000`, `accountId`, `camera_type=0`, `entrytype=0`, public
+`encryptkey` and `streamtype` 0/1. This does not expose PTZ controls.
+All commands retain the camera channel. The full envelopes and both codec
+values are asserted independently for every tuple in
+[eufycam-media.test.mjs](../test/eufycam-media.test.mjs).
+
+Snapshots query the HomeBase's latest database covers and retrieve
+`CMD_DATABASE_IMAGE`. They do not take a fresh photograph or start live media.
+Missing covers keep the bounded timeout. Unsupported profiles cannot download
+covers implicitly through latest-info events or retrieve recording thumbnails.
+Recording calendar/list uses `CMD_DATABASE_COUNT_BY_DATE` and
+`CMD_DATABASE_QUERY_BY_DATE`. List results are complete station metadata,
+including known cameras whose media is unverified. Camera-bound thumbnail and
+download operations check admission before opening their media connection.
+Downloads use the existing H3 payload with `CMD_DOWNLOAD_VIDEO`, `filepath` and
+public download key. No cipher or legacy-cloud fallback is added. The upstream
+H3 TODO in vendor source is historical, not a new hardware finding.
+
+Live stop requires a successful matching `CMD_STOP_REALTIME_MEDIA` result and
+local stop on the same owner/channel. A regression fixes wrong-channel local
+stop events incorrectly satisfying that condition. Cancelled starts retain
+ownership until their bounded STOP outcome. Recording cancel requires matching
+`CMD_DOWNLOAD_CANCEL`. Local EOF alone cannot complete a download. Recording
+cleanup now removes pending source EOF listeners even when cancelled sources
+never finish, and duplicate finish events do not add listeners.
+The existing eight-second live cleanup and five-second download cancel bounds,
+32 MiB recording limit, completion checks and no-command-replay policy remain.
+
+The fixtures forward distinct synthetic video/audio bytes, not playable footage.
+They exercise snapshots, filtered complete history, calendars, thumbnails,
+download completion, cancellation, wrong channels, missing/rejected ACKs,
+timeouts, late ACKs and a failing owner alongside a second active owner.
+[Family lifecycle fixtures](../test/family-lifecycle.test.mjs) additionally run
+each newly admitted eufyCam through duplicate events and cancelled-start cleanup.
+Software success does not establish decoded or audible hardware playback.
+
+No new H evidence is assigned. The dated T8160/T8030 baseline remains in
+[COMPATIBILITY.md](COMPATIBILITY.md). #55 retains physical acceptance for each
+model/firmware/topology, including unavailable hardware, real video/audio,
+recordings, events and restart recovery. #35 retains older owners and #36
+standalone protocols. E2/E6 remain open. Release/HA integration acceptance is
+separate from this software story. Version 0.7.0 is unreleased and requires no
+session migration. Retain the prior package and private store for rollback.

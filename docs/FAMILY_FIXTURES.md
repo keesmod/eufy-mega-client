@@ -52,7 +52,7 @@ HomeBase Mini, MiniBase Chime, NVR and unknown owners. Standalone T8134 identiti
 have an internal owner descriptor with unverified transport. [Discovery tests](../test/discovery.test.mjs)
 verify that these identities cannot open a session or create a HomeBase entity. Sound-only chimes are not inferred to be connection owners.
 
-The four currently admitted H3 models use a real camera factory with a
+The four original H3 models and the ten additional #20 eufyCam models use a real camera factory with a
 [synthetic station event fixture](../test/fixtures/media.mjs). The
 [lifecycle tests](../test/family-lifecycle.test.mjs) cover wrong-channel and
 duplicate events, exactly one stop outcome, cancellation retaining ownership,
@@ -92,3 +92,9 @@ standalone transport gaps. #37, #38 and #39 own LTE, NVR and integrated/unresolv
 research. E2 retains implementation and E6 retains hardware validation. No new
 protocol work is hidden in the fixture story and none of those obligations is
 closed by this software evidence. Mower protocols are outside this camera matrix.
+
+The [#20 eufyCam command/media tests](../test/eufycam-media.test.mjs) extend the
+H3 software profile using the exact tuples and envelopes in [EUFYCAM.md](EUFYCAM.md).
+They include synthetic byte forwarding, stored snapshots, recording operations,
+owner isolation and cancelled-source listener cleanup. The hardware boundary
+above remains unchanged.
