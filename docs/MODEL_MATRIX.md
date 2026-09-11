@@ -313,7 +313,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | Type  | Model / evaluated topology                           | Discovery | Available state | Battery   | Stored snapshot | Live video | Live audio | Events   | Recordings    | Evidence                                            | Remaining work                   |
 | ----- | ---------------------------------------------------- | --------- | --------------- | --------- | --------------- | ---------- | ---------- | -------- | ------------- | --------------------------------------------------- | -------------------------------- |
 | 1     | T8111 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#96]                            |
-| 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
+| 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
 | 4     | T8112 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#97]                            |
 | 5     | T8200 / T8201 / T8202 / listed topologies            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]              |
 | 7     | T8210 / T8212 candidates / listed topologies         | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#108], [#109]                   |
@@ -332,13 +332,13 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 33    | T8131 / H3 only                                      | X         | X               | X         | X               | X          | X          | X        | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]              |
 | 34    | T8401 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 35    | T8411 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
-| 37    | T8422 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
-| 38    | T8423 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
-| 39    | T8424 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
+| 37    | T8422 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
+| 38    | T8423 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
+| 39    | T8424 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]        |
 | 44    | T8440 candidate / listed topologies                  | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 45    | T8441 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 46    | T8442 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
-| 47    | T8425 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
+| 47    | T8425 / H3 only                                      | X         | X               | N/A       | X               | X          | X          | X        | X             | [Floodlight-software], [Catalogue]                  | [#29], [#30], [#60]              |
 | 48    | T8170 / H3 only                                      | X         | X               | X         | X               | X          | X          | X        | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]              |
 | 49    | T8144 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#105]                           |
 | 55    | T8530 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                |
@@ -347,7 +347,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 62    | T8124 / H3 only                                      | X         | X               | X         | X               | X          | X          | X        | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]              |
 | 63    | T8134 / H3 only                                      | P         | P identity      | P reading | P               | F          | U          | P person | P video/audio | [R0], [R1], [R2], [R3], [S1], [C0], [Solo-software] | [#35], [#36], [#56], [Camera-10] |
 | 64    | T8B00 / H3 only                                      | X         | X               | X         | X               | X          | X          | X        | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]              |
-| 87    | T8426 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [#60]              |
+| 87    | T8426 / H3 only                                      | X         | X               | N/A       | X               | X          | X          | X        | X             | [Floodlight-software], [Catalogue]                  | [#29], [#30], [#60]              |
 | 88    | T8171 / H3 only                                      | X         | X               | X         | X               | X          | X          | X        | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]              |
 | 89    | T8172 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#106]                           |
 | 90    | T8790 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                |
@@ -398,6 +398,15 @@ For excluded models, available vendor predicates, properties or command tables
 are protocol leads only. They are not experimental public-client coverage.
 Battery-less products also say B1/U because their current client status route is
 unreachable. Do not read that as a claim that a mains-powered product has a battery.
+
+For T8425/47 and T8426/87, [Floodlight-software] defines the exact experimental
+H3 profile. Available state covers identity and observed firmware. Battery is
+not applicable, and availability remains unknown because the attributed model
+properties have no such field. Standalone recognition retains an explicit
+transport blocker and does not inherit H3 media or event coverage. Other owners
+remain blocked. T8420/X, T8422, T8423 and T8424 retain their entry barriers.
+H3 storage compatibility alone does not establish command ownership. [E2]
+retains that model work after scoped software acceptance of [#29]/[#30].
 
 ## Dated device evidence and failures
 
@@ -637,3 +646,4 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [#115]: https://github.com/keesmod/eufy-mega-client/issues/115
 [Solo-software]: SOLOCAM.md
 [Wall-software]: WALLLIGHT.md
+[Floodlight-software]: FLOODLIGHT.md

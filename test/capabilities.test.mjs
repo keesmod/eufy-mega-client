@@ -6,12 +6,14 @@ import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
+import { floodlightMedia } from './fixtures/floodlight-media.mjs';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 for (const profile of [
   ...eufycamMedia,
   ...batteryDoorbellMedia,
   ...solocamMedia,
   ...walllightMedia,
+  ...floodlightMedia,
 ]) {
   test(`${profile.model}: capabilities share media admission and do not start commands`, async () => {
     const f = await mediaFixture(profile);
