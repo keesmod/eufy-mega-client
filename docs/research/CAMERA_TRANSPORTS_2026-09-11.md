@@ -79,7 +79,8 @@ Mega device rows to:
 node scripts/inspect-camera-transport.mjs /private/path/devices.json
 ```
 
-The tool reads one regular file of at most 2 MiB. It rejects arrays of 100 or
+The tool opens input without blocking and reads one regular file of at most
+2 MiB. Named pipes are rejected without waiting for a writer. It rejects arrays of 100 or
 more rows because this inventory API's completeness is not established at the
 page limit. It performs no network requests, device operations or file writes.
 Its output contains only allowlisted candidate model names, expected protocol
@@ -96,7 +97,7 @@ source-checkout research helper, not a new public library API or packaged CLI.
 
 The synthetic regression tests in `test/transport-evidence.test.mjs` cover
 credential redaction, duplicate identities, mismatched model/type associations,
-separate owner variants, parent observation, malformed JSON and bounded input.
+separate owner variants, parent observation, malformed JSON, named pipes and bounded input.
 
 ## Remaining work in the existing issues
 

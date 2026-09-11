@@ -1,4 +1,5 @@
 import { open } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 // Research candidates, deliberately separate from the runtime admission registry.
@@ -90,7 +91,8 @@ export function inspectTransportInventory(rows) {
 
 async function main() {
   if (process.argv.length !== 3) throw new Error('input_required');
-  const file = await open(process.argv[2], 'r');
+  // A FIFO must not wait for a writer before fstat rejects it.
+  const file = await open(process.argv[2], constants.O_RDONLY | constants.O_NONBLOCK);
   let text;
   try {
     const limit = 2 * 1024 * 1024;
