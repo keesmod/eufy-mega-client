@@ -2,6 +2,11 @@
 
 ## 0.12.0 - Unreleased
 
+- Recognize exact T8200/T8201/T8202 type 5 and T8203 type 93 wired doorbells
+  with their received inventory state and real standalone identity. Reject
+  HomeBase ownership for these models. Standalone authentication, events and
+  media remain unverified. See [wired doorbell evidence](docs/WIRED_DOORBELLS.md).
+
 - Allow exact family profiles to reject an H3 command-owner relationship when
   that topology is unproven. This guard does not enable standalone transport
   or change the existing admitted camera profiles.
