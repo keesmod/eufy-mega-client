@@ -14,6 +14,11 @@
   lid or user-management controls. [Integrated camera evidence](docs/INTEGRATED_CAMERAS.md)
   retains unresolved E330, catalogue, owner and hardware obligations under #39.
 
+- Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
+- Recognize exact T8200/T8201/T8202 type 5 and T8203 type 93 wired doorbells
+  with their received inventory state and real standalone identity. Reject
+  HomeBase ownership for these models. Standalone authentication, events and
+  media remain unverified. See [wired doorbell evidence](docs/WIRED_DOORBELLS.md).
 - Add experimental T86P2 / type 111 discovery, observed state, H3 events and core
   media through its actual T8030 parent in Wi-Fi mode. Reuse the generic camera
   adapter and acknowledged media lifecycle. Cellular and standalone transport
