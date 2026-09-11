@@ -1,0 +1,138 @@
+import {
+  EufyError,
+  type Device,
+  type DiscoveryIssue,
+  type DiscoveryResult,
+  type DeviceRelationship,
+  type WireDevice,
+} from './types.js';
+
+// Exact model/type pairs already evidenced by the client. Family stories extend this registry.
+const profiles = new Map<string, { type: number; kind: Device['kind']; standalone?: boolean }>([
+  ['T8030', { type: 18, kind: 'station' }],
+  ['T8160', { type: 19, kind: 'camera' }],
+  ['T8213', { type: 91, kind: 'camera' }],
+  ['T8142', { type: 15, kind: 'camera' }],
+  ['T8134', { type: 63, kind: 'camera', standalone: true }],
+]);
+export const isStation = (raw: WireDevice): boolean =>
+  profiles.get(raw.device_model)?.kind === 'station';
+export interface ConnectionOwner {
+  kind: 'station' | 'standalone';
+  id: string;
+  transport: 'h3-lan' | 'unsupported';
+}
+export interface Inventory {
+  result: DiscoveryResult;
+  raw: Map<string, WireDevice>;
+  owners: Map<string, ConnectionOwner>;
+  relationships: Map<string, DeviceRelationship>;
+}
+const identity = (value: unknown): value is string =>
+  typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
+export function discover(items: unknown): Inventory {
+  if (!Array.isArray(items)) throw new EufyError('invalid_inventory');
+  if (items.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');
+  const raw = new Map<string, WireDevice>();
+  const issues: DiscoveryIssue[] = [];
+  const identities = new Map<string, number>();
+  for (const item of items) {
+    if (item && typeof item === 'object' && identity(item.device_sn))
+      identities.set(item.device_sn, (identities.get(item.device_sn) ?? 0) + 1);
+  }
+  const reject = (index: number, deviceId: string | null, code: DiscoveryIssue['code']) =>
+    issues.push({ index, deviceId, code });
+  items.forEach((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      reject(index, null, 'invalid_device_identity');
+      return;
+    }
+    if (item.category !== 'eufy_security') return;
+    if (!identity(item.device_sn) || identities.get(item.device_sn)! > 1) {
+      reject(index, identity(item.device_sn) ? item.device_sn : null, 'invalid_device_identity');
+      return;
+    }
+    if (
+      typeof item.parent_sn !== 'string' ||
+      (item.parent_sn !== '' && !identity(item.parent_sn)) ||
+      !Number.isInteger(item.device_type)
+    ) {
+      reject(index, item.device_sn, 'invalid_device_relationship');
+      return;
+    }
+    const profile = profiles.get(item.device_model);
+    if (!profile || profile.type !== item.device_type) {
+      reject(index, item.device_sn, 'unsupported_device');
+      return;
+    }
+    raw.set(item.device_sn, item as WireDevice);
+  });
+  const owners = new Map<string, ConnectionOwner>();
+  const relationships = new Map<string, DeviceRelationship>();
+  for (const [id, device] of raw) {
+    const profile = profiles.get(device.device_model)!;
+    if (profile.kind === 'station') {
+      if (device.parent_sn && device.parent_sn !== id) {
+        relationships.set(id, { kind: 'unsupported', reason: 'invalid_device_relationship' });
+      } else {
+        owners.set(id, { id, kind: 'station', transport: 'h3-lan' });
+        relationships.set(id, { kind: 'station', ownerId: id });
+      }
+    } else if (device.parent_sn === '' || device.parent_sn === id) {
+      if (profile.standalone) {
+        owners.set(id, { id, kind: 'standalone', transport: 'unsupported' });
+        relationships.set(id, {
+          kind: 'standalone',
+          ownerId: id,
+          reason: 'standalone_transport_unverified',
+        });
+      } else relationships.set(id, { kind: 'unsupported', reason: 'invalid_device_relationship' });
+    }
+  }
+  for (const [id, device] of raw) {
+    if (relationships.has(id)) continue;
+    const owner = owners.get(device.parent_sn);
+    relationships.set(
+      id,
+      owner?.kind === 'station'
+        ? { kind: 'station', ownerId: owner.id }
+        : { kind: 'unsupported', reason: 'unsupported_station' },
+    );
+  }
+  const devices: Device[] = [];
+  for (const [id, device] of raw) {
+    const relationship = relationships.get(id)!;
+    if ('reason' in relationship) reject(items.indexOf(device), id, relationship.reason);
+    devices.push({
+      id,
+      stationId: device.parent_sn || id,
+      kind: profiles.get(device.device_model)!.kind,
+      model: device.device_model,
+      name:
+        typeof device.device_alias_name === 'string'
+          ? device.device_alias_name
+          : typeof device.device_name === 'string'
+            ? device.device_name
+            : '',
+      firmware:
+        typeof device.main_sw_version === 'string' && device.main_sw_version
+          ? device.main_sw_version
+          : null,
+      hardware: typeof device.main_hw_version === 'string' ? device.main_hw_version : null,
+      battery: null,
+    });
+  }
+  return {
+    result: {
+      devices,
+      relationships: [...relationships].map(([deviceId, relationship]) => ({
+        deviceId,
+        ...relationship,
+      })),
+      issues: issues.sort((a, b) => a.index - b.index),
+    },
+    raw,
+    owners,
+    relationships,
+  };
+}

@@ -1,3 +1,4 @@
+import { isStation, type Inventory } from './discovery.js';
 import { lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
@@ -42,6 +43,7 @@ const fail = (): never => {
 
 /** Private adapter: protocol objects never cross the public library boundary. */
 export class DeviceTransport extends EventEmitter {
+  private failures = new Map<string, string>();
   private raw = new Map<string, WireDevice>();
   private stations = new Map<string, Station>();
   private cameras = new Map<string, ProtocolDevice>();
@@ -73,7 +75,7 @@ export class DeviceTransport extends EventEmitter {
     getDevices: () =>
       Object.fromEntries(
         [...this.raw.values()]
-          .filter((d) => d.device_model !== 'T8030')
+          .filter((d) => !isStation(d))
           .map((d) => [d.device_sn, this.cameraWire(d)]),
       ),
     refreshStationData: async () => {
@@ -95,14 +97,42 @@ export class DeviceTransport extends EventEmitter {
   private cameraWire(raw: WireDevice): DeviceListResponse {
     return { ...raw, station_sn: raw.parent_sn } as unknown as DeviceListResponse;
   }
-  async load(raw: Map<string, WireDevice>): Promise<void> {
+  async load(raw: Map<string, WireDevice>, inventory?: Inventory): Promise<void> {
     if (this.lifetime.signal.aborted) throw new EufyError('client_closed');
     // Never replace a transport in the middle of a device operation.
-    if (this.lives.size || this.starting.size || this.commands.size || this.recordings.active)
+    if (
+      this.lives.size ||
+      this.starting.size ||
+      this.commands.size ||
+      this.recordings.active ||
+      this.connecting.size
+    )
       throw new EufyError('devices_busy');
+    this.failures.clear();
+    if (inventory) {
+      for (const issue of inventory.result.issues)
+        if (issue.deviceId) this.failures.set(issue.deviceId, issue.code);
+      raw = new Map([...raw].filter(([id]) => !this.failures.has(id)));
+    }
+    const previous = this.raw;
+    const changed = (id: string) => {
+      const before = previous.get(id),
+        after = raw.get(id);
+      return (
+        !after ||
+        (before &&
+          (before.device_model !== after.device_model ||
+            before.device_type !== after.device_type ||
+            before.parent_sn !== after.parent_sn ||
+            before.device_channel !== after.device_channel ||
+            before.p2p_did !== after.p2p_did ||
+            before.p2p_license !== after.p2p_license ||
+            before.member?.admin_user_id !== after.member?.admin_user_id))
+      );
+    };
     this.raw = raw;
     for (const [id, camera] of this.cameras)
-      if (!raw.has(id)) {
+      if (changed(id)) {
         camera.destroy();
         camera.removeAllListeners();
         this.cameras.delete(id);
@@ -110,60 +140,91 @@ export class DeviceTransport extends EventEmitter {
         this.covers.delete(id);
       }
     for (const [id, station] of this.stations)
-      if (!raw.has(id)) {
+      if (changed(id)) {
+        station.removeAllListeners();
         await station.dispose();
         this.stations.delete(id);
         this.encryption.delete(id);
+        this.observedModes.delete(id);
       }
     for (const device of raw.values())
-      if (device.device_model !== 'T8030') {
-        const existing = this.cameras.get(device.device_sn);
-        if (existing) {
-          existing.update(this.cameraWire(device));
-          continue;
-        }
-        const factory = device.device_model === 'T8213' ? BatteryDoorbellCamera : Camera;
-        const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
-          simultaneousDetections: false,
-        });
-        this.cameras.set(device.device_sn, camera);
-        for (const [key, type] of Object.entries(detectionEvents)) {
-          camera.on(key.replace(/^device /, '') as 'person detected', (_device, active, name) => {
-            if (active)
-              this.emit('detection', {
-                id: device.device_sn,
-                type,
-                name,
-                stranger: key === 'device stranger person detected',
-              });
+      if (!isStation(device)) {
+        try {
+          const existing = this.cameras.get(device.device_sn);
+          if (existing) {
+            existing.update(this.cameraWire(device));
+            continue;
+          }
+          const factory = device.device_model === 'T8213' ? BatteryDoorbellCamera : Camera;
+          const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
+            simultaneousDetections: false,
           });
+          this.cameras.set(device.device_sn, camera);
+          for (const [key, type] of Object.entries(detectionEvents)) {
+            camera.on(key.replace(/^device /, '') as 'person detected', (_device, active, name) => {
+              if (active)
+                this.emit('detection', {
+                  id: device.device_sn,
+                  type,
+                  name,
+                  stranger: key === 'device stranger person detected',
+                });
+            });
+          }
+          camera.on('property changed', () => this.emit('device', this.device(device.device_sn)));
+          camera.initialize();
+        } catch {
+          const camera = this.cameras.get(device.device_sn);
+          camera?.destroy();
+          camera?.removeAllListeners();
+          this.cameras.delete(device.device_sn);
+          this.failures.set(device.device_sn, 'device_initialization_failed');
         }
-        camera.on('property changed', () => this.emit('device', this.device(device.device_sn)));
-        camera.initialize();
       }
     for (const device of raw.values())
-      if (device.device_model === 'T8030') {
-        if (typeof device.p2p_did !== 'string' || !device.p2p_did || !device.member?.admin_user_id)
-          throw new EufyError('invalid_connection_credentials');
-        const stationWire = {
-          ...device,
-          station_sn: device.device_sn,
-          station_name: device.device_name,
-          station_model: device.device_model,
-          devices: [...raw.values()]
-            .filter((d) => d.parent_sn === device.device_sn)
-            .map((d) => this.cameraWire(d)),
-        } as unknown as StationListResponse;
-        const existing = this.stations.get(device.device_sn);
-        if (existing) {
-          existing.update(stationWire);
-          continue;
+      if (isStation(device)) {
+        try {
+          if (
+            typeof device.p2p_did !== 'string' ||
+            !device.p2p_did ||
+            !device.member?.admin_user_id
+          )
+            throw new EufyError('invalid_connection_credentials');
+          const stationWire = {
+            ...device,
+            station_sn: device.device_sn,
+            station_name: device.device_name,
+            station_model: device.device_model,
+            devices: [...raw.values()]
+              .filter((d) => this.cameras.has(d.device_sn) && d.parent_sn === device.device_sn)
+              .map((d) => this.cameraWire(d)),
+          } as unknown as StationListResponse;
+          const existing = this.stations.get(device.device_sn);
+          if (existing) {
+            existing.update(stationWire);
+            continue;
+          }
+          const station = await Station.getInstance(this.provider, stationWire, lanAddress(device));
+          station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+          this.stations.set(device.device_sn, station);
+          this.bind(station);
+          station.initialize();
+        } catch (error) {
+          const station = this.stations.get(device.device_sn);
+          if (station) {
+            station.removeAllListeners();
+            await station.dispose();
+          }
+          this.stations.delete(device.device_sn);
+          this.encryption.delete(device.device_sn);
+          this.observedModes.delete(device.device_sn);
+          this.failures.set(
+            device.device_sn,
+            error instanceof EufyError && error.code === 'invalid_connection_credentials'
+              ? error.code
+              : 'device_initialization_failed',
+          );
         }
-        const station = await Station.getInstance(this.provider, stationWire, lanAddress(device));
-        station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
-        this.stations.set(device.device_sn, station);
-        this.bind(station);
-        station.initialize();
       }
   }
   device(id: string): Device {
@@ -176,7 +237,7 @@ export class DeviceTransport extends EventEmitter {
     return {
       id,
       stationId: raw.parent_sn || id,
-      kind: raw.device_model === 'T8030' ? 'station' : 'camera',
+      kind: isStation(raw) ? 'station' : 'camera',
       model: raw.device_model,
       name: String(raw.device_alias_name || raw.device_name || ''),
       firmware: typeof raw.main_sw_version === 'string' ? raw.main_sw_version : null,
@@ -204,11 +265,15 @@ export class DeviceTransport extends EventEmitter {
     };
   }
   private station(id: string): Station {
+    const failure = this.failures.get(id);
+    if (failure) throw new EufyError(failure);
     const station = this.stations.get(id);
     if (!station) throw new EufyError('unknown_station');
     return station;
   }
   private camera(id: string): ProtocolDevice {
+    const failure = this.failures.get(id);
+    if (failure) throw new EufyError(failure);
     const camera = this.cameras.get(id);
     if (!camera) throw new EufyError('unknown_camera');
     return camera;

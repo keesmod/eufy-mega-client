@@ -50,8 +50,8 @@ for (const p of families) {
         try {
           await denied.connect();
           await denied.listDevices();
-          await assert.rejects(denied.startLive(camera.device_sn), { code: 'unknown_camera' });
-          await assert.rejects(denied.snapshot(camera.device_sn), { code: 'unknown_camera' });
+          await assert.rejects(denied.startLive(camera.device_sn), { code: 'unsupported_device' });
+          await assert.rejects(denied.snapshot(camera.device_sn), { code: 'unsupported_device' });
           assert.equal(denied.transport.stations.size, 0);
           assert.equal(denied.transport.lives.size, 0);
           assert.ok(blocked.calls.every((c) => !c.path.includes('command')));
@@ -133,7 +133,12 @@ for (const owner of [
       client = new EufyMegaClient(f.options);
     try {
       await client.connect();
-      await assert.rejects(client.listDevices(), { code: 'unsupported_station' });
+      const result = await client.discoverDevices();
+      assert.equal(
+        result.issues.find((i) => i.deviceId === 'T8134_SYNTHETIC').code,
+        'unsupported_station',
+      );
+      assert.equal(result.devices.find((d) => d.id === 'T8134_SYNTHETIC').kind, 'camera');
       assert.equal(client.transport, undefined);
     } finally {
       await client.close();

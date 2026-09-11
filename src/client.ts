@@ -1,3 +1,4 @@
+import { discover, type Inventory } from './discovery.js';
 import { EventEmitter } from 'node:events';
 import { EventTransport } from './event-transport.js';
 import { DeviceTransport } from './device-transport.js';
@@ -9,6 +10,7 @@ import {
   type AuthState,
   type ClientOptions,
   type Device,
+  type DiscoveryResult,
   type WireDevice,
   type StationState,
   type Snapshot,
@@ -25,6 +27,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   private eventsOperation?: Promise<void>;
   private closed = false;
   private closing?: Promise<void>;
+  private inventory?: Inventory;
   private loaded?: Map<string, WireDevice>;
   private devices = new Map<string, WireDevice>();
   constructor(options: ClientOptions) {
@@ -52,6 +55,9 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     });
   }
   async listDevices(signal?: AbortSignal): Promise<Device[]> {
+    return (await this.discoverDevices(signal)).devices;
+  }
+  async discoverDevices(signal?: AbortSignal): Promise<DiscoveryResult> {
     const result = responseObject(
       await this.cloud.call(
         'house',
@@ -60,49 +66,11 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
         signal,
       ),
     );
-    if (!Array.isArray(result.devices)) throw new EufyError('invalid_inventory');
-    // The initial hardware target has five devices. Do not claim completeness at a server cap.
-    if (result.devices.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');
-    const devices = new Map<string, WireDevice>();
-    for (const item of result.devices) {
-      const raw = responseObject(item);
-      if (
-        raw.category !== 'eufy_security' ||
-        !['T8030', 'T8160', 'T8213', 'T8142', 'T8134'].includes(String(raw.device_model))
-      )
-        continue;
-      if (
-        typeof raw.device_sn !== 'string' ||
-        !/^[A-Za-z0-9_-]{1,64}$/.test(raw.device_sn) ||
-        devices.has(raw.device_sn)
-      )
-        throw new EufyError('invalid_device_identity');
-      if (typeof raw.parent_sn !== 'string' || typeof raw.device_type !== 'number')
-        throw new EufyError('invalid_device_relationship');
-      devices.set(raw.device_sn, raw as unknown as WireDevice);
-    }
-    for (const device of devices.values()) {
-      if (
-        device.device_model !== 'T8030' &&
-        devices.get(device.parent_sn)?.device_model !== 'T8030'
-      )
-        throw new EufyError('unsupported_station');
-    }
+    const inventory = discover(result.devices);
     if (this.closed) throw new EufyError('client_closed');
-    this.devices = devices;
-    return [...devices.values()].map((device) => ({
-      id: device.device_sn,
-      stationId: device.parent_sn || device.device_sn,
-      kind: device.device_model === 'T8030' ? 'station' : 'camera',
-      model: device.device_model,
-      name: (device.device_alias_name as string) || device.device_name,
-      firmware:
-        typeof device.main_sw_version === 'string' && device.main_sw_version
-          ? device.main_sw_version
-          : null,
-      hardware: typeof device.main_hw_version === 'string' ? device.main_hw_version : null,
-      battery: null,
-    }));
+    this.inventory = inventory;
+    this.devices = inventory.raw;
+    return structuredClone(inventory.result);
   }
   private deviceTransport(): Promise<DeviceTransport> {
     if (this.closed) return Promise.reject(new EufyError('client_closed'));
@@ -121,7 +89,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   }
   private async loadDeviceTransport(): Promise<DeviceTransport> {
     if (!this.connected) throw new EufyError('authentication_required');
-    if (!this.devices.size) await this.listDevices();
+    if (!this.inventory) await this.listDevices();
     if (this.closed) throw new EufyError('client_closed');
     if (!this.transport) {
       this.transport = new DeviceTransport();
@@ -131,8 +99,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
         this.transport.on(event, (value) => this.emit(event, value));
     }
     if (this.loaded !== this.devices) {
-      await this.transport.load(this.devices);
-      this.loaded = this.devices;
+      const devices = this.devices,
+        inventory = this.inventory;
+      await this.transport.load(devices, inventory);
+      this.loaded = devices;
     }
     return this.transport;
   }

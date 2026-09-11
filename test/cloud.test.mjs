@@ -86,22 +86,8 @@ test('lockout persists and prevents further automatic login requests', async () 
   assert.equal(f.calls.length, n);
   c.close();
 });
-test('inventory fails on missing data, repeated identities, or an unknown parent', async () => {
-  for (const options of [
-    { malformed: true },
-    {
-      inventory: [
-        {
-          category: 'eufy_security',
-          device_sn: 'CAM',
-          parent_sn: 'MISSING',
-          device_model: 'T8160',
-          device_type: 19,
-        },
-      ],
-    },
-    { inventory: Array(100).fill({}) },
-  ]) {
+test('inventory fails on missing data or a server cap', async () => {
+  for (const options of [{ malformed: true }, { inventory: Array(100).fill({}) }]) {
     const f = fixture(options),
       c = new EufyMegaClient(f.options);
     try {
@@ -286,7 +272,7 @@ for (const [model, type] of [
       await c.close();
     }
   });
-  test(`${model} cannot introduce standalone or missing-parent operation`, async () => {
+  test(`${model} reports unsupported relationships without enabling operation`, async () => {
     for (const parent of ['', 'MISSING']) {
       const f = fixture({
         inventory: [
@@ -302,7 +288,17 @@ for (const [model, type] of [
       const c = new EufyMegaClient(f.options);
       try {
         await c.connect();
-        await assert.rejects(c.listDevices(), { code: 'unsupported_station' });
+        const result = await c.discoverDevices();
+        const code =
+          parent === 'MISSING'
+            ? 'unsupported_station'
+            : model === 'T8134'
+              ? 'standalone_transport_unverified'
+              : 'invalid_device_relationship';
+        assert.equal(result.issues[0].code, code);
+        assert.equal(result.devices[0].id, 'S220TEST');
+        await assert.rejects(c.startLive('S220TEST'), { code });
+        assert.equal(c.transport.stations.size, 0);
       } finally {
         await c.close();
       }

@@ -8,6 +8,18 @@ The camera bridge and integration belong in `ha-eufy-cam`. The separate mower
 bridge and integration belong in `eufy-robomow-ha`. Both consume this library
 independently, as described in [PROGRAMME.md](PROGRAMME.md).
 
+## Discovery relationship evidence, 0.5.0
+
+[Story #17][#17] adds [typed discovery and per-device errors](DISCOVERY.md).
+This supersedes the historical C0 whole-inventory rejection behavior below.
+Exact recognized model/type pairs retain their identities when a parent is
+unsupported. T8134 with an empty or self parent has a private standalone owner
+and an explicit `standalone_transport_unverified` operation error. It creates
+no HomeBase entity. Unknown pairs remain unadmitted with `unsupported_device`.
+[Regression tests](../test/discovery.test.mjs) prove this software boundary.
+The dated feature rows and hardware claims below remain unchanged. Other owner
+protocols and standalone authentication remain with [#35] and [#36].
+
 ## Source boundary and reading rules
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
@@ -41,7 +53,7 @@ ownership. Outdoor wired cameras follow the existing indoor protocol family.
 | H3             | Camera paired with T8030 HomeBase 3, S380. Only the local LAN-derived credential path is implemented. Host networking was observed.            | [C0], [H0]. Other network/encryption profiles remain with [#17], [#18], [E2], [E6].                                                  |
 | H1/E/2         | HomeBase 1, HomeBase E or HomeBase 2 as the connection owner. Model and firmware matter.                                                       | [HB-old], [HB-guide]. Not admitted by the current client. [#35], [#17], [E2], [E6].                                                  |
 | HM             | HomeBase Mini, T8025, as a possible owner. This is not MiniBase Chime T8023.                                                                   | [Catalogue], [Display], [HB-guide]. Conflicting regional tables and exact revisions need [#35]. All features remain with [E2], [E6]. |
-| W              | Standalone Wi-Fi camera with its own transport/storage owner. Optional HomeBase storage does not prove HomeBase command ownership.             | Product sources per row. No standalone owner is implemented. [#36], [#17], [E2], [E6].                                               |
+| W              | Standalone Wi-Fi camera with its own transport/storage owner. Optional HomeBase storage does not prove HomeBase command ownership.             | Product sources per row. A T8134 standalone descriptor is implemented. Transport is unverified. [#36], [#17], [E2], [E6].            |
 | L              | Cellular connection. T86P2 also has a distinct Wi-Fi mode. Do not project Wi-Fi evidence onto LTE.                                             | [HB3], [HB-guide]. Route, credentials and media remain unknown. [#37], [E2], [E6].                                                   |
 | N              | PoE camera connected directly or through a PoE switch to an NVR.                                                                               | [NVR-setup]. [NVR-HB] explicitly excludes HomeBase 2/3. [#38], [E2], [E6].                                                           |
 | Chime / bridge | A Wi-Fi Chime, MiniBase Chime or Wi-Fi bridge may own a device connection. A chime used only for sound is not necessarily its transport owner. | [HB-old], [Lock-setup]. Exact relationships remain with [#35], [#36], [#17], [E2], [E6].                                             |

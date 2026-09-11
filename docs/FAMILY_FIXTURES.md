@@ -47,9 +47,10 @@ an explicit test decision. It also keeps the two S220 aliases distinct.
 T8142 with synthetic T8010 owner firmware `2.0.9.6` selects the integer live
 command. At `2.0.9.7` it selects the payload command. This checks the existing
 `Station.startLivestream` branch, not HomeBase 2 support. Wrong-owner and missing
-start-capability cases issue no command. Independent public tests reject H2,
-HomeBase Mini, MiniBase Chime, NVR, an unknown owner and standalone ownership for
-a recognized camera. Sound-only chimes are not inferred to be connection owners.
+start-capability cases issue no command. Independent public tests retain recognized cameras with explicit errors for H2,
+HomeBase Mini, MiniBase Chime, NVR and unknown owners. Standalone T8134 identities
+have an internal owner descriptor with unverified transport. [Discovery tests](../test/discovery.test.mjs)
+verify that these identities cannot open a session or create a HomeBase entity. Sound-only chimes are not inferred to be connection owners.
 
 The four currently admitted H3 models use a real camera factory with a
 [synthetic station event fixture](../test/fixtures/media.mjs). The
