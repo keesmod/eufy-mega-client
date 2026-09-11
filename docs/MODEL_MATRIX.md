@@ -43,6 +43,18 @@ cells only for that exact profile. It assigns no new hardware evidence.
 Unsupported firmware, models and topologies remain explicit. [#55], [#35],
 [#36], [E2] and [E6] retain the remaining obligations.
 
+## Battery doorbell software evidence, 0.8.0
+
+[Story #25][#25] adds exact T8214/94, T8224/95 and T8223/96 discovery behind the
+existing T8030 H3 owner. T8213/91 retains its existing route. All four select the
+private battery doorbell adapter. [Per-model evidence](BATTERY_DOORBELLS.md) and
+[regressions](../test/battery-doorbell.test.mjs) supersede the historical B1/U
+state, battery, discovery and motion/person/ring cells for these exact H3 tuples
+only. Available values are observations, never synthesized from connection state.
+No hardware cell changes. New media remains unverified under [#26]. Candidate
+model/type 7/16 associations remain unadmitted. [#58], [#35], [#36] and [E2]
+retain those evidence and owner obligations.
+
 ## Source boundary and reading rules
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
@@ -61,8 +73,8 @@ the rest. The check compares exact names and numeric values, not just a count.
 `INDOOR_PT_CAMERA_C220_V3`. The first two are camera-bearing products in Eufy's
 primary documentation. The other three stay unresolved rather than disappearing.
 
-The original four recognized camera models and the twelve exact eufyCam pairs
-listed above now have discovery software evidence. Other model/type associations
+The original four recognized camera models, the twelve exact eufyCam pairs
+and the three additional battery doorbell pairs listed above have discovery software evidence. Other model/type associations
 remain catalogue associations for investigation. New fixture admission is not an
 observation from a Mega hardware inventory. Eufy's
 pages establish product names and possible product topologies, not numeric
@@ -290,7 +302,7 @@ not eight passing model-specific fixture suites. [Discovery-tests] proves the
 allowlist/parent rules. [S1] checks the existing live command choice. T8142 uses
 `CMD_SET_PAYLOAD`, T8134 uses `CMD_DOORBELL_SET_PAYLOAD` in that test.
 The adapter currently instantiates generic `Camera` for both and
-`BatteryDoorbellCamera` for T8213. It does not yet instantiate a new SoloCam
+`BatteryDoorbellCamera` for T8213 and the three exact pairs in the 0.8.0 section. It does not yet instantiate a new SoloCam
 family factory. That obligation remains [#21].
 
 For excluded models, available vendor predicates, properties or command tables

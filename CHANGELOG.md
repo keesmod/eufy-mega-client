@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 - Unreleased
+
+- Admit exact T8214/94, T8224/95 and T8223/96 battery doorbells behind the existing
+  T8030 owner and select the private BatteryDoorbellCamera adapter.
+- Preserve observed state, battery, firmware, owner/property-filtered detections,
+  distinct ring events and replay suppression. Preserve existing camera identities.
+- Keep new doorbell media explicitly unverified and retain the T8213 media route.
+  Candidate type 7/16 variants and unsupported owners remain explicit.
+- See [battery doorbell software evidence](docs/BATTERY_DOORBELLS.md). No hardware
+  claim or session migration is added. Retain the preceding package and private
+  session store for rollback. This version is unreleased.
+
 ## 0.7.0 - Unreleased
 
 - Enable exact eufyCam model/type media profiles behind T8030 using existing
