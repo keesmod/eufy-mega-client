@@ -16,6 +16,7 @@ const profiles = new Map<
     kind: Device['kind'];
     family?: 'solo' | 'indoor' | 'floodlight';
     standalone?: boolean;
+    h3?: boolean;
   }
 >([
   ['T8400', { type: 30, kind: 'camera', family: 'indoor', standalone: true }],
@@ -54,8 +55,8 @@ const profiles = new Map<
   ['T8B00', { type: 64, kind: 'camera', family: 'solo', standalone: true }],
   ['T8171', { type: 88, kind: 'camera', family: 'solo', standalone: true }],
   ['T8173', { type: 98, kind: 'camera', family: 'solo', standalone: true }],
-  ['T8452', { type: 132, kind: 'camera', standalone: true }],
-  ['T8453', { type: 133, kind: 'camera', standalone: true }],
+  ['T8452', { type: 132, kind: 'camera', standalone: true, h3: false }],
+  ['T8453', { type: 133, kind: 'camera', standalone: true, h3: false }],
   ['T84A1', { type: 151, kind: 'camera', standalone: true }],
   ['T81A0', { type: 10005, kind: 'camera', standalone: true }],
   ['T8425', { type: 47, kind: 'camera', family: 'floodlight', standalone: true }],
@@ -152,11 +153,12 @@ export function discover(items: unknown): Inventory {
   }
   for (const [id, device] of raw) {
     if (relationships.has(id)) continue;
-    // Garage H3 compatibility is under evaluation, not an evidenced command owner.
     const owner = owners.get(device.parent_sn);
     relationships.set(
       id,
-      owner?.kind === 'station' && !['T8452', 'T8453'].includes(device.device_model)
+      profiles.get(device.device_model)?.h3 !== false &&
+        owner?.kind === 'station' &&
+        owner.transport === 'h3-lan'
         ? { kind: 'station', ownerId: owner.id }
         : { kind: 'unsupported', reason: 'unsupported_station' },
     );

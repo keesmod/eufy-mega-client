@@ -4,6 +4,9 @@
 
 - Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
 
+- Allow exact family profiles to reject an H3 command-owner relationship when
+  that topology is unproven. This guard does not enable standalone transport
+  or change the existing admitted camera profiles.
 - Add nine exact Indoor model/type pairs with native event routing and
   experimental media on the existing actual-parent T8030 H3 profile. Battery
   and availability remain unknown where no observed property exists.
