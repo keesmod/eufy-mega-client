@@ -58,3 +58,52 @@ No physical test, consumer upgrade or publication is performed. The
 firmware, topology and feature. Missing hardware feedback alone does not block
 ordinary upgrades. There is no session-store migration. Keep the preceding
 package, lockfile and private store for rollback.
+
+## H3 media profile
+
+#30 adds stored snapshots, live video/audio and recordings for the two exact
+pairs. Admission requires the matching T8030/type 18 parent, a T8030 owner serial
+prefix, LAN-derived credentials and numeric four-part owner firmware at or above
+2.0.9.7. This is the existing conservative additional-H3 profile, not a newly
+measured Floodlight minimum. Unknown, malformed or earlier owner firmware keeps
+`camera_media_unverified`. The tests use synthetic camera firmware 1.2.3 and owner
+3.8.6.0, with a separate check at the admission boundary 2.0.9.7.
+
+Both models reuse `Station.startLivestream`, but the existing envelopes differ:
+
+| Model    | Existing live payload                                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| T8425/47 | `CMD_DOORBELL_SET_PAYLOAD`, command 1000, `accountId`, `camera_type=0`, `entrytype=0`, public `encryptkey` and `streamtype` 0/1 |
+| T8426/87 | `CMD_DOORBELL_SET_PAYLOAD`, command 1000, `account_id`, public `encryptkey` and `streamtype` 0/1                                |
+
+Tests assert the complete vendor payload for H.264 and H.265 and the actual
+channel. No vendor source or transport implementation changes are needed.
+
+Stored snapshots use the latest HomeBase cover query and `CMD_DATABASE_IMAGE`.
+They do not request a fresh exposure. Recordings use the existing date/count
+queries and H3 `CMD_DOWNLOAD_VIDEO` payload with path and public download key.
+The historical upstream H3 download TODO remains in source. Synthetic tests
+establish that the branch is reachable, not that these cameras produce playable
+recordings on hardware.
+
+Live stop requires matching `CMD_STOP_REALTIME_MEDIA` acknowledgement and local
+stop. Recording cancellation requires `CMD_DOWNLOAD_CANCEL` acknowledgement.
+Local EOF alone is not recording completion. Existing time/byte limits,
+cancellation ownership, late-event cleanup and isolation between HomeBases stay
+in place. No legacy-cloud fallback or uncertain command replay is added.
+
+[Media fixtures](../test/fixtures/floodlight-media.mjs) extend the existing
+[command/media suite](../test/eufycam-media.test.mjs),
+[capability suite](../test/capabilities.test.mjs) and
+[lifecycle suite](../test/family-lifecycle.test.mjs). Each model gets snapshot
+bytes, separate audio/video bytes, full recording metadata, thumbnail/download,
+completion/cancellation and exact command checks. Missing/rejected stop or cancel
+acknowledgements cannot report success. A failed stream must leave a simultaneous
+second HomeBase's audio working. Unsupported firmware/model/owner is rejected
+before media commands. The two snapshot regressions fail with
+`camera_media_unverified` before #30 admission and pass after it.
+
+No physical stream, decoded video, audible track, device stop or recovery has
+been confirmed for either model. Those feature-specific results remain #60.
+The other Floodlight model barriers remain #29/#30, rather than being silently
+counted as delivered by this bounded profile.
