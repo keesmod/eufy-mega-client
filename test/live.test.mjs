@@ -40,6 +40,7 @@ function fixture() {
   });
   t.stations.set('HB', station);
   t.encryption.set('HB', 'lan-derived');
+  t.raw.set('CAM', { device_sn: 'CAM', device_model: 'T8160', device_type: 19, parent_sn: 'HB' });
   t.cameras.set('CAM', {
     getModel: () => 'T8160',
     getStationSerial: () => 'HB',

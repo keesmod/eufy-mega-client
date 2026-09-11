@@ -28,8 +28,20 @@ catalogued eufyCam model/type pairs on the existing T8030 owner profile.
 supersede the historical unimplemented discovery/state/event cells for those
 exact tuples only. This is software evidence. No hardware cell changes.
 T8111/T8112 availability remains unknown and wired T8600 battery is not applicable.
-New media routes reject with `camera_media_unverified` pending [#20]. Older owners,
+The original 0.6.0 media guard is superseded only by the profile below. Older owners,
 unresolved suffixes and hardware acceptance remain with [#35], [#55], [E2] and [E6].
+
+## eufyCam media evidence, 0.7.0
+
+[Story #20][#20] adds [exact per-model media evidence](EUFYCAM.md#h3-core-media-070)
+for the twelve eufyCam tuples above on the H3 local LAN-derived profile. The
+new model guard also requires the documented owner firmware branch. Generic,
+T8600 professional and T8172 outdoor pan/tilt live envelopes are separately
+asserted. Snapshot, live video/audio forwarding, recordings and confirmed
+stop/cancel have software fixtures. This supersedes the historical media B1/U
+cells only for that exact profile. It assigns no new hardware evidence.
+Unsupported firmware, models and topologies remain explicit. [#55], [#35],
+[#36], [E2] and [E6] retain the remaining obligations.
 
 ## Source boundary and reading rules
 
