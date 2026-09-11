@@ -2,6 +2,11 @@
 
 ## 0.12.0 - Unreleased
 
+- Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
+  motion/person events. Admit S120 media only with its actual T8030 H3 parent.
+  S100 media and standalone transport remain unverified. See
+  [Wall-light software evidence](docs/WALLLIGHT.md). No new hardware claim.
+
 - Enable stored snapshots, live video/audio and recordings for the nine additional
   exact SoloCam pairs on the existing T8030 H3 LAN-derived media profile. Reuse
   existing command envelopes, stop/cancel and independent-owner cleanup.

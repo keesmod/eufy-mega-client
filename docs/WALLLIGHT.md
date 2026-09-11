@@ -67,7 +67,7 @@ T84A1/type 151 remains `camera_media_unverified` for snapshots, live and recordi
 media even with an H3 inventory parent. Its matrix evidence establishes H3
 storage, with unresolved AI/owner behavior. Storage compatibility alone cannot
 establish which device owns commands. T84A1 keeps recognition/state/events from
-#31. Its media/owner obligation remains under the existing #32, #36 and #61 scope.
+#31. Its remaining transport/owner and hardware obligations stay under #36 and #61.
 
 ### Reused media commands
 
