@@ -137,7 +137,21 @@ export function discover(items: unknown): Inventory {
     }
     const profile = profiles.get(item.device_model);
     if (!profile || profile.type !== item.device_type) {
-      reject(index, item.device_sn, 'unsupported_device');
+      // These bounds restrict diagnostics only, never recognition. Do not trim,
+      // truncate or coerce values: a serial prefix is not a received model code.
+      issues.push({
+        index,
+        deviceId: item.device_sn,
+        code: 'unsupported_device',
+        ...(typeof item.device_model === 'string' &&
+        item.device_model.length === 5 &&
+        /^T[A-Z0-9]{4}$/.test(item.device_model)
+          ? { deviceModel: item.device_model }
+          : {}),
+        ...(Number.isInteger(item.device_type) && item.device_type >= 0 && item.device_type <= 65535
+          ? { deviceType: item.device_type }
+          : {}),
+      });
       return;
     }
     raw.set(item.device_sn, item as WireDevice);

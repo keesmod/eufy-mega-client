@@ -25,3 +25,20 @@ environment. The tested hosts are `security-app-eu.eufylife.com`,
 service hosts. Google FCM and local HomeBase UDP are required transports, not
 legacy Eufy cloud API fallback. Report newly observed destinations before
 changing an allowlist or claiming independence.
+
+## Missing devices
+
+`discoverDevices().issues` preserves its existing `index`, `deviceId` and `code`.
+Never log the whole issue: `deviceId` is private. For `unsupported_device`,
+optional `deviceModel` and `deviceType` fields describe the received pair.
+Only a model matching `T[A-Z0-9]{4}` and an integer type from 0 through 65535
+are included. These are conservative diagnostic bounds, not protocol limits or
+recognition rules. Values are never trimmed, truncated, coerced or derived from
+serial numbers. Missing or invalid values are omitted.
+
+Consumers can log the fixed error code and these two fields, revalidate them
+at the logging boundary, and deduplicate by code plus model plus type. Distinct
+unknown pairs must remain visible. Keep the existing code when either field is
+absent. Other rejection codes have no new fields. Usable devices in a mixed
+inventory remain available. This does not add device support or diagnose the
+reported C30 without its actual received pair.
