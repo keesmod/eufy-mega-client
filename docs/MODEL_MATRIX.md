@@ -203,6 +203,13 @@ module is described as forthcoming by [NVR-WiFi]. Its availability, owner and
 transport remain unknown under [#38]. Neither case enlarges this story into
 protocol implementation.
 
+## Wired inventory recognition, 0.12.0
+
+The four exact wired pairs in [Wired-software] now retain received inventory
+state and standalone identity. H3 and foreign owners are rejected. The existing
+[#27], [#28] and [#36] obligations remain open for live state, event routing,
+authentication and media. No wired transport or hardware support is claimed.
+
 ## Catalogue rows
 
 `R` means the public client recognizes the exact unsuffixed model through its
@@ -315,7 +322,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 1     | T8111 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#96]                             |
 | 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]         |
 | 4     | T8112 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#97]                             |
-| 5     | T8200 / T8201 / T8202 / listed topologies            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]               |
+| 5     | T8200 / T8201 / T8202 / standalone inventory only    | X         | X inventory         | N/A       | B2/U            | B2/U       | B2/U       | B2/U            | B2/U          | [Wired-software], [Catalogue]                       | [#27], [#28], [#36], [#59]        |
 | 7     | T8210 / T8212 candidates / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#108], [#109]                    |
 | 8     | T8113 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#98]                             |
 | 9     | T8114 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#99]                             |
@@ -352,7 +359,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 89    | T8172 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#106]                            |
 | 90    | T8790 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
 | 91    | T8213 / H3 only                                      | H         | H                   | H         | H               | H          | H          | H ring          | H             | [H58], [H0], [C0]                                   | [#25], [#26], [#58]               |
-| 93    | T8203 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]               |
+| 93    | T8203 / standalone inventory only                    | X         | X inventory         | N/A       | B2/U            | B2/U       | B2/U       | B2/U            | B2/U          | [Wired-software], [Catalogue]                       | [#27], [#28], [#36], [#59]        |
 | 94    | T8214 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#113]                            |
 | 95    | T8224 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#114]                            |
 | 96    | T8223 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#115]                            |
@@ -649,4 +656,5 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Floodlight-software]: FLOODLIGHT.md
 [LTE0]: LTE.md
 [Indoor-software]: INDOOR.md
+[Wired-software]: WIRED_DOORBELLS.md
 [NVR-research]: research/NVR_TRANSPORT.md
