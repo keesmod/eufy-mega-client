@@ -2,6 +2,13 @@
 
 ## 0.12.0 - Unreleased
 
+- Add experimental camera-only coverage for exact T8530/55, T8790/90 and
+  T85V0/203 profiles with an actual T8030 H3 parent. Reuse existing camera
+  classes, native events, stored snapshots, live media and recording paths.
+  Ignore native lock and parcel-state notifications. Expose no physical lock,
+  lid or user-management controls. [Integrated camera evidence](docs/INTEGRATED_CAMERAS.md)
+  retains unresolved E330, catalogue, owner and hardware obligations under #39.
+
 - Add nine exact Indoor model/type pairs with native event routing and
   experimental media on the existing actual-parent T8030 H3 profile. Battery
   and availability remain unknown where no observed property exists.
