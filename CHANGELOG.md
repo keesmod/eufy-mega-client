@@ -4,6 +4,12 @@
 
 - Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
 
+- Add nine exact Indoor model/type pairs with native event routing and
+  experimental media on the existing actual-parent T8030 H3 profile. Battery
+  and availability remain unknown where no observed property exists.
+  See [Indoor evidence](docs/INDOOR.md) for exact models, command branches and
+  exclusions. Standalone connections and unresolved C210/C220 aliases stay
+  explicit. Hardware validation remains separate.
 - Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
   motion/person events. Admit S120 media only with its actual T8030 H3 parent.
   S100 media and standalone transport remain unverified. See

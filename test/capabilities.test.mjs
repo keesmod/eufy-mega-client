@@ -4,6 +4,7 @@ import { EufyMegaClient } from '../dist/index.js';
 import { mediaFixture } from './fixtures/media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
+import { indoorMedia } from './fixtures/indoor-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
 import { floodlightMedia } from './fixtures/floodlight-media.mjs';
@@ -14,6 +15,7 @@ for (const profile of [
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...indoorMedia,
 ]) {
   test(`${profile.model}: capabilities share media admission and do not start commands`, async () => {
     const f = await mediaFixture(profile);
