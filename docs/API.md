@@ -294,4 +294,6 @@ The [SoloCam evidence guide](SOLOCAM.md) lists ten exact model/type pairs with
 H3 discovery, observed state and motion/person routing. Public identifiers and
 API signatures are unchanged. Standalone descriptors identify their own owner
 but retain `standalone_transport_unverified`. Existing T8134 media admission is
-preserved. Additional SoloCam media remains `camera_media_unverified`.
+preserved. Version 0.12.0 enables the nine additional models on the existing
+[H3 media profile](SOLOCAM.md#h3-core-media-0120), with unchanged API methods.
+Unsupported owner/firmware combinations retain `camera_media_unverified`.

@@ -64,12 +64,11 @@ Synthetic firmware and events are test inputs, not observed hardware results.
 ## Media and remaining work
 
 T8134 keeps its existing snapshot, live and recording admission, with unchanged
-[S220 command regression coverage](../test/s220.test.mjs). The other nine models
-return `camera_media_unverified`. Selecting SoloCamera does not enable media,
-settings or physical controls.
+[S220 command regression coverage](../test/s220.test.mjs). Version 0.11.0 kept
+media unverified for the other nine models. The [0.12.0 H3 media profile](#h3-core-media-0120)
+below supersedes that restriction for its exact connection profile. Selecting
+SoloCamera alone does not enable media, settings or physical controls.
 
-- [#22](https://github.com/keesmod/eufy-mega-client/issues/22) owns further SoloCam
-  media software on an explicitly selected, evidenced transport profile.
 - [#36](https://github.com/keesmod/eufy-mega-client/issues/36) owns standalone
   transport and [#35](https://github.com/keesmod/eufy-mega-client/issues/35) other
   HomeBase owners. Candidate and unresolved variants remain in the matrix and
@@ -85,3 +84,85 @@ Missing hardware evidence alone does not block ordinary upgrades. No hardware
 trial, consumer upgrade or release publication is performed for #21.
 Version 0.11.0 requires no session-store migration. Retain the preceding package,
 lockfile and private store for rollback.
+
+## H3 core media, 0.12.0
+
+Story [#22](https://github.com/keesmod/eufy-mega-client/issues/22) enables the
+existing media operations for the nine additional exact SoloCam pairs above.
+T8134 retains its existing admission. No new adapter or vendor implementation is
+introduced. The command source is the attributed `vendor/src/http/station.ts`
+at client commit `58f1ca2183bfcb7e9e205b511b924dd3f52014ab`, specifically
+`startLivestream`, `stopLivestream`, `startDownload`, `cancelDownload`,
+`databaseQueryLatestInfo`, `downloadImage`, `databaseQueryByDate` and
+`databaseCountByDate`.
+
+### Selected connection profile
+
+The added models use the existing additional-H3 admission: exact model/type,
+actual matching T8030/type 18 parent with a T8030 serial prefix, local LAN-derived
+credentials and four-part numeric owner firmware at or above 2.0.9.7. This reuses
+the conservative profile already used for other added H3 cameras. It is not a
+newly observed SoloCam firmware minimum. The two SoloCam live envelopes below
+have no firmware branch of their own in the attributed source.
+
+Unknown, malformed and earlier owner firmware retain `camera_media_unverified`
+for these nine added profiles. That restriction is not added to T8134. Tests use
+synthetic camera firmware 1.2.3 and owner 3.8.6.0, with a separate admission test
+at 2.0.9.7. They are software inputs, not hardware acceptance evidence.
+Standalone and other-owner relationships retain their existing typed reasons.
+No cloud DSK lookup, legacy authentication fallback or guessed key is added.
+
+### Existing command paths
+
+| Models                                   | Live envelope    | Stored snapshot | Live video/audio + stop | Recordings + cancel |
+| ---------------------------------------- | ---------------- | --------------- | ----------------------- | ------------------- |
+| T8130, T8131, T8122, T8123, T8124, T8B00 | SoloCam          | Software        | Software                | Software            |
+| T8170, T8171, T8173                      | Pan/tilt camera  | Software        | Software                | Software            |
+| T8134                                    | Existing SoloCam | Regression      | Regression              | Regression          |
+
+Both live envelopes use `CMD_DOORBELL_SET_PAYLOAD` with `commandType=1000`,
+`accountId`, public `encryptkey` and `streamtype` 0/1 for H.264/H.265. The
+T8170/T8171/T8173 branch also sends `camera_type=0` and `entrytype=0`. Tests assert
+both full envelopes and the actual channel for every model and codec. These
+names describe existing wire formats, not new adapters or permission to move a
+pan/tilt camera.
+
+Snapshots query the latest HomeBase cover and download it through
+`CMD_DATABASE_IMAGE`. They do not wake the camera for a fresh image. Recording
+metadata uses `CMD_DATABASE_COUNT_BY_DATE` and `CMD_DATABASE_QUERY_BY_DATE`.
+Thumbnail/download admission is checked for the exact camera before opening its
+media connection. Downloads reuse H3 `CMD_SET_PAYLOAD` with `CMD_DOWNLOAD_VIDEO`,
+file path and public download key. The historical upstream H3 TODO remains in
+source. It is not a new measured failure or proof that every SoloCam supports
+recordings. Existing T8134 reporter video/audio results remain dated evidence.
+
+Live stop uses `CMD_STOP_REALTIME_MEDIA` and requires matching acknowledgement
+and local stop on the same channel. Recording cancellation uses
+`CMD_DOWNLOAD_CANCEL`. Local EOF or a finished transport alone cannot establish
+complete recording delivery. Existing eight-second live cleanup, five-second
+recording cancellation, byte/duration limits and no automatic replay remain.
+
+### Software validation and limits
+
+The independently authored [SoloCam fixtures](../test/fixtures/solocam-media.mjs)
+extend the existing [H3 media tests](../test/eufycam-media.test.mjs),
+[capability tests](../test/capabilities.test.mjs) and
+[family lifecycle tests](../test/family-lifecycle.test.mjs). They cover all ten
+models with exact commands, synthetic snapshot and separate video/audio bytes,
+complete metadata, thumbnails, recording completion/cancellation, rejected or
+missing acknowledgements, late events, repeated cleanup and replay suppression.
+A failed stream on one HomeBase must leave a simultaneous second owner's audio
+stream working. All nine added profiles also reject invalid model/type, owner
+and firmware before starting media, and retain their existing standalone block.
+
+The nine stored-snapshot regressions failed with `camera_media_unverified` on
+the baseline and pass with admission added. Existing T8134 behavior receives the
+same shared checks, including a regression that preserves its firmware admission.
+These synthetic bytes do not prove decodable or audible media on real hardware.
+Camera #10's audio, live-route and recovery questions remain open. #56 retains
+exact hardware confirmation, #36 standalone transport and #35 other owners.
+
+No physical camera test, consumer upgrade or product publication is performed
+for this software story. Version 0.12.0 needs no session-store migration. Retain
+the preceding package, lockfile and private store for rollback. Community results
+remain voluntary and are recorded through the existing process.
