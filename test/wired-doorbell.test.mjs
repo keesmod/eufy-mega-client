@@ -89,9 +89,14 @@ for (const [model, type] of models) {
       });
       assert.equal(inventory.relationships.get(sibling.device_sn).ownerId, owner.device_sn);
       assert.equal(inventory.result.devices.length, 3);
-      assert.deepEqual(inventory.result.issues, [
-        { index: 2, deviceId: raw.device_sn, code: 'unsupported_station' },
-      ]);
+      assert.deepEqual(
+        inventory.result.issues.map(({ context, ...issue }) => issue),
+        [{ index: 2, deviceId: raw.device_sn, code: 'unsupported_station' }],
+      );
+      assert.equal(
+        inventory.result.issues[0].context.parentStatus,
+        parent === owner.device_sn ? 'present' : 'missing',
+      );
       // The inventory issue must block admission even when a recognized H3 is present.
       const transport = new DeviceTransport();
       try {
