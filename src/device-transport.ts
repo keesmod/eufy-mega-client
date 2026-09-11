@@ -1,3 +1,4 @@
+import { observedDeviceState, observedInteger } from './device-state.js';
 import { isStation, type Inventory } from './discovery.js';
 import { lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
@@ -14,7 +15,7 @@ import { P2PConnectionType, VideoCodec, AudioCodec, CommandType } from './vendor
 import type { StreamMetadata, DatabaseQueryLatestInfo } from './vendor/p2p/interfaces.js';
 import type { CommandResult } from './vendor/p2p/models.js';
 import type { PushMessage } from './vendor/push/models.js';
-import { detectionEvents } from './detections.js';
+import { detectionEvents, pushEventType } from './detections.js';
 import {
   EufyError,
   type Device,
@@ -64,7 +65,7 @@ export class DeviceTransport extends EventEmitter {
         await this.connect(id, signal);
         return this.station(id);
       },
-      camera: (id) => this.camera(id),
+      camera: (id) => this.camera(id, true),
       knownCamera: (id, station) => this.raw.get(id)?.parent_sn === station,
       busy: (id) => this.lives.has(id) || this.starting.has(id) || this.commands.has(id),
     },
@@ -162,7 +163,7 @@ export class DeviceTransport extends EventEmitter {
           this.cameras.set(device.device_sn, camera);
           for (const [key, type] of Object.entries(detectionEvents)) {
             camera.on(key.replace(/^device /, '') as 'person detected', (_device, active, name) => {
-              if (active)
+              if (active && this.supportsEvent(device.device_sn, type))
                 this.emit('detection', {
                   id: device.device_sn,
                   type,
@@ -228,21 +229,21 @@ export class DeviceTransport extends EventEmitter {
       }
   }
   device(id: string): Device {
+    const failure = this.failures.get(id);
+    if (failure) throw new EufyError(failure);
     const raw = this.raw.get(id);
     if (!raw) throw new EufyError('unknown_device');
     const camera = this.cameras.get(id);
-    const battery = camera?.hasProperty(PropertyName.DeviceBattery)
-      ? camera.getPropertyValue(PropertyName.DeviceBattery)
-      : undefined;
     return {
       id,
       stationId: raw.parent_sn || id,
       kind: isStation(raw) ? 'station' : 'camera',
       model: raw.device_model,
       name: String(raw.device_alias_name || raw.device_name || ''),
-      firmware: typeof raw.main_sw_version === 'string' ? raw.main_sw_version : null,
+      firmware:
+        typeof raw.main_sw_version === 'string' && raw.main_sw_version ? raw.main_sw_version : null,
       hardware: typeof raw.main_hw_version === 'string' ? raw.main_hw_version : null,
-      battery: typeof battery === 'number' && battery >= 0 && battery <= 100 ? battery : null,
+      ...observedDeviceState(raw, camera ? (key) => camera.getRawProperty(key) : undefined),
     };
   }
   state(id: string): StationState {
@@ -271,12 +272,52 @@ export class DeviceTransport extends EventEmitter {
     if (!station) throw new EufyError('unknown_station');
     return station;
   }
-  private camera(id: string): ProtocolDevice {
+  private camera(id: string, media = false): ProtocolDevice {
     const failure = this.failures.get(id);
     if (failure) throw new EufyError(failure);
     const camera = this.cameras.get(id);
     if (!camera) throw new EufyError('unknown_camera');
+    if (media && !['T8160', 'T8142', 'T8134', 'T8213'].includes(camera.getModel()))
+      throw new EufyError('camera_media_unverified');
     return camera;
+  }
+  supportsEvent(id: string, type: string): boolean {
+    const camera = this.cameras.get(id);
+    if (!camera || this.failures.has(id) || this.failures.has(camera.getStationSerial()))
+      return false;
+    if (type === 'notification') return true;
+    const properties: Record<string, PropertyName> = {
+      motion: PropertyName.DeviceMotionDetected,
+      person: PropertyName.DevicePersonDetected,
+      ring: PropertyName.DeviceRinging,
+      vehicle: PropertyName.DeviceVehicleDetected,
+      pet: PropertyName.DevicePetDetected,
+      crying: PropertyName.DeviceCryingDetected,
+      sound: PropertyName.DeviceSoundDetected,
+      package_delivered: PropertyName.DevicePackageDelivered,
+      package_stranded: PropertyName.DevicePackageStranded,
+      package_taken: PropertyName.DevicePackageTaken,
+      loitering: PropertyName.DeviceSomeoneLoitering,
+      radar_motion: PropertyName.DeviceRadarMotionDetected,
+      dog: PropertyName.DeviceDogDetected,
+      dog_lick: PropertyName.DeviceDogLickDetected,
+      dog_poop: PropertyName.DeviceDogPoopDetected,
+    };
+    const property = properties[type];
+    return property !== undefined && camera.hasProperty(property);
+  }
+  acceptPush(message: PushMessage): boolean {
+    if (
+      (!message.device_sn || message.device_sn === message.station_sn) &&
+      this.stations.has(message.station_sn) &&
+      !this.failures.has(message.station_sn)
+    )
+      return true;
+    return (
+      this.raw.get(message.device_sn)?.parent_sn === message.station_sn &&
+      this.stations.has(message.station_sn) &&
+      this.supportsEvent(message.device_sn, pushEventType(message))
+    );
   }
   private bind(station: Station): void {
     const id = station.getSerial();
@@ -305,7 +346,7 @@ export class DeviceTransport extends EventEmitter {
     });
     station.on('raw device property changed', (serial, params) => {
       const camera = this.cameras.get(serial);
-      if (camera)
+      if (camera?.getStationSerial() === id)
         for (const [type, p] of Object.entries(params))
           camera.updateRawProperty(Number(type), p.value, p.source);
     });
@@ -313,8 +354,8 @@ export class DeviceTransport extends EventEmitter {
       const camera = [...this.cameras.values()].find(
         (c) => c.getStationSerial() === id && c.getChannel() === channel,
       );
-      if (camera?.hasProperty(PropertyName.DeviceBattery))
-        camera.updateProperty(PropertyName.DeviceBattery, battery);
+      if (camera?.hasProperty(PropertyName.DeviceBattery) && observedInteger(battery, 100) !== null)
+        camera.updateRawProperty(CommandType.CMD_GET_BATTERY, String(battery), 'p2p');
     });
     station.on('database query latest', (_s, code, rows) => {
       if (code === 0) this.latest(id, rows);
@@ -410,7 +451,7 @@ export class DeviceTransport extends EventEmitter {
     }
   }
   async snapshot(id: string, signal?: AbortSignal): Promise<Snapshot> {
-    const camera = this.camera(id);
+    const camera = this.camera(id, true);
     await this.connect(camera.getStationSerial(), signal);
     const existing = this.snapshots.get(id);
     if (existing) return { ...existing, data: Buffer.from(existing.data) };
@@ -435,7 +476,7 @@ export class DeviceTransport extends EventEmitter {
     return awaitEvent(source, event, issue, accept, abort, timeout);
   }
   async startLive(id: string, signal?: AbortSignal): Promise<LiveStream> {
-    const camera = this.camera(id),
+    const camera = this.camera(id, true),
       stationId = camera.getStationSerial(),
       station = this.station(stationId);
     if (
@@ -617,7 +658,7 @@ export class DeviceTransport extends EventEmitter {
   }
   processPush(message: PushMessage): void {
     const station = this.stations.get(message.station_sn);
-    if (!station) return;
+    if (!station || !this.acceptPush(message)) return;
     station.processPushNotification(message);
     this.cameras.get(message.device_sn)?.processPushNotification(station, message, 10);
     this.refreshSnapshots(station.getSerial());

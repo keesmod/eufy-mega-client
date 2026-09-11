@@ -123,8 +123,16 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     if (this.events) await this.events.close();
     const events = (this.events = new EventTransport(
       this.cloud,
-      (id) => this.devices.has(id),
+      (id) => {
+        const relationship = this.inventory?.relationships.get(id);
+        return (
+          relationship?.kind === 'station' &&
+          this.devices.get(id)?.parent_sn === relationship.ownerId &&
+          transport.supportsEvent(id, 'notification')
+        );
+      },
       (message) => transport.processPush(message),
+      (message) => transport.acceptPush(message),
     ));
     for (const name of ['event', 'fault'] as const)
       events.on(name, (value) => this.emit(name, value));
@@ -135,6 +143,9 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     const t = await this.deviceTransport();
     await t.connect(id, signal);
     return t.state(id);
+  }
+  async getDeviceState(id: string): Promise<Device> {
+    return (await this.deviceTransport()).device(id);
   }
   async getStationState(id: string): Promise<StationState> {
     return (await this.deviceTransport()).state(id);

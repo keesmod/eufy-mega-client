@@ -239,3 +239,12 @@ and preserves the existing camera and mower module interfaces. See the
 relationships and per-device issues. `listDevices(signal?)` retains `Device[]`
 and stable identifier fields. Recognized unsupported identities remain visible.
 See [the discovery contract](DISCOVERY.md) for operation gates and software evidence.
+
+## Observed camera state
+
+`getDeviceState(id)` returns the latest available `Device` state without opening
+a P2P connection. `Device.availability` is an additive optional field, returned
+as `online`, `offline`, `disabled` or null from the model's reported status.
+`listDevices()` and `discoverDevices()` also include validated cloud battery and
+availability observations. See [the eufyCam state contract](EUFYCAM.md) for missing
+values, unsupported properties, source priority and unchanged identity fields.
