@@ -28,3 +28,11 @@ window, not a 24-hour test. CI-only changes do not need a physical device test.
 Publish and verify the compiled package through GitHub Releases, then pin its
 exact URL and integrity in the consuming bridge and validate that repository.
 Do not publish a new library version solely for CI/documentation changes.
+
+## Community results
+
+You can contribute scoped hardware results without owning development tools.
+Read the [community evidence policy](docs/COMMUNITY_VALIDATION.md). For camera
+installations, use the [compatibility form](https://github.com/keesmod/ha-eufy-cam/issues/new?template=compatibility.yml)
+or add results to the existing issue for that problem. Successes and partial
+results both help. Reports are voluntary and are not an upgrade requirement.
