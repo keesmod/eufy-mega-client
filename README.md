@@ -20,7 +20,7 @@ Building a Home Assistant installation? Use the
 Install the compiled GitHub release:
 
 ```sh
-npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.10.0/keesmod-eufy-mega-client-0.10.0.tgz
+npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.12.0/keesmod-eufy-mega-client-0.12.0.tgz
 ```
 
 Commit your lockfile so `npm ci` verifies package integrity. Packages are
