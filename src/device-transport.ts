@@ -157,7 +157,10 @@ export class DeviceTransport extends EventEmitter {
             existing.update(this.cameraWire(device));
             continue;
           }
-          const factory = device.device_model === 'T8213' ? BatteryDoorbellCamera : Camera;
+          // Discovery admits exact pairs. Family selection does not grant media access.
+          const factory = Camera.isBatteryDoorbell(device.device_type)
+            ? BatteryDoorbellCamera
+            : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
