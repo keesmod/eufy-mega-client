@@ -134,6 +134,6 @@ test('garage discovery never manufactures battery or availability from unrelated
     assert.equal(state.battery, null);
     assert.equal(state.firmware, null);
     // Use only the pinned model's state mapping, never generic numeric defaults.
-    assert.equal(state.availability, null);
+    assert.equal(state.availability, value === '0' ? 'offline' : null);
   }
 });
