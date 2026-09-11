@@ -2,6 +2,10 @@
 
 ## 0.12.0 - Unreleased
 
+- Recognize exact T8200/T8201/T8202 type 5 and T8203 type 93 wired doorbells
+  with their received inventory state and real standalone identity. Reject
+  HomeBase ownership for these models. Standalone authentication, events and
+  media remain unverified. See [wired doorbell evidence](docs/WIRED_DOORBELLS.md).
 - Add experimental T86P2 / type 111 discovery, observed state, H3 events and core
   media through its actual T8030 parent in Wi-Fi mode. Reuse the generic camera
   adapter and acknowledged media lifecycle. Cellular and standalone transport
