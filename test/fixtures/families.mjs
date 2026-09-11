@@ -24,7 +24,7 @@ export const families = [
   row('cam-s220-h3', 'cam', 'T8142', 15, 'H3', 'payload', true),
   row('solo-h3', 'solo', 'T8134', 63, 'H3', 'doorbell', true),
   row('battery-h3', 'battery', 'T8213', 91, 'H3', 'payload', true),
-  row('indoor-wifi', 'indoor', 'T8400', 30, 'W', 'doorbell'),
+  { ...row('indoor-wifi', 'indoor', 'T8400', 30, 'W', 'doorbell'), recognized: true },
   row('wired-wifi', 'wired', 'T8200', 5, 'W', 'doorbell'),
   row('flood-wifi', 'flood', 'T8423', 38, 'W', 'doorbell'),
   { ...row('wall-wifi', 'wall', 'T84A1', 151, 'W', 'doorbell'), recognized: true },

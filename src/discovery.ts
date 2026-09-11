@@ -11,8 +11,22 @@ import {
 // Exact model/type pairs already evidenced by the client. Family stories extend this registry.
 const profiles = new Map<
   string,
-  { type: number; kind: Device['kind']; family?: 'solo' | 'floodlight'; standalone?: boolean }
+  {
+    type: number;
+    kind: Device['kind'];
+    family?: 'solo' | 'indoor' | 'floodlight';
+    standalone?: boolean;
+  }
 >([
+  ['T8400', { type: 30, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8410', { type: 31, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8401', { type: 34, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8411', { type: 35, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8441', { type: 45, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8442', { type: 46, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8414', { type: 100, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8416', { type: 104, kind: 'camera', family: 'indoor', standalone: true }],
+  ['T8417', { type: 105, kind: 'camera', family: 'indoor', standalone: true }],
   ['T8030', { type: 18, kind: 'station' }],
   ['T8111', { type: 1, kind: 'camera' }],
   ['T8112', { type: 4, kind: 'camera' }],
@@ -52,6 +66,10 @@ const profiles = new Map<
 export const isSoloCamera = (raw: WireDevice): boolean => {
   const profile = profiles.get(raw.device_model);
   return profile?.family === 'solo' && profile.type === raw.device_type;
+};
+export const isIndoorCamera = (raw: WireDevice): boolean => {
+  const profile = profiles.get(raw.device_model);
+  return profile?.family === 'indoor' && profile.type === raw.device_type;
 };
 // Storage-only Floodlight variants are deliberately outside this command-owner profile.
 export const isFloodlightCamera = (raw: WireDevice): boolean => {
