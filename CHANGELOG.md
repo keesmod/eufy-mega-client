@@ -2,6 +2,9 @@
 
 ## 0.12.0 - Unreleased
 
+- Allow exact family profiles to reject an H3 command-owner relationship when
+  that topology is unproven. This guard does not enable standalone transport
+  or change the existing admitted camera profiles.
 - Add nine exact Indoor model/type pairs with native event routing and
   experimental media on the existing actual-parent T8030 H3 profile. Battery
   and availability remain unknown where no observed property exists.
