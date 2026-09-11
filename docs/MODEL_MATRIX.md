@@ -20,6 +20,17 @@ no HomeBase entity. Unknown pairs remain unadmitted with `unsupported_device`.
 The dated feature rows and hardware claims below remain unchanged. Other owner
 protocols and standalone authentication remain with [#35] and [#36].
 
+## eufyCam software evidence, 0.6.0
+
+[Story #19][#19] adds exact discovery, state and event coverage for all twelve
+catalogued eufyCam model/type pairs on the existing T8030 owner profile.
+[Per-model feature evidence](EUFYCAM.md) and [regressions](../test/eufycam.test.mjs)
+supersede the historical unimplemented discovery/state/event cells for those
+exact tuples only. This is software evidence. No hardware cell changes.
+T8111/T8112 availability remains unknown and wired T8600 battery is not applicable.
+New media routes reject with `camera_media_unverified` pending [#20]. Older owners,
+unresolved suffixes and hardware acceptance remain with [#35], [#55], [E2] and [E6].
+
 ## Source boundary and reading rules
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
@@ -38,8 +49,10 @@ the rest. The check compares exact names and numeric values, not just a count.
 `INDOOR_PT_CAMERA_C220_V3`. The first two are camera-bearing products in Eufy's
 primary documentation. The other three stay unresolved rather than disappearing.
 
-Model/type associations outside the four recognized camera models are catalogue
-associations for investigation, not observations from a Mega inventory. Eufy's
+The original four recognized camera models and the twelve exact eufyCam pairs
+listed above now have discovery software evidence. Other model/type associations
+remain catalogue associations for investigation. New fixture admission is not an
+observation from a Mega hardware inventory. Eufy's
 pages establish product names and possible product topologies, not numeric
 protocol types or this client's implementation. A candidate, regional suffix or
 bundle code must be resolved with sanitized inventory before enabling it.

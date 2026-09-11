@@ -1,3 +1,4 @@
+import { observedDeviceState } from './device-state.js';
 import {
   EufyError,
   type Device,
@@ -10,6 +11,16 @@ import {
 // Exact model/type pairs already evidenced by the client. Family stories extend this registry.
 const profiles = new Map<string, { type: number; kind: Device['kind']; standalone?: boolean }>([
   ['T8030', { type: 18, kind: 'station' }],
+  ['T8111', { type: 1, kind: 'camera' }],
+  ['T8112', { type: 4, kind: 'camera' }],
+  ['T8113', { type: 8, kind: 'camera' }],
+  ['T8114', { type: 9, kind: 'camera' }],
+  ['T8140', { type: 14, kind: 'camera' }],
+  ['T8161', { type: 23, kind: 'camera' }],
+  ['T8600', { type: 24, kind: 'camera' }],
+  ['T8162', { type: 26, kind: 'camera' }],
+  ['T8144', { type: 49, kind: 'camera' }],
+  ['T8172', { type: 89, kind: 'camera' }],
   ['T8160', { type: 19, kind: 'camera' }],
   ['T8213', { type: 91, kind: 'camera' }],
   ['T8142', { type: 15, kind: 'camera' }],
@@ -119,7 +130,7 @@ export function discover(items: unknown): Inventory {
           ? device.main_sw_version
           : null,
       hardware: typeof device.main_hw_version === 'string' ? device.main_hw_version : null,
-      battery: null,
+      ...observedDeviceState(device),
     });
   }
   return {

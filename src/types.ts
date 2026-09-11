@@ -46,6 +46,8 @@ export interface Device {
   firmware: string | null;
   hardware: string | null;
   battery: number | null;
+  /** Last reported device status, not reachability inferred from its HomeBase. */
+  availability?: 'online' | 'offline' | 'disabled' | null;
 }
 /** Discovery is software evidence. Owner IDs are stable device IDs, never credentials. */
 export type DeviceRelationship =

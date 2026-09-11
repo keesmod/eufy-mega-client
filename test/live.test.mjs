@@ -41,6 +41,7 @@ function fixture() {
   t.stations.set('HB', station);
   t.encryption.set('HB', 'lan-derived');
   t.cameras.set('CAM', {
+    getModel: () => 'T8160',
     getStationSerial: () => 'HB',
     getChannel: () => 1,
     destroy() {},

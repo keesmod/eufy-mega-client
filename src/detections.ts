@@ -41,6 +41,9 @@ const pushTypes: Record<number, string> = {
   3305: 'loitering',
   3306: 'radar_motion',
 };
+export const pushEventType = (message: PushMessage): string =>
+  pushTypes[message.event_type ?? -1] ?? 'notification';
+
 export type Recognition = 'known' | 'unknown' | 'unidentified' | 'not_applicable';
 export interface Notification {
   id: string;
@@ -106,7 +109,7 @@ export class Detections {
     if (!this.known(serial)) return;
     const now = Date.now();
     for (const [key, expires] of this.seen) if (expires <= now) this.seen.delete(key);
-    const type = pushTypes[message.event_type ?? -1] ?? 'notification';
+    const type = pushEventType(message);
     const occurred_at = occurredAt(message.event_time);
     const identity = message.unique_id || message.event_session;
     const key =

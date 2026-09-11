@@ -17,6 +17,7 @@ export class EventTransport extends EventEmitter {
     private readonly cloud: MegaCloud,
     known: (id: string) => boolean,
     private readonly devicePush: (message: PushMessage) => void,
+    private readonly acceptPush: (message: PushMessage) => boolean = () => true,
   ) {
     super();
     this.detections = new Detections(
@@ -60,6 +61,7 @@ export class EventTransport extends EventEmitter {
   push(message: PushMessage): void {
     if (this.closed) return;
     try {
+      if (!this.acceptPush(message)) return;
       this.detections.push(message);
       this.devicePush(message);
     } catch {
