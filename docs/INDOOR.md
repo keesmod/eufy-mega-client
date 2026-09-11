@@ -124,7 +124,7 @@ Synthetic streams do not prove decodable video or audible sound on hardware.
 
 The T8400 snapshot regression fails with `camera_media_unverified` before the
 admission change. All nine real command paths and the expanded shared tests pass
-after it. #23 software evidence was recorded before #24 admission. The issues
-remain open for coordinated batch review and integration. #57 remains the
+after it. #23 software evidence was recorded before #24 admission. The batch
+acceptance and final package evidence are tracked in #63. #57 remains the
 separate hardware obligation. Version 0.12.0 needs no session-store migration.
 Retain the preceding package, lockfile and private store for rollback.
