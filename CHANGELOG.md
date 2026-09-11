@@ -5,6 +5,12 @@
 - Record [PoE/NVR transport evidence](docs/research/NVR_TRANSPORT.md) and an offline
   admission probe. NVR media remains blocked under #38 pending its own transport.
 
+- Add nine exact Indoor model/type pairs with native event routing and
+  experimental media on the existing actual-parent T8030 H3 profile. Battery
+  and availability remain unknown where no observed property exists.
+  See [Indoor evidence](docs/INDOOR.md) for exact models, command branches and
+  exclusions. Standalone connections and unresolved C210/C220 aliases stay
+  explicit. Hardware validation remains separate.
 - Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
   motion/person events. Admit S120 media only with its actual T8030 H3 parent.
   S100 media and standalone transport remain unverified. See
