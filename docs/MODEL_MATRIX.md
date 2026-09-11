@@ -367,11 +367,11 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 131   | T8453 candidate / listed topologies                  | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]              |
 | 132   | T8452 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]              |
 | 133   | T8453 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]              |
-| 151   | T84A1 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#31], [#32], [#61]              |
+| 151 | T84A1 / H3 state and events, W descriptor | X | X (firmware only) | U | U | U | U | X | U | [Wall-software], [Catalogue] | [#32], [#35], [#36], [#61] |
 | 189   | T8531 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                |
 | 203   | T85V0 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                |
 | 301   | T8E00 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#38], [E2], [E6]                |
-| 10005 | T81A0 / listed topologies                            | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#31], [#32], [#61]              |
+| 10005 | T81A0 / H3 state and events, W descriptor | X | X (firmware only) | X | U | U | U | X | U | [Wall-software], [Catalogue] | [#32], [#35], [#36], [#61] |
 | 10008 | T8W11C candidate / listed topologies                 | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 10009 | T8419 / T8W11P candidate / listed topologies         | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
 | 10010 | T8W11C candidate / listed topologies                 | B1/U      | B1/U            | B1/U      | B1/U            | B1/U       | B1/U       | B1/U     | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]              |
@@ -636,3 +636,5 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [#114]: https://github.com/keesmod/eufy-mega-client/issues/114
 [#115]: https://github.com/keesmod/eufy-mega-client/issues/115
 [Solo-software]: SOLOCAM.md
+
+[Wall-software]: WALLLIGHT.md

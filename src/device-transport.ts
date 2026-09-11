@@ -12,6 +12,7 @@ import {
   Station,
   Camera,
   SoloCamera,
+  WallLightCam,
   BatteryDoorbellCamera,
   PropertyName,
 } from './vendor/http/index.js';
@@ -168,7 +169,9 @@ export class DeviceTransport extends EventEmitter {
             ? BatteryDoorbellCamera
             : isSoloCamera(device)
               ? SoloCamera
-              : Camera;
+              : Camera.isWallLightCam(device.device_type)
+                ? WallLightCam
+                : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
