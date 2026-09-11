@@ -51,9 +51,20 @@ private battery doorbell adapter. [Per-model evidence](BATTERY_DOORBELLS.md) and
 [regressions](../test/battery-doorbell.test.mjs) supersede the historical B1/U
 state, battery, discovery and motion/person/ring cells for these exact H3 tuples
 only. Available values are observations, never synthesized from connection state.
-No hardware cell changes. New media remains unverified under [#26]. Candidate
+No hardware cell changes. The media profile below supersedes the 0.8.0 guard. Candidate
 model/type 7/16 associations remain unadmitted. [#58], [#35], [#36] and [E2]
 retain those evidence and owner obligations.
+
+## Battery doorbell media evidence, 0.9.0
+
+[Story #26][#26] adds [exact H3 media evidence](BATTERY_DOORBELLS.md#h3-core-media-090)
+for T8214/94, T8224/95 and T8223/96 with the documented numeric T8030 owner
+firmware branch. T8213/91 retains its existing route and gains regression coverage.
+Separate E340 and generic C30/C31 live envelopes, stored snapshots, video/audio
+forwarding, recording operations and acknowledged stop/cancel have software tests.
+This supersedes historical B1/U media cells only for that exact profile. No H
+cells change. [#58], [#35], [#36], [E2] and [E6] retain hardware, other owners,
+standalone and candidate inventory obligations.
 
 ## Source boundary and reading rules
 
