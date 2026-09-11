@@ -4,6 +4,7 @@ import type { WireDevice } from './types.js';
 // T81A0 ownership and command evidence: docs/WALLLIGHT.md.
 // Discovery alone is not media evidence.
 const additionalH3Media = new Map([
+  ['T86P2', 111],
   ['T8111', 1],
   ['T8112', 4],
   ['T8113', 8],
