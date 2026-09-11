@@ -153,7 +153,11 @@ covered by software tests. Snapshot, separate video/audio forwarding, recordings
 and acknowledged stop/cancel reuse the established H3 route. No lock, lid, parcel
 mechanism or user-management control is exposed. Non-camera pushes are excluded.
 
-These three feature rows supersede their historical B1/U software cells only for
+The remaining-catalogue audit also adds exact T8110/type 10035 eufyCam C35
+coverage using the generic Camera class and existing Solo live envelope.
+It remains an eufyCam, with its other-owner and hardware obligations in [#39].
+
+These four feature rows supersede their historical B1/U software cells only for
 this exact H3 profile. No hardware cells change. T8531/189 lacks camera metadata
 and media commands in the pinned source. Types 101/102 have no model or operation
 mapping. Those gaps, E85V0 variants and hardware acceptance remain with [#39],
@@ -391,7 +395,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 10009 | T8419 / T8W11P candidate / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
 | 10010 | T8W11C candidate / listed topologies                 | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
 | 10011 | T8419N per catalogue only / listed topologies        | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
-| 10035 | T8110 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#19], [#20], [#55]               |
+| 10035 | T8110 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software], [Catalogue]                  | [#39], [#35], [#36], [E2], [E6]   |
 
 For the four R rows, evaluate every listed non-H3 topology as B2/U for each of
 discovery, state, battery, snapshot, live video, live audio, events and recordings.

@@ -1,4 +1,4 @@
-# Cameras in integrated products
+# Integrated products and remaining camera catalogue
 
 Version 0.12.0 adds experimental camera software coverage for three exact
 model/type pairs. [Issue #39](https://github.com/keesmod/eufy-mega-client/issues/39)
@@ -60,6 +60,32 @@ This is software coverage of the inherited H3 route, not a measured device or
 cloud recording result.
 
 ## Evidence and remaining obligations
+
+### Remaining-catalogue addition: eufyCam C35
+
+The same #39 catalogue audit found exact T8110/type 10035 missing from public
+admission. Version 0.12.0 now includes it as an eufyCam using the generic Camera
+class. It is not assigned to the SoloCam family merely because the vendor live
+predicate includes C35. The existing live command is `CMD_DOORBELL_SET_PAYLOAD`
+with nested command 1000, `accountId`, RSA `encryptkey` and codec `streamtype`.
+No adapter or protocol code is added for this model.
+
+The exact H3 owner and conservative firmware guard above also apply to C35.
+The source has native battery/state metadata, camera detection properties and
+start/stop/download/cancel commands for type 10035. Tests exercise observed state,
+H3 motion/person events, duplicate suppression and rejected ring/owner/model
+variants. Empty or self-parent descriptors remain explicitly unverified. Wi-Fi,
+MiniBase, regional variants and physical validation remain in #39/#35/#36.
+
+[C35 regressions](../test/c35.test.mjs), [eufyCam state tests](../test/eufycam.test.mjs)
+and the shared [eufyCam media profiles](../test/fixtures/eufycam-media.mjs) separately
+cover the generic camera class, exact native live envelope, stored snapshots,
+video/audio, recordings and acknowledged stop/cancel. The primary HomeBase guide
+lists T8110 with H3, and the pinned enum and display metadata associate T8110
+with type 10035. Those sources support a software profile conditional on the
+actual descriptor, not a hardware-support claim.
+
+### Sources and unresolved entries
 
 The protocol source is the attributed MIT camera adaptation of
 `bropat/eufy-security-client` 4.1.1-1, upstream commit

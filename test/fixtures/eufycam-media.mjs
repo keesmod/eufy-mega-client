@@ -12,9 +12,12 @@ export const eufycamMedia = [
   ['T8162', 26],
   ['T8144', 49],
   ['T8172', 89],
-].map(([model, type]) => ({
+  // Remaining-catalogue delivery under #39, documented separately from the original twelve.
+  ['T8110', 10035, 'solo'],
+].map(([model, type, liveEnvelope]) => ({
   id: `cam-${model}-h3`,
   family: 'cam',
+  ...(liveEnvelope ? { liveEnvelope } : {}),
   model,
   type,
   topology: 'H3',

@@ -1,5 +1,13 @@
 # eufyCam evidence
 
+The 0.12.0 remaining-catalogue work in
+[#39](https://github.com/keesmod/eufy-mega-client/issues/39) separately adds exact
+[C35/T8110/type 10035 H3 software coverage](INTEGRATED_CAMERAS.md#remaining-catalogue-addition-eufycam-c35).
+The existing generic Camera class and native Solo live envelope are reused.
+Observed state, H3 motion/person events and core media have software tests.
+Other owners, standalone operation, variants and hardware validation remain
+with #39. The original twelve-model evidence below is preserved.
+
 Story [#19](https://github.com/keesmod/eufy-mega-client/issues/19) adds software
 coverage in unreleased 0.6.0. The independently authored
 [regressions](../test/eufycam.test.mjs) exercise the actual private `Camera` factory,

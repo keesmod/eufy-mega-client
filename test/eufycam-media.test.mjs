@@ -333,6 +333,7 @@ for (const p of profiles) {
 
 for (const p of [
   eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
   ...indoorMedia,
@@ -450,6 +451,7 @@ for (const p of profiles) {
 
 for (const p of [
   eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
   ...batteryDoorbellMedia,
   ...solocamMedia,
   ...walllightMedia,
@@ -503,6 +505,7 @@ for (const p of [
 
 for (const p of [
   eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
   ...indoorMedia,
