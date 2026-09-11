@@ -1,3 +1,4 @@
+import { hasCameraMedia } from './camera-media.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
 import { isStation, type Inventory } from './discovery.js';
 import { lanAddress } from './network.js';
@@ -277,7 +278,7 @@ export class DeviceTransport extends EventEmitter {
     if (failure) throw new EufyError(failure);
     const camera = this.cameras.get(id);
     if (!camera) throw new EufyError('unknown_camera');
-    if (media && !['T8160', 'T8142', 'T8134', 'T8213'].includes(camera.getModel()))
+    if (media && !hasCameraMedia(this.raw.get(id), this.raw.get(camera.getStationSerial())))
       throw new EufyError('camera_media_unverified');
     return camera;
   }
@@ -397,9 +398,9 @@ export class DeviceTransport extends EventEmitter {
       live.acknowledged = true;
       if (live.stopped) this.finishLive(id, { confirmed: true, reason: 'device' });
     });
-    station.on('livestream stop', () => {
+    station.on('livestream stop', (_s, channel) => {
       const live = this.lives.get(id);
-      if (!live) return;
+      if (!live || channel !== live.channel) return;
       live.stopped = true;
       // Upstream emits this locally as soon as STOP is sent. Wait for device ACK.
       if (live.acknowledged) this.finishLive(id, { confirmed: true, reason: 'device' });
@@ -414,6 +415,7 @@ export class DeviceTransport extends EventEmitter {
       if (
         !this.cameras.has(row.device_sn) ||
         this.raw.get(row.device_sn)?.parent_sn !== stationId ||
+        !hasCameraMedia(this.raw.get(row.device_sn), this.raw.get(stationId)) ||
         !('crop_local_path' in row)
       )
         continue;

@@ -2,10 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate as turn } from 'node:timers/promises';
 import { Detections } from '../dist/detections.js';
+import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { families } from './fixtures/families.mjs';
 import { mediaFixture } from './fixtures/media.mjs';
 
-for (const p of families.filter((p) => p.admitted)) {
+for (const p of [
+  ...families.filter((p) => p.admitted),
+  ...eufycamMedia.filter((p) => !['T8142', 'T8160'].includes(p.model)),
+]) {
   test(`${p.id}: duplicate start/stop events preserve one stream and one confirmed outcome`, async () => {
     const f = await mediaFixture(p),
       outcomes = [];

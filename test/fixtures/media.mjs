@@ -6,10 +6,11 @@ import { CommandType } from '../../dist/vendor/p2p/types.js';
 
 // Synthetic station event boundary, real camera factory and DeviceTransport lifecycle.
 // Streams contain no recording or image bytes. No socket or hardware is opened.
-export async function mediaFixture(profile) {
-  const { camera } = inventory(profile);
+export async function mediaFixture(profile, options) {
+  const { camera, rows } = inventory(profile, options);
   const transport = new DeviceTransport();
   await transport.load(new Map([[camera.device_sn, camera]]));
+  for (const row of rows) transport.raw.set(row.device_sn, row);
   const counts = { starts: 0, stops: 0, closes: 0 };
   const streams = [];
   let connected = true;
@@ -54,6 +55,7 @@ export async function mediaFixture(profile) {
         video,
         audio,
       );
+      return { video, audio };
     },
     ack(code = 0, channel = camera.device_channel) {
       station.emit('command result', station, {

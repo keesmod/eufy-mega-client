@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 - Unreleased
+
+- Enable exact eufyCam model/type media profiles behind T8030 using existing
+  H3 local LAN-derived command paths. Require the documented owner firmware
+  branch for newly admitted models. Keep unknown profiles explicitly unsupported.
+- Preserve stored snapshots, live video/audio, recording history and downloads,
+  with per-model command and lifecycle fixtures. No new hardware support is claimed.
+- Require the matching camera channel for local live-stop confirmation. Remove
+  pending recording EOF listeners after cancellation and suppress duplicate listeners.
+- Check unsupported camera-bound recording access before opening its connection.
+- See [eufyCam media evidence](docs/EUFYCAM.md). Version 0.7.0 is unreleased.
+  No session migration is required. Retain the preceding package and private
+  session store for rollback.
+
 ## 0.6.0 - Unreleased
 
 - Admit twelve exact eufyCam model/type pairs behind the existing HomeBase 3 owner.
