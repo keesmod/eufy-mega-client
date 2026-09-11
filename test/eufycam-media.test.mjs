@@ -10,12 +10,14 @@ import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
 import { floodlightMedia } from './fixtures/floodlight-media.mjs';
+import { integratedMedia } from './fixtures/integrated-media.mjs';
 const profiles = [
   ...eufycamMedia,
   ...batteryDoorbellMedia,
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
 ];
 const newlyAdmittedSolo = solocamMedia.filter((p) => p.model !== 'T8134');
 
@@ -109,18 +111,27 @@ for (const p of profiles) {
         p.liveEnvelope ?? (['T8172', 'T8214'].includes(p.model) ? 'doorbell' : 'payload');
       for (const codec of [VideoCodec.H264, VideoCodec.H265]) {
         station.startLivestream(camera, codec);
-        const command = sent.pop(),
-          payload = JSON.parse(command.value);
+        const command = sent.pop();
+        if (envelope === 'int') {
+          assert.deepEqual(command, {
+            commandType: CommandType.CMD_START_REALTIME_MEDIA,
+            value: 2,
+            strValue: 'abcd',
+            channel: 2,
+          });
+          continue;
+        }
+        const payload = JSON.parse(command.value);
         assert.equal(
           command.commandType,
-          envelope !== 'payload'
+          !['payload', 'smartdrop'].includes(envelope)
             ? CommandType.CMD_DOORBELL_SET_PAYLOAD
             : CommandType.CMD_SET_PAYLOAD,
         );
         assert.equal(command.channel, 2);
         assert.deepEqual(
           payload,
-          envelope !== 'payload'
+          !['payload', 'smartdrop'].includes(envelope)
             ? {
                 commandType: 1000,
                 data: {
@@ -135,10 +146,11 @@ for (const p of profiles) {
             : {
                 account_id: 'synthetic',
                 cmd: CommandType.CMD_START_REALTIME_MEDIA,
+                ...(envelope === 'smartdrop' ? { mChannel: 0 } : {}),
                 mValue3: CommandType.CMD_START_REALTIME_MEDIA,
                 payload: {
                   ClientOS: 'Android',
-                  ...(p.model === 'T8600' ? { camera_type: 0, entrytype: 0 } : {}),
+                  ...(p.model === 'T8600' || envelope === 'smartdrop' ? { camera_type: 0, entrytype: 0 } : {}),
                   key: 'abcd',
                   streamtype: codec === VideoCodec.H264 ? 1 : 2,
                 },
@@ -319,6 +331,7 @@ for (const p of [
   ...newlyAdmittedSolo,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
 ])
   test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
     for (const change of [
@@ -434,6 +447,7 @@ for (const p of [
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
 ])
   test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
     const f = await mediaFixture(p);
@@ -485,6 +499,7 @@ for (const p of [
   ...newlyAdmittedSolo,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
 ])
   test(`${p.model}: the new profile admits the existing additional-H3 firmware boundary`, async () => {
     for (const firmware of ['2.0.9.7', '3.8.6.0']) {
