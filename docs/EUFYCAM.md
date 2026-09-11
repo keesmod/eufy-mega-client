@@ -1,11 +1,22 @@
-# eufyCam software evidence
+# eufyCam evidence
 
 Story [#19](https://github.com/keesmod/eufy-mega-client/issues/19) adds software
 coverage in unreleased 0.6.0. The independently authored
 [regressions](../test/eufycam.test.mjs) exercise the actual private `Camera` factory,
 state adapter and event route. They do not establish physical support.
 
-## Exact scope
+## Exact hardware validation
+
+[Story #55 hardware evidence](hardware/T8160_2026_09_11.md) records one T8160
+firmware 3.4.3.0 behind its actual T8030 firmware 3.8.6.0, using client 0.10.0
+and bridge/integration 0.7.1. Discovery, reported state and battery, stored
+snapshot, decoded live video/audio and stop, recording playback/seek, real HA
+person event, in-flight UI cancellation with confirmed device stop, and restart
+recovery were individually measured. Existing HA identities and configuration
+were preserved. Other models, firmware and owners retain their separate
+[hardware obligations](hardware/T8160_2026_09_11.md#remaining-hardware-tuples).
+
+## Exact software scope
 
 | Model | Protocol type | Power   | Discovery | Battery        | Availability  | Motion/person  |
 | ----- | ------------- | ------- | --------- | -------------- | ------------- | -------------- |
