@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 - Unreleased
+
+- Add typed discovery relationships and per-device reasons through `discoverDevices()`.
+  Keep existing `listDevices()` results and camera/HA identifier fields compatible.
+- Isolate unknown models, unsupported owners and device initialization failures.
+  Preserve duplicate identity, malformed relationship and inventory-cap errors.
+- Represent standalone T8134 ownership without a false HomeBase or unverified
+  transport. Wire/auth research remains in #36. No hardware support is added.
+- See [discovery evidence and migration notes](docs/DISCOVERY.md). No session-store
+  migration is required. Retain the previous package and private store for rollback.
+  This version is unreleased.
+
 ## 0.4.0 - Unreleased
 
 - Add the bounded read-only `PortableMapAcquisition` library adapter for the three

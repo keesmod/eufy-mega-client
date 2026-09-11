@@ -6,6 +6,7 @@ import {
   type AuthState,
   type ClientOptions,
   type Device,
+  type DiscoveryResult,
   type MowerAdapter,
   type MowerModule,
   type MowerSession,
@@ -18,6 +19,7 @@ const credentials = { email: 'fixture@example.invalid', password: 'fixture', cou
 const options: ClientOptions = { credentials, sessionStore: new FileSessionStore('camera.json') };
 const legacy = new EufyMegaClient(options);
 const devices: Promise<Device[]> = legacy.listDevices();
+const discovery: Promise<DiscoveryResult> = legacy.discoverDevices();
 const camera = new EufyClient({ security: options });
 const security: SecurityModule | undefined = camera.security;
 const store: MowerSessionStore = { load: async () => undefined, save: async () => {} };
@@ -43,3 +45,5 @@ module?.start();
 // @ts-expect-error Camera configuration cannot use the mower session format.
 new EufyClient({ security: { credentials, sessionStore: store } });
 void [devices, state, securitySession, new EufyError('fixture')];
+
+void discovery;

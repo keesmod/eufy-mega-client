@@ -47,6 +47,26 @@ export interface Device {
   hardware: string | null;
   battery: number | null;
 }
+/** Discovery is software evidence. Owner IDs are stable device IDs, never credentials. */
+export type DeviceRelationship =
+  | { kind: 'station'; ownerId: string }
+  | { kind: 'standalone'; ownerId: string; reason: 'standalone_transport_unverified' }
+  | { kind: 'unsupported'; reason: 'invalid_device_relationship' | 'unsupported_station' };
+export interface DiscoveryIssue {
+  index: number;
+  deviceId: string | null;
+  code:
+    | 'invalid_device_identity'
+    | 'invalid_device_relationship'
+    | 'unsupported_device'
+    | 'unsupported_station'
+    | 'standalone_transport_unverified';
+}
+export interface DiscoveryResult {
+  devices: Device[];
+  relationships: (DeviceRelationship & { deviceId: string })[];
+  issues: DiscoveryIssue[];
+}
 export interface Diagnostic {
   operation: string;
   host: string;
