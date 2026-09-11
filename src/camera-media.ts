@@ -1,6 +1,7 @@
 import type { WireDevice } from './types.js';
 
 // Software command evidence: docs/EUFYCAM.md, docs/BATTERY_DOORBELLS.md, docs/SOLOCAM.md and docs/FLOODLIGHT.md.
+// T81A0 ownership and command evidence: docs/WALLLIGHT.md.
 // Discovery alone is not media evidence.
 const additionalH3Media = new Map([
   ['T8111', 1],
@@ -25,6 +26,7 @@ const additionalH3Media = new Map([
   ['T8B00', 64],
   ['T8171', 88],
   ['T8173', 98],
+  ['T81A0', 10005],
   ['T8425', 47],
   ['T8426', 87],
 ]);

@@ -12,6 +12,7 @@ import {
   Station,
   Camera,
   SoloCamera,
+  WallLightCam,
   FloodlightCamera,
   BatteryDoorbellCamera,
   PropertyName,
@@ -171,7 +172,9 @@ export class DeviceTransport extends EventEmitter {
               ? FloodlightCamera
               : isSoloCamera(device)
                 ? SoloCamera
-                : Camera;
+                : Camera.isWallLightCam(device.device_type)
+                  ? WallLightCam
+                  : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
