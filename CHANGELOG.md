@@ -2,6 +2,11 @@
 
 ## 0.12.0 - Unreleased
 
+- Add the missing exact eufyCam C35 T8110/type 10035 H3 profile through the
+  existing generic camera class and Solo live envelope. Test observed state,
+  H3 motion/person events and core media. Other owners, variants and hardware
+  evidence remain under #39. No new adapter or physical support claim.
+
 - Add experimental camera-only coverage for exact T8530/55, T8790/90 and
   T85V0/203 profiles with an actual T8030 H3 parent. Reuse existing camera
   classes, native events, stored snapshots, live media and recording paths.

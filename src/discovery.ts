@@ -30,6 +30,7 @@ const profiles = new Map<
   ['T8417', { type: 105, kind: 'camera', family: 'indoor', standalone: true }],
   ['T8030', { type: 18, kind: 'station' }],
   ['T8111', { type: 1, kind: 'camera' }],
+  ['T8110', { type: 10035, kind: 'camera', standalone: true }],
   ['T8112', { type: 4, kind: 'camera' }],
   ['T8113', { type: 8, kind: 'camera' }],
   ['T8114', { type: 9, kind: 'camera' }],
