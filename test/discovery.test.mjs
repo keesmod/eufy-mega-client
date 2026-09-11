@@ -240,7 +240,7 @@ test('bad camera initialization is isolated and never leaks protocol errors', as
 });
 
 test('unsupported discovery includes only bounded model and numeric type diagnostics', () => {
-  const issue = (model, type = 95) =>
+  const detailedIssue = (model, type = 95) =>
     discover([
       base(),
       camera(),
@@ -253,6 +253,10 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
         address: '192.0.2.1',
       },
     ]).result;
+  const issue = (...args) => {
+    const result = detailedIssue(...args);
+    return { ...result, issues: result.issues.map(({ context, ...row }) => row) };
+  };
   const result = issue('T9999');
   assert.deepEqual(result.issues, [
     {
@@ -316,4 +320,53 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
       code: 'invalid_device_relationship',
     });
   }
+});
+
+test('rejection context preserves received firmware and parent evidence without guessing', () => {
+  const rejected = {
+    ...camera('UNKNOWN'),
+    device_model: 'T9999',
+    main_sw_version: '0.2.1.8',
+    main_hw_version: '1.0',
+  };
+  const get = (row, parents = [{ ...base(), main_sw_version: '3.8.6.0' }]) =>
+    discover([...parents, row]).result.issues.find((i) => i.deviceId === 'UNKNOWN');
+  assert.deepEqual(get(rejected).context, {
+    firmware: '0.2.1.8',
+    hardware: '1.0',
+    parentStatus: 'present',
+    parentId: 'HB',
+    parentModel: 'T8030',
+    parentFirmware: '3.8.6.0',
+  });
+  for (const [parent_sn, status] of [
+    ['', 'none'],
+    ['UNKNOWN', 'self'],
+    ['MISSING', 'missing'],
+    ['HB\n', 'invalid'],
+  ]) {
+    const value = get({ ...rejected, parent_sn }).context;
+    assert.equal(value.parentStatus, status);
+    assert.equal(value.parentId, undefined);
+  }
+  assert.equal(get(rejected, [base(), base()]).context.parentStatus, 'ambiguous');
+  for (const version of [
+    '1\n',
+    'PRIVATE_TOKEN',
+    '1.2.3.4.5',
+    '12345',
+    '1'.repeat(1000),
+    null,
+    {},
+    42,
+  ]) {
+    const value = get({ ...rejected, main_sw_version: version, main_hw_version: version }, [
+      { ...base(), main_sw_version: version, device_model: 'T8030\nPRIVATE' },
+    ]).context;
+    assert.equal(value.firmware, undefined);
+    assert.equal(value.hardware, undefined);
+    assert.equal(value.parentFirmware, undefined);
+    assert.equal(value.parentModel, undefined);
+  }
+  assert.equal(get({ ...rejected, device_type: null }).context.firmware, '0.2.1.8');
 });

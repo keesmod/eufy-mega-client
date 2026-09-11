@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.2 - Unreleased
+
+- Add bounded firmware, hardware and received parent context to rejected security
+  inventory rows. Distinguish absent, self, missing, ambiguous and invalid parents.
+  Private parent identifiers are only for consumer-side anonymous correlation.
+- Preserve model admission, topology guards and mixed inventories. This supplies
+  support evidence for camera issue #40 without claiming its cause or a C30 fix.
+
 ## 0.12.1 - Unreleased
 
 - Add optional bounded `deviceModel` and `deviceType` diagnostics to
