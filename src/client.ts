@@ -147,6 +147,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   async getDeviceState(id: string): Promise<Device> {
     return (await this.deviceTransport()).device(id);
   }
+  /** Inspect the current software guards without opening a device connection. */
+  async getCameraCapabilities(id: string) {
+    return (await this.deviceTransport()).cameraCapabilities(id);
+  }
   async getStationState(id: string): Promise<StationState> {
     return (await this.deviceTransport()).state(id);
   }

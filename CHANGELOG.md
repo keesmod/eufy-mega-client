@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 - Unreleased
+
+- Add `getCameraCapabilities()` for snapshot, live and recording software admission.
+  Results use the existing media and owner guards without connecting to devices.
+  Available operations remain experimental. Hardware acceptance is unchanged.
+- Preserve existing methods and private session stores. No migration is needed.
+  Retain the preceding package and store for rollback.
+
 ## 0.9.0 - Unreleased
 
 - Enable stored snapshots, live video/audio and recordings for exact T8214/94,

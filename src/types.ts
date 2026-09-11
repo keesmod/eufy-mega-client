@@ -37,6 +37,17 @@ export interface SessionStore {
   load(): Promise<Session | undefined>;
   save(session: Session): Promise<void>;
 }
+/** Software admission only. Availability does not establish hardware validation. */
+export interface CameraMediaCapability {
+  available: boolean;
+  status: 'experimental' | 'unsupported';
+  reason: string | null;
+}
+export interface CameraCapabilities {
+  snapshot: CameraMediaCapability;
+  live: CameraMediaCapability;
+  recordings: CameraMediaCapability;
+}
 export interface Device {
   id: string;
   stationId: string;
