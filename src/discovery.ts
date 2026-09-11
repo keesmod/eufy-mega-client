@@ -23,6 +23,9 @@ const profiles = new Map<string, { type: number; kind: Device['kind']; standalon
   ['T8172', { type: 89, kind: 'camera' }],
   ['T8160', { type: 19, kind: 'camera' }],
   ['T8213', { type: 91, kind: 'camera' }],
+  ['T8214', { type: 94, kind: 'camera' }],
+  ['T8224', { type: 95, kind: 'camera' }],
+  ['T8223', { type: 96, kind: 'camera' }],
   ['T8142', { type: 15, kind: 'camera' }],
   ['T8134', { type: 63, kind: 'camera', standalone: true }],
 ]);
