@@ -11,14 +11,26 @@ including development dependencies. The same checks run daily between releases.
 
 Keep `package.json`, the lockfile's root version and its root package entry
 aligned. Runtime changes under `src`/`vendor`, dependency changes and public API
-changes require a new library version. Preserve the MIT license, NOTICE and the
+changes require a new library version or inclusion in an explicit unpublished
+candidate as described below. Preserve the MIT license, NOTICE and the
 upstream source attribution. Update API and compatibility documentation where the
 behavior changes.
 
 Update the release's `CHANGELOG.md` section with the user-visible behavior,
 upgrade steps, compatibility limits and rollback instructions. Runtime changes
-must advance the affected versions. CI/documentation-only changes can retain the
-current versions and state that no product release is needed.
+must advance the version unless they belong to the current unpublished batch.
+CI/documentation-only changes can retain the current version and state that no
+product release is needed.
+
+For a selected batch, `release-candidate.json` records the current package version
+and the existing library issue coordinating its scope and acceptance. Runtime PRs
+may retain that version only with updated release notes. CI checks the canonical
+remote for a matching tag and queries every page of authenticated GitHub releases,
+including drafts. An existing tag, release or draft, or a failed lookup rejects
+the exception. Version downgrades remain forbidden. Use an authenticated `gh`
+session for local checks. Remove or replace the candidate record when preparing
+the next version. All normal tests, package checks and immutable publication
+checks still apply. This record does not authorize publication.
 
 All Validate checks must pass on the current PR commit. The final **ci** check
 fails if any prerequisite failed, timed out, was cancelled or skipped. Protect
