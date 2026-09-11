@@ -203,6 +203,13 @@ module is described as forthcoming by [NVR-WiFi]. Its availability, owner and
 transport remain unknown under [#38]. Neither case enlarges this story into
 protocol implementation.
 
+## Wired inventory recognition, 0.12.0
+
+The four exact wired pairs in [Wired-software] now retain received inventory
+state and standalone identity. H3 and foreign owners are rejected. The existing
+[#27], [#28] and [#36] obligations remain open for live state, event routing,
+authentication and media. No wired transport or hardware support is claimed.
+
 ## Catalogue rows
 
 `R` means the public client recognizes the exact unsuffixed model through its
@@ -315,7 +322,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 1     | T8111 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#96]                             |
 | 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]         |
 | 4     | T8112 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#97]                             |
-| 5     | T8200 / T8201 / T8202 / listed topologies            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]               |
+| 5     | T8200 / T8201 / T8202 / standalone inventory only    | X         | X inventory         | N/A       | B2/U            | B2/U       | B2/U       | B2/U            | B2/U          | [Wired-software], [Catalogue]                       | [#27], [#28], [#36], [#59]        |
 | 7     | T8210 / T8212 candidates / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#108], [#109]                    |
 | 8     | T8113 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#98]                             |
 | 9     | T8114 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#99]                             |
@@ -352,7 +359,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 89    | T8172 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#106]                            |
 | 90    | T8790 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
 | 91    | T8213 / H3 only                                      | H         | H                   | H         | H               | H          | H          | H ring          | H             | [H58], [H0], [C0]                                   | [#25], [#26], [#58]               |
-| 93    | T8203 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]               |
+| 93    | T8203 / standalone inventory only                    | X         | X inventory         | N/A       | B2/U            | B2/U       | B2/U       | B2/U            | B2/U          | [Wired-software], [Catalogue]                       | [#27], [#28], [#36], [#59]        |
 | 94    | T8214 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#113]                            |
 | 95    | T8224 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#114]                            |
 | 96    | T8223 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#115]                            |
@@ -363,14 +370,14 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 104   | T8416 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
 | 105   | T8417 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
 | 110   | T8150 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#37], [E2], [E6]                 |
-| 111   | T86P2 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#37], [E2], [E6]                 |
+| 111   | T86P2 / actual H3 parent in Wi-Fi mode only          | X         | X                   | X         | X               | X          | X          | X               | X             | [LTE0], [Catalogue], [HB3]                          | [#37], [#36], [#35], [E2], [E6]   |
 | 131   | T8453 candidate / listed topologies                  | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
 | 132   | T8452 / listed topologies                            | X         | X descriptor        | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [Garage-software], [Catalogue]                      | [#33], [#34], [#36], [#62]        |
 | 133   | T8453 / listed topologies                            | X         | X descriptor        | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [Garage-software], [Catalogue]                      | [#33], [#34], [#36], [#62]        |
 | 151   | T84A1 / H3 state and events, W descriptor            | X         | X                   | U         | U               | U          | U          | X               | U             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
 | 189   | T8531 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
 | 203   | T85V0 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
-| 301   | T8E00 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#38], [E2], [E6]                 |
+| 301   | T8E00 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [NVR-research]                   | [#38], [E2], [E6]                 |
 | 10005 | T81A0 / H3 media, W descriptor                       | X         | X                   | X         | X               | X          | X          | X               | X             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
 | 10008 | T8W11C candidate / listed topologies                 | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
 | 10009 | T8419 / T8W11P candidate / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
@@ -454,6 +461,11 @@ rows. Station status and media ownership remain in scope where applicable.
 T8020 Wi-Fi Chime and T8021 Wi-Fi Bridge appear in [Display] but have no dedicated
 enum name here. Preserve their exact inventory-type question in [#35]/[#17].
 Do not fabricate a HomeBase entity for a standalone device or sound-only chime.
+
+The [standalone and older-owner investigation](research/CAMERA_TRANSPORTS_2026-09-11.md)
+records the pinned Mega and P2P evidence, an offline descriptor inspection tool
+and the exact authentication/media gaps retained in [#35] and [#36].
+Descriptor field presence does not establish a working connection.
 
 ## Explicit non-camera exclusions
 
@@ -647,6 +659,7 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Solo-software]: SOLOCAM.md
 [Wall-software]: WALLLIGHT.md
 [Floodlight-software]: FLOODLIGHT.md
+[LTE0]: LTE.md
 [Indoor-software]: INDOOR.md
 
 Garage types 132/133 have descriptor recognition only. Their firmware and identity
@@ -654,3 +667,5 @@ are visible, but public state refresh, events and media remain blocked pending
 a proven owner and authentication route. See [Garage-software].
 
 [Garage-software]: GARAGE.md
+[Wired-software]: WIRED_DOORBELLS.md
+[NVR-research]: research/NVR_TRANSPORT.md
