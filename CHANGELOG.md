@@ -2,6 +2,8 @@
 
 ## 0.12.2 - Unreleased
 
+### Logging improvements for diagnostics
+
 - Add bounded firmware, hardware and received parent context to rejected security
   inventory rows. Distinguish absent, self, missing, ambiguous and invalid parents.
   Private parent identifiers are only for consumer-side anonymous correlation.
