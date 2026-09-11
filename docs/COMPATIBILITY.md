@@ -21,6 +21,14 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 | T8160 camera     | 3.4.3.0           | 3        |
 | T8213 doorbell   | 0.2.1.8           | 1        |
 
+## Combined camera candidate, 0.12.0
+
+The [combined candidate notes](RELEASE_0_12_0.md) list the added exact H3 camera
+profiles, wired/garage descriptor recognition and the remaining transport
+barriers. These are experimental software results. Dated hardware evidence
+retains its original versions. A listed camera is not proof of working
+media, and unresolved T8134 audio remains separate.
+
 ## SoloCam media software evidence, 0.12.0
 
 The [H3 SoloCam media profile](SOLOCAM.md#h3-core-media-0120) adds software

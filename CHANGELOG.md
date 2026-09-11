@@ -2,61 +2,30 @@
 
 ## 0.12.0 - Unreleased
 
-- Add the missing exact eufyCam C35 T8110/type 10035 H3 profile through the
-  existing generic camera class and Solo live envelope. Test observed state,
-  H3 motion/person events and core media. Other owners, variants and hardware
-  evidence remain under #39. No new adapter or physical support claim.
-
-- Add experimental camera-only coverage for exact T8530/55, T8790/90 and
-  T85V0/203 profiles with an actual T8030 H3 parent. Reuse existing camera
-  classes, native events, stored snapshots, live media and recording paths.
-  Ignore native lock and parcel-state notifications. Expose no physical lock,
-  lid or user-management controls. [Integrated camera evidence](docs/INTEGRATED_CAMERAS.md)
-  retains unresolved E330, catalogue, owner and hardware obligations under #39.
-
-- Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
-- Recognize exact T8200/T8201/T8202 type 5 and T8203 type 93 wired doorbells
-  with their received inventory state and real standalone identity. Reject
-  HomeBase ownership for these models. Standalone authentication, events and
-  media remain unverified. See [wired doorbell evidence](docs/WIRED_DOORBELLS.md).
-- Add experimental T86P2 / type 111 discovery, observed state, H3 events and core
-  media through its actual T8030 parent in Wi-Fi mode. Reuse the generic camera
-  adapter and acknowledged media lifecycle. Cellular and standalone transport
-  remain blocked with explicit reasons. See [4G camera evidence](docs/LTE.md)
-  and #37. No new hardware support or LTE connectivity claim is made.
-- Record [PoE/NVR transport evidence](docs/research/NVR_TRANSPORT.md) and an offline
-  admission probe. NVR media remains blocked under #38 pending its own transport.
-
-- Allow exact family profiles to reject an H3 command-owner relationship when
-  that topology is unproven. This guard does not enable standalone transport
-  or change the existing admitted camera profiles.
-- Add nine exact Indoor model/type pairs with native event routing and
-  experimental media on the existing actual-parent T8030 H3 profile. Battery
-  and availability remain unknown where no observed property exists.
-  See [Indoor evidence](docs/INDOOR.md) for exact models, command branches and
-  exclusions. Standalone connections and unresolved C210/C220 aliases stay
-  explicit. Hardware validation remains separate.
-- Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
-  motion/person events. Admit S120 media only with its actual T8030 H3 parent.
-  S100 media and standalone transport remain unverified. See
-  [Wall-light software evidence](docs/WALLLIGHT.md). No new hardware claim.
-- Add experimental Floodlight E340 (T8425) and E30 (T8426) discovery, native
-  motion/person events and HomeBase 3 stored snapshots, live video/audio and
-  recordings. Preserve exact owners and acknowledged stop/cancel. Other
-  Floodlight models and standalone transports retain explicit blockers.
-  Software evidence and limits are in [Floodlight coverage](docs/FLOODLIGHT.md).
-  Refs #29 and #30. No hardware support claim is added.
-
-- Enable stored snapshots, live video/audio and recordings for the nine additional
-  exact SoloCam pairs on the existing T8030 H3 LAN-derived media profile. Reuse
-  existing command envelopes, stop/cancel and independent-owner cleanup.
-- Preserve T8134 admission, identifiers and firmware behavior. Newly admitted
-  media retains the existing additional-H3 numeric owner firmware boundary.
-  Unsupported tuples, standalone connections and other owners stay explicit.
-- See [SoloCam media evidence](docs/SOLOCAM.md#h3-core-media-0120). Tests establish
-  software behavior only. No new hardware support or audio-fix claim is made.
-  No session migration is needed. Retain the preceding package, lockfile and
-  private store for rollback. This version is not published.
+- Combine the unpublished SoloCam discovery/media work with exact H3 profiles
+  for Indoor, Floodlight, Wall-light, eufyCam C35, T86P2 in Wi-Fi mode and camera
+  functions in three integrated products. Reuse existing attributed protocol
+  classes and command paths. Preserve T8134 admission and existing identities.
+- Add stored snapshots, live video/audio and recording software coverage only
+  behind the actual admitted owner and existing firmware guards. Preserve
+  acknowledged stop/cancel, bounded cleanup and independent owners. Missing
+  battery or availability observations remain unknown.
+- Recognize four wired doorbell and two garage camera model/type pairs with
+  explicit standalone/owner blockers. Recognition does not activate their
+  missing authentication, events or media. No lock, lid, garage-door, light or
+  PTZ controls are added.
+- Record reproducible standalone, older-owner, LTE and PoE/NVR protocol limits,
+  including a bounded offline descriptor inspector that omits private values.
+  Unimplemented connections and unresolved model variants remain open.
+- Allow one explicitly tracked unpublished candidate version across related
+  runtime PRs. Updated release notes are required. Existing tags, releases or
+  drafts and failed remote checks reject that exception. All CI and immutable
+  publication checks remain required.
+- See the [0.12.0 candidate notes](docs/RELEASE_0_12_0.md) for exact models,
+  source evidence, consumer limits and remaining obligations. Software tests
+  do not add hardware support or resolve the T8134 audio report. No session
+  migration is needed. Retain the previous package, lockfile and private store
+  for rollback. This candidate has not been published or deployed.
 
 ## 0.11.0 - Unreleased
 
@@ -70,7 +39,7 @@
   session migration or physical control is claimed. Retain the preceding package
   and private store for rollback. This version is not published.
 
-## 0.10.0 - Unreleased
+## 0.10.0 - 2026-09-11
 
 - Add `getCameraCapabilities()` for snapshot, live and recording software admission.
   Results use the existing media and owner guards without connecting to devices.
