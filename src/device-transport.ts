@@ -1,6 +1,13 @@
 import { hasCameraMedia } from './camera-media.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
-import { isFloodlightCamera, isIntegratedCamera, isSoloCamera, isStation, type Inventory } from './discovery.js';
+import {
+  isIndoorCamera,
+  isIntegratedCamera,
+  isFloodlightCamera,
+  isSoloCamera,
+  isStation,
+  type Inventory,
+} from './discovery.js';
 import { lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
@@ -12,6 +19,7 @@ import {
   Station,
   Camera,
   SoloCamera,
+  IndoorCamera,
   WallLightCam,
   FloodlightCamera,
   BatteryDoorbellCamera,
@@ -178,9 +186,11 @@ export class DeviceTransport extends EventEmitter {
               ? FloodlightCamera
               : isSoloCamera(device)
                 ? SoloCamera
-                : Camera.isWallLightCam(device.device_type)
-                  ? WallLightCam
-                  : Camera;
+                : isIndoorCamera(device)
+                  ? IndoorCamera
+                  : Camera.isWallLightCam(device.device_type)
+                    ? WallLightCam
+                    : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
