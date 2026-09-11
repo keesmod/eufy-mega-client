@@ -1,6 +1,6 @@
 import { hasCameraMedia } from './camera-media.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
-import { isSoloCamera, isStation, type Inventory } from './discovery.js';
+import { isIndoorCamera, isSoloCamera, isStation, type Inventory } from './discovery.js';
 import { lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
@@ -12,6 +12,7 @@ import {
   Station,
   Camera,
   SoloCamera,
+  IndoorCamera,
   BatteryDoorbellCamera,
   PropertyName,
 } from './vendor/http/index.js';
@@ -168,7 +169,9 @@ export class DeviceTransport extends EventEmitter {
             ? BatteryDoorbellCamera
             : isSoloCamera(device)
               ? SoloCamera
-              : Camera;
+              : isIndoorCamera(device)
+                ? IndoorCamera
+                : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
