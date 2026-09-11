@@ -1,6 +1,6 @@
 import { hasCameraMedia } from './camera-media.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
-import { isSoloCamera, isStation, type Inventory } from './discovery.js';
+import { isFloodlightCamera, isSoloCamera, isStation, type Inventory } from './discovery.js';
 import { lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
@@ -12,6 +12,7 @@ import {
   Station,
   Camera,
   SoloCamera,
+  FloodlightCamera,
   BatteryDoorbellCamera,
   PropertyName,
 } from './vendor/http/index.js';
@@ -166,9 +167,11 @@ export class DeviceTransport extends EventEmitter {
           // Discovery admits exact pairs. Family selection does not grant media access.
           const factory = Camera.isBatteryDoorbell(device.device_type)
             ? BatteryDoorbellCamera
-            : isSoloCamera(device)
-              ? SoloCamera
-              : Camera;
+            : isFloodlightCamera(device)
+              ? FloodlightCamera
+              : isSoloCamera(device)
+                ? SoloCamera
+                : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
