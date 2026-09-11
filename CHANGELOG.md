@@ -2,6 +2,7 @@
 
 ## 0.12.0 - Unreleased
 
+- Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
 - Recognize exact T8200/T8201/T8202 type 5 and T8203 type 93 wired doorbells
   with their received inventory state and real standalone identity. Reject
   HomeBase ownership for these models. Standalone authentication, events and
