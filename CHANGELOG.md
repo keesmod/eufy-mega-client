@@ -14,6 +14,11 @@
   lid or user-management controls. [Integrated camera evidence](docs/INTEGRATED_CAMERAS.md)
   retains unresolved E330, catalogue, owner and hardware obligations under #39.
 
+- Add experimental T86P2 / type 111 discovery, observed state, H3 events and core
+  media through its actual T8030 parent in Wi-Fi mode. Reuse the generic camera
+  adapter and acknowledged media lifecycle. Cellular and standalone transport
+  remain blocked with explicit reasons. See [4G camera evidence](docs/LTE.md)
+  and #37. No new hardware support or LTE connectivity claim is made.
 - Record [PoE/NVR transport evidence](docs/research/NVR_TRANSPORT.md) and an offline
   admission probe. NVR media remains blocked under #38 pending its own transport.
 

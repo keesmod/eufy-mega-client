@@ -5,6 +5,7 @@ import type { WireDevice } from './types.js';
 // Indoor software evidence: docs/INDOOR.md.
 // Discovery alone is not media evidence.
 const additionalH3Media = new Map([
+  ['T86P2', 111],
   ['T8400', 30],
   ['T8410', 31],
   ['T8401', 34],
