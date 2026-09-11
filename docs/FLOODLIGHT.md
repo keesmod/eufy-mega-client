@@ -22,7 +22,8 @@ automation. Product compatibility alone is not evidence of a Mega command route.
 
 The original T8420 and X variant are not merged or inferred from their common
 type. No new model alias or guessed serial discriminator is introduced.
-Remaining Floodlight models stay in #29/#30 and the matrix.
+Remaining Floodlight model and command-owner work stays in
+[epic #9](https://github.com/keesmod/eufy-mega-client/issues/9) and the matrix.
 [#35](https://github.com/keesmod/eufy-mega-client/issues/35) owns other HomeBases,
 [#36](https://github.com/keesmod/eufy-mega-client/issues/36) standalone transport,
 and [#60](https://github.com/keesmod/eufy-mega-client/issues/60) hardware evidence.
@@ -105,5 +106,5 @@ before media commands. The two snapshot regressions fail with
 
 No physical stream, decoded video, audible track, device stop or recovery has
 been confirmed for either model. Those feature-specific results remain #60.
-The other Floodlight model barriers remain #29/#30, rather than being silently
-counted as delivered by this bounded profile.
+The other Floodlight model barriers remain under epic #9. They are not counted
+as delivered by this bounded profile.
