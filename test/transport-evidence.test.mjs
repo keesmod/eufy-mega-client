@@ -100,3 +100,29 @@ test('CLI inspects a local array and sanitizes parse and file failures', async (
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test(
+  'CLI rejects a named pipe without waiting for a writer',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'transport-fifo-'));
+    const file = join(directory, 'PRIVATE_PIPE');
+    try {
+      const created = spawnSync('mkfifo', [file]);
+      assert.equal(created.status, 0);
+      const result = spawnSync(process.execPath, ['scripts/inspect-camera-transport.mjs', file], {
+        encoding: 'utf8',
+        timeout: 2000,
+      });
+      assert.equal(result.error, undefined);
+      assert.equal(result.status, 1);
+      assert.equal(result.stdout, '');
+      assert.equal(
+        result.stderr,
+        'Transport evidence inspection failed. Supply a complete JSON device array in a regular file, at most 2 MiB.\n',
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
