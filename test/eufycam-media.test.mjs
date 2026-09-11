@@ -7,7 +7,9 @@ import { CommandType, VideoCodec } from '../dist/vendor/p2p/types.js';
 import { mediaFixture } from './fixtures/media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
-const profiles = [...eufycamMedia, ...batteryDoorbellMedia];
+import { solocamMedia } from './fixtures/solocam-media.mjs';
+const profiles = [...eufycamMedia, ...batteryDoorbellMedia, ...solocamMedia];
+const newlyAdmittedSolo = solocamMedia.filter((p) => p.model !== 'T8134');
 
 const jpeg = Buffer.from([255, 216, 255, 0, 255, 217]);
 const day = '2026-09-11';
@@ -18,6 +20,27 @@ const metadata = {
   videoWidth: 1920,
   videoHeight: 1080,
 };
+
+test('T8134 keeps its existing media admission without a new owner firmware restriction', async () => {
+  const profile = solocamMedia.find((p) => p.model === 'T8134');
+  for (const firmware of [undefined, 'unknown', '2.0.9.6']) {
+    const f = await mediaFixture({ ...profile, owner: { ...profile.owner, firmware } });
+    try {
+      for (const feature of Object.values(f.transport.cameraCapabilities(f.camera.device_sn)))
+        assert.deepEqual(feature, { available: true, status: 'experimental', reason: null });
+      const opening = f.transport.startLive(f.camera.device_sn);
+      await turn();
+      f.startEvent();
+      const live = await opening;
+      const stop = live.stop();
+      f.ack();
+      assert.deepEqual(await stop, { confirmed: true, reason: 'device' });
+    } finally {
+      await f.close();
+    }
+  }
+});
+
 function records(f) {
   const row = {
     record_id: 1,
@@ -74,26 +97,27 @@ for (const p of profiles) {
         sendCommandWithStringPayload: (c) => sent.push(c),
         sendCommandWithInt: (c) => sent.push(c),
       };
+      const envelope =
+        p.liveEnvelope ?? (['T8172', 'T8214'].includes(p.model) ? 'doorbell' : 'payload');
       for (const codec of [VideoCodec.H264, VideoCodec.H265]) {
         station.startLivestream(camera, codec);
         const command = sent.pop(),
           payload = JSON.parse(command.value);
         assert.equal(
           command.commandType,
-          ['T8172', 'T8214'].includes(p.model)
+          envelope !== 'payload'
             ? CommandType.CMD_DOORBELL_SET_PAYLOAD
             : CommandType.CMD_SET_PAYLOAD,
         );
         assert.equal(command.channel, 2);
         assert.deepEqual(
           payload,
-          ['T8172', 'T8214'].includes(p.model)
+          envelope !== 'payload'
             ? {
                 commandType: 1000,
                 data: {
                   accountId: 'synthetic',
-                  camera_type: 0,
-                  entrytype: 0,
+                  ...(envelope === 'doorbell' ? { camera_type: 0, entrytype: 0 } : {}),
                   encryptkey: 'abcd',
                   streamtype: codec,
                 },
@@ -279,7 +303,7 @@ for (const p of profiles) {
   });
 }
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1)])
+for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1), ...newlyAdmittedSolo])
   test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
     for (const change of [
       (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = undefined),
@@ -388,7 +412,7 @@ for (const p of profiles) {
   }
 }
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia])
+for (const p of [eufycamMedia[0], ...batteryDoorbellMedia, ...solocamMedia])
   test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
     const f = await mediaFixture(p);
     const g = await mediaFixture(
@@ -433,8 +457,8 @@ for (const p of [eufycamMedia[0], ...batteryDoorbellMedia])
     }
   });
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1)])
-  test(`${p.model}: the new profile admits the existing payload firmware boundary without an integer fallback`, async () => {
+for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1), ...newlyAdmittedSolo])
+  test(`${p.model}: the new profile admits the existing additional-H3 firmware boundary`, async () => {
     for (const firmware of ['2.0.9.7', '3.8.6.0']) {
       const f = await mediaFixture({ ...p, owner: { ...p.owner, firmware } });
       try {

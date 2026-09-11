@@ -99,6 +99,9 @@ for (const [model, type] of models) {
       sdk.emit('person detected', sdk, true, 'Synthetic person');
       assert.deepEqual(detections, ['motion', 'person']);
       if (model !== 'T8134') {
+        // #22 adds the evidenced H3 media profile. Unknown owner firmware stays explicit.
+        assert.equal(t.cameraCapabilities(raw.device_sn).live.available, true);
+        t.raw.get('T8030_SECOND').main_sw_version = undefined;
         assert.equal(t.cameraCapabilities(raw.device_sn).live.reason, 'camera_media_unverified');
         await assert.rejects(t.startLive(raw.device_sn), { code: 'camera_media_unverified' });
         await assert.rejects(t.snapshot(raw.device_sn), { code: 'camera_media_unverified' });

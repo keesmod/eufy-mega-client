@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.12.0 - Unreleased
+
+- Enable stored snapshots, live video/audio and recordings for the nine additional
+  exact SoloCam pairs on the existing T8030 H3 LAN-derived media profile. Reuse
+  existing command envelopes, stop/cancel and independent-owner cleanup.
+- Preserve T8134 admission, identifiers and firmware behavior. Newly admitted
+  media retains the existing additional-H3 numeric owner firmware boundary.
+  Unsupported tuples, standalone connections and other owners stay explicit.
+- See [SoloCam media evidence](docs/SOLOCAM.md#h3-core-media-0120). Tests establish
+  software behavior only. No new hardware support or audio-fix claim is made.
+  No session migration is needed. Retain the preceding package, lockfile and
+  private store for rollback. This version is not published.
+
 ## 0.11.0 - Unreleased
 
 - Add exact SoloCam discovery, observed state and motion/person event routing for

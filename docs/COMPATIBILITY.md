@@ -21,6 +21,15 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 | T8160 camera     | 3.4.3.0           | 3        |
 | T8213 doorbell   | 0.2.1.8           | 1        |
 
+## SoloCam media software evidence, 0.12.0
+
+The [H3 SoloCam media profile](SOLOCAM.md#h3-core-media-0120) adds software
+coverage for snapshots, live video/audio and recordings on the nine additional
+exact SoloCam pairs. T8134 retains its established admission. Existing command
+and lifecycle code is reused with per-model tests. This does not resolve the
+reporter's audio issue or add a physical compatibility claim. The profile's
+connection/firmware limits and remaining hardware obligations are documented.
+
 ## SoloCam software evidence, 0.11.0
 
 [Exact SoloCam profiles](SOLOCAM.md) now have H3 discovery, observed state and
