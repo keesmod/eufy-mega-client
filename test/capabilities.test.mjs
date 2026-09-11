@@ -8,6 +8,7 @@ import { indoorMedia } from './fixtures/indoor-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
 import { floodlightMedia } from './fixtures/floodlight-media.mjs';
+import { integratedMedia } from './fixtures/integrated-media.mjs';
 import { lteMedia } from './fixtures/lte-media.mjs';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 for (const profile of [
@@ -16,6 +17,7 @@ for (const profile of [
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...integratedMedia,
   ...lteMedia,
   ...indoorMedia,
 ]) {

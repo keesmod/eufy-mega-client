@@ -16,6 +16,7 @@ const additionalH3Media = new Map([
   ['T8416', 104],
   ['T8417', 105],
   ['T8111', 1],
+  ['T8110', 10035],
   ['T8112', 4],
   ['T8113', 8],
   ['T8114', 9],
@@ -40,6 +41,9 @@ const additionalH3Media = new Map([
   ['T81A0', 10005],
   ['T8425', 47],
   ['T8426', 87],
+  ['T8530', 55],
+  ['T8790', 90],
+  ['T85V0', 203],
 ]);
 export function hasCameraMedia(camera: WireDevice | undefined, owner?: WireDevice): boolean {
   if (!camera) return false;

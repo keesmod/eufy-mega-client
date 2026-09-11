@@ -13,6 +13,7 @@ import { cloudFixture } from './fixtures/mega-cloud.mjs';
 // Exact catalogue pairs from MODEL_MATRIX.md, independently authored synthetic values.
 const models = [
   ['T8111', 1],
+  ['T8110', 10035],
   ['T8112', 4],
   ['T8113', 8],
   ['T8114', 9],
