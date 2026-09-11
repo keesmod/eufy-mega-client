@@ -3,6 +3,45 @@
 All imports below come from `@keesmod/eufy-mega-client`. Public results and events
 use library-owned types. Protocol SDK objects are private implementation details.
 
+## Camera quick start
+
+Use Node.js 24 and install the compiled package as described in the
+[README](../README.md#install-and-upgrade).
+
+```typescript
+import { EufyMegaClient, FileSessionStore } from '@keesmod/eufy-mega-client';
+
+const client = new EufyMegaClient({
+  credentials: {
+    email: process.env.EUFY_EMAIL!,
+    password: process.env.EUFY_PASSWORD!,
+    country: 'NL',
+  },
+  sessionStore: new FileSessionStore('/private/eufy/mega-session.json'),
+});
+
+try {
+  const auth = await client.connect();
+  if (auth.state === 'connected') {
+    const devices = await client.listDevices();
+    const station = devices.find((device) => device.kind === 'station');
+    if (station) await client.connectStation(station.id);
+    // Select devices by their stable IDs. See the operations below.
+  }
+  // Return authentication challenges to your UI. Do not retry them in a loop.
+} finally {
+  await client.shutdown();
+}
+```
+
+Run on the HomeBase LAN with one controlling bridge per installation. The tested
+Home Assistant deployment uses host networking and binds its bridge API to
+loopback. Routed/VLAN and Docker bridge discovery have not passed acceptance.
+
+The library uses Eufy's cloud and local device protocols, with no legacy cloud
+fallback. It returns device operations and raw media streams. FFmpeg, playback,
+viewer leases and Home Assistant entities belong in the consuming bridge.
+
 ## Modular clients
 
 `EufyClient` adds optional `security` and `mowers` modules. Existing
