@@ -372,8 +372,8 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 110   | T8150 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#37], [E2], [E6]                 |
 | 111   | T86P2 / actual H3 parent in Wi-Fi mode only          | X         | X                   | X         | X               | X          | X          | X               | X             | [LTE0], [Catalogue], [HB3]                          | [#37], [#36], [#35], [E2], [E6]   |
 | 131   | T8453 candidate / listed topologies                  | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
-| 132   | T8452 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
-| 133   | T8453 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
+| 132   | T8452 / listed topologies                            | X         | X descriptor        | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [Garage-software], [Catalogue]                      | [#33], [#34], [#36], [#62]        |
+| 133   | T8453 / listed topologies                            | X         | X descriptor        | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [Garage-software], [Catalogue]                      | [#33], [#34], [#36], [#62]        |
 | 151   | T84A1 / H3 state and events, W descriptor            | X         | X                   | U         | U               | U          | U          | X               | U             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
 | 189   | T8531 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
 | 203   | T85V0 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
@@ -661,5 +661,11 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Floodlight-software]: FLOODLIGHT.md
 [LTE0]: LTE.md
 [Indoor-software]: INDOOR.md
+
+Garage types 132/133 have descriptor recognition only. Their firmware and identity
+are visible, but public state refresh, events and media remain blocked pending
+a proven owner and authentication route. See [Garage-software].
+
+[Garage-software]: GARAGE.md
 [Wired-software]: WIRED_DOORBELLS.md
 [NVR-research]: research/NVR_TRANSPORT.md
