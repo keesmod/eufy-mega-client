@@ -1,9 +1,12 @@
-# Library 0.12.0 candidate
+# Library 0.12.0
 
-This candidate combines the unpublished SoloCam work with additional camera
-families and a review of the remaining camera connections. It is prepared in
-[#63](https://github.com/keesmod/eufy-mega-client/issues/63). The current public
-installation remains 0.10.0 until a separate release is published.
+[Version 0.12.0](https://github.com/keesmod/eufy-mega-client/releases/tag/v0.12.0)
+was published on 11 September 2026 from commit
+`6fbf2dcb493b6c37739187294211d0545ee1f156`. It combines SoloCam work with
+additional camera families and a review of remaining camera connections.
+[#63](https://github.com/keesmod/eufy-mega-client/issues/63) records preparation.
+[The publication run](https://github.com/keesmod/eufy-mega-client/actions/runs/34631852445)
+passed all checks and verified the downloaded public assets.
 
 ## Included camera profiles
 
@@ -64,15 +67,16 @@ The programme and map acceptance remain open. Unresolved battery-doorbell,
 SoloCam and Indoor aliases remain visible in the model matrix. Recognized
 models, implemented functions and physical results are separate claims.
 
-## Candidate use and rollback
+## Installation and rollback
 
 Node 24 is required. The final source commit, successful CI, Release rehearsal
 and package evidence are recorded in #63. A rehearsal supplies a compiled tarball
 and a manifest with source commit and hashes. Follow the
 [release verification procedure](RELEASING.md) before using that exact artifact.
-There is no public 0.12.0 download URL until publication.
+The [README installation command](../README.md#install-and-upgrade) uses the published
+0.12.0 tarball.
 
-For a voluntary candidate test, retain the previous package and lockfile and back
+Before upgrading, retain the previous package and lockfile and back
 up private session data. Install the verified tarball in an isolated consumer,
 keep one controller per device and check the features you use. No session or API
 migration is required. Restore the retained package, lockfile and private store
@@ -87,5 +91,5 @@ missing standalone features.
 Report scoped results through the [community process](COMMUNITY_VALIDATION.md).
 Missing hardware feedback alone does not block ordinary upgrades.
 
-This candidate has not been published or deployed. Existing MIT and
-Apache-2.0 attribution remains packaged. It adds no mower licensing claim.
+Publication does not establish deployment or new hardware validation. Existing MIT
+and Apache-2.0 attribution remains packaged. It adds no mower licensing claim.
