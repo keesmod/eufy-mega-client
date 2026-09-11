@@ -7,6 +7,8 @@ export type {
   AuthAnswer,
   Credentials,
   Device,
+  CameraCapabilities,
+  CameraMediaCapability,
   DeviceRelationship,
   DiscoveryIssue,
   DiscoveryResult,

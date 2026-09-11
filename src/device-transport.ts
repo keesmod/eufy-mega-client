@@ -285,6 +285,21 @@ export class DeviceTransport extends EventEmitter {
       throw new EufyError('camera_media_unverified');
     return camera;
   }
+  cameraCapabilities(id: string): import('./types.js').CameraCapabilities {
+    let reason: string | null = null;
+    try {
+      const camera = this.camera(id, true);
+      this.station(camera.getStationSerial());
+    } catch (error) {
+      reason = error instanceof EufyError ? error.code : 'device_initialization_failed';
+    }
+    const capability = () => ({
+      available: reason === null,
+      status: reason === null ? ('experimental' as const) : ('unsupported' as const),
+      reason,
+    });
+    return { snapshot: capability(), live: capability(), recordings: capability() };
+  }
   supportsEvent(id: string, type: string): boolean {
     const camera = this.cameras.get(id);
     if (!camera || this.failures.has(id) || this.failures.has(camera.getStationSerial()))
