@@ -455,6 +455,11 @@ T8020 Wi-Fi Chime and T8021 Wi-Fi Bridge appear in [Display] but have no dedicat
 enum name here. Preserve their exact inventory-type question in [#35]/[#17].
 Do not fabricate a HomeBase entity for a standalone device or sound-only chime.
 
+The [standalone and older-owner investigation](research/CAMERA_TRANSPORTS_2026-09-11.md)
+records the pinned Mega and P2P evidence, an offline descriptor inspection tool
+and the exact authentication/media gaps retained in [#35] and [#36].
+Descriptor field presence does not establish a working connection.
+
 ## Explicit non-camera exclusions
 
 These are exclusions from the camera matrix, not supported-product claims.
