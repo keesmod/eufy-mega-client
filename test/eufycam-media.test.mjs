@@ -8,6 +8,7 @@ import { mediaFixture } from './fixtures/media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
+import { indoorMedia } from './fixtures/indoor-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
 import { floodlightMedia } from './fixtures/floodlight-media.mjs';
 const profiles = [
@@ -16,6 +17,7 @@ const profiles = [
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...indoorMedia,
 ];
 const newlyAdmittedSolo = solocamMedia.filter((p) => p.model !== 'T8134');
 
@@ -113,18 +115,18 @@ for (const p of profiles) {
           payload = JSON.parse(command.value);
         assert.equal(
           command.commandType,
-          envelope !== 'payload'
+          !['payload', 'indoor-h3'].includes(envelope)
             ? CommandType.CMD_DOORBELL_SET_PAYLOAD
             : CommandType.CMD_SET_PAYLOAD,
         );
         assert.equal(command.channel, 2);
         assert.deepEqual(
           payload,
-          envelope !== 'payload'
+          !['payload', 'indoor-h3'].includes(envelope)
             ? {
                 commandType: 1000,
                 data: {
-                  ...(envelope === 'floodlight'
+                  ...(['indoor', 'floodlight'].includes(envelope)
                     ? { account_id: 'synthetic' }
                     : { accountId: 'synthetic' }),
                   ...(envelope === 'doorbell' ? { camera_type: 0, entrytype: 0 } : {}),
@@ -136,9 +138,13 @@ for (const p of profiles) {
                 account_id: 'synthetic',
                 cmd: CommandType.CMD_START_REALTIME_MEDIA,
                 mValue3: CommandType.CMD_START_REALTIME_MEDIA,
+                ...(envelope === 'indoor-h3' ? { mChannel: 2 } : {}),
                 payload: {
                   ClientOS: 'Android',
-                  ...(p.model === 'T8600' ? { camera_type: 0, entrytype: 0 } : {}),
+                  ...(p.model === 'T8600' || envelope === 'indoor-h3'
+                    ? { camera_type: 0, entrytype: 0 }
+                    : {}),
+                  ...(envelope === 'indoor-h3' ? { accountId: 'synthetic' } : {}),
                   key: 'abcd',
                   streamtype: codec === VideoCodec.H264 ? 1 : 2,
                 },
@@ -317,6 +323,7 @@ for (const p of [
   eufycamMedia[0],
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
+  ...indoorMedia,
   ...walllightMedia,
   ...floodlightMedia,
 ])
@@ -434,6 +441,7 @@ for (const p of [
   ...solocamMedia,
   ...walllightMedia,
   ...floodlightMedia,
+  ...indoorMedia,
 ])
   test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
     const f = await mediaFixture(p);
@@ -483,6 +491,7 @@ for (const p of [
   eufycamMedia[0],
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
+  ...indoorMedia,
   ...walllightMedia,
   ...floodlightMedia,
 ])
