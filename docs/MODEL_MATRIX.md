@@ -144,6 +144,21 @@ T8134 reporter cells and dated follow-up observations are preserved. [#56],
 obligations. Software audio forwarding is not proof that the reporter's missing
 audio is resolved.
 
+## Integrated camera software evidence, 0.12.0
+
+[Issue #39][#39] adds [integrated camera software evidence](INTEGRATED_CAMERAS.md)
+for exact T8530/55, T8790/90 and T85V0/203 pairs on their actual T8030 H3 parent.
+The existing private camera classes and three distinct native live envelopes are
+covered by software tests. Snapshot, separate video/audio forwarding, recordings
+and acknowledged stop/cancel reuse the established H3 route. No slot, lid, parcel
+mechanism or user-management control is exposed. Non-camera pushes are excluded.
+
+These three feature rows supersede their historical B1/U software cells only for
+this exact H3 profile. No hardware cells change. T8531/189 lacks camera metadata
+and media commands in the pinned source. Types 101/102 have no model or operation
+mapping. Those gaps, E85V0 variants and hardware acceptance remain with [#39],
+[E2] and [E6]. Standalone and other owners remain with [#36] and [#35].
+
 ## Source boundary and reading rules
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
@@ -341,7 +356,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 47    | T8425 / H3 only                                      | X         | X                   | N/A       | X               | X          | X          | X               | X             | [Floodlight-software], [Catalogue]                  | [#29], [#30], [#60]               |
 | 48    | T8170 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 49    | T8144 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#105]                            |
-| 55    | T8530 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
+| 55    | T8530 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software]                               | [#39], [#35], [#36], [E2], [E6]   |
 | 60    | T8122 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 61    | T8123 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 62    | T8124 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
@@ -350,7 +365,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 87    | T8426 / H3 only                                      | X         | X                   | N/A       | X               | X          | X          | X               | X             | [Floodlight-software], [Catalogue]                  | [#29], [#30], [#60]               |
 | 88    | T8171 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 89    | T8172 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#106]                            |
-| 90    | T8790 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
+| 90    | T8790 / exact H3 profile                             | X         | U                   | X         | X               | X          | X          | X               | X             | [Integrated-software]                               | [#39], [#35], [#36], [E2], [E6]   |
 | 91    | T8213 / H3 only                                      | H         | H                   | H         | H               | H          | H          | H ring          | H             | [H58], [H0], [C0]                                   | [#25], [#26], [#58]               |
 | 93    | T8203 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#27], [#28], [#59]               |
 | 94    | T8214 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#113]                            |
@@ -358,8 +373,8 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 96    | T8223 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#115]                            |
 | 98    | T8173 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 100   | T8414 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
-| 101   | Unknown / listed topologies                          | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
-| 102   | Unknown / listed topologies                          | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
+| 101   | Unknown / listed topologies                          | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [Integrated-software]            | [#39], [E2], [E6]                 |
+| 102   | Unknown / listed topologies                          | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [Integrated-software]            | [#39], [E2], [E6]                 |
 | 104   | T8416 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
 | 105   | T8417 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
 | 110   | T8150 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#37], [E2], [E6]                 |
@@ -368,8 +383,8 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 132   | T8452 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
 | 133   | T8453 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#33], [#34], [#62]               |
 | 151   | T84A1 / H3 state and events, W descriptor            | X         | X                   | U         | U               | U          | U          | X               | U             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
-| 189   | T8531 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
-| 203   | T85V0 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#39], [E2], [E6]                 |
+| 189   | T8531 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [Integrated-software]            | [#39], [E2], [E6]                 |
+| 203   | T85V0 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software]                               | [#39], [#35], [#36], [E2], [E6]   |
 | 301   | T8E00 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#38], [E2], [E6]                 |
 | 10005 | T81A0 / H3 media, W descriptor                       | X         | X                   | X         | X               | X          | X          | X               | X             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]        |
 | 10008 | T8W11C candidate / listed topologies                 | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
@@ -648,3 +663,4 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Wall-software]: WALLLIGHT.md
 [Floodlight-software]: FLOODLIGHT.md
 [Indoor-software]: INDOOR.md
+[Integrated-software]: INTEGRATED_CAMERAS.md

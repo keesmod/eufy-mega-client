@@ -181,16 +181,16 @@ export class DeviceTransport extends EventEmitter {
             : Camera.isLockWifiVideo(device.device_type)
               ? DoorbellCamera
               : Camera.isBatteryDoorbell(device.device_type)
-            ? BatteryDoorbellCamera
-            : isFloodlightCamera(device)
-              ? FloodlightCamera
-              : isSoloCamera(device)
-                ? SoloCamera
-                : isIndoorCamera(device)
-                  ? IndoorCamera
-                  : Camera.isWallLightCam(device.device_type)
-                    ? WallLightCam
-                    : Camera;
+                ? BatteryDoorbellCamera
+                : isFloodlightCamera(device)
+                  ? FloodlightCamera
+                  : isSoloCamera(device)
+                    ? SoloCamera
+                    : isIndoorCamera(device)
+                      ? IndoorCamera
+                      : Camera.isWallLightCam(device.device_type)
+                        ? WallLightCam
+                        : Camera;
           const camera = await factory.getInstance(this.provider, this.cameraWire(device), {
             simultaneousDetections: false,
           });
