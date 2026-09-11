@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -40,10 +41,9 @@ class ProjectTests(unittest.TestCase):
             project.changelog(self.root, "99.0.0")
 
     def test_code_change_without_new_version_rejected(self):
-
         def fake_run(root, *args):
             return (
-                "src/client.ts\n"
+                "src/client.ts\nCHANGELOG.md\n"
                 if args[1] == "diff"
                 else (self.root / args[-1].split(":", 1)[1]).read_text()
             )
@@ -53,6 +53,166 @@ class ProjectTests(unittest.TestCase):
             self.assertRaisesRegex(ValueError, "version bump"),
         ):
             project.check_changes(self.root, "a" * 40, project.metadata(self.root))
+
+    def write_candidate(self, **overrides):
+        candidate = {
+            "version": project.metadata(self.root)["version"],
+            "issue": "https://github.com/keesmod/eufy-mega-client/issues/63",
+        }
+        candidate.update(overrides)
+        (self.root / "release-candidate.json").write_text(json.dumps(candidate))
+
+    def candidate_run(
+        self,
+        *,
+        paths="src/client.ts\nCHANGELOG.md\n",
+        tag="",
+        pages=None,
+        previous_version=None,
+    ):
+        def fake_run(root, *args):
+            if args[0] == "gh":
+                self.assertEqual(
+                    args,
+                    (
+                        "gh",
+                        "api",
+                        "--paginate",
+                        "--slurp",
+                        "repos/keesmod/eufy-mega-client/releases?per_page=100",
+                    ),
+                )
+                return json.dumps([[]] if pages is None else pages)
+            if args[1] == "ls-remote":
+                self.assertEqual(
+                    args[3], "https://github.com/keesmod/eufy-mega-client.git"
+                )
+                return tag
+            if args[1] == "diff":
+                return paths
+            value = json.loads((self.root / args[-1].split(":", 1)[1]).read_text())
+            if previous_version and args[-1].endswith(":package.json"):
+                value["version"] = previous_version
+            return json.dumps(value)
+
+        return fake_run
+
+    def test_explicit_unpublished_batch_accepts_same_version(self):
+        self.write_candidate()
+        with patch.object(project, "run", self.candidate_run()):
+            project.check_changes(self.root, "a" * 40, project.metadata(self.root))
+
+    def test_candidate_requires_new_release_notes_for_runtime_change(self):
+        self.write_candidate()
+        with (
+            patch.object(project, "run", self.candidate_run(paths="src/client.ts\n")),
+            self.assertRaisesRegex(ValueError, "updated release notes"),
+        ):
+            project.check_changes(self.root, "a" * 40, project.metadata(self.root))
+
+    def test_candidate_rejects_existing_tag(self):
+        self.write_candidate()
+        with (
+            patch.object(
+                project, "run", self.candidate_run(tag="abc\trefs/tags/v0.12.0\n")
+            ),
+            self.assertRaisesRegex(ValueError, "remote tag"),
+        ):
+            project.check_unpublished_candidate(self.root, project.metadata(self.root))
+
+    def test_candidate_rejects_published_or_draft_release_on_later_page(self):
+        self.write_candidate()
+        version = project.metadata(self.root)["version"]
+        for draft in (False, True):
+            with self.subTest(draft=draft):
+                pages = [
+                    [{"tag_name": "v0.1.0"}],
+                    [{"tag_name": "v" + version, "draft": draft}],
+                ]
+                with (
+                    patch.object(project, "run", self.candidate_run(pages=pages)),
+                    self.assertRaisesRegex(ValueError, "release or draft"),
+                ):
+                    project.check_unpublished_candidate(
+                        self.root, project.metadata(self.root)
+                    )
+
+    def test_candidate_rejects_stale_or_foreign_scope(self):
+        for change in (
+            {"version": "0.0.1"},
+            {"issue": "https://github.com/other/repo/issues/63"},
+            {"bypass": True},
+        ):
+            with self.subTest(change=change):
+                self.write_candidate(**change)
+                with (
+                    patch.object(project, "run") as remote,
+                    self.assertRaisesRegex(ValueError, "tracking issue"),
+                ):
+                    project.check_unpublished_candidate(
+                        self.root, project.metadata(self.root)
+                    )
+                remote.assert_not_called()
+
+    def test_candidate_remote_failure_is_not_treated_as_absence(self):
+        self.write_candidate()
+        for failure in (
+            subprocess.CalledProcessError(1, "gh"),
+            subprocess.TimeoutExpired("git", 180),
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                with (
+                    patch.object(project, "run", side_effect=failure),
+                    self.assertRaises(type(failure)),
+                ):
+                    project.check_unpublished_candidate(
+                        self.root, project.metadata(self.root)
+                    )
+
+    def test_candidate_rejects_malformed_release_inventory(self):
+        self.write_candidate()
+        for pages in ([], {}, [None], [[{}]]):
+            with self.subTest(pages=pages):
+                with (
+                    patch.object(project, "run", self.candidate_run(pages=pages)),
+                    self.assertRaisesRegex(ValueError, "Invalid release inventory"),
+                ):
+                    project.check_unpublished_candidate(
+                        self.root, project.metadata(self.root)
+                    )
+
+    def test_version_downgrade_rejected_even_without_runtime_changes(self):
+        self.write_candidate()
+        with (
+            patch.object(
+                project,
+                "run",
+                self.candidate_run(paths="README.md\n", previous_version="99.0.0"),
+            ),
+            self.assertRaisesRegex(ValueError, "cannot decrease"),
+        ):
+            project.check_changes(self.root, "a" * 40, project.metadata(self.root))
+
+    def test_new_version_and_documentation_changes_need_no_candidate_lookup(self):
+        for paths, previous_version in (
+            ("src/client.ts\nCHANGELOG.md\n", "0.0.1"),
+            ("README.md\n", None),
+        ):
+            with self.subTest(paths=paths):
+                with (
+                    patch.object(
+                        project,
+                        "run",
+                        self.candidate_run(
+                            paths=paths, previous_version=previous_version
+                        ),
+                    ),
+                    patch.object(project, "check_unpublished_candidate") as candidate,
+                ):
+                    project.check_changes(
+                        self.root, "a" * 40, project.metadata(self.root)
+                    )
+                candidate.assert_not_called()
 
     def test_tarball_links_rejected_before_unpacking(self):
         meta = project.metadata(self.root)
