@@ -9,7 +9,14 @@ import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
-const profiles = [...eufycamMedia, ...batteryDoorbellMedia, ...solocamMedia, ...walllightMedia];
+import { floodlightMedia } from './fixtures/floodlight-media.mjs';
+const profiles = [
+  ...eufycamMedia,
+  ...batteryDoorbellMedia,
+  ...solocamMedia,
+  ...walllightMedia,
+  ...floodlightMedia,
+];
 const newlyAdmittedSolo = solocamMedia.filter((p) => p.model !== 'T8134');
 
 const jpeg = Buffer.from([255, 216, 255, 0, 255, 217]);
@@ -117,7 +124,9 @@ for (const p of profiles) {
             ? {
                 commandType: 1000,
                 data: {
-                  accountId: 'synthetic',
+                  ...(envelope === 'floodlight'
+                    ? { account_id: 'synthetic' }
+                    : { accountId: 'synthetic' }),
                   ...(envelope === 'doorbell' ? { camera_type: 0, entrytype: 0 } : {}),
                   encryptkey: 'abcd',
                   streamtype: codec,
@@ -309,6 +318,7 @@ for (const p of [
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
   ...walllightMedia,
+  ...floodlightMedia,
 ])
   test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
     for (const change of [
@@ -418,7 +428,13 @@ for (const p of profiles) {
   }
 }
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia, ...solocamMedia, ...walllightMedia])
+for (const p of [
+  eufycamMedia[0],
+  ...batteryDoorbellMedia,
+  ...solocamMedia,
+  ...walllightMedia,
+  ...floodlightMedia,
+])
   test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
     const f = await mediaFixture(p);
     const g = await mediaFixture(
@@ -468,6 +484,7 @@ for (const p of [
   ...batteryDoorbellMedia.slice(1),
   ...newlyAdmittedSolo,
   ...walllightMedia,
+  ...floodlightMedia,
 ])
   test(`${p.model}: the new profile admits the existing additional-H3 firmware boundary`, async () => {
     for (const firmware of ['2.0.9.7', '3.8.6.0']) {

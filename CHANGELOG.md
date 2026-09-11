@@ -6,6 +6,12 @@
   motion/person events. Admit S120 media only with its actual T8030 H3 parent.
   S100 media and standalone transport remain unverified. See
   [Wall-light software evidence](docs/WALLLIGHT.md). No new hardware claim.
+- Add experimental Floodlight E340 (T8425) and E30 (T8426) discovery, native
+  motion/person events and HomeBase 3 stored snapshots, live video/audio and
+  recordings. Preserve exact owners and acknowledged stop/cancel. Other
+  Floodlight models and standalone transports retain explicit blockers.
+  Software evidence and limits are in [Floodlight coverage](docs/FLOODLIGHT.md).
+  Refs #29 and #30. No hardware support claim is added.
 
 - Enable stored snapshots, live video/audio and recordings for the nine additional
   exact SoloCam pairs on the existing T8030 H3 LAN-derived media profile. Reuse

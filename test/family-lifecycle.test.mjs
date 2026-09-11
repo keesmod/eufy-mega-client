@@ -6,12 +6,14 @@ import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { walllightMedia } from './fixtures/walllight-media.mjs';
+import { floodlightMedia } from './fixtures/floodlight-media.mjs';
 import { families } from './fixtures/families.mjs';
 import { mediaFixture } from './fixtures/media.mjs';
 
 for (const p of [
   ...walllightMedia,
   ...batteryDoorbellMedia.slice(1),
+  ...floodlightMedia,
   ...solocamMedia.filter((p) => p.model !== 'T8134'),
   ...families.filter((p) => p.admitted),
   ...eufycamMedia.filter((p) => !['T8142', 'T8160'].includes(p.model)),
