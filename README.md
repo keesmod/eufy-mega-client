@@ -1,91 +1,65 @@
 # Eufy Mega client
 
-An unofficial, independent TypeScript library for Eufy's Mega cloud and HomeBase
-device protocols. Node.js 24, ESM and MIT licensed. It is not affiliated with
-Eufy or Anker.
+An unofficial TypeScript library for Eufy cameras and HomeBase devices, with
+separate mower APIs under development. It provides discovery, state, snapshots,
+live media, events and recordings for implemented camera profiles.
 
-Version 0.1.0 is tested with HomeBase 3 T8030, three T8160 cameras and a T8213
-doorbell through Home Assistant. See [compatibility results](docs/COMPATIBILITY.md)
-for firmware, verified features and the limits of the overnight observation.
+Building a Home Assistant installation? Use the
+[camera integration and bridge](https://github.com/keesmod/ha-eufy-cam) or the
+[separate mower project](https://github.com/keesmod/eufy-robomow-ha).
 
-Version 0.1.1 adds discovery for S220 T8142 and T8134 cameras
-paired with T8030. Hardware validation is incomplete. See the compatibility document for partial
-T8134 reporter results and unresolved live-view and recovery failures.
+## Requirements
 
-Install the compiled GitHub release with Node.js 24:
+- Node.js 24 and an ESM project.
+- Eufy account credentials and private storage for sessions.
+- Access to the HomeBase LAN for camera device connections. Use one controlling
+  bridge per installation.
 
-```sh
-npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.1.0/keesmod-eufy-mega-client-0.1.0.tgz
-```
+## Install and upgrade
 
-Commit the consumer's lockfile so `npm ci` verifies package integrity. The
-package is distributed through GitHub Releases, not the npm registry.
-
-To build from source:
+Install the compiled GitHub release:
 
 ```sh
-npm ci
-npm test
-npm pack
+npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.10.0/keesmod-eufy-mega-client-0.10.0.tgz
 ```
 
-Install the resulting `.tgz` into a consuming project with `npm install
-/path/to/keesmod-eufy-mega-client-0.1.0.tgz`.
+Commit your lockfile so `npm ci` verifies package integrity. Packages are
+published through [GitHub Releases](https://github.com/keesmod/eufy-mega-client/releases),
+not the npm registry.
 
-```typescript
-import { EufyMegaClient, FileSessionStore } from '@keesmod/eufy-mega-client';
+For an upgrade, read the target release notes, back up your private session store
+and retain the previous package and lockfile for rollback. Install the target
+release's exact `.tgz` URL and verify your application.
 
-const client = new EufyMegaClient({
-  credentials: {
-    email: process.env.EUFY_EMAIL!,
-    password: process.env.EUFY_PASSWORD!,
-    country: 'NL',
-  },
-  sessionStore: new FileSessionStore('/private/eufy/mega-session.json'),
-});
+Start with the [camera example and API guide](docs/API.md#camera-quick-start).
+To build from source, see [Contributing](CONTRIBUTING.md).
 
-try {
-  const auth = await client.connect();
-  if (auth.state === 'connected') {
-    const devices = await client.listDevices();
-    const station = devices.find((device) => device.kind === 'station');
-    if (station) await client.connectStation(station.id);
-    // Select devices by their stable IDs; use the operations in the API guide.
-  }
-  // Return authentication challenges to your UI. Do not retry them in a loop.
-} finally {
-  await client.shutdown();
-}
-```
+## Compatibility and feedback
 
-The process must be on the HomeBase LAN. The tested Home Assistant deployment
-uses host networking, with its bridge API bound to loopback. Routed/VLAN and
-Docker bridge discovery have not passed acceptance. Only one controlling
-bridge should use this installation at a time.
+Missing hardware test results alone do not prevent upgrades. Available features
+still depend on the model, firmware and connection. See the
+[compatibility results](docs/COMPATIBILITY.md) and
+[model and feature matrix](docs/MODEL_MATRIX.md).
 
-The library uses Eufy's cloud and local device protocols. Mega support does not
-make the system independent of Eufy. There is no legacy cloud fallback.
-
-The library returns device operations and raw media streams. FFmpeg, playback,
-viewer leases and Home Assistant entities belong in the consuming bridge.
-
-- [Eufy platform programme and backlog](docs/PROGRAMME.md)
-- [API guide](docs/API.md)
-- [Compatibility and limitations](docs/COMPATIBILITY.md)
-- [Sanitized diagnostics](docs/DIAGNOSTICS.md)
-- [Contribution guide](CONTRIBUTING.md)
-- [Upstream attribution](NOTICE.md)
-- [Firebase key provenance and security assessment](docs/FIREBASE_KEY.md)
-
-Maintainers: use the [validated release flow](docs/RELEASING.md) for version checks,
-package verification, a rehearsal and explicit GitHub publication.
+Working and failing results both help. Use the voluntary
+[camera compatibility report](https://github.com/keesmod/ha-eufy-cam/issues/new?template=compatibility.yml),
+or add results to the existing issue for your problem. See
+[community evidence](docs/COMMUNITY_VALIDATION.md) and
+[diagnostics](docs/DIAGNOSTICS.md) for what to share safely.
 
 ## Independent module API
 
-`EufyClient` adds optional `security` and `mowers` modules while preserving
-`EufyMegaClient` and existing exports. Each bridge constructs its own client,
-with separate credentials, session storage and lifecycle. See the
-[modular API guide](docs/API.md#modular-clients).
+`EufyMegaClient` remains available. `EufyClient` adds independent `security` and
+`mowers` modules with separate credentials and sessions. Mower support includes
+E15 authentication/discovery and a separate read-only map acquisition API.
+Physical controls and decoded maps are not delivered. See the
+[modular API](docs/API.md#modular-clients) and [map limits](docs/MAP_ACQUISITION.md).
 
-The mower module currently provides an adapter contract only. No mower protocol
-is bundled. Its synthetic tests establish API isolation, not physical support.
+## Project and development
+
+- [Programme and backlog](docs/PROGRAMME.md)
+- [Contributing](CONTRIBUTING.md) and [release process](docs/RELEASING.md)
+- [License](LICENSE) and [component attribution](NOTICE.md)
+
+Independent of Eufy and Anker. The package includes MIT and Apache-2.0 components
+and uses Eufy's cloud services.

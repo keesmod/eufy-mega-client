@@ -1,8 +1,26 @@
 # Contributing
 
-Use Node.js 24. Run `npm ci` and `npm test`; `npm pack` builds the distributed
-ESM JavaScript, declarations and protocol assets. Test the tarball in a consumer
-as well as the source checkout.
+## Build from source
+
+Use Node.js 24:
+
+```sh
+npm ci
+npm test
+npm pack
+```
+
+`npm pack` builds the distributed ESM JavaScript, declarations and protocol
+assets. Install the resulting `.tgz` in a consuming project:
+
+```sh
+npm install /path/to/keesmod-eufy-mega-client-0.10.0.tgz
+```
+
+Use the filename printed by `npm pack` for your checkout's version. Test the
+tarball in a consumer as well as the source checkout.
+
+## Development and validation
 
 Keep cloud authentication/discovery, device connections, events and recordings
 separate. Device code receives credentials through an explicit interface. Do
