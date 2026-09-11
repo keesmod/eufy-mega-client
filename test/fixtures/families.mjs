@@ -28,7 +28,7 @@ export const families = [
   row('wired-wifi', 'wired', 'T8200', 5, 'W', 'doorbell'),
   row('flood-wifi', 'flood', 'T8423', 38, 'W', 'doorbell'),
   { ...row('wall-wifi', 'wall', 'T84A1', 151, 'W', 'doorbell'), recognized: true },
-  row('garage-wifi', 'garage', 'T8452', 132, 'W', 'doorbell'),
+  { ...row('garage-wifi', 'garage', 'T8452', 132, 'W', 'doorbell'), recognized: true },
   row('integrated-h3', 'integrated', 'T8790', 90, 'H3', 'payload'),
   row('cellular', 'lte', 'T8150', 110, 'L', null),
   row('poe-nvr', 'nvr', 'T8E00', 301, 'N', null),

@@ -2,6 +2,8 @@
 
 ## 0.12.0 - Unreleased
 
+- Recognize exact T8452/132 and T8453/133 garage camera descriptors. Preserve their standalone owner and reject unverified H3 and media routes. No garage actuation or new hardware support. See [garage evidence](docs/GARAGE.md).
+
 - Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
   motion/person events. Admit S120 media only with its actual T8030 H3 parent.
   S100 media and standalone transport remain unverified. See
