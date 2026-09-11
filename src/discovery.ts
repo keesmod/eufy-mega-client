@@ -16,6 +16,7 @@ const profiles = new Map<
     kind: Device['kind'];
     family?: 'solo' | 'indoor' | 'floodlight';
     standalone?: boolean;
+    h3?: boolean;
   }
 >([
   ['T8400', { type: 30, kind: 'camera', family: 'indoor', standalone: true }],
@@ -153,7 +154,9 @@ export function discover(items: unknown): Inventory {
     const owner = owners.get(device.parent_sn);
     relationships.set(
       id,
-      owner?.kind === 'station'
+      profiles.get(device.device_model)?.h3 !== false &&
+        owner?.kind === 'station' &&
+        owner.transport === 'h3-lan'
         ? { kind: 'station', ownerId: owner.id }
         : { kind: 'unsupported', reason: 'unsupported_station' },
     );
