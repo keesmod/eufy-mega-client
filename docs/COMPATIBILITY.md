@@ -4,6 +4,13 @@ See the [model, topology and feature matrix](MODEL_MATRIX.md) for the full pinne
 camera catalogue, current reporter discussion and open implementation/hardware
 obligations. The dated baseline below applies only to its stated hardware.
 
+You can upgrade without a maintainer having tested your exact model. Missing
+evidence does not establish incompatibility. Actual missing protocol support and
+the consuming bridge's migration checks still apply. See the
+[community evidence policy](COMMUNITY_VALIDATION.md) and
+[report your camera results](https://github.com/keesmod/ha-eufy-cam/issues/new?template=compatibility.yml).
+For an existing problem, add results to its original issue. Reports are voluntary.
+
 Baseline acceptance for version 0.1.0, 2026-09-10. Feature tests and the agreed overnight observation
 passed on the isolated HA VM. The production HA migration and feature acceptance
 also passed, with the same fifteen entity identities and one controlling bridge.
@@ -83,6 +90,14 @@ consumer defects, separately from the hardware observations. The
 [0.6.3 delivery update](https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5620098054)
 announces fixes for video-only audio conversion and session-recovery retries.
 A T8134 hardware retest remains pending in the original issue.
+
+Later evidence is more specific: on [11 September the reporter observed live
+video in the iOS app but no audio](https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5631252411).
+The exact installed versions and route of that attempt were not recorded in the
+report. It does not confirm all live routes or resolve audio/recovery. The
+[0.7.1 retest and local-audio diagnostic request](https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5631991682)
+remains separate from the earlier failed Cloudflare attempt. The matrix retains
+these dated results together rather than describing every T8134 live path as failed.
 
 At the programme handover, both the [bridge manifest](https://github.com/keesmod/ha-eufy-cam/blob/5e4e82715e76667e6026bd9d7f5f27758e832c2d/bridge/package.json)
 and [HA app manifest](https://github.com/keesmod/ha-eufy-cam/blob/5e4e82715e76667e6026bd9d7f5f27758e832c2d/ha_app/package.json)

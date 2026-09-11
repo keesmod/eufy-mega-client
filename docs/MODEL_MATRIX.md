@@ -8,6 +8,42 @@ The camera bridge and integration belong in `ha-eufy-cam`. The separate mower
 bridge and integration belong in `eufy-robomow-ha`. Both consume this library
 independently, as described in [PROGRAMME.md](PROGRAMME.md).
 
+## Community evidence, 2026-09-11
+
+The [community policy](COMMUNITY_VALIDATION.md) separates ordinary upgrades from
+the evidence below. A model without a maintainer test is not an upgrade exclusion.
+Runtime protocol limitations remain. Share results through the
+[compatibility form](https://github.com/keesmod/ha-eufy-cam/issues/new?template=compatibility.yml)
+or the original issue for an existing defect.
+
+The historical codes remain unchanged: X is unconfirmed implementation, P is
+reported working, H is a dated hardware observation, F is a known reported problem,
+and U is unknown. B1/U and B2/U describe historical implementation barriers at
+their pinned commit. They do not label all newer releases unsupported. Later
+software and evidence sections supersede only their stated combinations.
+Not implemented requires an identified missing code path. Confirmed behavior
+requires the exact combination and reproducible feature evidence described in the
+policy. Community evidence can meet that standard without maintainer ownership.
+
+### T8134 follow-up observations
+
+This table supplements the historical R0-R3 rows and type 63 cells. It preserves
+the original failures. Known hardware from R0 is T8134 firmware 3.3.6.0 with T8030
+firmware 3.8.5.2. Later comments do not independently reconfirm those versions.
+
+| Date and source  | Feature and outcome                                                                                                                                                 | Versions, route and limits                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-10, [R1] | Reported working: discovery, stored snapshots, battery, person events and recording video/audio after reinstall. Reported problems: live view and session recovery. | R0 hardware. Client, bridge and integration versions of the test are unconfirmed. No complete stop/reopen or recovery proof.                                         |
+| 2026-09-11, [R4] | Known reported problem: remote live visualization still fails.                                                                                                      | Reporter identifies Cloudflare Tunnel. A 0.6.4 diagnostic test was requested, but the installed component versions are not explicitly confirmed in the comment.      |
+| 2026-09-11, [R5] | Reported working: live video in the iOS app. Known reported problem: live audio is absent.                                                                          | Attempt was the previous night. Exact app/component versions and that attempt's route are unspecified. This cannot establish success on every local or remote route. |
+| 2026-09-11, [R6] | Reporter confirms sound was enabled. Audio remains a known reported problem.                                                                                        | No cause or fix is established by this comment.                                                                                                                      |
+| 2026-09-11, [R7] | Software delivery: bridge/integration 0.7.1 adds video-only JPEG fallback and diagnostics. Reporter retest requested.                                               | No subsequent T8134 result at this review. JPEG fallback carries no audio. Local-audio diagnostics and session recovery remain separate obligations.                 |
+
+Unknown component versions stay unknown. These observations do not upgrade any
+feature to confirmed behavior. [Camera-10], [#21], [#22] and [#56] retain their
+respective investigation, software and validation obligations. Keep successful and
+failed route observations together when processing a new report.
+
 ## Discovery relationship evidence, 0.5.0
 
 [Story #17][#17] adds [typed discovery and per-device errors](DISCOVERY.md).
@@ -555,6 +591,10 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [#105]: https://github.com/keesmod/eufy-mega-client/issues/105
 [#106]: https://github.com/keesmod/eufy-mega-client/issues/106
 [H58]: hardware/T8213_2026_09_11.md
+[R4]: https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5631081488
+[R5]: https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5631252411
+[R6]: https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5631339423
+[R7]: https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5631991682
 [#108]: https://github.com/keesmod/eufy-mega-client/issues/108
 [#109]: https://github.com/keesmod/eufy-mega-client/issues/109
 [#110]: https://github.com/keesmod/eufy-mega-client/issues/110

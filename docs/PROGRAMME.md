@@ -96,6 +96,14 @@ bounded follow-up stories rather than silently dropping the affected model.
 
 ## Story contract
 
+The [community evidence and upgrade policy](COMMUNITY_VALIDATION.md), accepted
+in [#117](https://github.com/keesmod/eufy-mega-client/issues/117), separates
+ordinary upgrades, implemented features and hardware evidence. Reviewed community
+results can establish reported or confirmed behavior without maintainer ownership
+of every model. Missing hardware evidence alone does not block a qualified release.
+Preserve actual protocol, migration, safety and CI gates. Use release dependencies
+for the affected feature slice, not the complete programme catalogue.
+
 Every story must state its outcome, parent epic, owning repository, exact scope,
 exclusions, prerequisite issues, one- or two-day active-effort estimate,
 acceptance criteria, required evidence and references. Estimates are engineering
@@ -130,10 +138,15 @@ At the end, update the issue and Project with completed work, remaining work,
 blockers, next action and PR/evidence links. Do not start another product story
 implicitly. No daily background monitoring is requested.
 
-PRs reference their story. Avoid automatic closing keywords while hardware
-validation remains pending. A merge moves work to Validation when more evidence
-is required, not directly to Done. Preserve required CI and do not introduce
+PRs reference their story. Avoid automatic closing keywords while that story's
+hardware validation remains pending. A software story can finish when its own
+criteria pass and separate hardware obligations stay linked. A merge moves work
+to Validation when its own acceptance needs more evidence. Preserve required CI and do not introduce
 workflow bypasses or a second status source in local files.
+
+The [11 September dependency review](COMMUNITY_BACKLOG_REVIEW_2026_09_11.md)
+records the application of this policy to existing obligations. Live issues remain
+authoritative.
 
 ## Evidence, provenance and rollout
 
