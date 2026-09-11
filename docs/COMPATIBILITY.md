@@ -21,6 +21,14 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 | T8160 camera     | 3.4.3.0           | 3        |
 | T8213 doorbell   | 0.2.1.8           | 1        |
 
+## SoloCam software evidence, 0.11.0
+
+[Exact SoloCam profiles](SOLOCAM.md) now have H3 discovery, observed state and
+event-routing regression coverage. Nine profiles are newly admitted and T8134
+now selects the SoloCamera adapter. This is software evidence only. Existing
+T8134 community observations remain dated below. Additional media, standalone
+connections, other owners and hardware confirmation retain their linked work.
+
 ## Modular API software evidence, 0.2.0
 
 [E1-03](https://github.com/keesmod/eufy-mega-client/issues/16) adds independent

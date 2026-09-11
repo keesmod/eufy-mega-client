@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0 - Unreleased
+
+- Add exact SoloCam discovery, observed state and motion/person event routing for
+  ten model/type pairs behind the existing T8030 HomeBase 3 owner. Select the
+  private SoloCamera adapter while preserving eufyCam and doorbell adapters.
+- Preserve T8134 identities and existing media admission. Additional SoloCam media
+  stays explicitly unverified. Standalone descriptors identify their own owner
+  without enabling an unverified connection or creating a HomeBase entity.
+- See [SoloCam software evidence](docs/SOLOCAM.md). No new hardware support,
+  session migration or physical control is claimed. Retain the preceding package
+  and private store for rollback. This version is not published.
+
 ## 0.10.0 - Unreleased
 
 - Add `getCameraCapabilities()` for snapshot, live and recording software admission.

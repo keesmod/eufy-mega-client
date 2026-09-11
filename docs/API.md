@@ -287,3 +287,11 @@ as `online`, `offline`, `disabled` or null from the model's reported status.
 `listDevices()` and `discoverDevices()` also include validated cloud battery and
 availability observations. See [the eufyCam state contract](EUFYCAM.md) for missing
 values, unsupported properties, source priority and unchanged identity fields.
+
+## SoloCam discovery, 0.11.0
+
+The [SoloCam evidence guide](SOLOCAM.md) lists ten exact model/type pairs with
+H3 discovery, observed state and motion/person routing. Public identifiers and
+API signatures are unchanged. Standalone descriptors identify their own owner
+but retain `standalone_transport_unverified`. Existing T8134 media admission is
+preserved. Additional SoloCam media remains `camera_media_unverified`.

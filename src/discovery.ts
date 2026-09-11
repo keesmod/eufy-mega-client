@@ -9,7 +9,10 @@ import {
 } from './types.js';
 
 // Exact model/type pairs already evidenced by the client. Family stories extend this registry.
-const profiles = new Map<string, { type: number; kind: Device['kind']; standalone?: boolean }>([
+const profiles = new Map<
+  string,
+  { type: number; kind: Device['kind']; family?: 'solo'; standalone?: boolean }
+>([
   ['T8030', { type: 18, kind: 'station' }],
   ['T8111', { type: 1, kind: 'camera' }],
   ['T8112', { type: 4, kind: 'camera' }],
@@ -27,8 +30,23 @@ const profiles = new Map<string, { type: number; kind: Device['kind']; standalon
   ['T8224', { type: 95, kind: 'camera' }],
   ['T8223', { type: 96, kind: 'camera' }],
   ['T8142', { type: 15, kind: 'camera' }],
-  ['T8134', { type: 63, kind: 'camera', standalone: true }],
+  ['T8130', { type: 32, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8131', { type: 33, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8170', { type: 48, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8122', { type: 60, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8123', { type: 61, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8124', { type: 62, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8134', { type: 63, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8B00', { type: 64, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8171', { type: 88, kind: 'camera', family: 'solo', standalone: true }],
+  ['T8173', { type: 98, kind: 'camera', family: 'solo', standalone: true }],
 ]);
+// The upstream family predicate also includes eufyCam S4 and LTE models.
+// Keep adapter selection tied to the exact family recorded in our catalogue.
+export const isSoloCamera = (raw: WireDevice): boolean => {
+  const profile = profiles.get(raw.device_model);
+  return profile?.family === 'solo' && profile.type === raw.device_type;
+};
 export const isStation = (raw: WireDevice): boolean =>
   profiles.get(raw.device_model)?.kind === 'station';
 export interface ConnectionOwner {
