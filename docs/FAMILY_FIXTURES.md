@@ -98,3 +98,10 @@ H3 software profile using the exact tuples and envelopes in [EUFYCAM.md](EUFYCAM
 They include synthetic byte forwarding, stored snapshots, recording operations,
 owner isolation and cancelled-source listener cleanup. The hardware boundary
 above remains unchanged.
+
+The #26 battery doorbell profile extends the same per-model media tests with
+T8213/91 baseline regressions and T8214/94, T8224/95 and T8223/96 software evidence.
+See [the exact commands and limits](BATTERY_DOORBELLS.md#h3-core-media-090).
+The additional tuples also run the family lifecycle tests. Firmware boundaries,
+unsupported profile rejection and a second active owner are covered per new model.
+No new hardware support is established.

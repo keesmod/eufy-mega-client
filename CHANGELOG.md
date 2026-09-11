@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 - Unreleased
+
+- Enable stored snapshots, live video/audio and recordings for exact T8214/94,
+  T8224/95 and T8223/96 behind the existing T8030 H3 local LAN-derived profile.
+  Require the documented numeric owner firmware branch. Preserve T8213 media.
+- Validate separate E340 and C30/C31 live commands, acknowledged stop/cancel,
+  bounded cleanup and failure isolation with synthetic family fixtures.
+- See [battery doorbell media evidence](docs/BATTERY_DOORBELLS.md#h3-core-media-090).
+  Hardware acceptance remains open. No session migration is required. Retain
+  the preceding package and private store for rollback. No release is published.
+
 ## 0.8.0 - Unreleased
 
 - Admit exact T8214/94, T8224/95 and T8223/96 battery doorbells behind the existing
