@@ -2,6 +2,11 @@
 
 ## 0.12.0 - Unreleased
 
+- Add experimental T86P2 / type 111 discovery, observed state, H3 events and core
+  media through its actual T8030 parent in Wi-Fi mode. Reuse the generic camera
+  adapter and acknowledged media lifecycle. Cellular and standalone transport
+  remain blocked with explicit reasons. See [4G camera evidence](docs/LTE.md)
+  and #37. No new hardware support or LTE connectivity claim is made.
 - Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
   motion/person events. Admit S120 media only with its actual T8030 H3 parent.
   S100 media and standalone transport remain unverified. See

@@ -14,6 +14,7 @@ const profiles = new Map<
   { type: number; kind: Device['kind']; family?: 'solo' | 'floodlight'; standalone?: boolean }
 >([
   ['T8030', { type: 18, kind: 'station' }],
+  ['T86P2', { type: 111, kind: 'camera', standalone: true }],
   ['T8111', { type: 1, kind: 'camera' }],
   ['T8112', { type: 4, kind: 'camera' }],
   ['T8113', { type: 8, kind: 'camera' }],
