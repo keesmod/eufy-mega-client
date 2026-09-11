@@ -232,3 +232,10 @@ copied `lastComplete` transport files and supports `acquire`, `disconnect`,
 `shutdown` and `clearLastComplete`. This independent adapter uses Node built-ins
 and preserves the existing camera and mower module interfaces. See the
 [full contract, bounds and feature evidence](MAP_ACQUISITION.md).
+
+## Discovery relationships
+
+`discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,
+relationships and per-device issues. `listDevices(signal?)` retains `Device[]`
+and stable identifier fields. Recognized unsupported identities remain visible.
+See [the discovery contract](DISCOVERY.md) for operation gates and software evidence.
