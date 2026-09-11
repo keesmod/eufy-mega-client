@@ -4,12 +4,14 @@ import { setImmediate as turn } from 'node:timers/promises';
 import { Detections } from '../dist/detections.js';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
+import { indoorMedia } from './fixtures/indoor-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
 import { families } from './fixtures/families.mjs';
 import { mediaFixture } from './fixtures/media.mjs';
 
 for (const p of [
   ...batteryDoorbellMedia.slice(1),
+  ...indoorMedia,
   ...solocamMedia.filter((p) => p.model !== 'T8134'),
   ...families.filter((p) => p.admitted),
   ...eufycamMedia.filter((p) => !['T8142', 'T8160'].includes(p.model)),

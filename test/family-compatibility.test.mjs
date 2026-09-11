@@ -43,15 +43,20 @@ for (const p of families) {
         assert.equal(result.firmware, p.firmware);
         assert.equal(result.battery, null);
       } else {
-        assert.equal(result, undefined);
+        if (p.descriptor) {
+          assert.equal(result.model, p.model);
+          assert.equal(result.kind, 'camera');
+          assert.equal(result.stationId, camera.device_sn);
+        } else assert.equal(result, undefined);
+        const reason = p.descriptor ? 'standalone_transport_unverified' : 'unsupported_device';
         // A separate unsupported-only inventory avoids loading even a synthetic HomeBase.
         const blocked = cloudFixture({ inventory: [camera] });
         const denied = new EufyMegaClient(blocked.options);
         try {
           await denied.connect();
           await denied.listDevices();
-          await assert.rejects(denied.startLive(camera.device_sn), { code: 'unsupported_device' });
-          await assert.rejects(denied.snapshot(camera.device_sn), { code: 'unsupported_device' });
+          await assert.rejects(denied.startLive(camera.device_sn), { code: reason });
+          await assert.rejects(denied.snapshot(camera.device_sn), { code: reason });
           assert.equal(denied.transport.stations.size, 0);
           assert.equal(denied.transport.lives.size, 0);
           assert.ok(blocked.calls.every((c) => !c.path.includes('command')));
