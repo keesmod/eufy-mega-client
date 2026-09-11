@@ -5,6 +5,9 @@
 - Record [PoE/NVR transport evidence](docs/research/NVR_TRANSPORT.md) and an offline
   admission probe. NVR media remains blocked under #38 pending its own transport.
 
+- Allow exact family profiles to reject an H3 command-owner relationship when
+  that topology is unproven. This guard does not enable standalone transport
+  or change the existing admitted camera profiles.
 - Add nine exact Indoor model/type pairs with native event routing and
   experimental media on the existing actual-parent T8030 H3 profile. Battery
   and availability remain unknown where no observed property exists.
