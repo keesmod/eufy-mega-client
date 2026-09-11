@@ -1,9 +1,22 @@
 import type { WireDevice } from './types.js';
 
-// Software command evidence: docs/EUFYCAM.md, docs/BATTERY_DOORBELLS.md and docs/SOLOCAM.md.
+// Software command evidence: docs/EUFYCAM.md, docs/BATTERY_DOORBELLS.md, docs/SOLOCAM.md and docs/FLOODLIGHT.md.
+// T81A0 ownership and command evidence: docs/WALLLIGHT.md.
+// Indoor software evidence: docs/INDOOR.md.
 // Discovery alone is not media evidence.
 const additionalH3Media = new Map([
+  ['T86P2', 111],
+  ['T8400', 30],
+  ['T8410', 31],
+  ['T8401', 34],
+  ['T8411', 35],
+  ['T8441', 45],
+  ['T8442', 46],
+  ['T8414', 100],
+  ['T8416', 104],
+  ['T8417', 105],
   ['T8111', 1],
+  ['T8110', 10035],
   ['T8112', 4],
   ['T8113', 8],
   ['T8114', 9],
@@ -25,6 +38,12 @@ const additionalH3Media = new Map([
   ['T8B00', 64],
   ['T8171', 88],
   ['T8173', 98],
+  ['T81A0', 10005],
+  ['T8425', 47],
+  ['T8426', 87],
+  ['T8530', 55],
+  ['T8790', 90],
+  ['T85V0', 203],
 ]);
 export function hasCameraMedia(camera: WireDevice | undefined, owner?: WireDevice): boolean {
   if (!camera) return false;

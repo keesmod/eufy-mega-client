@@ -2,16 +2,30 @@
 
 ## 0.12.0 - Unreleased
 
-- Enable stored snapshots, live video/audio and recordings for the nine additional
-  exact SoloCam pairs on the existing T8030 H3 LAN-derived media profile. Reuse
-  existing command envelopes, stop/cancel and independent-owner cleanup.
-- Preserve T8134 admission, identifiers and firmware behavior. Newly admitted
-  media retains the existing additional-H3 numeric owner firmware boundary.
-  Unsupported tuples, standalone connections and other owners stay explicit.
-- See [SoloCam media evidence](docs/SOLOCAM.md#h3-core-media-0120). Tests establish
-  software behavior only. No new hardware support or audio-fix claim is made.
-  No session migration is needed. Retain the preceding package, lockfile and
-  private store for rollback. This version is not published.
+- Combine the unpublished SoloCam discovery/media work with exact H3 profiles
+  for Indoor, Floodlight, Wall-light, eufyCam C35, T86P2 in Wi-Fi mode and camera
+  functions in three integrated products. Reuse existing attributed protocol
+  classes and command paths. Preserve T8134 admission and existing identities.
+- Add stored snapshots, live video/audio and recording software coverage only
+  behind the actual admitted owner and existing firmware guards. Preserve
+  acknowledged stop/cancel, bounded cleanup and independent owners. Missing
+  battery or availability observations remain unknown.
+- Recognize four wired doorbell and two garage camera model/type pairs with
+  explicit standalone/owner blockers. Recognition does not activate their
+  missing authentication, events or media. No lock, lid, garage-door, light or
+  PTZ controls are added.
+- Record reproducible standalone, older-owner, LTE and PoE/NVR protocol limits,
+  including a bounded offline descriptor inspector that omits private values.
+  Unimplemented connections and unresolved model variants remain open.
+- Allow one explicitly tracked unpublished candidate version across related
+  runtime PRs. Updated release notes are required. Existing tags, releases or
+  drafts and failed remote checks reject that exception. All CI and immutable
+  publication checks remain required.
+- See the [0.12.0 candidate notes](docs/RELEASE_0_12_0.md) for exact models,
+  source evidence, consumer limits and remaining obligations. Software tests
+  do not add hardware support or resolve the T8134 audio report. No session
+  migration is needed. Retain the previous package, lockfile and private store
+  for rollback. This candidate has not been published or deployed.
 
 ## 0.11.0 - Unreleased
 
@@ -25,7 +39,7 @@
   session migration or physical control is claimed. Retain the preceding package
   and private store for rollback. This version is not published.
 
-## 0.10.0 - Unreleased
+## 0.10.0 - 2026-09-11
 
 - Add `getCameraCapabilities()` for snapshot, live and recording software admission.
   Results use the existing media and owner guards without connecting to devices.

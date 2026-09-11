@@ -8,7 +8,21 @@ import { mediaFixture } from './fixtures/media.mjs';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
-const profiles = [...eufycamMedia, ...batteryDoorbellMedia, ...solocamMedia];
+import { indoorMedia } from './fixtures/indoor-media.mjs';
+import { walllightMedia } from './fixtures/walllight-media.mjs';
+import { floodlightMedia } from './fixtures/floodlight-media.mjs';
+import { integratedMedia } from './fixtures/integrated-media.mjs';
+import { lteMedia } from './fixtures/lte-media.mjs';
+const profiles = [
+  ...eufycamMedia,
+  ...batteryDoorbellMedia,
+  ...solocamMedia,
+  ...walllightMedia,
+  ...floodlightMedia,
+  ...integratedMedia,
+  ...lteMedia,
+  ...indoorMedia,
+];
 const newlyAdmittedSolo = solocamMedia.filter((p) => p.model !== 'T8134');
 
 const jpeg = Buffer.from([255, 216, 255, 0, 255, 217]);
@@ -101,22 +115,33 @@ for (const p of profiles) {
         p.liveEnvelope ?? (['T8172', 'T8214'].includes(p.model) ? 'doorbell' : 'payload');
       for (const codec of [VideoCodec.H264, VideoCodec.H265]) {
         station.startLivestream(camera, codec);
-        const command = sent.pop(),
-          payload = JSON.parse(command.value);
+        const command = sent.pop();
+        if (envelope === 'int') {
+          assert.deepEqual(command, {
+            commandType: CommandType.CMD_START_REALTIME_MEDIA,
+            value: 2,
+            strValue: 'abcd',
+            channel: 2,
+          });
+          continue;
+        }
+        const payload = JSON.parse(command.value);
         assert.equal(
           command.commandType,
-          envelope !== 'payload'
+          !['payload', 'smartdrop', 'indoor-h3'].includes(envelope)
             ? CommandType.CMD_DOORBELL_SET_PAYLOAD
             : CommandType.CMD_SET_PAYLOAD,
         );
         assert.equal(command.channel, 2);
         assert.deepEqual(
           payload,
-          envelope !== 'payload'
+          !['payload', 'smartdrop', 'indoor-h3'].includes(envelope)
             ? {
                 commandType: 1000,
                 data: {
-                  accountId: 'synthetic',
+                  ...(['indoor', 'floodlight'].includes(envelope)
+                    ? { account_id: 'synthetic' }
+                    : { accountId: 'synthetic' }),
                   ...(envelope === 'doorbell' ? { camera_type: 0, entrytype: 0 } : {}),
                   encryptkey: 'abcd',
                   streamtype: codec,
@@ -125,10 +150,15 @@ for (const p of profiles) {
             : {
                 account_id: 'synthetic',
                 cmd: CommandType.CMD_START_REALTIME_MEDIA,
+                ...(envelope === 'smartdrop' ? { mChannel: 0 } : {}),
                 mValue3: CommandType.CMD_START_REALTIME_MEDIA,
+                ...(envelope === 'indoor-h3' ? { mChannel: 2 } : {}),
                 payload: {
                   ClientOS: 'Android',
-                  ...(p.model === 'T8600' ? { camera_type: 0, entrytype: 0 } : {}),
+                  ...(p.model === 'T8600' || ['indoor-h3', 'smartdrop'].includes(envelope)
+                    ? { camera_type: 0, entrytype: 0 }
+                    : {}),
+                  ...(envelope === 'indoor-h3' ? { accountId: 'synthetic' } : {}),
                   key: 'abcd',
                   streamtype: codec === VideoCodec.H264 ? 1 : 2,
                 },
@@ -303,7 +333,17 @@ for (const p of profiles) {
   });
 }
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1), ...newlyAdmittedSolo])
+for (const p of [
+  eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
+  ...batteryDoorbellMedia.slice(1),
+  ...newlyAdmittedSolo,
+  ...indoorMedia,
+  ...walllightMedia,
+  ...floodlightMedia,
+  ...integratedMedia,
+  ...lteMedia,
+])
   test(`${p.model}: new media profile rejects unknown tuple, owner and firmware before any command`, async () => {
     for (const change of [
       (f) => (f.transport.raw.get(f.camera.parent_sn).main_sw_version = undefined),
@@ -412,7 +452,17 @@ for (const p of profiles) {
   }
 }
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia, ...solocamMedia])
+for (const p of [
+  eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
+  ...batteryDoorbellMedia,
+  ...solocamMedia,
+  ...walllightMedia,
+  ...floodlightMedia,
+  ...integratedMedia,
+  ...lteMedia,
+  ...indoorMedia,
+])
   test(`${p.model}: one failed HomeBase stream leaves a simultaneous second owner and audio stream intact`, async () => {
     const f = await mediaFixture(p);
     const g = await mediaFixture(
@@ -457,7 +507,17 @@ for (const p of [eufycamMedia[0], ...batteryDoorbellMedia, ...solocamMedia])
     }
   });
 
-for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1), ...newlyAdmittedSolo])
+for (const p of [
+  eufycamMedia[0],
+  ...eufycamMedia.filter((p) => p.model === 'T8110'),
+  ...batteryDoorbellMedia.slice(1),
+  ...newlyAdmittedSolo,
+  ...indoorMedia,
+  ...walllightMedia,
+  ...floodlightMedia,
+  ...integratedMedia,
+  ...lteMedia,
+])
   test(`${p.model}: the new profile admits the existing additional-H3 firmware boundary`, async () => {
     for (const firmware of ['2.0.9.7', '3.8.6.0']) {
       const f = await mediaFixture({ ...p, owner: { ...p.owner, firmware } });
@@ -474,3 +534,34 @@ for (const p of [eufycamMedia[0], ...batteryDoorbellMedia.slice(1), ...newlyAdmi
       }
     }
   });
+
+// S100 storage compatibility alone is not command-owner evidence.
+test('T84A1 stays media-unverified beside the admitted T81A0 profile', async () => {
+  const f = await mediaFixture({ ...walllightMedia[0], model: 'T84A1', type: 151 });
+  try {
+    for (const feature of Object.values(f.transport.cameraCapabilities(f.camera.device_sn)))
+      assert.deepEqual(feature, {
+        available: false,
+        status: 'unsupported',
+        reason: 'camera_media_unverified',
+      });
+    records(f);
+    await assert.rejects(f.transport.snapshot(f.camera.device_sn), {
+      code: 'camera_media_unverified',
+    });
+    await assert.rejects(f.transport.startLive(f.camera.device_sn), {
+      code: 'camera_media_unverified',
+    });
+    const { recordings } = await f.transport.recordings.list(f.camera.parent_sn, day);
+    await assert.rejects(f.transport.recordings.download(recordings[0].id), {
+      code: 'camera_media_unverified',
+    });
+    await assert.rejects(f.transport.recordings.thumbnail(recordings[0].id), {
+      code: 'camera_media_unverified',
+    });
+    assert.equal(f.counts.starts, 0);
+    assert.equal(f.transport.recordings.active, false);
+  } finally {
+    await f.close();
+  }
+});
