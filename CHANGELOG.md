@@ -2,6 +2,9 @@
 
 ## 0.12.0 - Unreleased
 
+- Record [PoE/NVR transport evidence](docs/research/NVR_TRANSPORT.md) and an offline
+  admission probe. NVR media remains blocked under #38 pending its own transport.
+
 - Add exact S100/T84A1 and S120/T81A0 recognition, observed state and native
   motion/person events. Admit S120 media only with its actual T8030 H3 parent.
   S100 media and standalone transport remain unverified. See
