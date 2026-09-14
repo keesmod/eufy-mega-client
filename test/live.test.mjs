@@ -182,3 +182,39 @@ test('recovery confirms STOP and retains ownership until the media connection is
     await f.t.close();
   }
 });
+
+test('live metadata reflects audio discovered after video startup', async () => {
+  const f = fixture();
+  const metadata = {
+    videoCodec: 0,
+    audioCodec: -1,
+    videoFPS: 15,
+    videoWidth: 640,
+    videoHeight: 360,
+  };
+  const { AudioCodec } = await import('../dist/vendor/p2p/types.js');
+  metadata.audioCodec = AudioCodec.NONE;
+  f.station.startLivestream = () =>
+    queueMicrotask(() =>
+      f.station.emit(
+        'livestream start',
+        f.station,
+        1,
+        metadata,
+        new Readable({ read() {} }),
+        new Readable({ read() {} }),
+      ),
+    );
+  try {
+    const stream = await f.t.startLive('CAM');
+    assert.equal(stream.metadata.audioCodec, 'none');
+    metadata.audioCodec = AudioCodec.AAC;
+    assert.equal(stream.metadata.audioCodec, 'aac');
+    const stopped = stream.stop();
+    f.ack();
+    await stopped;
+    assert.equal(f.stops(), 1);
+  } finally {
+    await f.t.close();
+  }
+});

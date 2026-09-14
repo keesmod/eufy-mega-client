@@ -297,3 +297,15 @@ but retain `standalone_transport_unverified`. Existing T8134 media admission is
 preserved. Version 0.12.0 enables the nine additional models on the existing
 [H3 media profile](SOLOCAM.md#h3-core-media-0120), with unchanged API methods.
 Unsupported owner/firmware combinations retain `camera_media_unverified`.
+
+### Audio discovered after live startup
+
+`LiveStream.metadata` returns the current observed metadata. Video-only startup
+remains bounded to the existing audio discovery deadline. A later first audio
+packet updates `audioCodec` before its bytes reach `LiveStream.audio`, without
+a second start event or camera command. Read the handle metadata again when
+consuming first audio data. A cached metadata object remains a snapshot.
+
+This does not renegotiate consumer transports. A consumer that started a
+video-only mux or SDP session must handle late track admission separately.
+No actual audio packet is inferred from expiration of the startup timer.
