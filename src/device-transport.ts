@@ -577,7 +577,9 @@ export class DeviceTransport extends EventEmitter {
           const handle: LiveStream = {
             id: randomUUID(),
             deviceId: id,
-            metadata: mediaMetadata(metadata),
+            get metadata() {
+              return mediaMetadata(metadata);
+            },
             video,
             audio,
             ended,
