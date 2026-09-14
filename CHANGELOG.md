@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.3 - Unreleased
+
+- Keep audio codec discovery open after bounded video-only startup. The first
+  late AAC packet is classified and normalized without a second stream-start
+  event or camera command. Live handle metadata reflects the observed codec.
+- Preserve the three-second startup limit for cameras that send no audio.
+  Consumers must explicitly support adding a late audio track. This library
+  correction alone does not add audio to an existing browser connection or
+  establish T8134 acceptance for camera issue #10.
+
 ## 0.12.2 - Unreleased
 
 ### Logging improvements for diagnostics

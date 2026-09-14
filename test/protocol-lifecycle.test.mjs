@@ -5,58 +5,67 @@ import { P2PClientProtocol } from '../dist/vendor/p2p/session.js';
 import { EventEmitter } from 'node:events';
 import { CommandType, AudioCodec, P2PDataType } from '../dist/vendor/p2p/types.js';
 
-test('audio arriving after the former 650 ms cutoff is included in the first stream metadata', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  const protocol = new P2PClientProtocol(
-    {
-      station_sn: 'T8030_FIXTURE',
-      device_type: 18,
-      app_conn: '',
-      devices: [],
-      member: { admin_user_id: 'test' },
-    },
-    {},
-  );
-  const kind = P2PDataType.VIDEO;
-  const started = [];
-  protocol.on('livestream started', (_channel, metadata) => started.push({ ...metadata }));
-  const video = Buffer.alloc(28);
-  video.writeUInt32LE(6, 0);
-  video[4] = 1;
-  video[5] = 1;
-  video.writeUInt16LE(15, 8);
-  video.writeUInt16LE(640, 10);
-  video.writeUInt16LE(360, 12);
-  Buffer.from([0, 0, 0, 1, 0x65, 0]).copy(video, 22);
-  try {
-    protocol.handleDataBinaryAndVideo({
-      dataType: kind,
-      commandId: CommandType.CMD_VIDEO_FRAME,
-      channel: 0,
-      signCode: 0,
-      data: video,
-    });
-    t.mock.timers.tick(900);
-    assert.equal(
-      started.length,
-      0,
-      'Video must not declare audio absent before a delayed AAC frame',
+for (const delay of [900, 2999, 3001, 5000])
+  test(`first AAC at ${delay} ms is discovered without a second start`, async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const protocol = new P2PClientProtocol(
+      {
+        station_sn: 'T8030_FIXTURE',
+        device_type: 18,
+        app_conn: '',
+        devices: [],
+        member: { admin_user_id: 'test' },
+      },
+      {},
     );
-    const audio = Buffer.alloc(16);
-    audio[5] = 0;
-    protocol.handleDataBinaryAndVideo({
-      dataType: kind,
-      commandId: CommandType.CMD_AUDIO_FRAME,
-      channel: 0,
-      signCode: 0,
-      data: audio,
+    const kind = P2PDataType.VIDEO;
+    const started = [];
+    let current;
+    protocol.on('livestream started', (_channel, metadata) => {
+      current = metadata;
+      started.push({ ...metadata });
     });
-    assert.equal(started.length, 1);
-    assert.equal(started[0].audioCodec, AudioCodec.AAC);
-  } finally {
-    await protocol.dispose();
-  }
-});
+    const video = Buffer.alloc(28);
+    video.writeUInt32LE(6, 0);
+    video[4] = 1;
+    video[5] = 1;
+    video.writeUInt16LE(15, 8);
+    video.writeUInt16LE(640, 10);
+    video.writeUInt16LE(360, 12);
+    Buffer.from([0, 0, 0, 1, 0x65, 0]).copy(video, 22);
+    try {
+      protocol.handleDataBinaryAndVideo({
+        dataType: kind,
+        commandId: CommandType.CMD_VIDEO_FRAME,
+        channel: 0,
+        signCode: 0,
+        data: video,
+      });
+      t.mock.timers.tick(delay);
+      assert.equal(
+        started.length,
+        delay < 3000 ? 0 : 1,
+        'Video startup remains bounded while audio discovery stays open',
+      );
+      const audio = Buffer.alloc(16);
+      audio[5] = 0;
+      protocol.handleDataBinaryAndVideo({
+        dataType: kind,
+        commandId: CommandType.CMD_AUDIO_FRAME,
+        channel: 0,
+        signCode: 0,
+        data: audio,
+      });
+      assert.equal(started.length, 1);
+      assert.equal(started[0].audioCodec, delay < 3000 ? AudioCodec.AAC : AudioCodec.NONE);
+      assert.equal(current.audioCodec, AudioCodec.AAC);
+      assert.equal(protocol.currentMessageState[kind].p2pStreamFirstAudioDataReceived, true);
+      t.mock.timers.tick(5000);
+      assert.equal(started.length, 1);
+    } finally {
+      await protocol.dispose();
+    }
+  });
 
 test('a video-only stream still starts within the bounded audio discovery window', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });

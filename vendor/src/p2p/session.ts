@@ -2437,9 +2437,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               this.currentMessageState[message.dataType].waitForAudioData = setTimeout(() => {
                 this.currentMessageState[message.dataType].waitForAudioData = undefined;
                 this.currentMessageState[message.dataType].p2pStreamMetadata.audioCodec = AudioCodec.NONE;
-                this.currentMessageState[message.dataType].p2pStreamFirstAudioDataReceived = true;
+                // Startup may proceed without audio. Only an actual audio packet
+                // completes codec discovery, even after this deadline.
                 if (
-                  this.currentMessageState[message.dataType].p2pStreamFirstAudioDataReceived &&
                   this.currentMessageState[message.dataType].p2pStreamFirstVideoDataReceived &&
                   this.currentMessageState[message.dataType].p2pStreamNotStarted
                 ) {

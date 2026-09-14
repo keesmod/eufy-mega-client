@@ -156,6 +156,7 @@ export interface StreamStop {
 export interface LiveStream {
   id: string;
   deviceId: string;
+  /** Current observed codecs. Audio may become known after bounded video startup. */
   metadata: MediaMetadata;
   video: import('node:stream').Readable;
   audio: import('node:stream').Readable;
