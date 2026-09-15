@@ -4,6 +4,10 @@ Reviewed 2026-09-10 for [story #15][Story]. This is an evidence inventory for th
 [programme][Programme], not a list of supported products. Product implementation
 belongs to [E2] and hardware acceptance to [E6]. Current work status stays in GitHub.
 
+The generated [device-profile policy](DEVICE_PROFILES.md) lists current runtime
+recognition, topology and separate media admission from one typed source. Dated
+hardware observations and unresolved feature evidence remain in this matrix.
+
 The camera bridge and integration belong in `ha-eufy-cam`. The separate mower
 bridge and integration belong in `eufy-robomow-ha`. Both consume this library
 independently, as described in [PROGRAMME.md](PROGRAMME.md).

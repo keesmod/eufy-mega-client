@@ -1,4 +1,5 @@
 import { hasCameraMedia } from './camera-media.js';
+import type { CameraMediaFeature } from './device-profiles.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
 import {
   isIndoorCamera,
@@ -84,7 +85,7 @@ export class DeviceTransport extends EventEmitter {
         await this.connect(id, signal);
         return this.station(id);
       },
-      camera: (id) => this.camera(id, true),
+      camera: (id) => this.camera(id, 'recordings'),
       knownCamera: (id, station) => this.raw.get(id)?.parent_sn === station,
       busy: (id) => this.lives.has(id) || this.starting.has(id) || this.commands.has(id),
     },
@@ -306,29 +307,38 @@ export class DeviceTransport extends EventEmitter {
     if (!station) throw new EufyError('unknown_station');
     return station;
   }
-  private camera(id: string, media = false): ProtocolDevice {
+  private camera(id: string, feature?: CameraMediaFeature): ProtocolDevice {
     const failure = this.failures.get(id);
     if (failure) throw new EufyError(failure);
     const camera = this.cameras.get(id);
     if (!camera) throw new EufyError('unknown_camera');
-    if (media && !hasCameraMedia(this.raw.get(id), this.raw.get(camera.getStationSerial())))
+    if (
+      feature &&
+      !hasCameraMedia(this.raw.get(id), this.raw.get(camera.getStationSerial()), feature)
+    )
       throw new EufyError('camera_media_unverified');
     return camera;
   }
   cameraCapabilities(id: string): import('./types.js').CameraCapabilities {
-    let reason: string | null = null;
-    try {
-      const camera = this.camera(id, true);
-      this.station(camera.getStationSerial());
-    } catch (error) {
-      reason = error instanceof EufyError ? error.code : 'device_initialization_failed';
-    }
-    const capability = () => ({
-      available: reason === null,
-      status: reason === null ? ('experimental' as const) : ('unsupported' as const),
-      reason,
-    });
-    return { snapshot: capability(), live: capability(), recordings: capability() };
+    const capability = (feature: CameraMediaFeature) => {
+      let reason: string | null = null;
+      try {
+        const camera = this.camera(id, feature);
+        this.station(camera.getStationSerial());
+      } catch (error) {
+        reason = error instanceof EufyError ? error.code : 'device_initialization_failed';
+      }
+      return {
+        available: reason === null,
+        status: reason === null ? ('experimental' as const) : ('unsupported' as const),
+        reason,
+      };
+    };
+    return {
+      snapshot: capability('snapshot'),
+      live: capability('live'),
+      recordings: capability('recordings'),
+    };
   }
   supportsEvent(id: string, type: string): boolean {
     const camera = this.cameras.get(id);
@@ -468,7 +478,7 @@ export class DeviceTransport extends EventEmitter {
       if (
         !this.cameras.has(row.device_sn) ||
         this.raw.get(row.device_sn)?.parent_sn !== stationId ||
-        !hasCameraMedia(this.raw.get(row.device_sn), this.raw.get(stationId)) ||
+        !hasCameraMedia(this.raw.get(row.device_sn), this.raw.get(stationId), 'snapshot') ||
         !('crop_local_path' in row)
       )
         continue;
@@ -506,7 +516,7 @@ export class DeviceTransport extends EventEmitter {
     }
   }
   async snapshot(id: string, signal?: AbortSignal): Promise<Snapshot> {
-    const camera = this.camera(id, true);
+    const camera = this.camera(id, 'snapshot');
     await this.connect(camera.getStationSerial(), signal);
     const existing = this.snapshots.get(id);
     if (existing) return { ...existing, data: Buffer.from(existing.data) };
@@ -531,7 +541,7 @@ export class DeviceTransport extends EventEmitter {
     return awaitEvent(source, event, issue, accept, abort, timeout);
   }
   async startLive(id: string, signal?: AbortSignal): Promise<LiveStream> {
-    const camera = this.camera(id, true),
+    const camera = this.camera(id, 'live'),
       stationId = camera.getStationSerial(),
       station = this.station(stationId);
     if (
