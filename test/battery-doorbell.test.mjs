@@ -105,7 +105,9 @@ for (const [model, type] of models) {
         t.raw.get(raw.parent_sn).main_sw_version = '2.0.9.6';
         await assert.rejects(t.startLive(raw.device_sn), { code: 'camera_media_unverified' });
         await assert.rejects(t.snapshot(raw.device_sn), { code: 'camera_media_unverified' });
-        assert.throws(() => t.camera(raw.device_sn, true), { code: 'camera_media_unverified' });
+        assert.throws(() => t.camera(raw.device_sn, 'recordings'), {
+          code: 'camera_media_unverified',
+        });
       }
     });
   });
