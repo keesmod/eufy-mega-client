@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.12.3 - Unreleased
+## 0.12.3 - 2026-09-15
+
+### Easier device maintenance
 
 - Consolidate all 51 existing device profiles and per-feature media rules in
   one typed registry. Preserve exact model/type, owner and firmware admission,
@@ -9,6 +11,13 @@
 - Generate and check the software-policy table from the same registry. Existing
   model/topology behavior is characterized before and after the refactor.
   This change adds no model, transport or hardware support claim.
+- Give maintainers one place to review a known-family device addition and its
+  snapshot, live and recording rules. Characterization tests detect changes to
+  existing profiles. New protocols still require implementation and hardware
+  validation before support can be claimed.
+
+### Late audio discovery
+
 - Keep audio codec discovery open after bounded video-only startup. The first
   late AAC packet is classified and normalized without a second stream-start
   event or camera command. Live handle metadata reflects the observed codec.
@@ -17,9 +26,16 @@
   correction alone does not add audio to an existing browser connection or
   establish T8134 acceptance for camera issue #10.
 
-This candidate supports the combined camera quality batch. Consumers use the
-compiled versioned tarball and must validate their own bridge and HA behavior.
-References #139 and camera #78. Public publication remains a separate step.
+### Upgrade and compatibility
+
+Use the compiled versioned 0.12.3 tarball and its verified integrity. The combined
+[camera 0.8.19 release](https://github.com/keesmod/ha-eufy-cam/pull/81) consumes
+this version. Other consumers must validate their own late-audio handling and
+bridge behavior. Public API shapes, identities and admission boundaries remain
+compatible. Retain the previous package and lockfile for rollback and preserve
+the private credential/session store. No data migration is required.
+
+References #139 and [camera #78](https://github.com/keesmod/ha-eufy-cam/issues/78).
 
 ## 0.12.2 - Unreleased
 
