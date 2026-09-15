@@ -2,6 +2,13 @@
 
 ## 0.12.3 - Unreleased
 
+- Consolidate all 51 existing device profiles and per-feature media rules in
+  one typed registry. Preserve exact model/type, owner and firmware admission,
+  including the four established routes. Snapshot, live and recording
+  capabilities retain their independent failures and current public shape.
+- Generate and check the software-policy table from the same registry. Existing
+  model/topology behavior is characterized before and after the refactor.
+  This change adds no model, transport or hardware support claim.
 - Keep audio codec discovery open after bounded video-only startup. The first
   late AAC packet is classified and normalized without a second stream-start
   event or camera command. Live handle metadata reflects the observed codec.
@@ -9,6 +16,10 @@
   Consumers must explicitly support adding a late audio track. This library
   correction alone does not add audio to an existing browser connection or
   establish T8134 acceptance for camera issue #10.
+
+This candidate supports the combined camera quality batch. Consumers use the
+compiled versioned tarball and must validate their own bridge and HA behavior.
+References #139 and camera #78. Public publication remains a separate step.
 
 ## 0.12.2 - Unreleased
 
