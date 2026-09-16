@@ -23,6 +23,8 @@ export const e15Schema = [
     type: 'obj',
     property: { type: 'enum', range: ['None', 'Wifi', 'Cellular'] },
   },
+  // Declared raw without an internal layout. Provenance: E15_ROBOT_STATUS_CONTRACT_2026-09-16.md.
+  { id: 107, code: 'robot_status', mode: 'ro', type: 'raw' },
 ];
 
 export const e15Dps = { 8: 73, 109: 54, 134: 'Wifi' };

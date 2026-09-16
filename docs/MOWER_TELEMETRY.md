@@ -48,8 +48,9 @@ map onto these values. Anything else is `invalid`.
 ## Definitions and confirmation levels
 
 A `MowerTelemetryDefinition` names the field, the data point id, the decode rule
-(`enum` with an explicit value map, `boolean`, `percent`, `signal_dbm` or
-`signal_percent`), the evidence `source` and a level:
+(`enum` with an explicit value map, `boolean`, `percent`, `signal_dbm`,
+`signal_percent` or `wire` for one candidate reading of a raw payload), the
+evidence `source` and a level:
 
 | Level        | Meaning                                                                                    | Typed value |
 | ------------ | ------------------------------------------------------------------------------------------ | ----------- |
@@ -69,17 +70,21 @@ confirm battery, Wifi and a device-declared signal percentage on E15/T2880
 firmware 6.9.28. Definitions come from that device's schema and repeated
 read-only responses, independently of the unlicensed mower fork.
 
-| Field                   | Data point | Level                | Definition                                          |
-| ----------------------- | ---------- | -------------------- | --------------------------------------------------- |
-| `status`                | none       | none                 | DP 107 reports acquired, binary meaning unconfirmed |
-| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`         |
-| `progress`              | none       | none                 | No current mowing-progress definition observed      |
-| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`             |
-| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`       |
+| Field                   | Data point | Level                | Definition                                                                                                             |
+| ----------------------- | ---------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `status`                | 107        | observed, withheld   | `robot_status` wire candidates: fields 1 = 2 and 3 = 1 `mowing`, 1 = 2 and 3 = 2 `paused`, 1 = 1 and 3 = 1 `returning` |
+| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`                                                                            |
+| `progress`              | none       | none                 | No current mowing-progress definition observed                                                                         |
+| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`                                                                                |
+| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`                                                                          |
 
 Every confirmed row cites the same receipt above. `None` and `Cellular` are
 declared but not observed, so they remain unmapped. DP 109 is a percentage,
-not a negative dBm reading. Status and progress remain `unconfirmed`. Passing
+not a negative dBm reading. The three `status` candidates cite the
+[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).
+They come from one owner-operated cycle, stay `observed` and are withheld, so
+`status` reports `{ state: 'unconfirmed', level: 'observed' }` on the owned
+device. Progress remains `unconfirmed` without a candidate. Passing
 `definitions: []` explicitly opts out of the built-in registry. Built-in
 definitions and their decode rules are frozen so consumers cannot alter the
 defaults shared by other sessions.
@@ -89,6 +94,51 @@ A consumer that holds its own confirmed evidence can pass definitions to
 added to this registry must cite a receipt in `docs/research/` that records the
 data point id, the declared code and type from the device schema, the observed
 values, the app and firmware versions, the user action and three reproductions.
+
+## Raw wire payloads
+
+The E15 declares DP 107 `robot_status` and DP 108 `battery_status` as `raw`
+without an internal layout. The
+[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md)
+establishes the envelope from the protocol owner's base64 raw report path and
+the public Protocol Buffers encoding rules, and verifies it against every
+retained raw value: a payload is a sequence of wire records, each a tag varint
+holding the field number and wire type followed by a varint or a
+length-delimited body. Fields with a zero default are omitted. The observed DP
+107 fields are 1, 2, 3 and 6, all varints, in payloads of one to six bytes. The
+single-zero-byte payload is a distinct default without records.
+
+`parseMowerWirePayload(value)` is the pure structural parser for this envelope.
+It returns `{ shape: 'fields', byteLength, fields }` with `number`, `wire` and
+`value` per record, `{ shape: 'default' }` for the empty or single-zero-byte
+payload, or `{ shape: 'malformed', reason }` naming the first fault:
+`not_text`, `not_base64`, `too_long`, `truncated`, `field_number`, `wire_type`,
+`varint` or `too_many_fields`. It accepts at most 256 decoded bytes and 32
+records, decodes varints up to 2^53 - 1, copies `bytes`, `fixed32` and
+`fixed64` records without recursing into them, never throws and shares no
+memory with its input. DP 158 exceeds the byte bound and is out of scope.
+
+The decoder attaches the parse as `fields[dp].wire` for each data point named
+by a `wire` definition of any level, provided the value is text and the device
+declares the point `raw` or not at all. Structure is not meaning: field numbers
+and integers are the payload itself in another form, so exposing them does not
+bypass the evidence levels. With `definitions: []` nothing is attached.
+
+A `wire` definition is `{ kind: 'wire', match, activity }`. It reports
+`activity` only when every field number in `match` is a varint with exactly the
+listed value, an absent field counting as zero, and only at `confirmed`. A
+payload that is malformed, wrong-typed or declared as a non-raw type makes the
+field `invalid`. The default payload, a payload with repeated or non-varint
+records, and any combination no confirmed candidate claims are withheld as
+`invalid` rather than guessed. Several candidates may share one data point with
+their own levels. An empty `match` or an activity outside `MowerActivity` is an
+invalid definition. No enum is inferred from the wire format itself.
+
+| Fact                                                                                                                                                           | Permitted source                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tag varint, wire types 0, 1, 2, 5 and the deprecated groups 3 and 4, base-128 varints of at most ten bytes, any field order, absent records for missing fields | [Protocol Buffers Encoding guide](https://protobuf.dev/programming-guides/encoding/), public documentation. Site source [protocolbuffers/protocolbuffers.github.io, 4b88f52a8f830d4b4fbdad161dee33618ebc617f](https://github.com/protocolbuffers/protocolbuffers.github.io/tree/4b88f52a8f830d4b4fbdad161dee33618ebc617f), BSD-3-Clause, copyright Google Inc. Read to establish format facts. No code copied |
+| Field numbers 1 to 536,870,911, zero defaults of implicit-presence scalars are not serialized, the first enum value is zero, unknown fields are preserved      | [Language Guide, proto3](https://protobuf.dev/programming-guides/proto3/), same site and license                                                                                                                                                                                                                                                                                                              |
+| Raw data points travel as base64 text keyed by DP id                                                                                                           | TuyaOpen `tuya_iot_dp_raw_report`, pinned in [transport provenance](MOWER_TRANSPORT_PROVENANCE.md)                                                                                                                                                                                                                                                                                                            |
 
 ## Device schema
 
@@ -124,7 +174,13 @@ definition, and the session path with and without a schema. The synthetic
 schema, codes and values in that generic decoder suite are invented.
 `test/e15-telemetry.test.mjs` adds independently sourced E15 declarations with
 synthetic values, default-session decoding and strict separation between signal
-units. CI runs both suites on Linux with Node 24 without a device.
+units. `test/e15-activity.test.mjs` covers the wire parser and the DP 107
+candidates: the established shape, omitted fields, the default payload, other
+wire types, malformed and truncated input, size and record limits, unknown
+values, mixed evidence levels, the declaration veto, frozen registry entries
+and copy isolation. Its payloads are built from the documented tag and varint
+rules, not from captures. CI runs all three suites on Linux with Node 24
+without a device.
 
 ## Remaining acceptance
 
@@ -135,15 +191,16 @@ The earlier idle-window silence does not describe this active test. See its
 [receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md) and the
 [model matrix](MODEL_MATRIX.md#e15-local-telemetry-2026-09-16).
 
-Activity definitions and the mowing-progress source remain unconfirmed. The
-device declares DP 107 as raw data without a binary schema or enum definitions.
-One mowing, pause and return cycle does not independently reproduce each
-proposed meaning three times. The app displayed 0% mowing progress, so this
-window did not establish a changing mowing-progress value. DP 118 changed
-during the app's separate map-saving phase and remains map-save progress.
-Cloud cached values are not substituted for local observations. Other network
-modes and firmware remain untested.
-The immediate next implementation step is
-[#153](https://github.com/keesmod/eufy-mega-client/issues/153), deriving the DP 107
-field contract and adding evidence-gated activity decoding.
+The DP 107 envelope and field boundaries are established in the
+[contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md) for
+[#153](https://github.com/keesmod/eufy-mega-client/issues/153). Activity
+meanings remain `observed` at best: one mowing, pause and return cycle does not
+independently reproduce each candidate three times, Defogging has no identified
+field value, and field 2 substates, field 6 and the default payload have no
+correlated app state. The mowing-progress source remains unidentified. The app
+displayed 0% mowing progress, so the windows did not establish a changing
+value. DP 118 changed during the app's separate map-saving phase and remains
+map-save progress. Cloud cached values are not substituted for local
+observations. Other network modes and firmware remain untested. The remaining
+hardware step is one bounded owner-operated window with further cycles.
 Physical control, settings and map decoding remain separate work.

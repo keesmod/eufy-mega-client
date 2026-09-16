@@ -401,8 +401,9 @@ test('a session exposes the device schema and decodes telemetry through the mowe
     unit: '%',
   });
   assert.deepEqual(telemetry.fields['200'], { id: '200', value: 'undeclared', declared: false });
-  for (const name of ['status', 'progress'])
-    assert.deepEqual(telemetry[name], { state: 'unconfirmed' });
+  // The shipped registry carries observed DP 107 candidates, so status names that level.
+  assert.deepEqual(telemetry.status, { state: 'unconfirmed', level: 'observed' });
+  assert.deepEqual(telemetry.progress, { state: 'unconfirmed' });
   // This invented product schema does not supply valid E15 battery/network data points.
   assert.deepEqual(telemetry.battery, { state: 'invalid', dp: ['8'] });
   assert.deepEqual(telemetry.network, { state: 'missing', dp: ['134', '109'] });
