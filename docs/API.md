@@ -398,6 +398,29 @@ or `[]` to disable the defaults. See
 [typed mower telemetry](MOWER_TELEMETRY.md) for the definition format, levels,
 schema provenance and remaining acceptance.
 
+### Raw wire payloads, 0.13.0
+
+`parseMowerWirePayload(value)` decodes one raw data-point value from base64 into
+wire records without assigning meaning. It returns `shape: 'fields'` with
+`number`, `wire` and `value` per record, `shape: 'default'` for the observed
+empty or single-zero-byte payload, or `shape: 'malformed'` with a `reason`. It
+is bounded to 256 bytes and 32 records and never throws. The decoder attaches
+the same result as `fields[dp].wire` for data points named by a `wire`
+definition, today DP 107 `robot_status` on the E15.
+
+```ts
+const telemetry = decodeMowerTelemetry(report, { schema: session.schema });
+const wire = telemetry.fields['107']?.wire;
+if (wire?.shape === 'fields') {
+  // Structural values only, for example [{ number: 1, wire: 'varint', value: 2 }, ...].
+  // telemetry.status stays { state: 'unconfirmed', level: 'observed' } until confirmed.
+}
+```
+
+The shipped DP 107 candidates are `observed` and withheld. A `wire` definition
+at `confirmed` reports its activity only when every listed field matches. See
+the [DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,

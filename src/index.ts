@@ -56,9 +56,13 @@ export type {
   MowerTelemetryValue,
   MowerTelemetry,
   MowerTelemetryOptions,
+  MowerWireField,
+  MowerWireFault,
+  MowerWirePayload,
 } from './modular-types.js';
 export { decodeMowerTelemetry } from './mowers/telemetry/decode.js';
 export { E15_TELEMETRY_DEFINITIONS } from './mowers/telemetry/definitions.js';
+export { parseMowerWirePayload } from './mowers/telemetry/wire.js';
 export { PortableMapAcquisition } from './mowers/maps/acquisition.js';
 export type {
   MapSessionProvisioning,

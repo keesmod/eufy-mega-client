@@ -13,6 +13,7 @@ import type {
   MowerTelemetryValue,
 } from '../../modular-types.js';
 import { E15_TELEMETRY_DEFINITIONS } from './definitions.js';
+import { parseMowerWirePayload, wireVarints } from './wire.js';
 
 const LEVELS: Record<MowerTelemetryLevel, number> = { hypothesis: 0, observed: 1, confirmed: 2 };
 const ACTIVITIES = new Set<MowerActivity>([
@@ -88,7 +89,12 @@ function conforms(value: MowerDpValue, entry?: MowerDpSchemaEntry): boolean {
   return !entry || (resolve('0', value, entry).valid ?? true);
 }
 
-type Decoded<T> = { state: 'reported'; value: T } | { state: 'missing' } | { state: 'invalid' };
+/** `unmatched` means the value is present and well formed but this candidate does not claim it. */
+type Decoded<T> =
+  | { state: 'reported'; value: T }
+  | { state: 'missing' }
+  | { state: 'invalid' }
+  | { state: 'unmatched' };
 
 function decodeOne(
   definition: MowerTelemetryDefinition,
@@ -123,6 +129,20 @@ function decodeOne(
       return typeof value === 'number' && Number.isInteger(value) && value >= -120 && value <= 0
         ? { state: 'reported', value }
         : { state: 'invalid' };
+    case 'wire': {
+      const expected = Object.entries(decode.match);
+      if (!expected.length || !ACTIVITIES.has(decode.activity)) return { state: 'invalid' };
+      if (typeof value !== 'string' || (entry && entry.type !== 'raw')) return { state: 'invalid' };
+      const payload = parseMowerWirePayload(value);
+      if (payload.shape === 'malformed') return { state: 'invalid' };
+      const varints = wireVarints(payload);
+      if (!varints) return { state: 'unmatched' };
+      // An absent record is the zero default of the encoding, so `0` matches an omitted field.
+      const matched = expected.every(
+        ([number, wanted]) => (varints.get(Number(number)) ?? 0) === wanted,
+      );
+      return matched ? { state: 'reported', value: decode.activity } : { state: 'unmatched' };
+    }
   }
 }
 
@@ -174,6 +194,14 @@ export function decodeMowerTelemetry(
   const dps = copy(snapshot.dps);
   const fields: Record<string, MowerTelemetryValue> = {};
   for (const [id, value] of Object.entries(dps)) fields[id] = resolve(id, value, schema.get(id));
+  // Structure without meaning: parse raw payloads named by a wire definition of any level.
+  for (const definition of definitions) {
+    if (definition.decode.kind !== 'wire') continue;
+    const value = fields[definition.dp];
+    if (!value || value.wire || typeof value.value !== 'string') continue;
+    if (value.declared && value.type !== 'raw') continue;
+    value.wire = parseMowerWirePayload(value.value);
+  }
   const first = (values: Decoded<never>[]) =>
     values.find((item) => item.state === 'reported') as
       { state: 'reported'; value: MowerActivity | number | MowerNetworkKind } | undefined;

@@ -192,3 +192,7 @@ acceptance remains in the model matrix. No next issue is started by this run.
 
 The candidate is staged in a private test directory only. It does not replace
 the existing mower integration and does not publish version 0.13.0.
+
+The field contract derived from these reports, with the evidence level of every
+candidate meaning, is in the
+[DP 107 contract receipt](E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).

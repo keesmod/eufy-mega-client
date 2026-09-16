@@ -46,14 +46,31 @@
   No DP refresh, command write, retry or reconnect is added. See the
   [report API](docs/API.md#spontaneous-mower-reports-0130).
 
+### E15 activity report contract
+
+- Establish the DP 107 `robot_status` envelope from the protocol owner's base64
+  raw report path and the public Protocol Buffers encoding rules, verified
+  against every retained raw value of the owner-operated windows. Add the pure
+  bounded `parseMowerWirePayload()` and expose its structural result as
+  `fields[dp].wire` for data points named by a `wire` definition.
+- Add the `wire` decode kind for evidence-gated candidate readings of a raw
+  payload. Ship the mowing, paused and returning candidates for DP 107 at
+  `observed`, so `status` now reports `unconfirmed` with that level and no
+  activity value until three app-correlated reproductions exist. Battery,
+  network and the report freshness rules are unchanged. See the
+  [contract receipt](docs/research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).
+
 ### Upgrade and compatibility
 
 Existing camera and mower APIs, identifiers, persisted sessions and the map
 acquisition adapter are unchanged. The `MowerAdapter` contract is unchanged, so
 custom adapters keep working and report `mower_protocol_unavailable` for local
 sessions. The local session interface gains `schema`, `queryTelemetry()` and `receiveReport()`.
+`MowerTelemetryValue` gains the optional `wire` property and status definitions gain
+the `wire` decode kind. Consumers that matched `status` against `{ state: 'unconfirmed' }`
+exactly now also see `level: 'observed'`.
 This version is not published. Retain the previous package and lockfile for
-rollback. References #145, #147, #149 and #150.
+rollback. References #145, #147, #149, #150 and #153.
 
 ## 0.12.3 - 2026-09-15
 

@@ -132,7 +132,17 @@ export type MowerTelemetryDefinition = {
       field: 'status';
       decode:
         | { kind: 'enum'; values: Record<string, MowerActivity> }
-        | { kind: 'boolean'; on: MowerActivity; off: MowerActivity };
+        | { kind: 'boolean'; on: MowerActivity; off: MowerActivity }
+        | {
+            /**
+             * One candidate reading of a raw wire-format payload. Every listed field number
+             * must be a varint with exactly the given value. An absent field counts as zero.
+             * Other fields are ignored. An empty `match` is an invalid definition.
+             */
+            kind: 'wire';
+            match: Record<number, number>;
+            activity: MowerActivity;
+          };
     }
   | { field: 'battery' | 'progress'; decode: { kind: 'percent' } }
   | {
@@ -161,7 +171,37 @@ export interface MowerTelemetryValue {
   unit?: string;
   /** Declared value divided by ten to the power of the declared scale. */
   scaled?: number;
+  /**
+   * Structural parse of a raw payload named by a `wire` definition of any level. It exposes
+   * field numbers and values, never a meaning. See docs/MOWER_TELEMETRY.md.
+   */
+  wire?: MowerWirePayload;
 }
+
+/** One record of a wire-format payload. `bytes`, `fixed32` and `fixed64` are copied, not decoded. */
+export type MowerWireField =
+  | { number: number; wire: 'varint'; value: number }
+  | { number: number; wire: 'bytes' | 'fixed32' | 'fixed64'; value: Uint8Array };
+
+export type MowerWireFault =
+  | 'not_text'
+  | 'not_base64'
+  | 'too_long'
+  | 'truncated'
+  | 'field_number'
+  | 'wire_type'
+  | 'varint'
+  | 'too_many_fields';
+
+/**
+ * A raw data point decoded from base64 into wire-format records. `fields` is a well-formed
+ * record sequence, `default` is the observed empty or single-zero-byte payload with no
+ * records, and `malformed` names the first fault. No field meaning is attached.
+ */
+export type MowerWirePayload =
+  | { shape: 'fields'; byteLength: number; fields: MowerWireField[] }
+  | { shape: 'default'; byteLength: number; fields: [] }
+  | { shape: 'malformed'; byteLength: number; reason: MowerWireFault };
 
 /** Typed view of one snapshot. Nothing is inferred from age or absence. */
 export interface MowerTelemetry {
