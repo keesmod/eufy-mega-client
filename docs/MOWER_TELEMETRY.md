@@ -12,6 +12,14 @@ from age or absence.
 `decodeMowerTelemetry(snapshot, { schema?, definitions? })` is the same pure
 decoder for a snapshot the consumer already holds. Both keep the raw `dps` copy.
 
+`session.receiveReport()` adds a separate acquisition path for spontaneous
+command-8 reports. It keeps the full-frame arrival time and labels the result
+`kind: 'device-report'`. Pass this report to `decodeMowerTelemetry` with the
+session schema to decode only those reported points. A newly received query
+response is not substituted for a report. See the
+[report API](API.md#spontaneous-mower-reports-0130) and
+[hardware receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md).
+
 - `source` and `observedAt` come from the snapshot. Nothing is timestamped by
   the device and nothing is aged locally. Staleness is the consumer's decision.
 - `fields` types every reported data point by the device's own declaration:

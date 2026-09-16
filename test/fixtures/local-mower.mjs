@@ -57,6 +57,7 @@ export async function fakeMower(t, config = {}) {
     received: [],
     faults: [],
     sockets: new Set(),
+    reporters: new Set(),
   };
   const timers = new Set();
   const later = (fn, ms) => {
@@ -86,6 +87,23 @@ export async function fakeMower(t, config = {}) {
     let lastSequence = 0;
     let outgoing = 1000;
     let buffer = Buffer.alloc(0);
+    const report = (dps, options = {}) => {
+      if (!secret) throw new Error('peer not negotiated');
+      const json =
+        options.body ??
+        JSON.stringify({ protocol: 4, t: 1, data: { dps, devId: options.deviceId ?? identity } });
+      const payload = Buffer.concat([Buffer.from('3.5'), Buffer.alloc(12), Buffer.from(json)]);
+      const bytes = deviceFrame(
+        secret,
+        options.sequence ?? 0,
+        options.command ?? 8,
+        reply(options.code ?? 0, payload),
+      );
+      if (options.tamper) bytes[bytes.length - 5] ^= 1;
+      write(socket, bytes);
+    };
+    peer.reporters.add(report);
+    socket.on('close', () => peer.reporters.delete(report));
     const fault = (reason) => {
       peer.faults.push(reason);
       socket.destroy();
@@ -178,6 +196,9 @@ export async function fakeMower(t, config = {}) {
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   peer.port = server.address().port;
+  peer.report = (dps, options) => {
+    for (const report of peer.reporters) report(dps, options);
+  };
   peer.drop = () => {
     for (const socket of peer.sockets) socket.destroy();
   };

@@ -70,7 +70,7 @@ export interface MowerLocalSessionOptions {
   host: string;
   /** Tuya LAN protocol port, default 6668. */
   port?: number;
-  /** Deadline for connecting, key negotiation and each query, default 5000 ms. */
+  /** Deadline for connecting, key negotiation and each query/report read, default 5000 ms. */
   timeoutMs?: number;
 }
 
@@ -84,6 +84,13 @@ export interface MowerDpSnapshot {
   /** Local receipt time as an ISO 8601 UTC timestamp, not device time. */
   observedAt: string;
   dps: Record<string, MowerDpValue>;
+}
+
+/** One spontaneous LAN report. No queried or previously merged device cache is substituted. */
+export interface MowerDpReport extends MowerDpSnapshot {
+  kind: 'device-report';
+  /** Device frame counter. It may be zero and does not correlate with a request sequence. */
+  sequence: number;
 }
 
 /** Property types of a Tuya data point as declared by the product definition. */
@@ -200,6 +207,12 @@ export interface MowerLocalSession {
   queryStatus(signal?: AbortSignal): Promise<MowerDpSnapshot>;
   /** One status query decoded with the session schema and the library's E15 definitions. */
   queryTelemetry(signal?: AbortSignal): Promise<MowerTelemetry>;
+  /**
+   * Receive one command-8 report within the session timeout. Does not query or refresh DPs.
+   * A transport heartbeat keeps a pending read alive. Receipt time is when the full frame
+   * arrived, including when it arrived before this call. Consumers must check that time.
+   */
+  receiveReport(signal?: AbortSignal): Promise<MowerDpReport>;
   /** Idempotent. Resolves when the socket has actually closed. */
   disconnect(): Promise<void>;
 }
