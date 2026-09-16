@@ -39,6 +39,11 @@ export type {
   MowerAdapterContext,
   MowerSession,
   MowerSessionStore,
+  MowerLocalSessionOptions,
+  MowerLocalSession,
+  MowerLocalSessionEnd,
+  MowerDpSnapshot,
+  MowerDpValue,
 } from './modular-types.js';
 export { PortableMapAcquisition } from './mowers/maps/acquisition.js';
 export type {

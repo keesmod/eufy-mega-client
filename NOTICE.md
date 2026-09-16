@@ -49,3 +49,12 @@ The complete [Apache-2.0 licence](docs/licenses/Apache-2.0.txt) and
 [x8 MIT notice](docs/licenses/eufy-x8-MIT.txt) are distributed with this package.
 The adapted files retain Apache-2.0 terms. Other existing files retain their
 MIT terms. See [component provenance and validation limits](docs/MOWER_AUTH_PROVENANCE.md).
+
+## Local mower transport
+
+`src/mowers/local/` is a new MIT implementation of the publicly documented Tuya
+LAN protocol 3.5, copyright 2026 keesmod. Its protocol facts were established from
+Tuya's Apache-2.0 TuyaOpen device SDK and cross-checked with the MIT tinytuya and
+tuyapi clients. No code from those projects is included. Pinned revisions, file
+digests and the reproduction record are in
+[Mower transport provenance](docs/MOWER_TRANSPORT_PROVENANCE.md).
