@@ -1,4 +1,5 @@
 import { EufyHomeAdapter } from './mowers/home.js';
+import { LocalMowerSession, type LocalBinding } from './mowers/local/session.js';
 import { EufyMegaClient } from './client.js';
 import { EufyError, type AuthAnswer, type AuthState, type ClientOptions } from './types.js';
 import type {
@@ -6,10 +7,21 @@ import type {
   ModuleLifecycleState,
   MowerAdapter,
   MowerDevice,
+  MowerLocalSession,
+  MowerLocalSessionOptions,
   MowerModule,
   MowerOptions,
   SecurityModule,
 } from './modular-types.js';
+
+/** Internal owner capability: lend a private binding for one bounded callback. Not public API. */
+interface BindingOwner {
+  withConnection<T>(
+    id: string,
+    signal: AbortSignal,
+    use: (connection: LocalBinding, signal: AbortSignal) => Promise<T>,
+  ): Promise<T>;
+}
 
 function authState(value: AuthState): AuthState {
   switch (value?.state) {
@@ -80,6 +92,14 @@ function mowerError(error: unknown): EufyError {
     'mower_request_failed',
     'mower_binding_unavailable',
     'mower_discovery_busy',
+    'mower_local_key_invalid',
+    'mower_local_unreachable',
+    'mower_local_authentication_failed',
+    'mower_local_protocol_error',
+    'mower_local_rejected',
+    'mower_local_binding_mismatch',
+    'mower_local_disconnected',
+    'mower_local_busy',
   ];
   return new EufyError(
     error instanceof EufyError && codes.includes(error.code)
@@ -96,6 +116,7 @@ class Mowers implements MowerModule {
   #lifetime = new AbortController();
   #authentication?: Promise<AuthState>;
   #shutdown?: Promise<void>;
+  #localSessions = new Set<LocalMowerSession>();
 
   constructor(options: MowerOptions) {
     this.#options = {
@@ -179,6 +200,39 @@ class Mowers implements MowerModule {
     }
   }
 
+  async openLocalSession(
+    id: string,
+    options: MowerLocalSessionOptions,
+    signal?: AbortSignal,
+  ): Promise<MowerLocalSession> {
+    if (this.#lifecycle !== 'open') throw new EufyError('client_closed');
+    const abort = AbortSignal.any([this.#lifetime.signal, ...(signal ? [signal] : [])]);
+    try {
+      if (abort.aborted) throw new EufyError('request_aborted');
+      if (!this.connected) throw new EufyError('authentication_required');
+      const owner = this.#adapter as Partial<BindingOwner> | undefined;
+      if (typeof owner?.withConnection !== 'function')
+        throw new EufyError('mower_protocol_unavailable');
+      if (typeof id !== 'string') throw new EufyError('mower_binding_unavailable');
+      // The session is tracked before any I/O so shutdown and failures always release it.
+      const session = new LocalMowerSession(options, this.#lifetime.signal);
+      this.#localSessions.add(session);
+      session.closed.then(() => this.#localSessions.delete(session));
+      try {
+        await owner.withConnection(id, abort, (connection, lease) =>
+          session.connect(connection, lease),
+        );
+        if (abort.aborted) throw new EufyError('request_aborted');
+      } catch (error) {
+        await session.disconnect();
+        throw error;
+      }
+      return session;
+    } catch (error) {
+      throw mowerError(error);
+    }
+  }
+
   shutdown(): Promise<void> {
     if (this.#shutdown) return this.#shutdown;
     this.#lifecycle = 'closing';
@@ -193,6 +247,7 @@ class Mowers implements MowerModule {
       const [closed] = await Promise.allSettled([
         Promise.resolve().then(() => this.#adapter?.shutdown()),
         this.#authentication,
+        ...[...this.#localSessions].map((session) => session.closed),
       ]);
       if (closed.status === 'rejected') throw new EufyError('shutdown_incomplete');
     } finally {

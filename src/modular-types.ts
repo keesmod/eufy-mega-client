@@ -65,9 +65,59 @@ export interface MowerOptions extends MowerAdapterContext {
   adapter?: (context: MowerAdapterContext) => MowerAdapter;
 }
 
+/** Options for one read-only local session. The host is the mower's LAN address. */
+export interface MowerLocalSessionOptions {
+  host: string;
+  /** Tuya LAN protocol port, default 6668. */
+  port?: number;
+  /** Deadline for connecting, key negotiation and each query, default 5000 ms. */
+  timeoutMs?: number;
+}
+
+/** A JSON value exactly as the device reported it. Interpretation belongs to later telemetry work. */
+export type MowerDpValue =
+  boolean | number | string | null | MowerDpValue[] | { [key: string]: MowerDpValue };
+
+/** Raw data points from one local query. Values may contain private data; do not log them. */
+export interface MowerDpSnapshot {
+  source: 'local-tuya-3.5';
+  /** Local receipt time as an ISO 8601 UTC timestamp, not device time. */
+  observedAt: string;
+  dps: Record<string, MowerDpValue>;
+}
+
+export type MowerLocalSessionEnd =
+  | 'disconnected'
+  | 'shutdown'
+  | 'aborted'
+  | 'timeout'
+  | 'peer_closed'
+  | 'connection_failed'
+  | 'authentication_failed'
+  | 'protocol_error';
+
+/** One authenticated TCP session to one E15. Read-only: no DP writes, commands or settings. */
+export interface MowerLocalSession {
+  readonly connected: boolean;
+  /** Resolves once the socket is closed and all owned resources are released. */
+  readonly closed: Promise<MowerLocalSessionEnd>;
+  queryStatus(signal?: AbortSignal): Promise<MowerDpSnapshot>;
+  /** Idempotent. Resolves when the socket has actually closed. */
+  disconnect(): Promise<void>;
+}
+
 /** Protocol features will be added by their owning stories after evidence review. */
 export interface MowerModule extends ModuleLifecycle {
   discover(signal?: AbortSignal): Promise<MowerDevice[]>;
+  /**
+   * Open a read-only local Tuya 3.5 session to one discovered mower. The private local key is
+   * used only during key negotiation inside the verified cloud binding and is then discarded.
+   */
+  openLocalSession(
+    id: string,
+    options: MowerLocalSessionOptions,
+    signal?: AbortSignal,
+  ): Promise<MowerLocalSession>;
 }
 
 export interface EufyClientOptions {

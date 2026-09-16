@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.13.0 - Unreleased
+
+### Read-only local mower session
+
+- Add `EufyClient.mowers.openLocalSession(id, { host })` for one authenticated Tuya
+  LAN protocol 3.5 session to one discovered E15. `queryStatus()` returns a copied
+  snapshot with `source`, local `observedAt` and raw `dps`. No data point is
+  interpreted or written. There is no command, setting, retry, reconnect or
+  automatic polling.
+- Borrow the private local key from the verified cloud binding only during key
+  negotiation and erase it afterwards. Public results never contain the key,
+  device ID or host. Every failure is a stable `EufyError` code without upstream
+  detail, and failed or closed sessions release their socket and timers.
+- Record every protocol fact with its permitted public source, pinned revisions
+  and file digests in [Mower transport provenance](docs/MOWER_TRANSPORT_PROVENANCE.md).
+  The frame codec and session-key derivation are reproduced byte for byte with
+  tinytuya 1.20.0 and covered by synthetic peer tests. No live E15 session was run
+  for this version and no hardware acceptance is claimed.
+
+### Upgrade and compatibility
+
+Existing camera and mower APIs, identifiers, persisted sessions and the map
+acquisition adapter are unchanged. The `MowerAdapter` contract is unchanged, so
+custom adapters keep working and report `mower_protocol_unavailable` for local
+sessions. This version is not published. Retain the previous package and lockfile
+for rollback. References #145.
+
 ## 0.12.3 - 2026-09-15
 
 ### Easier device maintenance
