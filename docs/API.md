@@ -326,6 +326,31 @@ The protocol facts, their public sources and the independent reproduction are in
 [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md). This is software
 coverage with synthetic peers. No live E15 session was run for this version.
 
+## Typed mower telemetry, 0.13.0
+
+`session.queryTelemetry(signal?)` runs one status query and returns a
+`MowerTelemetry`: `source`, `observedAt`, the four typed fields `status`,
+`battery`, `progress` and `network`, `fields` with every reported data point
+typed by the device's own declared schema, and the raw `dps` copy.
+`decodeMowerTelemetry(snapshot, { schema?, definitions? })` is the same pure
+decoder for a snapshot you already hold. `session.schema` is a copy of the
+declared data points from discovery, or `undefined` when the cloud supplied none.
+
+```ts
+const telemetry = await session.queryTelemetry();
+if (telemetry.battery.state === 'reported') console.log(telemetry.battery.value.percent);
+// telemetry.fields['6'] carries the declared code, type, unit and validity.
+```
+
+A typed field is `reported` only from a `confirmed` definition and a value that
+conforms to both the definition and the device declaration. Otherwise it is
+`missing`, `invalid` or `unconfirmed`. Nothing is inferred from age or absence.
+The shipped E15 registry is empty because no E15 data point has permitted,
+reproduced evidence yet, so typed fields report `unconfirmed` on real hardware.
+Consumers with their own confirmed evidence pass `definitions`. See
+[typed mower telemetry](MOWER_TELEMETRY.md) for the definition format, levels,
+schema provenance and remaining acceptance.
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,

@@ -9,8 +9,10 @@ import type {
   MowerAdapter,
   MowerAdapterContext,
   MowerDevice,
+  MowerDpSchemaEntry,
   MowerHomeOptions,
 } from '../modular-types.js';
+import { copySchema, parseSchema } from './telemetry/schema.js';
 import {
   APP_QUERY,
   REGIONS,
@@ -53,11 +55,18 @@ interface Session {
   phoneCode: string;
   expiresAt: number;
 }
+interface Binding {
+  deviceId: string;
+  localKey: string;
+  schema?: MowerDpSchemaEntry[];
+}
 /** Internal-only input. Never returned by the package's public mower module. */
 export interface PrivateMowerConnection {
   readonly accountUid: string;
   readonly deviceId: string;
   readonly localKey: string;
+  /** Declared data points from the device record, when the cloud supplied them. */
+  readonly schema?: readonly MowerDpSchemaEntry[];
   readonly region: Region;
   readonly expiresAt: number;
 }
@@ -72,7 +81,7 @@ export class EufyHomeAdapter implements MowerAdapter {
   #lifetime = new AbortController();
   #bindingLifetime = new AbortController();
   #discovering = false;
-  #bindings = new Map<string, { deviceId: string; localKey: string }>();
+  #bindings = new Map<string, Binding>();
   #pending = new Set<Promise<unknown>>();
 
   constructor(context: MowerAdapterContext, options: MowerHomeOptions = {}) {
@@ -407,7 +416,7 @@ export class EufyHomeAdapter implements MowerAdapter {
       );
       const devices = list(cloud.items).map((item) => object(object(item).device));
       const result: MowerDevice[] = [];
-      const bindings = new Map<string, { deviceId: string; localKey: string }>();
+      const bindings = new Map<string, Binding>();
       for (const device of devices) {
         // Exact E15 model and cross-service identity must be independently validated.
         if (object(device.product).product_code !== 'T2880') continue;
@@ -419,7 +428,9 @@ export class EufyHomeAdapter implements MowerAdapter {
         const localKey = string(peer.localKey);
         const id = createHmac('sha256', session.identitySalt).update(deviceId).digest('hex');
         if (bindings.has(id)) continue;
-        bindings.set(id, { deviceId, localKey });
+        // The schema is optional product metadata. It never fails discovery.
+        const schema = parseSchema(peer.schema);
+        bindings.set(id, { deviceId, localKey, ...(schema ? { schema } : {}) });
         result.push({ id, kind: 'mower', model: 'E15', productCode: 'T2880' });
       }
       if (abort.aborted) throw new EufyError('request_aborted');
@@ -441,10 +452,13 @@ export class EufyHomeAdapter implements MowerAdapter {
       if (!binding) throw new EufyError('mower_binding_unavailable');
       const expiry = AbortSignal.timeout(Math.max(1, session.expiresAt - Date.now()));
       const lease = AbortSignal.any([abort, expiry, this.#bindingLifetime.signal]);
+      const schema = copySchema(binding.schema);
       const result = await use(
         Object.freeze({
           accountUid: session.accountUid,
-          ...binding,
+          deviceId: binding.deviceId,
+          localKey: binding.localKey,
+          ...(schema ? { schema } : {}),
           region: session.region,
           expiresAt: session.expiresAt,
         }),
