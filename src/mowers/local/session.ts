@@ -4,11 +4,15 @@ import net from 'node:net';
 import { once } from 'node:events';
 import { EufyError } from '../../types.js';
 import type {
+  MowerDpSchemaEntry,
   MowerDpSnapshot,
   MowerLocalSession,
   MowerLocalSessionEnd,
   MowerLocalSessionOptions,
+  MowerTelemetry,
 } from '../../modular-types.js';
+import { decodeMowerTelemetry } from '../telemetry/decode.js';
+import { copySchema } from '../telemetry/schema.js';
 import {
   Command,
   FrameReader,
@@ -30,6 +34,7 @@ import {
 export interface LocalBinding {
   readonly deviceId: string;
   readonly localKey: string;
+  readonly schema?: readonly MowerDpSchemaEntry[];
 }
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -69,6 +74,7 @@ export class LocalMowerSession implements MowerLocalSession {
   #reader = new FrameReader();
   #key?: Buffer;
   #deviceHash?: string;
+  #schema?: MowerDpSchemaEntry[];
   #sequence = 1;
   #busy = false;
   #end?: MowerLocalSessionEnd;
@@ -93,6 +99,10 @@ export class LocalMowerSession implements MowerLocalSession {
     return !!this.#key && !this.#end && !this.#socketClosed;
   }
 
+  get schema(): MowerDpSchemaEntry[] | undefined {
+    return copySchema(this.#schema);
+  }
+
   /** Connect and negotiate the session key. The local key bytes are erased afterwards. */
   async connect(binding: LocalBinding, lease: AbortSignal): Promise<void> {
     if (this.#socket) throw new EufyError('mower_local_busy');
@@ -102,6 +112,7 @@ export class LocalMowerSession implements MowerLocalSession {
     try {
       await this.#operation(lease, async (signal) => {
         this.#deviceHash = sha256(binding.deviceId);
+        this.#schema = copySchema(binding.schema);
         const socket = new net.Socket();
         this.#socket = socket;
         this.#attach(socket);
@@ -139,6 +150,11 @@ export class LocalMowerSession implements MowerLocalSession {
         throw new EufyError('mower_local_binding_mismatch');
       return { source: 'local-tuya-3.5', observedAt, dps: status.dps };
     });
+  }
+
+  async queryTelemetry(signal?: AbortSignal): Promise<MowerTelemetry> {
+    const snapshot = await this.queryStatus(signal);
+    return decodeMowerTelemetry(snapshot, { schema: this.#schema });
   }
 
   async disconnect(): Promise<void> {

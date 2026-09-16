@@ -51,11 +51,12 @@ or add results to the existing issue for your problem. See
 
 `EufyMegaClient` remains available. `EufyClient` adds independent `security` and
 `mowers` modules with separate credentials and sessions. Mower support includes
-E15 authentication/discovery, a read-only local status session and a separate
-read-only map acquisition API. Physical controls, typed telemetry and decoded
-maps are not delivered. See the [modular API](docs/API.md#modular-clients),
-[local session](docs/API.md#read-only-local-mower-session-0130) and
-[map limits](docs/MAP_ACQUISITION.md).
+E15 authentication/discovery, a read-only local status session with a typed
+telemetry decoder, and a separate read-only map acquisition API. Physical
+controls, confirmed E15 data-point definitions and decoded maps are not
+delivered. See the [modular API](docs/API.md#modular-clients),
+[local session](docs/API.md#read-only-local-mower-session-0130),
+[telemetry limits](docs/MOWER_TELEMETRY.md) and [map limits](docs/MAP_ACQUISITION.md).
 
 ## Project and development
 
