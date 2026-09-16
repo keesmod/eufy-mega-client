@@ -323,8 +323,9 @@ the device cannot authenticate the first frame. After any failure other than a
 device rejection the session is closed and must be opened again.
 
 The protocol facts, their public sources and the independent reproduction are in
-[Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md). This is software
-coverage with synthetic peers. No live E15 session was run for this version.
+[Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md). The
+[2026-09-16 E15 receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
+adds live query and cleanup evidence on firmware 6.9.28 to the synthetic tests.
 
 ## Typed mower telemetry, 0.13.0
 
@@ -339,15 +340,18 @@ declared data points from discovery, or `undefined` when the cloud supplied none
 ```ts
 const telemetry = await session.queryTelemetry();
 if (telemetry.battery.state === 'reported') console.log(telemetry.battery.value.percent);
-// telemetry.fields['6'] carries the declared code, type, unit and validity.
+// telemetry.fields['8'] carries the E15 battery's declared code, type, unit and validity.
 ```
 
 A typed field is `reported` only from a `confirmed` definition and a value that
 conforms to both the definition and the device declaration. Otherwise it is
 `missing`, `invalid` or `unconfirmed`. Nothing is inferred from age or absence.
-The shipped E15 registry is empty because no E15 data point has permitted,
-reproduced evidence yet, so typed fields report `unconfirmed` on real hardware.
-Consumers with their own confirmed evidence pass `definitions`. See
+The E15 defaults report battery percentage, the observed `Wifi` network kind
+and `network.value.signalPercent` from independently observed definitions.
+`signalPercent` is a 0 to 100 percentage and is not converted to dBm. Status
+and mowing progress remain `unconfirmed`, and unobserved network enum values
+are rejected. Consumers with their own confirmed evidence pass `definitions`,
+or `[]` to disable the defaults. See
 [typed mower telemetry](MOWER_TELEMETRY.md) for the definition format, levels,
 schema provenance and remaining acceptance.
 

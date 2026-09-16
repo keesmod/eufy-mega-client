@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeMowerTelemetry, E15_TELEMETRY_DEFINITIONS } from '../dist/index.js';
+import { decodeMowerTelemetry } from '../dist/index.js';
 import { parseSchema } from '../dist/mowers/telemetry/schema.js';
 import { fakeMower } from './fixtures/local-mower.mjs';
 import { mowerClient } from './fixtures/mower-cloud.mjs';
@@ -188,7 +188,7 @@ test('the schema parser accepts the documented entry shapes and skips invalid, d
 test('the decoder types every reported data point by the device declaration and passes raw values through', () => {
   const schema = parseSchema(schemaText);
   const input = snapshot();
-  const telemetry = decodeMowerTelemetry(input, { schema });
+  const telemetry = decodeMowerTelemetry(input, { schema, definitions: [] });
   assert.equal(telemetry.source, 'local-tuya-3.5');
   assert.equal(telemetry.observedAt, input.observedAt);
   assert.deepEqual(telemetry.fields['1'], {
@@ -265,7 +265,6 @@ test('the decoder types every reported data point by the device declaration and 
   assert.equal(decodeMowerTelemetry(input, { schema }).fields['3'].value, 'mowing');
   for (const name of ['status', 'battery', 'progress', 'network'])
     assert.deepEqual(telemetry[name], { state: 'unconfirmed' });
-  assert.deepEqual(E15_TELEMETRY_DEFINITIONS, []);
   assert.deepEqual(decodeMowerTelemetry(input).fields['6'], {
     id: '6',
     value: 87,
@@ -402,8 +401,11 @@ test('a session exposes the device schema and decodes telemetry through the mowe
     unit: '%',
   });
   assert.deepEqual(telemetry.fields['200'], { id: '200', value: 'undeclared', declared: false });
-  for (const name of ['status', 'battery', 'progress', 'network'])
+  for (const name of ['status', 'progress'])
     assert.deepEqual(telemetry[name], { state: 'unconfirmed' });
+  // This invented product schema does not supply valid E15 battery/network data points.
+  assert.deepEqual(telemetry.battery, { state: 'invalid', dp: ['8'] });
+  assert.deepEqual(telemetry.network, { state: 'missing', dp: ['134', '109'] });
   assert.deepEqual(telemetry.dps, dps);
   const custom = decodeMowerTelemetry(await session.queryStatus(), {
     schema: session.schema,
