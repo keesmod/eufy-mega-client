@@ -475,4 +475,12 @@ const SAFE_CODES = new Set([
   'mower_request_failed',
   'mower_binding_unavailable',
   'mower_discovery_busy',
+  'mower_local_key_invalid',
+  'mower_local_unreachable',
+  'mower_local_authentication_failed',
+  'mower_local_protocol_error',
+  'mower_local_rejected',
+  'mower_local_binding_mismatch',
+  'mower_local_disconnected',
+  'mower_local_busy',
 ]);
