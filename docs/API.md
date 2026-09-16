@@ -272,6 +272,60 @@ copied `lastComplete` transport files and supports `acquire`, `disconnect`,
 and preserves the existing camera and mower module interfaces. See the
 [full contract, bounds and feature evidence](MAP_ACQUISITION.md).
 
+## Read-only local mower session, 0.13.0
+
+`client.mowers.openLocalSession(id, { host, port?, timeoutMs? }, signal?)` opens one
+authenticated Tuya LAN protocol 3.5 session to one discovered E15 and returns a
+`MowerLocalSession`. `id` is the opaque ID from `discover()`. The private local key
+is borrowed from the verified cloud binding only while the session key is
+negotiated and is erased afterwards. Consumers never receive or store the local
+key. Discovery must have succeeded on the same connected module, otherwise the
+call reports `authentication_required` or `mower_binding_unavailable`. A custom
+adapter without the private binding capability reports `mower_protocol_unavailable`.
+
+```ts
+const [mower] = await client.mowers.discover();
+const session = await client.mowers.openLocalSession(mower.id, { host: '192.0.2.10' });
+try {
+  const snapshot = await session.queryStatus();
+  // snapshot.dps holds raw data points exactly as reported. Do not log them.
+} finally {
+  await session.disconnect();
+}
+```
+
+The session is read-only. `queryStatus(signal?)` sends one status query and
+returns a copied `MowerDpSnapshot` with `source: 'local-tuya-3.5'`, `observedAt`
+as the local ISO 8601 receipt time and `dps`, the raw data points as the device
+reported them. No data point is interpreted, written or refreshed, and this API
+has no command or setting. Typed telemetry is a separate follow-up. Snapshot
+values can contain private data, so consumers must not log them.
+
+`connected` reports whether the negotiated socket is still open. `closed`
+resolves with a `MowerLocalSessionEnd` once the socket has closed and all owned
+resources are released. `disconnect()` is idempotent and resolves after actual
+closure. Module `shutdown()` closes every open session with `shutdown` and awaits
+that closure. An open session no longer depends on the cloud session, so it
+survives cloud expiry and a later `discover()`. Opening a new session requires a
+connected module with current discovery bindings.
+
+One session runs one operation at a time, without retry, reconnect or automatic
+polling. `timeoutMs` bounds connecting plus key negotiation, and separately each
+query, default 5000 ms and at most 60000 ms. The device closes a connection that
+stays silent for about 30 seconds, so poll one open session at a shorter interval
+or open a session per poll. Errors are `EufyError` codes: `mower_invalid_options`,
+`mower_local_key_invalid`, `mower_local_unreachable`, `mower_local_authentication_failed`,
+`mower_local_protocol_error`, `mower_local_rejected`, `mower_local_binding_mismatch`,
+`mower_local_disconnected` and `mower_local_busy`, plus the existing
+`request_timeout`, `request_aborted` and `client_closed`. A wrong local key usually
+appears as `request_timeout` or `mower_local_disconnected` while opening, because
+the device cannot authenticate the first frame. After any failure other than a
+device rejection the session is closed and must be opened again.
+
+The protocol facts, their public sources and the independent reproduction are in
+[Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md). This is software
+coverage with synthetic peers. No live E15 session was run for this version.
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,

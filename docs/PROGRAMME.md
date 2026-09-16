@@ -199,3 +199,6 @@ task-specific approvals, required checks and acceptance gates to those actions.
 - [Portable map acquisition](MAP_ACQUISITION.md) records the #50 library adapter,
   bounded demand and last-complete behavior. Its software evidence is separate
   from the #49 hardware research and the existing #51 through #54 obligations.
+- [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) records the #145
+  read-only local Tuya 3.5 session, its public protocol sources and the offline
+  reproduction. It claims software coverage only, no E15 hardware acceptance.
