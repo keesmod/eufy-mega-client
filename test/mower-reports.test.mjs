@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import net from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { decodeMowerTelemetry } from '../dist/index.js';
 import { fakeMower } from './fixtures/local-mower.mjs';
@@ -19,14 +20,31 @@ async function setup(t, timeoutMs = 500) {
 
 test('reports keep arrival time and partial values, independent of cached queries or device counters', async (t) => {
   const { peer, session } = await setup(t);
+  const arrival = Promise.withResolvers();
+  const originalEmit = net.Socket.prototype.emit;
+  const incoming = t.mock.method(net.Socket.prototype, 'emit', function (event, ...args) {
+    const result = originalEmit.call(this, event, ...args);
+    const chunk = args[0];
+    if (
+      event === 'data' &&
+      Buffer.isBuffer(chunk) &&
+      chunk.length >= 22 &&
+      chunk.readUInt32BE(0) === 0x00006699 &&
+      chunk.readUInt32BE(10) === 8 &&
+      chunk.length === 22 + chunk.readUInt32BE(14)
+    )
+      arrival.resolve(Date.now());
+    return result;
+  });
   peer.report({ 8: 41 });
-  await delay(30);
-  const beforeConsumption = Date.now();
+  const arrivedAt = await arrival.promise;
+  incoming.mock.restore();
   await delay(30);
   const report = await session.receiveReport();
   assert.equal(report.kind, 'device-report');
   assert.equal(report.sequence, 0);
-  assert.ok(Date.parse(report.observedAt) < beforeConsumption);
+  assert.ok(Date.parse(report.observedAt) <= arrivedAt);
+  assert.ok(Date.parse(report.observedAt) < Date.now());
   assert.deepEqual(report.dps, { 8: 41 });
   assert.equal(decodeMowerTelemetry(report).battery.value.percent, 41);
   const next = session.receiveReport();

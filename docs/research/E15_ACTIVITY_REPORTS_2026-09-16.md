@@ -84,6 +84,18 @@ A recovery read at **16:33:06 UTC** reported docked and 100%. Rain and child
 protection remained on. The map entity remained available. These are recovery
 observations from the existing consumer, not new library field definitions.
 
+A second 45-second window exercised the final heartbeat implementation on Node
+24.21.0. It received no command-8 report and ended through the same bounded
+cancellation and shutdown path. No activity or progress definition is inferred
+from that silence. The host's compiled session matched the local build with
+SHA-256 `cf170b21d60b6f0fe314205f88273432d1148e40230b1e57653db93632827b75`.
+
+After both windows, the temporary credential and cloud-session copies were
+removed and the test container was absent. The original installation's
+credentials and private observation records were retained. At **16:41:39 UTC**
+the existing integration again reported docked and 100%, and the map remained
+available. No start, pause or return command was sent in either window.
+
 ## Software evidence and remaining acceptance
 
 The report tests use invented device identities and data. They cover command
