@@ -12,6 +12,26 @@ The camera bridge and integration belong in `ha-eufy-cam`. The separate mower
 bridge and integration belong in `eufy-robomow-ha`. Both consume this library
 independently, as described in [PROGRAMME.md](PROGRAMME.md).
 
+## E15 local telemetry, 2026-09-16
+
+The [owned E15 receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
+records T2880 firmware 6.9.28, iOS Anker eufy 6.1.00 and Node 24.21.0 on Linux
+over direct LAN Tuya 3.5. This is separate from the camera catalogue below.
+
+| Feature                                     | Evidence                                                                        | Remaining limit                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Discovery, schema and local query lifecycle | Confirmed in bounded owned-device sessions with disconnect and shutdown         | Other firmware and installations remain untested                              |
+| Battery                                     | Confirmed DP 8, repeated 100% readings and independent app comparison           | Other battery levels have synthetic range coverage only                       |
+| Network kind and signal                     | Confirmed DP 134 `Wifi` and DP 109's declared percentage, repeated 68% readings | Cellular/None unobserved, no dBm conversion or RF calibration established     |
+| Activity and mowing progress                | Unconfirmed, absent from local replies and passive observation windows          | Establish a fresh read-only source and correlate its definitions with the app |
+
+The library leaves unconfirmed fields withheld and exposes raw snapshots
+unchanged. Commands, settings, map decoding and existing HA consumer behavior
+are outside this evidence. The implementation work is tracked in
+[#149](https://github.com/keesmod/eufy-mega-client/issues/149).
+The missing activity/progress report path is
+[#150](https://github.com/keesmod/eufy-mega-client/issues/150).
+
 ## Community evidence, 2026-09-11
 
 The [community policy](COMMUNITY_VALIDATION.md) separates ordinary upgrades from

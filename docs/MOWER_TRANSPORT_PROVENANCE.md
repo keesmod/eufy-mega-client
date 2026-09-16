@@ -83,12 +83,15 @@ fixture is a synthetic device peer whose framing, negotiation and key derivation
 were written separately from the device-side description above. A completed
 query under the negotiated key proves that both sides derived the same key.
 
-No live E15 session was opened by this library. The owned mower was not
-contacted in this run. The retained installation evidence establishes that the
-mower answers tinytuya 1.20.0 protocol 3.5 status queries, and the codec now
+No live E15 session was opened in the original #145 run. The retained
+installation evidence establishes that the mower answers tinytuya 1.20.0
+protocol 3.5 status queries, and the codec now
 matches that library byte for byte, but that is not hardware acceptance of this
 implementation. Hardware validation remains a separate, explicitly authorized
-supervised step with current telemetry and a recovery path.
+supervised step with current telemetry and a recovery path. The later
+[2026-09-16 telemetry receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
+now records that trial on the owned E15, including successful query responses
+and completed disconnect/shutdown on firmware 6.9.28.
 
 ## Licensing and privacy boundary
 
@@ -116,6 +119,7 @@ failures, peer closure, cancellation, concurrency, shutdown and an unreachable
 host. All tests use loopback sockets and synthetic values. CI runs them on Linux
 with Node 24.
 
-Not established by this version: physical E15 acceptance, DP meaning, telemetry
-typing, any write path, and behavior of firmware other than the observed 3.5
-profile. Those remain with the follow-up runs listed in #145.
+The later receipt confirms query lifecycle, battery, Wifi and declared signal
+percentage on the owned E15. Activity, mowing progress, any write path and other
+firmware remain unconfirmed. The hardware evidence is recorded in the
+[model matrix](MODEL_MATRIX.md#e15-local-telemetry-2026-09-16).
