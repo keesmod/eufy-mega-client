@@ -130,7 +130,10 @@ export type MowerTelemetryDefinition = {
   | { field: 'battery' | 'progress'; decode: { kind: 'percent' } }
   | {
       field: 'network';
-      decode: { kind: 'enum'; values: Record<string, MowerNetworkKind> } | { kind: 'signal_dbm' };
+      decode:
+        | { kind: 'enum'; values: Record<string, MowerNetworkKind> }
+        | { kind: 'signal_dbm' }
+        | { kind: 'signal_percent' };
     }
 );
 
@@ -160,7 +163,12 @@ export interface MowerTelemetry {
   status: MowerTelemetryField<MowerActivity>;
   battery: MowerTelemetryField<{ percent: number }>;
   progress: MowerTelemetryField<{ percent: number }>;
-  network: MowerTelemetryField<{ kind?: MowerNetworkKind; signalDbm?: number }>;
+  network: MowerTelemetryField<{
+    kind?: MowerNetworkKind;
+    signalDbm?: number;
+    /** Device-declared signal percentage, not an inferred dBm measurement. */
+    signalPercent?: number;
+  }>;
   /** Every reported data point, keyed by id, typed by the device's own declaration. */
   fields: Record<string, MowerTelemetryValue>;
   /** Raw pass-through, copied from the snapshot. */

@@ -16,8 +16,9 @@
 - Record every protocol fact with its permitted public source, pinned revisions
   and file digests in [Mower transport provenance](docs/MOWER_TRANSPORT_PROVENANCE.md).
   The frame codec and session-key derivation are reproduced byte for byte with
-  tinytuya 1.20.0 and covered by synthetic peer tests. No live E15 session was run
-  for this version and no hardware acceptance is claimed.
+  tinytuya 1.20.0 and covered by synthetic peer tests. The subsequent
+  [E15 6.9.28 observations](docs/research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
+  confirm bounded local queries, schema retrieval and session cleanup.
 
 ### Typed mower telemetry
 
@@ -28,8 +29,10 @@
   absence.
 - Retain the device's data-point schema from discovery and expose a copy as
   `session.schema`. Typed values come only from `confirmed` definitions that also
-  conform to the declaration. The shipped E15 registry is empty until owner
-  observations are recorded, so typed fields report `unconfirmed` on hardware.
+  conform to the declaration. The shipped E15 registry now includes independently
+  observed battery percentage, Wifi and signal percentage. `signalPercent` is
+  additive and keeps DP 109's declared `%` unit separate from `signalDbm`.
+  Activity, mowing progress and unobserved network modes remain unconfirmed.
   Consumers may pass their own confirmed definitions. See
   [typed mower telemetry](docs/MOWER_TELEMETRY.md).
 
@@ -40,7 +43,7 @@ acquisition adapter are unchanged. The `MowerAdapter` contract is unchanged, so
 custom adapters keep working and report `mower_protocol_unavailable` for local
 sessions. The local session interface gains `schema` and `queryTelemetry()`.
 This version is not published. Retain the previous package and lockfile for
-rollback. References #145 and #147.
+rollback. References #145, #147 and #149.
 
 ## 0.12.3 - 2026-09-15
 

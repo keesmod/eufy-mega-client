@@ -32,14 +32,16 @@ decoder for a snapshot the consumer already holds. Both keep the raw `dps` copy.
 Typed values are library-owned: `MowerActivity` is `mowing`, `paused`,
 `returning`, `charging`, `docked`, `idle`, `error` or `unknown`. Battery and
 progress are integer percentages from 0 to 100. Network kind is `wifi`,
-`cellular`, `ethernet` or `none` and the signal is an integer in dBm from -120
-to 0. A definition may only map onto these values. Anything else is `invalid`.
+`cellular`, `ethernet` or `none`. A signal is either `signalDbm`, an integer
+from -120 to 0, or `signalPercent`, an integer from 0 to 100, as independently
+defined. No conversion between these units is inferred. A definition may only
+map onto these values. Anything else is `invalid`.
 
 ## Definitions and confirmation levels
 
 A `MowerTelemetryDefinition` names the field, the data point id, the decode rule
-(`enum` with an explicit value map, `boolean`, `percent` or `signal_dbm`), the
-evidence `source` and a level:
+(`enum` with an explicit value map, `boolean`, `percent`, `signal_dbm` or
+`signal_percent`), the evidence `source` and a level:
 
 | Level        | Meaning                                                                                    | Typed value |
 | ------------ | ------------------------------------------------------------------------------------------ | ----------- |
@@ -53,19 +55,26 @@ the existing mower project without copying its constants or schemas.
 ### E15 registry
 
 `E15_TELEMETRY_DEFINITIONS` is the registry shipped with the library and is the
-default for `queryTelemetry()`. It is empty. No E15 data point has permitted,
-independently reproduced evidence in this repository yet. Tuya's public
-standard instruction set has no lawn mower category, so no public code names
-can be assumed, and the unlicensed fork's data point tables are not a permitted
-source. Every typed field therefore reports `unconfirmed` on real hardware
-until owner observations are recorded here.
+default for `queryTelemetry()`. The
+[2026-09-16 owner observations](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
+confirm battery, Wifi and a device-declared signal percentage on E15/T2880
+firmware 6.9.28. Definitions come from that device's schema and repeated
+read-only responses, independently of the unlicensed mower fork.
 
-| Field      | Data point | Level | Source                         |
-| ---------- | ---------- | ----- | ------------------------------ |
-| `status`   | none       | none  | No permitted evidence recorded |
-| `battery`  | none       | none  | No permitted evidence recorded |
-| `progress` | none       | none  | No permitted evidence recorded |
-| `network`  | none       | none  | No permitted evidence recorded |
+| Field                   | Data point | Level                | Definition                                     |
+| ----------------------- | ---------- | -------------------- | ---------------------------------------------- |
+| `status`                | none       | none                 | Local replies did not contain activity data    |
+| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`    |
+| `progress`              | none       | none                 | No current mowing-progress definition observed |
+| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`        |
+| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`  |
+
+Every confirmed row cites the same receipt above. `None` and `Cellular` are
+declared but not observed, so they remain unmapped. DP 109 is a percentage,
+not a negative dBm reading. Status and progress remain `unconfirmed`. Passing
+`definitions: []` explicitly opts out of the built-in registry. Built-in
+definitions and their decode rules are frozen so consumers cannot alter the
+defaults shared by other sessions.
 
 A consumer that holds its own confirmed evidence can pass definitions to
 `decodeMowerTelemetry`. The consumer then owns that provenance. Definitions
@@ -93,8 +102,8 @@ identifiers of the household or lawn geometry.
 The parser accepts at most 512 entries and 64 KiB of text, skips invalid or
 duplicate entries and never fails discovery over this optional field. Codes
 that do not match the documented identifier form are dropped while the entry is
-kept. The E15's actual schema has not been observed by this library. Whether it
-carries codes, and which, is unknown here.
+kept. The owned E15 returned 100 usable entries, including the codes and units
+in the observation receipt. That is evidence for the recorded firmware only.
 
 ## Software evidence
 
@@ -104,16 +113,18 @@ raw pass-through and copy isolation, confirmed definitions for all four fields,
 withheld lower levels, the boolean and partial network rules, missing,
 wrong-typed, out-of-range and unknown values, the device-declaration veto over a
 definition, and the session path with and without a schema. The synthetic
-schema, codes and values are invented. The E15 registry test asserts that the
-shipped registry is empty. CI runs the suite on Linux with Node 24 without a
-device.
+schema, codes and values in that generic decoder suite are invented.
+`test/e15-telemetry.test.mjs` adds independently sourced E15 declarations with
+synthetic values, default-session decoding and strict separation between signal
+units. CI runs both suites on Linux with Node 24 without a device.
 
 ## Remaining acceptance
 
-Not established: any E15 data point definition, the E15's real schema, DP
-meaning or hardware behavior. Filling the registry needs authorized read-only
-observations on the owned mower: the schema from discovery and at least three
-reproduced status snapshots per typed field with recorded firmware and app
-versions, redacted before publication. That step is separate and requires the
-owner's explicit approval. Physical control, settings and map decoding remain
-in their own follow-ups.
+Not established: a fresh read-only source and confirmed definitions for E15
+activity and mowing progress, other network modes, or other firmware. Two
+30-second windows, one with the Eufy app visible, returned no spontaneous status
+reports. Cloud cached values are not substituted for local observations. See
+the receipt and the [model matrix](MODEL_MATRIX.md#e15-local-telemetry-2026-09-16).
+The missing report-acquisition path is tracked in
+[#150](https://github.com/keesmod/eufy-mega-client/issues/150).
+Physical control, settings and map decoding remain separate work.

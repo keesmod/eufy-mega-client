@@ -101,7 +101,8 @@ function decodeOne(
   if (!conforms(value, entry)) return { state: 'invalid' };
   const decode = definition.decode;
   switch (decode.kind) {
-    case 'percent': {
+    case 'percent':
+    case 'signal_percent': {
       const number = percent(value);
       return number === undefined ? { state: 'invalid' } : { state: 'reported', value: number };
     }
@@ -192,12 +193,13 @@ export function decodeMowerTelemetry(
       return found ? { percent: found.value as number } : undefined;
     }),
     network: field('network', definitions, dps, schema, snapshot, (values, confirmed) => {
-      const result: { kind?: MowerNetworkKind; signalDbm?: number } = {};
+      const result: { kind?: MowerNetworkKind; signalDbm?: number; signalPercent?: number } = {};
       values.forEach((item, index) => {
         if (item.state !== 'reported') return;
         const decode = confirmed[index]!.decode;
         if (decode.kind === 'enum') result.kind ??= item.value as MowerNetworkKind;
         else if (decode.kind === 'signal_dbm') result.signalDbm ??= item.value as number;
+        else if (decode.kind === 'signal_percent') result.signalPercent ??= item.value as number;
       });
       return Object.keys(result).length ? result : undefined;
     }),
