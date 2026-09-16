@@ -19,13 +19,28 @@
   tinytuya 1.20.0 and covered by synthetic peer tests. No live E15 session was run
   for this version and no hardware acceptance is claimed.
 
+### Typed mower telemetry
+
+- Add `session.queryTelemetry()` and the pure `decodeMowerTelemetry()` that turn
+  one snapshot into `status`, `battery`, `progress` and `network` fields with
+  `source` and `observedAt`, plus every reported data point typed by the device's
+  own declared schema and the raw `dps` copy. Nothing is inferred from age or
+  absence.
+- Retain the device's data-point schema from discovery and expose a copy as
+  `session.schema`. Typed values come only from `confirmed` definitions that also
+  conform to the declaration. The shipped E15 registry is empty until owner
+  observations are recorded, so typed fields report `unconfirmed` on hardware.
+  Consumers may pass their own confirmed definitions. See
+  [typed mower telemetry](docs/MOWER_TELEMETRY.md).
+
 ### Upgrade and compatibility
 
 Existing camera and mower APIs, identifiers, persisted sessions and the map
 acquisition adapter are unchanged. The `MowerAdapter` contract is unchanged, so
 custom adapters keep working and report `mower_protocol_unavailable` for local
-sessions. This version is not published. Retain the previous package and lockfile
-for rollback. References #145.
+sessions. The local session interface gains `schema` and `queryTelemetry()`.
+This version is not published. Retain the previous package and lockfile for
+rollback. References #145 and #147.
 
 ## 0.12.3 - 2026-09-15
 

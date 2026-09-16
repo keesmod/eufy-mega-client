@@ -86,6 +86,92 @@ export interface MowerDpSnapshot {
   dps: Record<string, MowerDpValue>;
 }
 
+/** Property types of a Tuya data point as declared by the product definition. */
+export type MowerDpPropertyType = 'bool' | 'value' | 'enum' | 'string' | 'bitmap' | 'raw';
+
+/** One data-point declaration from the device's own cloud schema. Product metadata, not a secret. */
+export interface MowerDpSchemaEntry {
+  /** Same key space as `MowerDpSnapshot.dps`. */
+  id: string;
+  /** Product function identifier, when the cloud supplies it. */
+  code?: string;
+  mode: 'ro' | 'rw' | 'wr';
+  type: MowerDpPropertyType;
+  min?: number;
+  max?: number;
+  scale?: number;
+  step?: number;
+  unit?: string;
+  range?: string[];
+  maxlen?: number;
+}
+
+export type MowerTelemetryLevel = 'hypothesis' | 'observed' | 'confirmed';
+export type MowerActivity =
+  'mowing' | 'paused' | 'returning' | 'charging' | 'docked' | 'idle' | 'error' | 'unknown';
+export type MowerNetworkKind = 'wifi' | 'cellular' | 'ethernet' | 'none';
+export type MowerTelemetryFieldName = 'status' | 'battery' | 'progress' | 'network';
+
+/**
+ * Binds one typed field to one data point. Only `confirmed` definitions produce values.
+ * `source` names the evidence recorded in docs/MOWER_TELEMETRY.md.
+ */
+export type MowerTelemetryDefinition = {
+  dp: string;
+  level: MowerTelemetryLevel;
+  source: string;
+} & (
+  | {
+      field: 'status';
+      decode:
+        | { kind: 'enum'; values: Record<string, MowerActivity> }
+        | { kind: 'boolean'; on: MowerActivity; off: MowerActivity };
+    }
+  | { field: 'battery' | 'progress'; decode: { kind: 'percent' } }
+  | {
+      field: 'network';
+      decode: { kind: 'enum'; values: Record<string, MowerNetworkKind> } | { kind: 'signal_dbm' };
+    }
+);
+
+export type MowerTelemetryField<T> =
+  | { state: 'reported'; value: T; dp: string[]; source: 'local-tuya-3.5'; observedAt: string }
+  | { state: 'missing'; dp: string[] }
+  | { state: 'invalid'; dp: string[] }
+  | { state: 'unconfirmed'; level?: MowerTelemetryLevel };
+
+/** One reported data point resolved through the device schema. `valid` exists only when declared. */
+export interface MowerTelemetryValue {
+  id: string;
+  value: MowerDpValue;
+  declared: boolean;
+  code?: string;
+  type?: MowerDpPropertyType;
+  valid?: boolean;
+  unit?: string;
+  /** Declared value divided by ten to the power of the declared scale. */
+  scaled?: number;
+}
+
+/** Typed view of one snapshot. Nothing is inferred from age or absence. */
+export interface MowerTelemetry {
+  source: 'local-tuya-3.5';
+  observedAt: string;
+  status: MowerTelemetryField<MowerActivity>;
+  battery: MowerTelemetryField<{ percent: number }>;
+  progress: MowerTelemetryField<{ percent: number }>;
+  network: MowerTelemetryField<{ kind?: MowerNetworkKind; signalDbm?: number }>;
+  /** Every reported data point, keyed by id, typed by the device's own declaration. */
+  fields: Record<string, MowerTelemetryValue>;
+  /** Raw pass-through, copied from the snapshot. */
+  dps: Record<string, MowerDpValue>;
+}
+
+export interface MowerTelemetryOptions {
+  schema?: readonly MowerDpSchemaEntry[];
+  definitions?: readonly MowerTelemetryDefinition[];
+}
+
 export type MowerLocalSessionEnd =
   | 'disconnected'
   | 'shutdown'
@@ -101,7 +187,11 @@ export interface MowerLocalSession {
   readonly connected: boolean;
   /** Resolves once the socket is closed and all owned resources are released. */
   readonly closed: Promise<MowerLocalSessionEnd>;
+  /** Copy of the device's declared data points from discovery, when the cloud supplied one. */
+  readonly schema: MowerDpSchemaEntry[] | undefined;
   queryStatus(signal?: AbortSignal): Promise<MowerDpSnapshot>;
+  /** One status query decoded with the session schema and the library's E15 definitions. */
+  queryTelemetry(signal?: AbortSignal): Promise<MowerTelemetry>;
   /** Idempotent. Resolves when the socket has actually closed. */
   disconnect(): Promise<void>;
 }

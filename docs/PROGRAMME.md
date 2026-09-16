@@ -202,3 +202,6 @@ task-specific approvals, required checks and acceptance gates to those actions.
 - [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) records the #145
   read-only local Tuya 3.5 session, its public protocol sources and the offline
   reproduction. It claims software coverage only, no E15 hardware acceptance.
+- [Typed mower telemetry](MOWER_TELEMETRY.md) records the #147 decoder, the
+  definition levels and the device schema provenance. Its E15 registry stays
+  empty until owner observations are recorded.
