@@ -69,13 +69,13 @@ confirm battery, Wifi and a device-declared signal percentage on E15/T2880
 firmware 6.9.28. Definitions come from that device's schema and repeated
 read-only responses, independently of the unlicensed mower fork.
 
-| Field                   | Data point | Level                | Definition                                     |
-| ----------------------- | ---------- | -------------------- | ---------------------------------------------- |
-| `status`                | none       | none                 | Local replies did not contain activity data    |
-| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`    |
-| `progress`              | none       | none                 | No current mowing-progress definition observed |
-| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`        |
-| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`  |
+| Field                   | Data point | Level                | Definition                                          |
+| ----------------------- | ---------- | -------------------- | --------------------------------------------------- |
+| `status`                | none       | none                 | DP 107 reports acquired, binary meaning unconfirmed |
+| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`         |
+| `progress`              | none       | none                 | No current mowing-progress definition observed      |
+| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`             |
+| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`       |
 
 Every confirmed row cites the same receipt above. `None` and `Cellular` are
 declared but not observed, so they remain unmapped. DP 109 is a percentage,
@@ -128,11 +128,22 @@ units. CI runs both suites on Linux with Node 24 without a device.
 
 ## Remaining acceptance
 
-Not established: a fresh read-only source and confirmed definitions for E15
-activity and mowing progress, other network modes, or other firmware. Two
-30-second windows, one with the Eufy app visible, returned no spontaneous status
-reports. Cloud cached values are not substituted for local observations. See
-the receipt and the [model matrix](MODEL_MATRIX.md#e15-local-telemetry-2026-09-16).
-The missing report-acquisition path is tracked in
-[#150](https://github.com/keesmod/eufy-mega-client/issues/150).
+The owner-operated transition test for
+[#150](https://github.com/keesmod/eufy-mega-client/issues/150) acquired fresh
+command-8 reports containing DP 107 `robot_status` and DP 108 `battery_status`.
+The earlier idle-window silence does not describe this active test. See its
+[receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md) and the
+[model matrix](MODEL_MATRIX.md#e15-local-telemetry-2026-09-16).
+
+Activity definitions and the mowing-progress source remain unconfirmed. The
+device declares DP 107 as raw data without a binary schema or enum definitions.
+One mowing, pause and return cycle does not independently reproduce each
+proposed meaning three times. The app displayed 0% mowing progress, so this
+window did not establish a changing mowing-progress value. DP 118 changed
+during the app's separate map-saving phase and remains map-save progress.
+Cloud cached values are not substituted for local observations. Other network
+modes and firmware remain untested.
+The immediate next implementation step is
+[#153](https://github.com/keesmod/eufy-mega-client/issues/153), deriving the DP 107
+field contract and adding evidence-gated activity decoding.
 Physical control, settings and map decoding remain separate work.
