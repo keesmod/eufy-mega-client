@@ -18,22 +18,25 @@ The [owned E15 receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
 records T2880 firmware 6.9.28, iOS Anker eufy 6.1.00 and Node 24.21.0 on Linux
 over direct LAN Tuya 3.5. This is separate from the camera catalogue below.
 
-| Feature                                     | Evidence                                                                                    | Remaining limit                                                               |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Discovery, schema and local query lifecycle | Confirmed in bounded owned-device sessions with disconnect and shutdown                     | Other firmware and installations remain untested                              |
-| Battery                                     | Confirmed DP 8, repeated 100% readings and independent app comparison                       | Other battery levels have synthetic range coverage only                       |
-| Network kind and signal                     | Confirmed DP 134 `Wifi` and DP 109's declared percentage, repeated 68% readings             | Cellular/None unobserved, no dBm conversion or RF calibration established     |
-| Spontaneous LAN report acquisition          | Observed one authenticated command-8 report through `receiveReport()`, with bounded cleanup | Controlled activity/progress transitions and definitions remain outstanding   |
-| Activity and mowing progress                | Unconfirmed, absent from local replies and passive observation windows                      | Establish a fresh read-only source and correlate its definitions with the app |
+| Feature                                     | Evidence                                                                                                                     | Remaining limit                                                                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Discovery, schema and local query lifecycle | Confirmed in bounded owned-device sessions with disconnect and shutdown                                                      | Other firmware and installations remain untested                                                                     |
+| Battery                                     | Confirmed DP 8, repeated 100% readings and independent app comparison                                                        | Other battery levels have synthetic range coverage only                                                              |
+| Network kind and signal                     | Confirmed DP 134 `Wifi` and DP 109's declared percentage, repeated 68% readings                                              | Cellular/None unobserved, no dBm conversion or RF calibration established                                            |
+| Spontaneous LAN report acquisition          | Two owner-operated transition windows received 93 authenticated reports, including 20 DP 107 reports and four DP 108 reports | Receipt age is known, device measurement time is not. HA recovered after temporary unavailability during observation |
+| Activity                                    | Raw DP 107 observed through starting, mowing, pause and return preparation, with app and owner observations                  | Binary meanings remain unconfirmed, one controlled cycle is not three reproductions per definition                   |
+| Mowing progress                             | Unconfirmed, app displayed 0% during the short mowing cycle                                                                  | Identify a fresh source and reproduce changing app-correlated values. DP 118 is map-save progress                    |
 
 The library leaves unconfirmed fields withheld and exposes raw snapshots
 unchanged. Commands, settings, map decoding and existing HA consumer behavior
 are outside this evidence. The implementation work is tracked in
 [#149](https://github.com/keesmod/eufy-mega-client/issues/149).
-The missing activity/progress report path is
+The report acquisition work is
 [#150](https://github.com/keesmod/eufy-mega-client/issues/150).
 Its [report-acquisition receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md)
 records the separate incoming report path and its current evidence limits.
+The next implementation step is the DP 107 field contract and evidence-gated
+activity decoder in [#153](https://github.com/keesmod/eufy-mega-client/issues/153).
 
 ## Community evidence, 2026-09-11
 

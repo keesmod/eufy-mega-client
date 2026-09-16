@@ -96,6 +96,72 @@ credentials and private observation records were retained. At **16:41:39 UTC**
 the existing integration again reported docked and 100%, and the map remained
 available. No start, pause or return command was sent in either window.
 
+## Owner-operated transition observation
+
+The owner confirmed the area was clear and performed all physical controls in
+the official app. The client only received reports and maintained transport
+heartbeats. The agent's physical start attempts were blocked before execution,
+so the agent sent no start, pause or return command. The temporary pause
+watchdog was cancelled before the owner-operated test and issued no command.
+
+The same owned device and previously recorded firmware/app tuple apply. The
+official Mac app supplied an additional live view of the displayed state. Its
+app version was not separately recorded. The host ran the unchanged compiled
+implementation merged in PR #152, Node 24.21.0, with the session hash recorded
+above.
+
+| Window                              | Bound                                                | First and last report, UTC   | Authenticated reports | DP 107 reports | DP 108 reports | Exit                                                                  |
+| ----------------------------------- | ---------------------------------------------------- | ---------------------------- | --------------------- | -------------- | -------------- | --------------------------------------------------------------------- |
+| Start, pause and return preparation | 240 seconds                                          | 17:11:46.338 to 17:15:23.424 | 63                    | 17             | 2              | Caller deadline, aborted and disconnected                             |
+| Return and dock observation         | At most 180 seconds, each receive at most 60 seconds | 17:16:20.276 to 17:17:31.488 | 30                    | 3              | 2              | No further report within receive deadline, timed out and disconnected |
+
+Both windows independently matched the owned binding during discovery and used
+`receiveReport()`. They sent no status query, subscription, DP write or refresh.
+Each ended with `connected: false`, client shutdown and removal of its temporary
+container. The second window was a separately opened observation session, not
+an automatic reconnect or a replay of a physical command.
+
+The owner reported this sequence:
+
+1. After Start, the app showed Defogging, followed by Mowing.
+2. After Pause, the owner confirmed the mower physically stood still. The Mac
+   app displayed `Mowing Paused, 0%`.
+3. Stopping the session displayed map saving. After Return, the app displayed
+   Positioning and then Returning. These states were also visible in the Mac
+   app.
+4. The owner confirmed physical arrival at the dock while the app showed map
+   saving. Dock arrival is based on that observation, not on inactivity or an
+   acknowledgement.
+
+DP 107 `robot_status` arrived in 20 reports across the two windows. DP 108
+`battery_status` arrived four times. The device declares both as `raw` without
+their internal field layout or enum definitions. The short DP 107 payloads
+change during the control sequence, but the reports alone do not establish
+which field describes a job, an action or a substate. For example, the start
+sequence included both Defogging and Mowing. One pause and return cycle does
+not establish three independent reproductions of each proposed meaning.
+
+DP 5 was absent from all 93 reports. The Mac app displayed 0% mowing progress
+during this short run, so the observations do not identify a changing
+mowing-progress value. DP 118 arrived 41 times across the separate map-saving
+phases, reaching 100. The app independently displayed `Saving the map: 71%`
+during one of those phases. This supports keeping map-save progress separate
+from mowing progress. It does not add a new mowing-progress definition.
+
+During the first window, the existing HA mower entities became unavailable.
+The map entity continued to update. After both observation sessions closed,
+the existing mower integration recovered without a configuration change,
+reload or restart. At **17:19:50 UTC**, HA reported docked with fresh telemetry
+from **17:19:42 UTC**. A recovery read also found the map available, rain and
+child protection on, and irrigation off. Concurrent operation of the existing
+LAN consumer and this standalone observer is not established as reliable.
+
+The temporary credential and cloud-session copies were removed again after the
+second window. The test container was absent. The original installation and
+Android map source were retained, together with the private raw reports on the
+owning host. No credentials, raw captures, identifiers or geometry accompany
+this receipt.
+
 ## Software evidence and remaining acceptance
 
 The report tests use invented device identities and data. They cover command
@@ -105,11 +171,24 @@ exclusive ownership, cancellation, shutdown, bounded buffering and transport
 heartbeat lifecycle. A separate regression covers frequent reports that would
 otherwise keep postponing the heartbeat.
 
-Activity and mowing progress remain `unconfirmed`. A controlled transition
-window, three reproduced reports for each proposed value and independent app
-correlation remain required. DP 118 remains map-save progress and must not be
-relabeled as mowing progress. The declared raw DP 107 and DP 108 have no new
-binary definition in this implementation.
+The acquisition implementation was merged in
+[PR #152](https://github.com/keesmod/eufy-mega-client/pull/152). Its 1,139 client
+tests, 44 release-tool tests, format, model-matrix and workflow checks, dependency
+audit and clean-consumer package validation passed. The main-branch
+[validation run](https://github.com/keesmod/eufy-mega-client/actions/runs/35123932117)
+also passed.
+
+The bounded transition windows establish fresh receipt of the declared raw
+activity and battery reports. Activity and mowing progress remain
+`unconfirmed`. The exact remaining limits are the undocumented binary meaning
+of DP 107, insufficient repeated app correlation for each proposed definition,
+and the unidentified source of changing mowing progress. DP 118 remains
+map-save progress. DP 108 has no new binary definition either.
+
+The immediate next implementation step is
+[#153](https://github.com/keesmod/eufy-mega-client/issues/153), deriving the DP 107
+field contract and adding evidence-gated activity decoding. Hardware definition
+acceptance remains in the model matrix. No next issue is started by this run.
 
 The candidate is staged in a private test directory only. It does not replace
 the existing mower integration and does not publish version 0.13.0.
