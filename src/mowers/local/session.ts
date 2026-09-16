@@ -6,6 +6,7 @@ import { EufyError } from '../../types.js';
 import type {
   MowerDpSchemaEntry,
   MowerDpSnapshot,
+  MowerDpReport,
   MowerLocalSession,
   MowerLocalSessionEnd,
   MowerLocalSessionOptions,
@@ -17,6 +18,7 @@ import {
   Command,
   FrameReader,
   LOCAL_PORT,
+  MAX_FRAME_LENGTH,
   decodeFrame,
   decodeStatus,
   deriveSessionKey,
@@ -40,6 +42,10 @@ export interface LocalBinding {
 const DEFAULT_TIMEOUT_MS = 5000;
 /** Unsolicited reports and heartbeat replies may precede a query response. */
 const MAX_SKIPPED_FRAMES = 32;
+const HEARTBEAT_INTERVAL_MS = 10_000;
+interface ReceivedFrame extends DecodedFrame {
+  observedAt: string;
+}
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
 
 function validateOptions(options: MowerLocalSessionOptions) {
@@ -72,10 +78,14 @@ export class LocalMowerSession implements MowerLocalSession {
   #socketClosed = false;
   #failure?: MowerLocalSessionEnd;
   #reader = new FrameReader();
+  #frames: { raw: Buffer; observedAt: string }[] = [];
+  #frameBytes = 0;
+  #readError?: EufyError;
   #key?: Buffer;
   #deviceHash?: string;
   #schema?: MowerDpSchemaEntry[];
   #sequence = 1;
+  #lastSentAt = 0;
   #busy = false;
   #end?: MowerLocalSessionEnd;
   #resolveClosed!: (end: MowerLocalSessionEnd) => void;
@@ -142,19 +152,55 @@ export class LocalMowerSession implements MowerLocalSession {
       if (!key) throw new EufyError('mower_local_disconnected');
       this.#send(key, Command.DP_QUERY_NEW, Buffer.from('{}'));
       const frame = await this.#receive(key, abort, Command.DP_QUERY_NEW, true);
-      const observedAt = new Date().toISOString();
-      const { accepted, data } = splitReturnCode(frame.plaintext);
-      if (!accepted) throw new EufyError('mower_local_rejected');
-      const status = decodeStatus(data);
-      if (status.deviceId !== undefined && sha256(status.deviceId) !== this.#deviceHash)
-        throw new EufyError('mower_local_binding_mismatch');
-      return { source: 'local-tuya-3.5', observedAt, dps: status.dps };
+      return this.#snapshot(frame);
     });
   }
 
   async queryTelemetry(signal?: AbortSignal): Promise<MowerTelemetry> {
     const snapshot = await this.queryStatus(signal);
     return decodeMowerTelemetry(snapshot, { schema: this.#schema });
+  }
+
+  receiveReport(signal?: AbortSignal): Promise<MowerDpReport> {
+    return this.#operation(signal, async (abort) => {
+      const key = this.#key;
+      if (!key) throw new EufyError('mower_local_disconnected');
+      // Tuya's LAN owner expires a connection after 30 seconds without incoming traffic.
+      // An empty command-9 frame maintains transport only, never refreshes or writes a DP.
+      let heartbeat: ReturnType<typeof setTimeout> | undefined;
+      const keepAlive = () => {
+        try {
+          if (performance.now() - this.#lastSentAt >= HEARTBEAT_INTERVAL_MS)
+            this.#send(key, Command.HEARTBEAT, Buffer.alloc(0));
+          heartbeat = setTimeout(
+            keepAlive,
+            Math.max(1, HEARTBEAT_INTERVAL_MS - (performance.now() - this.#lastSentAt)),
+          );
+        } catch {
+          this.#finish('peer_closed');
+        }
+      };
+      try {
+        keepAlive();
+        const frame = await this.#receive(key, abort, Command.STATUS_REPORT, true);
+        return { ...this.#snapshot(frame), kind: 'device-report', sequence: frame.sequence };
+      } finally {
+        clearTimeout(heartbeat);
+      }
+    });
+  }
+
+  #snapshot(frame: ReceivedFrame): MowerDpSnapshot {
+    try {
+      const { accepted, data } = splitReturnCode(frame.plaintext);
+      if (!accepted) throw new EufyError('mower_local_rejected');
+      const status = decodeStatus(data);
+      if (status.deviceId !== undefined && sha256(status.deviceId) !== this.#deviceHash)
+        throw new EufyError('mower_local_binding_mismatch');
+      return { source: 'local-tuya-3.5', observedAt: frame.observedAt, dps: status.dps };
+    } finally {
+      frame.plaintext.fill(0);
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -223,8 +269,20 @@ export class LocalMowerSession implements MowerLocalSession {
     socket.on('data', (chunk: Buffer) => {
       if (this.#end) return;
       try {
+        if (this.#frameBytes + this.#reader.pending + chunk.length > 2 * MAX_FRAME_LENGTH)
+          throw new EufyError('mower_local_protocol_error');
         this.#reader.push(chunk);
+        let raw;
+        while ((raw = this.#reader.next())) {
+          if (this.#frames.length >= MAX_SKIPPED_FRAMES) {
+            raw.fill(0);
+            throw new EufyError('mower_local_protocol_error');
+          }
+          this.#frames.push({ raw, observedAt: new Date().toISOString() });
+          this.#frameBytes += raw.length;
+        }
       } catch {
+        this.#readError = new EufyError('mower_local_protocol_error');
         this.#failure ??= 'protocol_error';
         socket.destroy();
       }
@@ -244,6 +302,7 @@ export class LocalMowerSession implements MowerLocalSession {
     if (!socket || this.#socketClosed || socket.destroyed)
       throw new EufyError('mower_local_disconnected');
     socket.write(encodeFrame(key, this.#sequence++, command, plaintext));
+    this.#lastSentAt = performance.now();
   }
 
   async #receive(
@@ -251,15 +310,22 @@ export class LocalMowerSession implements MowerLocalSession {
     signal: AbortSignal,
     command: number,
     skipOthers: boolean,
-  ): Promise<DecodedFrame> {
+  ): Promise<ReceivedFrame> {
     let skipped = 0;
     while (true) {
+      if (this.#readError) throw this.#readError;
       if (this.#end || this.#socketClosed) throw new EufyError('mower_local_disconnected');
       if (signal.aborted) throw new Error('aborted');
-      const raw = this.#reader.next();
-      if (raw) {
-        const frame = decodeFrame(key, raw);
-        raw.fill(0);
+      const received = this.#frames.shift();
+      if (received) {
+        const { raw, observedAt } = received;
+        this.#frameBytes -= raw.length;
+        let frame: ReceivedFrame;
+        try {
+          frame = { ...decodeFrame(key, raw), observedAt };
+        } finally {
+          raw.fill(0);
+        }
         if (frame.command === command) return frame;
         frame.plaintext.fill(0);
         if (!skipOthers || ++skipped > MAX_SKIPPED_FRAMES)
@@ -285,6 +351,9 @@ export class LocalMowerSession implements MowerLocalSession {
     this.#key?.fill(0);
     this.#key = undefined;
     this.#reader.clear();
+    for (const frame of this.#frames) frame.raw.fill(0);
+    this.#frames = [];
+    this.#frameBytes = 0;
     const socket = this.#socket;
     if (!socket || this.#socketClosed) this.#resolveClosed(end);
     else socket.destroy();

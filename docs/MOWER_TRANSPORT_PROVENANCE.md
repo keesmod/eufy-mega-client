@@ -63,6 +63,32 @@ The reference device only requires parseable JSON. The library sends `{}`, the
 form used by the tinytuya version observed against the owned mower, and keeps
 the device identifier out of the wire payload.
 
+## Spontaneous reports, issue #150
+
+The same pinned TuyaOpen `tuya_lan.c`, lines 698 to 736, sends DP reports to
+active authenticated LAN sessions using `FRM_TP_STAT_REPORT`. This is command
+8 in the protocol header. The device's report sequence is zero in this
+reference implementation. It is not correlated with a query. Query commands
+instead call `tuya_iot_dp_obj_dump`, lines 859 to 887, which returns object DP
+cache contents. A new query reply does not establish a fresh measurement.
+
+The receive loop, lines 1058 to 1067, handles command-9 heartbeats without a
+payload and updates the session's activity time. The configured idle timeout is
+30 seconds. `receiveReport()` sends an empty authenticated heartbeat every 10
+seconds only during a bounded pending read. This maintains the transport and
+does not write or refresh any DP. No subscription frame is required by the
+reference report path and none is invented by this implementation.
+
+The owned E15 evidence is recorded in
+[the #150 receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md). Protocol source
+evidence does not establish that a particular firmware emits every declared DP.
+
+`test/mower-reports.test.mjs` independently constructs synthetic reports through
+the existing peer fixture. It verifies command correlation, foreign binding and
+GCM rejection, actual arrival times across buffered delivery, partial values,
+missing-report expiry, exclusive ownership, cancellation, shutdown, queue
+overflow and heartbeat cleanup. No device values or mower-fork code are used.
+
 ## Independent reproduction
 
 `scripts/research/tuya35_vectors.py` runs tinytuya 1.20.0 offline with synthetic
