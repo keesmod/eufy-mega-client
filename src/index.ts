@@ -43,6 +43,7 @@ export type {
   MowerLocalSession,
   MowerLocalSessionEnd,
   MowerDpSnapshot,
+  MowerDpReport,
   MowerDpValue,
   MowerDpPropertyType,
   MowerDpSchemaEntry,

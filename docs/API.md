@@ -298,7 +298,7 @@ The session is read-only. `queryStatus(signal?)` sends one status query and
 returns a copied `MowerDpSnapshot` with `source: 'local-tuya-3.5'`, `observedAt`
 as the local ISO 8601 receipt time and `dps`, the raw data points as the device
 reported them. No data point is interpreted, written or refreshed, and this API
-has no command or setting. Typed telemetry is a separate follow-up. Snapshot
+has no command or setting. `queryTelemetry()` decodes that same query response. Snapshot
 values can contain private data, so consumers must not log them.
 
 `connected` reports whether the negotiated socket is still open. `closed`
@@ -326,6 +326,49 @@ The protocol facts, their public sources and the independent reproduction are in
 [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md). The
 [2026-09-16 E15 receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
 adds live query and cleanup evidence on firmware 6.9.28 to the synthetic tests.
+
+## Spontaneous mower reports, 0.13.0
+
+`session.receiveReport(signal?)` waits for one authenticated command-8 device
+report. It returns `MowerDpReport`, a snapshot with `kind: 'device-report'` and
+the frame's `sequence`. It never substitutes a query response, cloud cache or
+previously merged data points. Report counters may be zero or independent of
+request counters, so they are not request acknowledgements.
+
+```ts
+const session = await client.mowers.openLocalSession(mower.id, {
+  host: '192.0.2.10',
+  timeoutMs: 20_000,
+});
+try {
+  const report = await session.receiveReport(signal);
+  // This is full-frame arrival time, even if the report waited before consumption.
+  const ageMs = Date.now() - Date.parse(report.observedAt);
+  if (ageMs >= 0 && ageMs < 5_000) {
+    const telemetry = decodeMowerTelemetry(report, { schema: session.schema });
+    // Only this report's data points are decoded. Missing values remain missing.
+  }
+} finally {
+  await session.disconnect();
+}
+```
+
+The session timeout bounds each read. Cancellation, timeout and client shutdown
+close the connection. A command-9 transport heartbeat is sent every 10 seconds
+only while a report read is pending. It changes no data point and does not
+request a refresh. There is no reconnect, report replay or background poll.
+One read or query owns the session at a time.
+
+Incoming complete frames retain their arrival time in a queue bounded to 32
+frames and 128 KiB including partial input. A slow consumer that exceeds either
+bound loses the session with a protocol error instead of silently losing data.
+`observedAt` proves receipt, not when the device measured a field. A report can
+be partial. Do not mark an older absent field fresh by merging it into a newer
+report. A status query can discard intervening reports while waiting for its
+reply, so use successive `receiveReport()` calls when observing transitions.
+
+The permitted protocol sources and owned-device observations are recorded in
+[the report receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md).
 
 ## Typed mower telemetry, 0.13.0
 

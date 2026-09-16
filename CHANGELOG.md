@@ -36,14 +36,24 @@
   Consumers may pass their own confirmed definitions. See
   [typed mower telemetry](docs/MOWER_TELEMETRY.md).
 
+### Spontaneous mower reports
+
+- Add `session.receiveReport()` for bounded, authenticated command-8 reports.
+  It preserves full-frame arrival time, distinguishes reports from query replies,
+  and returns each report's own data points without merging older values.
+- Keep a pending report read alive with transport-only heartbeats. Preserve one
+  operation per session, bounded buffering, cancellation, timeout and shutdown.
+  No DP refresh, command write, retry or reconnect is added. See the
+  [report API](docs/API.md#spontaneous-mower-reports-0130).
+
 ### Upgrade and compatibility
 
 Existing camera and mower APIs, identifiers, persisted sessions and the map
 acquisition adapter are unchanged. The `MowerAdapter` contract is unchanged, so
 custom adapters keep working and report `mower_protocol_unavailable` for local
-sessions. The local session interface gains `schema` and `queryTelemetry()`.
+sessions. The local session interface gains `schema`, `queryTelemetry()` and `receiveReport()`.
 This version is not published. Retain the previous package and lockfile for
-rollback. References #145, #147 and #149.
+rollback. References #145, #147, #149 and #150.
 
 ## 0.12.3 - 2026-09-15
 
