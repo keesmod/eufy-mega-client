@@ -58,7 +58,7 @@ interface ActiveLive {
   timer: NodeJS.Timeout;
   abort?: () => void;
 }
-/** Research prototype (#157): one additional P2P session per extra live camera. */
+/** One additional P2P session per further concurrent live camera on a station. */
 interface ExtraLive extends ActiveLive {
   key: string;
   stationId: string;
@@ -81,18 +81,14 @@ export class DeviceTransport extends EventEmitter {
   private snapshots = new Map<string, Snapshot>();
   private covers = new Map<string, string>();
   private lives = new Map<string, ActiveLive>();
-  private starting = new Set<string>();
+  /** Primary-session live starts in progress, station id to camera channel. */
+  private starting = new Map<string, number>();
   private pendingStarts = new Set<Promise<LiveStream>>();
   private commands = new Set<string>();
-  /**
-   * Research prototype for #157. When enabled, a second live camera on a
-   * station that already owns a live stream opens its own P2P session, keyed
-   * by station and channel. Off by default and not part of the public API.
-   * The primary session keeps control, snapshots and recordings.
-   */
-  concurrentLiveSessions = false;
+  /** Additional live sessions keyed by station and channel. See docs/API.md, live media. */
   private extraLives = new Map<string, ExtraLive>();
   private extraStarting = new Map<string, string>();
+  private readonly liveLimit: number;
   private observedModes = new Map<string, { guard?: number; current?: number }>();
   private refreshTimers = new Map<string, NodeJS.Timeout>();
   private readonly lifetime = new AbortController();
@@ -133,6 +129,13 @@ export class DeviceTransport extends EventEmitter {
     setParameters: async () => fail(),
     updateUserPassword: async () => fail(),
   };
+  constructor(options: { maxLiveStreamsPerStation?: number } = {}) {
+    super();
+    const limit = options.maxLiveStreamsPerStation ?? 1;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 4)
+      throw new EufyError('invalid_live_stream_limit');
+    this.liveLimit = limit;
+  }
   private cameraWire(raw: WireDevice): DeviceListResponse {
     return { ...raw, station_sn: raw.parent_sn } as unknown as DeviceListResponse;
   }
@@ -555,22 +558,22 @@ export class DeviceTransport extends EventEmitter {
   async startLive(id: string, signal?: AbortSignal): Promise<LiveStream> {
     const camera = this.camera(id, 'live'),
       stationId = camera.getStationSerial(),
-      station = this.station(stationId);
-    if (this.concurrentLiveSessions) {
-      const key = this.liveKey(stationId, camera.getChannel());
-      if (this.extraLives.has(key) || this.extraStarting.has(key))
-        throw new EufyError('station_busy');
-      if (this.extraCandidate(stationId, camera.getChannel()))
-        return this.startExtraLive(id, camera, stationId, signal);
-    }
-    if (
-      this.lives.has(stationId) ||
-      this.starting.has(stationId) ||
-      this.commands.has(stationId) ||
-      this.recordings.busy(stationId)
-    )
+      station = this.station(stationId),
+      channel = camera.getChannel(),
+      key = this.liveKey(stationId, channel);
+    if (this.commands.has(stationId) || this.recordings.busy(stationId))
       throw new EufyError('station_busy');
-    this.starting.add(stationId);
+    if (this.extraLives.has(key) || this.extraStarting.has(key))
+      throw new EufyError('station_busy');
+    // The primary session carries the first live stream on a station. Every
+    // further concurrent camera gets its own session, up to the configured limit.
+    const primary = this.lives.get(stationId)?.channel ?? this.starting.get(stationId);
+    if (primary !== undefined) {
+      if (primary === channel || this.liveCount(stationId) >= this.liveLimit)
+        throw new EufyError('station_busy');
+      return this.startExtraLive(id, camera, stationId, signal);
+    }
+    this.starting.set(stationId, channel);
     const operation = this.openLive(id, camera, stationId, station, signal);
     this.pendingStarts.add(operation);
     try {
@@ -757,16 +760,11 @@ export class DeviceTransport extends EventEmitter {
     for (const owner of this.extraStarting.values()) if (owner === stationId) return true;
     return false;
   }
-  /** A second camera qualifies only while the primary session streams another channel. */
-  private extraCandidate(stationId: string, channel: number): boolean {
-    const primary = this.lives.get(stationId);
-    return (
-      primary !== undefined &&
-      primary.channel !== channel &&
-      !this.starting.has(stationId) &&
-      !this.commands.has(stationId) &&
-      !this.recordings.busy(stationId)
-    );
+  private liveCount(stationId: string): number {
+    let count = this.lives.has(stationId) || this.starting.has(stationId) ? 1 : 0;
+    for (const live of this.extraLives.values()) if (live.stationId === stationId) count++;
+    for (const owner of this.extraStarting.values()) if (owner === stationId) count++;
+    return count;
   }
   private stationWire(device: WireDevice): StationListResponse {
     return {

@@ -5,9 +5,9 @@ import { Readable } from 'node:stream';
 import { setTimeout as delay } from 'node:timers/promises';
 import { DeviceTransport } from '../dist/device-transport.js';
 
-// Research prototype for #157: a second live camera on one station opens its
-// own P2P session. These tests use fake station objects, so they establish the
-// transport's ownership rules only, not HomeBase behaviour.
+// Concurrent live streams per station. Fake station objects establish the
+// transport's ownership rules only. HomeBase behaviour with several sessions
+// is bench evidence in docs/research/CONCURRENT_LIVE_2026-09-18.md.
 const metadata = {
   videoCodec: 0,
   audioCodec: 1,
@@ -61,9 +61,8 @@ function fakeStation(serial, connected = false) {
   });
   return station;
 }
-function fixture(flag = true) {
-  const t = new DeviceTransport();
-  t.concurrentLiveSessions = flag;
+function fixture(options = { maxLiveStreamsPerStation: 2 }) {
+  const t = new DeviceTransport(options);
   const primary = fakeStation('HB', true);
   const extras = [];
   t.createExtraStation = async (stationId) => {
@@ -74,7 +73,7 @@ function fixture(flag = true) {
   };
   t.stations.set('HB', primary);
   t.encryption.set('HB', 'lan-derived');
-  for (const channel of [1, 2, 3]) {
+  for (const channel of [1, 2, 3, 4]) {
     const id = `CAM${channel}`;
     t.raw.set(id, { device_sn: id, device_model: 'T8160', device_type: 19, parent_sn: 'HB' });
     t.cameras.set(id, {
@@ -88,17 +87,33 @@ function fixture(flag = true) {
   t.bind(primary);
   const stopped = [];
   t.on('live-stop', (event) => stopped.push(event));
-  return { t, primary, extras, stopped };
+  const stopConfirmed = async (stream, station, channel) => {
+    const stopping = stream.stop();
+    station.ack(channel);
+    return stopping;
+  };
+  return { t, primary, extras, stopped, stopConfirmed };
 }
-test('without the research flag a second camera on the station is still refused', async () => {
-  const f = fixture(false);
+test('the option accepts 1 to 4 concurrent streams per station', async () => {
+  for (const limit of [0, 5, 1.5, -1, Number.NaN])
+    assert.throws(
+      () => new DeviceTransport({ maxLiveStreamsPerStation: limit }),
+      (error) => error.code === 'invalid_live_stream_limit',
+    );
+  for (const limit of [1, 4])
+    await new DeviceTransport({ maxLiveStreamsPerStation: limit }).close();
+  await new DeviceTransport().close();
+});
+test('by default a second camera on the station is still refused', async () => {
+  const f = fixture({});
   try {
     const first = await f.t.startLive('CAM1');
     await assert.rejects(f.t.startLive('CAM2'), (error) => error.code === 'station_busy');
     assert.equal(f.extras.length, 0);
-    const stopping = first.stop();
-    f.primary.ack(1);
-    await stopping;
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
   } finally {
     await f.t.close();
   }
@@ -110,9 +125,10 @@ test('the first camera on an idle station keeps using the primary session', asyn
     assert.equal(f.extras.length, 0);
     assert.equal(f.t.lives.get('HB').handle, first);
     await assert.rejects(f.t.startLive('CAM1'), (error) => error.code === 'station_busy');
-    const stopping = first.stop();
-    f.primary.ack(1);
-    assert.deepEqual(await stopping, { confirmed: true, reason: 'device' });
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
   } finally {
     await f.t.close();
   }
@@ -142,30 +158,104 @@ test('a second camera streams over its own session and confirms STOP there', asy
     assert.equal(f.t.extraLives.size, 0);
     assert.equal(f.t.lives.get('HB').handle, first);
     assert.deepEqual(f.stopped, [{ deviceId: 'CAM2', confirmed: true, reason: 'device' }]);
-    const stopFirst = first.stop();
-    f.primary.ack(1);
-    assert.deepEqual(await stopFirst, { confirmed: true, reason: 'device' });
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
     assert.equal(f.primary.stops, 1);
     assert.equal(f.primary.closes, 0);
   } finally {
     await f.t.close();
   }
 });
-test('an active extra stream blocks station commands until it is released', async () => {
+test('the limit counts every session and pending start on the station', async () => {
+  const f = fixture({ maxLiveStreamsPerStation: 3 });
+  try {
+    const first = await f.t.startLive('CAM1');
+    const second = await f.t.startLive('CAM2');
+    const third = await f.t.startLive('CAM3');
+    assert.equal(f.extras.length, 2);
+    await assert.rejects(f.t.startLive('CAM4'), (error) => error.code === 'station_busy');
+    assert.deepEqual(await f.stopConfirmed(third, f.extras[1], 3), {
+      confirmed: true,
+      reason: 'device',
+    });
+    // A released slot admits the next camera on a fresh session.
+    const fourth = await f.t.startLive('CAM4');
+    assert.equal(f.extras.length, 3);
+    assert.equal(f.t.extraLives.get('HB#live:4').handle, fourth);
+    for (const [stream, station, channel] of [
+      [fourth, f.extras[2], 4],
+      [second, f.extras[0], 2],
+      [first, f.primary, 1],
+    ])
+      assert.deepEqual(await f.stopConfirmed(stream, station, channel), {
+        confirmed: true,
+        reason: 'device',
+      });
+    assert.equal(f.t.lives.size + f.t.extraLives.size, 0);
+  } finally {
+    await f.t.close();
+  }
+});
+test('a second camera does not wait for a pending primary start', async () => {
+  const f = fixture();
+  let release;
+  f.primary.startLivestream = (camera) => {
+    f.primary.starts++;
+    release = () =>
+      f.primary.emit(
+        'livestream start',
+        f.primary,
+        camera.getChannel(),
+        metadata,
+        new Readable({ read() {} }),
+        new Readable({ read() {} }),
+      );
+  };
+  try {
+    const starting = f.t.startLive('CAM1');
+    await delay(0);
+    assert.equal(f.t.starting.get('HB'), 1);
+    await assert.rejects(f.t.startLive('CAM1'), (error) => error.code === 'station_busy');
+    const second = await f.t.startLive('CAM2');
+    assert.equal(f.extras.length, 1);
+    assert.equal(f.t.extraLives.get('HB#live:2').handle, second);
+    release();
+    const first = await starting;
+    assert.equal(f.t.lives.get('HB').handle, first);
+    assert.deepEqual(await f.stopConfirmed(second, f.extras[0], 2), {
+      confirmed: true,
+      reason: 'device',
+    });
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
+  } finally {
+    await f.t.close();
+  }
+});
+test('extra streams block station commands and recovery of other cameras', async () => {
   const f = fixture();
   try {
     const first = await f.t.startLive('CAM1');
     const second = await f.t.startLive('CAM2');
-    const stopFirst = first.stop();
-    f.primary.ack(1);
-    await stopFirst;
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
     assert.equal(f.t.lives.size, 0);
     await assert.rejects(f.t.setGuardMode('HB', 0), (error) => error.code === 'station_busy');
     await assert.rejects(f.t.ensureLiveStopped('CAM3'), (error) => error.code === 'station_busy');
+    await assert.rejects(f.t.load(new Map(f.t.raw)), (error) => error.code === 'devices_busy');
+    // A camera's own extra stream is stopped on its session, without closing the primary.
     const stopSecond = f.t.ensureLiveStopped('CAM2');
     f.extras[0].ack(2);
     assert.deepEqual(await stopSecond, { confirmed: true, reason: 'device' });
     assert.equal(f.extras[0].stops, 1);
+    assert.equal(f.primary.closes, 0);
+    assert.equal(second.deviceId, 'CAM2');
   } finally {
     await f.t.close();
   }
@@ -201,9 +291,10 @@ test('cancelling an issued extra start waits for STOP on the extra session', asy
     assert.equal(extra.disposed, 1);
     assert.equal(f.t.lives.get('HB').handle, first);
     assert.equal(f.primary.stops, 0);
-    const stopFirst = first.stop();
-    f.primary.ack(1);
-    assert.deepEqual(await stopFirst, { confirmed: true, reason: 'device' });
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
   } finally {
     await f.t.close();
   }
@@ -223,9 +314,29 @@ test('a lost extra session ends only the extra stream and releases its socket', 
     assert.deepEqual(f.stopped, [
       { deviceId: 'CAM2', confirmed: false, reason: 'connection_lost' },
     ]);
-    const stopFirst = first.stop();
-    f.primary.ack(1);
-    assert.deepEqual(await stopFirst, { confirmed: true, reason: 'device' });
+    assert.deepEqual(await f.stopConfirmed(first, f.primary, 1), {
+      confirmed: true,
+      reason: 'device',
+    });
+  } finally {
+    await f.t.close();
+  }
+});
+test('a lost primary session ends its stream and leaves the extra stream running', async () => {
+  const f = fixture();
+  try {
+    const first = await f.t.startLive('CAM1');
+    const second = await f.t.startLive('CAM2');
+    await f.primary.close();
+    assert.deepEqual(await first.ended, { confirmed: false, reason: 'connection_lost' });
+    assert.equal(f.t.lives.size, 0);
+    assert.equal(f.t.extraLives.get('HB#live:2').handle, second);
+    assert.equal(f.extras[0].closes, 0);
+    assert.deepEqual(await f.stopConfirmed(second, f.extras[0], 2), {
+      confirmed: true,
+      reason: 'device',
+    });
+    assert.equal(f.extras[0].disposed, 1);
   } finally {
     await f.t.close();
   }

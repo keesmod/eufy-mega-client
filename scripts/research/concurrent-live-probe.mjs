@@ -1,6 +1,6 @@
 // Research probe for #157: two concurrent live streams on one HomeBase through
-// one P2P session per camera. Requires the research prototype on branch
-// concurrent-live-prototype-157 (private transport flag concurrentLiveSessions).
+// one P2P session per camera. Uses the client option maxLiveStreamsPerStation
+// (0.13.0) with a value of 2 and reads the transport's private state for evidence.
 // Runs on the LAN of one HomeBase with at least two cameras of one model. Every
 // attempt is bounded, every stop must be confirmed by the device, and the output
 // carries labels (station, camA, camB) instead of identifiers. Keep the session
@@ -61,7 +61,11 @@ if (process.env.EUFY_CREDENTIALS_FILE) {
   credentials = { email: 'unused@example.invalid', password: 'unused', country: 'NL' };
 }
 
-const client = new EufyMegaClient({ credentials, sessionStore: new FileSessionStore(sessionFile) });
+const client = new EufyMegaClient({
+  credentials,
+  sessionStore: new FileSessionStore(sessionFile),
+  maxLiveStreamsPerStation: 2,
+});
 const labels = new Map();
 const label = (id) => labels.get(id) ?? 'other';
 const stops = [];
@@ -228,8 +232,7 @@ try {
   });
   transport = client.transport;
   if (!transport) throw new Error('transport unavailable');
-  transport.concurrentLiveSessions = true;
-  await emit('flag', { concurrentLiveSessions: transport.concurrentLiveSessions });
+  await emit('option', { maxLiveStreamsPerStation: transport.liveLimit });
   instrument(transport.stations.get(station.id), 'primary');
   const baseCreate = transport.createExtraStation.bind(transport);
   transport.createExtraStation = async (id) => {
