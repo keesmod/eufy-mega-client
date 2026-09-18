@@ -58,6 +58,14 @@ interface ActiveLive {
   timer: NodeJS.Timeout;
   abort?: () => void;
 }
+/** Research prototype (#157): one additional P2P session per extra live camera. */
+interface ExtraLive extends ActiveLive {
+  key: string;
+  stationId: string;
+  deviceId: string;
+  station: Station;
+  camera: ProtocolDevice;
+}
 const fail = (): never => {
   throw new EufyError('operation_outside_hardware_scope');
 };
@@ -76,6 +84,15 @@ export class DeviceTransport extends EventEmitter {
   private starting = new Set<string>();
   private pendingStarts = new Set<Promise<LiveStream>>();
   private commands = new Set<string>();
+  /**
+   * Research prototype for #157. When enabled, a second live camera on a
+   * station that already owns a live stream opens its own P2P session, keyed
+   * by station and channel. Off by default and not part of the public API.
+   * The primary session keeps control, snapshots and recordings.
+   */
+  concurrentLiveSessions = false;
+  private extraLives = new Map<string, ExtraLive>();
+  private extraStarting = new Map<string, string>();
   private observedModes = new Map<string, { guard?: number; current?: number }>();
   private refreshTimers = new Map<string, NodeJS.Timeout>();
   private readonly lifetime = new AbortController();
@@ -87,7 +104,8 @@ export class DeviceTransport extends EventEmitter {
       },
       camera: (id) => this.camera(id, 'recordings'),
       knownCamera: (id, station) => this.raw.get(id)?.parent_sn === station,
-      busy: (id) => this.lives.has(id) || this.starting.has(id) || this.commands.has(id),
+      busy: (id) =>
+        this.lives.has(id) || this.starting.has(id) || this.commands.has(id) || this.extraBusy(id),
     },
     this.lifetime.signal,
   );
@@ -125,6 +143,8 @@ export class DeviceTransport extends EventEmitter {
       this.lives.size ||
       this.starting.size ||
       this.commands.size ||
+      this.extraLives.size ||
+      this.extraStarting.size ||
       this.recordings.active ||
       this.connecting.size
     )
@@ -226,15 +246,7 @@ export class DeviceTransport extends EventEmitter {
             !device.member?.admin_user_id
           )
             throw new EufyError('invalid_connection_credentials');
-          const stationWire = {
-            ...device,
-            station_sn: device.device_sn,
-            station_name: device.device_name,
-            station_model: device.device_model,
-            devices: [...raw.values()]
-              .filter((d) => this.cameras.has(d.device_sn) && d.parent_sn === device.device_sn)
-              .map((d) => this.cameraWire(d)),
-          } as unknown as StationListResponse;
+          const stationWire = this.stationWire(device);
           const existing = this.stations.get(device.device_sn);
           if (existing) {
             existing.update(stationWire);
@@ -544,6 +556,13 @@ export class DeviceTransport extends EventEmitter {
     const camera = this.camera(id, 'live'),
       stationId = camera.getStationSerial(),
       station = this.station(stationId);
+    if (this.concurrentLiveSessions) {
+      const key = this.liveKey(stationId, camera.getChannel());
+      if (this.extraLives.has(key) || this.extraStarting.has(key))
+        throw new EufyError('station_busy');
+      if (this.extraCandidate(stationId, camera.getChannel()))
+        return this.startExtraLive(id, camera, stationId, signal);
+    }
     if (
       this.lives.has(stationId) ||
       this.starting.has(stationId) ||
@@ -664,7 +683,11 @@ export class DeviceTransport extends EventEmitter {
       stationId = camera.getStationSerial(),
       station = this.station(stationId),
       live = this.lives.get(stationId);
-    if (!live || live.handle.deviceId !== id) throw new EufyError('live_session_not_found');
+    if (!live || live.handle.deviceId !== id) {
+      const extra = this.extraLives.get(this.liveKey(stationId, camera.getChannel()));
+      if (extra?.deviceId === id) return this.stopExtraLive(extra.key);
+      throw new EufyError('live_session_not_found');
+    }
     if (live.stop) return live.stop;
     live.stop = (async () => {
       const timeout = setTimeout(() => {
@@ -689,10 +712,13 @@ export class DeviceTransport extends EventEmitter {
       station = this.station(stationId);
     const live = this.lives.get(stationId);
     if (live?.handle.deviceId === id) return this.stopLive(id);
+    const extra = this.extraLives.get(this.liveKey(stationId, camera.getChannel()));
+    if (extra?.deviceId === id) return this.stopExtraLive(extra.key);
     if (
       live ||
       this.starting.has(stationId) ||
       this.commands.has(stationId) ||
+      this.extraBusy(stationId) ||
       this.recordings.busy(stationId)
     )
       throw new EufyError('station_busy');
@@ -723,6 +749,225 @@ export class DeviceTransport extends EventEmitter {
     live.finish(result);
     this.emit('live-stop', { deviceId: live.handle.deviceId, ...result });
   }
+  private liveKey(stationId: string, channel: number): string {
+    return `${stationId}#live:${channel}`;
+  }
+  private extraBusy(stationId: string): boolean {
+    for (const live of this.extraLives.values()) if (live.stationId === stationId) return true;
+    for (const owner of this.extraStarting.values()) if (owner === stationId) return true;
+    return false;
+  }
+  /** A second camera qualifies only while the primary session streams another channel. */
+  private extraCandidate(stationId: string, channel: number): boolean {
+    const primary = this.lives.get(stationId);
+    return (
+      primary !== undefined &&
+      primary.channel !== channel &&
+      !this.starting.has(stationId) &&
+      !this.commands.has(stationId) &&
+      !this.recordings.busy(stationId)
+    );
+  }
+  private stationWire(device: WireDevice): StationListResponse {
+    return {
+      ...device,
+      station_sn: device.device_sn,
+      station_name: device.device_name,
+      station_model: device.device_model,
+      devices: [...this.raw.values()]
+        .filter((d) => this.cameras.has(d.device_sn) && d.parent_sn === device.device_sn)
+        .map((d) => this.cameraWire(d)),
+    } as unknown as StationListResponse;
+  }
+  /** One additional station object gives one additional P2P session with its own socket. */
+  protected async createExtraStation(stationId: string): Promise<Station> {
+    const device = this.raw.get(stationId);
+    if (!device) throw new EufyError('unknown_station');
+    const station = await Station.getInstance(
+      this.provider,
+      this.stationWire(device),
+      lanAddress(device),
+    );
+    station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+    station.initialize();
+    return station;
+  }
+  private async startExtraLive(
+    id: string,
+    camera: ProtocolDevice,
+    stationId: string,
+    signal?: AbortSignal,
+  ): Promise<LiveStream> {
+    const key = this.liveKey(stationId, camera.getChannel());
+    if (this.extraLives.has(key) || this.extraStarting.has(key))
+      throw new EufyError('station_busy');
+    this.extraStarting.set(key, stationId);
+    const operation = this.openExtraLive(id, camera, stationId, key, signal);
+    this.pendingStarts.add(operation);
+    try {
+      return await operation;
+    } finally {
+      this.extraStarting.delete(key);
+      this.pendingStarts.delete(operation);
+    }
+  }
+  private async openExtraLive(
+    id: string,
+    camera: ProtocolDevice,
+    stationId: string,
+    key: string,
+    signal?: AbortSignal,
+  ): Promise<LiveStream> {
+    const station = await this.createExtraStation(stationId);
+    let issued = false;
+    try {
+      this.bindExtra(station, key);
+      await this.wait(
+        station,
+        'encryption ready',
+        () => {
+          void station
+            .connect()
+            .catch(() => station.emit('connection error', station, new Error('Connection failed')));
+        },
+        (_s, mode) => mode,
+        signal,
+        20000,
+      );
+      return await this.wait(
+        station,
+        'livestream start',
+        () => {
+          issued = true;
+          station.startLivestream(camera);
+        },
+        (_s, channel, metadata: StreamMetadata, video: Readable, audio: Readable) => {
+          if (channel !== camera.getChannel()) return undefined;
+          let finish!: (result: StreamStop) => void;
+          const ended = new Promise<StreamStop>((resolve) => {
+            finish = resolve;
+          });
+          const handle: LiveStream = {
+            id: randomUUID(),
+            deviceId: id,
+            get metadata() {
+              return mediaMetadata(metadata);
+            },
+            video,
+            audio,
+            ended,
+            stop: () =>
+              this.extraLives.get(key)?.handle === handle ? this.stopExtraLive(key) : ended,
+          };
+          const active: ExtraLive = {
+            key,
+            stationId,
+            deviceId: id,
+            station,
+            camera,
+            channel,
+            handle,
+            finish,
+            acknowledged: false,
+            stopped: false,
+            timer: setTimeout(() => void this.stopExtraLive(key).catch(() => {}), 120000),
+          };
+          const abort = () => {
+            if (this.extraLives.get(key)?.handle === handle)
+              void this.stopExtraLive(key).catch(() => {});
+          };
+          active.abort = () => {
+            signal?.removeEventListener('abort', abort);
+            video.off('error', abort);
+            audio.off('error', abort);
+          };
+          signal?.addEventListener('abort', abort, { once: true });
+          video.once('error', abort);
+          audio.once('error', abort);
+          this.extraLives.set(key, active);
+          return handle;
+        },
+        signal,
+        20000,
+      );
+    } catch (error) {
+      if (issued) {
+        // The extra session owns its own STOP. Confirm it before releasing the socket.
+        try {
+          await this.confirmStop(station, camera, new AbortController().signal);
+          this.emit('live-stop', { deviceId: id, confirmed: true, reason: 'device' });
+        } catch {
+          this.emit('live-stop', { deviceId: id, confirmed: false, reason: 'connection_lost' });
+        }
+      }
+      await station.dispose();
+      throw error;
+    }
+  }
+  private bindExtra(station: Station, key: string): void {
+    station.on('close', () => {
+      this.finishExtraLive(key, { confirmed: false, reason: 'connection_lost' });
+    });
+    station.on('command result', (_s, result) => {
+      const live = this.extraLives.get(key);
+      if (
+        !live ||
+        result.channel !== live.channel ||
+        result.command_type !== CommandType.CMD_STOP_REALTIME_MEDIA
+      )
+        return;
+      if (result.return_code !== 0) {
+        this.finishExtraLive(key, { confirmed: false, reason: 'connection_lost' });
+        void station.close();
+        return;
+      }
+      live.acknowledged = true;
+      if (live.stopped) this.finishExtraLive(key, { confirmed: true, reason: 'device' });
+    });
+    station.on('livestream stop', (_s, channel) => {
+      const live = this.extraLives.get(key);
+      if (!live || channel !== live.channel) return;
+      live.stopped = true;
+      if (live.acknowledged) this.finishExtraLive(key, { confirmed: true, reason: 'device' });
+    });
+    station.on('livestream error', () => {
+      this.finishExtraLive(key, { confirmed: false, reason: 'connection_lost' });
+    });
+  }
+  private async stopExtraLive(key: string): Promise<StreamStop> {
+    const live = this.extraLives.get(key);
+    if (!live) throw new EufyError('live_session_not_found');
+    if (live.stop) return live.stop;
+    live.stop = (async () => {
+      const timeout = setTimeout(() => {
+        this.finishExtraLive(key, { confirmed: false, reason: 'timeout' });
+        void live.station.close();
+      }, 8000);
+      try {
+        live.station.stopLivestream(live.camera);
+        return await live.handle.ended;
+      } catch {
+        await live.station.close();
+        return { confirmed: false, reason: 'connection_lost' } as StreamStop;
+      } finally {
+        clearTimeout(timeout);
+        // The extra session exists for this stream only. Release its socket.
+        await live.station.dispose();
+      }
+    })();
+    return live.stop;
+  }
+  private finishExtraLive(key: string, result: StreamStop): void {
+    const live = this.extraLives.get(key);
+    if (!live) return;
+    this.extraLives.delete(key);
+    clearTimeout(live.timer);
+    live.abort?.();
+    live.finish(result);
+    this.emit('live-stop', { deviceId: live.deviceId, ...result });
+    // A lost session has no stop owner. Release it off the event path.
+    if (!live.stop) setImmediate(() => void live.station.dispose().catch(() => {}));
+  }
   processPush(message: PushMessage): void {
     const station = this.stations.get(message.station_sn);
     if (!station || !this.acceptPush(message)) return;
@@ -739,6 +984,7 @@ export class DeviceTransport extends EventEmitter {
       if (
         this.lives.has(id) ||
         this.starting.has(id) ||
+        this.extraBusy(id) ||
         this.recordings.busy(id) ||
         this.commands.has(id)
       ) {
@@ -768,6 +1014,7 @@ export class DeviceTransport extends EventEmitter {
       this.commands.has(id) ||
       this.lives.has(id) ||
       this.starting.has(id) ||
+      this.extraBusy(id) ||
       this.recordings.busy(id)
     )
       throw new EufyError('station_busy');
@@ -793,9 +1040,10 @@ export class DeviceTransport extends EventEmitter {
     await Promise.allSettled([...this.pendingStarts]);
     for (const timer of this.refreshTimers.values()) clearTimeout(timer);
     this.refreshTimers.clear();
-    await Promise.allSettled(
-      [...this.lives.values()].map((live) => this.stopLive(live.handle.deviceId)),
-    );
+    await Promise.allSettled([
+      ...[...this.lives.values()].map((live) => this.stopLive(live.handle.deviceId)),
+      ...[...this.extraLives.keys()].map((key) => this.stopExtraLive(key)),
+    ]);
     await Promise.allSettled([...this.stations.values()].map((station) => station.dispose()));
     for (const camera of this.cameras.values()) {
       camera.destroy();
