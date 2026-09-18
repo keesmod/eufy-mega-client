@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.13.0 - Unreleased
+## 0.13.0 - 2026-09-18
 
 ### Concurrent live streams per station
 
@@ -97,8 +97,12 @@ rejected cloud identity now receive the remote result code instead. The
 `MowerTelemetryValue` gains the optional `wire` property and status definitions gain
 the `wire` decode kind. Consumers that matched `status` against `{ state: 'unconfirmed' }`
 exactly now also see `level: 'observed'`.
-This version is not published. Retain the previous package and lockfile for
-rollback. References #145, #147, #149, #150, #153 and #157.
+Use the compiled versioned 0.13.0 tarball and its verified integrity from the
+GitHub release. `maxLiveStreamsPerStation` defaults to 1, so consumers keep one
+live stream per station until they opt in. Retain the previous package and
+lockfile for rollback. The camera bridge pins this release separately in
+keesmod/ha-eufy-cam. References #145, #147, #149, #150, #153, #157, #159, #160
+and #161.
 
 ## 0.12.3 - 2026-09-15
 
