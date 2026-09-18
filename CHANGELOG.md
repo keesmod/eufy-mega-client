@@ -2,6 +2,19 @@
 
 ## 0.13.0 - Unreleased
 
+### Concurrent live streams per station
+
+- Add `maxLiveStreamsPerStation` (1 to 4, default 1). Above 1, every further
+  concurrent live camera on a station opens its own P2P session, keyed by
+  station and channel, with its own STOP confirmation, 120-second cap, abort
+  cleanup and disposal. The primary session keeps control, snapshots,
+  recordings and the first stream. The same camera twice, a start beyond the
+  limit, and recording transfers or mode commands during live still fail with
+  `station_busy`. Default behaviour is unchanged.
+- Verified with two concurrent T8160 streams on one T8030, see
+  [the research note](docs/research/CONCURRENT_LIVE_2026-09-18.md). Three or
+  four streams are unverified on hardware.
+
 ### Read-only local mower session
 
 - Add `EufyClient.mowers.openLocalSession(id, { host })` for one authenticated Tuya
