@@ -207,3 +207,8 @@ task-specific approvals, required checks and acceptance gates to those actions.
   [2026-09-16 observations](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
   confirm E15 battery, Wifi and signal percentage. Activity and mowing progress
   still need an evidenced fresh read-only source.
+- [Concurrent live streams on one HomeBase 3](research/CONCURRENT_LIVE_2026-09-18.md)
+  records the #157 bench result: a second P2P session per camera delivered a
+  second concurrent live stream on a T8030 with STOP confirmed per session. The
+  library design for more than one live camera per station follows in its
+  next-step issue. The public one-live-per-station contract is unchanged.
