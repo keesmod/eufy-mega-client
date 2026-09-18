@@ -60,17 +60,32 @@
   network and the report freshness rules are unchanged. See the
   [contract receipt](docs/research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).
 
+### Cloud identity renewal
+
+- Discard the cached key-exchange identity and persist the cleared session when
+  the Mega cloud answers with result code 4404 or 4416, also when that body
+  arrives with a non-2xx status such as HTTP 463. That reset was unreachable
+  before because every non-2xx response failed as `http_error` first, so a
+  stored session whose identity had been invalidated elsewhere, for example by
+  a key exchange on the same token from another host, failed every restore
+  attempt. Observed with camera bridge client 0.12.3 on 2026-09-18 in #157.
+- The rejected call now fails with `request_rejected`, `key_exchange_failed` or
+  `authentication_rejected` carrying the remote code instead of `http_error`.
+  Every other non-2xx response keeps `http_error`. No automatic retry is added.
+  The next explicit call performs a fresh key exchange.
+
 ### Upgrade and compatibility
 
 Existing camera and mower APIs, identifiers, persisted sessions and the map
-acquisition adapter are unchanged. The `MowerAdapter` contract is unchanged, so
-custom adapters keep working and report `mower_protocol_unavailable` for local
-sessions. The local session interface gains `schema`, `queryTelemetry()` and `receiveReport()`.
+acquisition adapter are unchanged. Consumers that matched `http_error` for a
+rejected cloud identity now receive the remote result code instead. The
+`MowerAdapter` contract is unchanged, so custom adapters keep working and report
+`mower_protocol_unavailable` for local sessions. The local session interface gains `schema`, `queryTelemetry()` and `receiveReport()`.
 `MowerTelemetryValue` gains the optional `wire` property and status definitions gain
 the `wire` decode kind. Consumers that matched `status` against `{ state: 'unconfirmed' }`
 exactly now also see `level: 'observed'`.
 This version is not published. Retain the previous package and lockfile for
-rollback. References #145, #147, #149, #150 and #153.
+rollback. References #145, #147, #149, #150, #153 and #157.
 
 ## 0.12.3 - 2026-09-15
 

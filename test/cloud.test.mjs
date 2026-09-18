@@ -225,6 +225,61 @@ test('a failing diagnostic consumer cannot break login', async () => {
     c.close();
   }
 });
+test('a rejected key-exchange identity behind HTTP 463 is cleared, persisted and renewed', async () => {
+  for (const code of [4404, 4416]) {
+    const f = fixture();
+    let rejected = 0;
+    const c = new EufyMegaClient({
+      ...f.options,
+      fetch: async (url, init) => {
+        // The fixture still records the call and verifies its signature.
+        const response = await f.options.fetch(url, init);
+        if (rejected === 0 && new URL(url).pathname === '/app/house/get_devs_list') {
+          rejected++;
+          return new Response(JSON.stringify({ code, msg: 'fixture' }), { status: 463 });
+        }
+        return response;
+      },
+    });
+    try {
+      assert.equal((await c.connect()).state, 'connected');
+      const [host] = Object.keys(f.session().identities);
+      assert.equal(host, 'app-openapi-eu-pr.eufy.com');
+      const before = f.session().identities[host].keyIdent;
+      let failure;
+      await assert.rejects(c.listDevices(), (error) => {
+        failure = error;
+        return error.code === 'request_rejected' && error.remoteCode === code;
+      });
+      assert.equal(failure.message, `request_rejected (${code})`);
+      assert.deepEqual(f.session().identities, {});
+      assert.equal(f.diagnostics.at(-1).status, 463);
+      assert.equal(f.diagnostics.at(-1).code, code);
+      // No automatic retry: the next explicit call performs a fresh key exchange.
+      const devices = await c.listDevices();
+      assert.deepEqual(
+        devices.map((d) => d.model),
+        ['T8030', 'T8160'],
+      );
+      assert.deepEqual(
+        f.calls.map((x) => x.path),
+        [
+          '/passport/estimate_domain',
+          '/openapi/oauth/key/exchange',
+          '/passport/login',
+          '/app/house/get_devs_list',
+          '/openapi/oauth/key/exchange',
+          '/app/house/get_devs_list',
+        ],
+      );
+      assert.notEqual(f.session().identities[host].keyIdent, before);
+      assert.equal(f.calls.at(-1).headers['x-key-ident'], f.session().identities[host].keyIdent);
+      assert.equal(rejected, 1);
+    } finally {
+      c.close();
+    }
+  }
+});
 
 for (const [model, type] of [
   ['T8142', 15],
