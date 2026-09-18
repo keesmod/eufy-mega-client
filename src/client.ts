@@ -30,9 +30,14 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   private inventory?: Inventory;
   private loaded?: Map<string, WireDevice>;
   private devices = new Map<string, WireDevice>();
+  private readonly liveLimit: number;
   constructor(options: ClientOptions) {
     super();
     this.cloud = new MegaCloud(options);
+    const limit = options.maxLiveStreamsPerStation ?? 1;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 4)
+      throw new EufyError('invalid_live_stream_limit');
+    this.liveLimit = limit;
   }
   get connected(): boolean {
     return this.cloud.connected;
@@ -92,7 +97,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     if (!this.inventory) await this.listDevices();
     if (this.closed) throw new EufyError('client_closed');
     if (!this.transport) {
-      this.transport = new DeviceTransport();
+      this.transport = new DeviceTransport({ maxLiveStreamsPerStation: this.liveLimit });
       this.transport.on('detection', (d) => this.events?.device(d.id, d.type, d.name, d.stranger));
       this.transport.on('push', (message) => this.events?.push(message));
       for (const event of ['device', 'station', 'snapshot', 'live-stop', 'fault'] as const)

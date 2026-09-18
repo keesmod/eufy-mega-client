@@ -106,6 +106,11 @@ export interface ClientOptions {
   sessionStore: SessionStore;
   requestTimeoutMs?: number;
   minRequestIntervalMs?: number;
+  /**
+   * Concurrent live streams per station, 1 to 4, default 1. Above 1, every
+   * further concurrent live camera on a station uses its own P2P session.
+   */
+  maxLiveStreamsPerStation?: number;
   diagnostics?: (event: Diagnostic) => void;
   /** Injectable for deterministic protocol tests. */
   fetch?: typeof fetch;

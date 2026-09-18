@@ -175,19 +175,34 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
 or H.265 and supported AAC variants. Consume both streams, or call `resume()` on
 an unused audio stream. The library does not transcode or package browser video.
 
-One station can own one live stream, recording transfer or conflicting command
-at a time. Conflicts fail with `station_busy`. Live sessions have a 120-second
-upper bound. The caller's abort signal also stops an established stream.
+One station carries one live stream by default. `maxLiveStreamsPerStation`
+(1 to 4, default 1) lets further cameras on the same station stream at the same
+time. The first live stream uses the station's primary session, which also
+carries control, snapshots and recordings. Every further concurrent camera gets
+its own P2P session, keyed by station and channel, opened by `startLive` and
+released when that stream ends. The same camera cannot stream twice. A start
+beyond the limit, during a recording transfer or during a station command fails
+with `station_busy`, and while any live stream runs on a station, recording
+transfers and mode commands fail with `station_busy`. Each stream has its own
+120-second upper bound. The caller's abort signal also stops an established
+stream. A lost session ends only the streams it carried, and station state
+reports the primary session.
+
+Two concurrent streams are verified on one HomeBase 3 with two eufyCam 3
+cameras, see the [research note](research/CONCURRENT_LIVE_2026-09-18.md).
+Three or four streams are permitted by the option but unverified on hardware.
 
 Always await `stop()` or `ended`. `confirmed: true` requires the device's STOP
 acknowledgement; a local EOF, socket close or timeout does not establish success.
 Cancelling an issued start retains its cleanup owner while awaiting STOP, even
 if no stream handle was returned. Subscribe to `live-stop` for that result.
 
-`stopLive(cameraId)` stops an owned stream. `ensureLiveStopped(cameraId, signal?)`
-sends an explicit STOP and checks its acknowledgement when recovering from an
-uncertain previous session. It rejects while another operation owns the station.
-An old stream handle cannot stop a newer stream.
+`stopLive(cameraId)` stops an owned stream on whichever session carries it.
+`ensureLiveStopped(cameraId, signal?)` does the same for a camera's own stream.
+For an uncertain previous session it sends an explicit STOP, checks its
+acknowledgement and renews the primary session, which needs an idle station: it
+rejects with `station_busy` while any camera streams or another operation owns
+the station. An old stream handle cannot stop a newer stream.
 
 ## Recordings
 

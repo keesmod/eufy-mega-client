@@ -87,6 +87,40 @@ Google FCM endpoints remain required for notifications; they are not legacy Eufy
 cloud API endpoints. Mega push registration succeeded at
 `app-push-eu-pr.eufy.com/app/push/register_push_token`.
 
+## Live sessions per camera, 2026-09-18
+
+The transport owns one station object per HomeBase for control, snapshots,
+recordings and the first live stream. With `maxLiveStreamsPerStation` above 1,
+every further concurrent live camera gets a second station object for the same
+station row, and with it a second P2P session: its own UDP socket, LAN lookup,
+`CMD_GATEWAYINFO` exchange, LAN-derived command key and stream RSA key. That
+object is bound to live events only, so the shared camera objects receive
+telemetry from the primary session alone. It is created by `startLive` and
+disposed when its stream ends, so no idle extra session survives a stream.
+
+- The limit counts established streams and pending starts on the station. The
+  primary session carries the first stream, every further camera its own
+  session keyed by station and channel. The same camera never streams twice.
+- Recording transfers and mode commands are refused while any live stream runs
+  on the station, and a start is refused while they run, both as `station_busy`.
+  `load()` refuses with `devices_busy` while any stream or start exists.
+- A STOP is confirmed only by the acknowledgement on the session that sent it.
+  An acknowledgement on another session for the same channel does not count.
+- A cancelled start on an extra session keeps its cleanup owner, sends STOP on
+  that session, reports through `live-stop` and disposes the session afterwards.
+- A lost extra session ends only its stream as `connection_lost` and releases
+  its socket. A lost primary session ends only the primary stream. Each stream
+  has its own 120-second cap.
+- `ensureLiveStopped` stops a camera's own stream on its session. Recovery of an
+  unknown previous session needs an idle station because it renews the primary
+  session.
+- `close()` stops every stream and disposes every extra session.
+
+Regression tests: `test/live-concurrent.test.mjs`. Bench evidence for two
+concurrent T8160 streams on one T8030:
+[research note](research/CONCURRENT_LIVE_2026-09-18.md). Three or four streams
+are permitted by the option and unverified.
+
 ## Test VM acceptance, 2026-09-09
 
 Production is intentionally disabled for development, with automatic restart and
