@@ -100,6 +100,29 @@ exercised no STOP path. The second run replaced it.
   H.264 stream type. The metadata reflects the received data, so consumers
   must keep reading the codec from the stream metadata.
 
+## Implementation check, 2026-09-18
+
+The same probe ran once more against the implementation for
+[#159](https://github.com/keesmod/eufy-mega-client/issues/159), with the client
+option `maxLiveStreamsPerStation` set to 2 instead of the prototype flag, the
+same bench and firmware, a fresh login into a separate session store, and the
+production bridge paused for the window and restored afterwards.
+
+| Step                   | Observation                                                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A alone, 8 s           | Primary session, observed H.265 3840 by 2160 with AAC, 132 video chunks, process 5.7 percent of one core                                                                                                       |
+| B start, extra session | Connected, START sent and first media received 3.0 s after the call, H.264 3840 by 2160 with AAC, primary session still owned A, one extra session registered                                                  |
+| Both, 20 s             | A 298 video chunks (14.9 per second), B 310 (15.5 per second), both with continuous audio, no stall, process 9.8 percent of one core                                                                           |
+| Stop B                 | STOP on the extra session, acknowledged there after 10 ms with return code 0, confirmed, session closed and socket released                                                                                    |
+| A after B stopped, 5 s | 73 video chunks, ownership unchanged                                                                                                                                                                           |
+| Stop A, cleanup        | STOP on the primary session confirmed, station connected with LAN-derived encryption, stored cover JPEG of 8962 bytes read through the primary session                                                         |
+| Cancel before media    | A restarted (H.264 this time), extra START issued 0.63 s after the call, abort 250 ms later, STOP on the extra session acknowledged after 1.5 s, caller rejected with `cancelled`, no media, A continued at 15 |
+| Result                 | All four stops confirmed by the device on their own session, no extra session or pending start left, station telemetry connected                                                                               |
+
+The counts match the prototype run within normal variation. The codec the
+station delivers varies between starts on the same camera, which confirms that
+consumers must read it from the stream metadata.
+
 ## Side finding, cloud identity
 
 Reusing a stored session from a second host needs the same credentials and
