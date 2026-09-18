@@ -35,6 +35,8 @@ export { object as responseObject };
 const allowedHost = (host: string): boolean =>
   /^(?:mega|app-[a-z]+)-(?:eu|us)-pr\.eufy\.com$/.test(host);
 const success = (code: number) => code === 0 || code === 200;
+/** The cloud no longer knows the key-exchange identity. The cached copy is unusable. */
+const identityRejected = (code: unknown): boolean => code === 4404 || code === 4416;
 
 /** Only Mega cloud transport. There is no legacy HTTP fallback. */
 export class MegaCloud {
@@ -180,7 +182,11 @@ export class MegaCloud {
               elapsedMs: Date.now() - started,
             });
           } catch {}
-          if (!response.ok) throw new EufyError('http_error', response.status);
+          // The cloud delivers a rejected identity (4404/4416) with a non-2xx status such
+          // as 463. Return that body so signed() discards the cached identity. Every other
+          // non-2xx response remains an http_error.
+          if (!response.ok && !identityRejected(code))
+            throw new EufyError('http_error', response.status);
           if (typeof code !== 'number') throw new EufyError('invalid_response');
           return { code, data: parsed.data };
         } catch (error) {
@@ -275,7 +281,7 @@ export class MegaCloud {
       },
       signal,
     );
-    if (result.code === 4404 || result.code === 4416) {
+    if (identityRejected(result.code)) {
       this.session!.identities = {};
       await this.persist();
     }
