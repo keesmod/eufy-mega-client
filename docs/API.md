@@ -176,21 +176,33 @@ or H.265 and supported AAC variants. Consume both streams, or call `resume()` on
 an unused audio stream. The library does not transcode or package browser video.
 
 One station carries one live stream by default. `maxLiveStreamsPerStation`
-(1 to 4, default 1) lets further cameras on the same station stream at the same
-time. The first live stream uses the station's primary session, which also
-carries control, snapshots and recordings. Every further concurrent camera gets
-its own P2P session, keyed by station and channel, opened by `startLive` and
-released when that stream ends. The same camera cannot stream twice. A start
-beyond the limit, during a recording transfer or during a station command fails
-with `station_busy`, and while any live stream runs on a station, recording
-transfers and mode commands fail with `station_busy`. Each stream has its own
-120-second upper bound. The caller's abort signal also stops an established
-stream. A lost session ends only the streams it carried, and station state
-reports the primary session.
+(1 to 4, default 1) lets that many cameras on the same station stream at the
+same time. With the default of 1 the stream uses the station's primary session,
+which also carries control, snapshots and recordings, and while it runs
+recording transfers and mode commands fail with `station_busy`. Above 1, every
+live stream gets its own P2P session, keyed by station and channel, opened by
+`startLive` and released when that stream ends, and the primary session stays
+free: mode commands, state refreshes and snapshots work while cameras stream.
+Recording transfers still fail with `station_busy` while any live stream runs.
+The same camera cannot stream twice. A start beyond the limit, during a
+recording transfer or during a station command fails with `station_busy`. A
+lost session ends only the streams it carried, and station state reports the
+primary session.
+
+Each stream has its own upper bound, 120 seconds by default.
+`startLive(cameraId, { signal?, maxDurationMs? })` may set a bound between one
+second and the client's `liveUpperBoundMs` ceiling (120000 to 3600000 ms,
+default 120000), so a longer stream needs both a raised ceiling and an explicit
+per-start value. Values outside that range fail with `invalid_live_bound`. At
+the bound the library sends STOP and the stream ends with the device's
+acknowledgement like any other stop. The caller's abort signal also stops an
+established stream.
 
 Two concurrent streams are verified on one HomeBase 3 with two eufyCam 3
 cameras, see the [research note](research/CONCURRENT_LIVE_2026-09-18.md).
-Three or four streams are permitted by the option but unverified on hardware.
+Three or four streams are permitted by the option but unverified on hardware. A
+ten-minute stream and control on an idle primary session are verified on the
+same bench, see [the live bound note](research/LIVE_BOUND_2026-09-19.md).
 
 Always await `stop()` or `ended`. `confirmed: true` requires the device's STOP
 acknowledgement; a local EOF, socket close or timeout does not establish success.

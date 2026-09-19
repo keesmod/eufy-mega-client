@@ -15,6 +15,7 @@ import {
   type StationState,
   type Snapshot,
   type LiveStream,
+  type LiveStartOptions,
   type StreamStop,
 } from './types.js';
 
@@ -31,6 +32,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   private loaded?: Map<string, WireDevice>;
   private devices = new Map<string, WireDevice>();
   private readonly liveLimit: number;
+  private readonly liveUpperBound: number;
   constructor(options: ClientOptions) {
     super();
     this.cloud = new MegaCloud(options);
@@ -38,6 +40,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     if (!Number.isInteger(limit) || limit < 1 || limit > 4)
       throw new EufyError('invalid_live_stream_limit');
     this.liveLimit = limit;
+    const bound = options.liveUpperBoundMs ?? 120000;
+    if (!Number.isInteger(bound) || bound < 120000 || bound > 3_600_000)
+      throw new EufyError('invalid_live_bound');
+    this.liveUpperBound = bound;
   }
   get connected(): boolean {
     return this.cloud.connected;
@@ -97,7 +103,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     if (!this.inventory) await this.listDevices();
     if (this.closed) throw new EufyError('client_closed');
     if (!this.transport) {
-      this.transport = new DeviceTransport({ maxLiveStreamsPerStation: this.liveLimit });
+      this.transport = new DeviceTransport({
+        maxLiveStreamsPerStation: this.liveLimit,
+        liveUpperBoundMs: this.liveUpperBound,
+      });
       this.transport.on('detection', (d) => this.events?.device(d.id, d.type, d.name, d.stranger));
       this.transport.on('push', (message) => this.events?.push(message));
       for (const event of ['device', 'station', 'snapshot', 'live-stop', 'fault'] as const)
@@ -184,8 +193,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   async snapshot(id: string, signal?: AbortSignal): Promise<Snapshot> {
     return (await this.deviceTransport()).snapshot(id, signal);
   }
-  async startLive(id: string, signal?: AbortSignal): Promise<LiveStream> {
-    return (await this.deviceTransport()).startLive(id, signal);
+  async startLive(id: string, options?: AbortSignal | LiveStartOptions): Promise<LiveStream> {
+    const { signal, maxDurationMs } =
+      options instanceof AbortSignal ? { signal: options } : (options ?? {});
+    return (await this.deviceTransport()).startLive(id, signal, maxDurationMs);
   }
   async stopLive(id: string): Promise<StreamStop> {
     if (!this.transport) throw new EufyError('live_session_not_found');

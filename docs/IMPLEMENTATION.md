@@ -121,6 +121,29 @@ concurrent T8160 streams on one T8030:
 [research note](research/CONCURRENT_LIVE_2026-09-18.md). Three or four streams
 are permitted by the option and unverified.
 
+## Free primary session and per-start bound, 2026-09-19
+
+With `maxLiveStreamsPerStation` above 1, every live stream now uses its own
+session, including the first one, so the primary session never carries media
+and stays available for mode commands, state refreshes, snapshots and
+recordings. With the default of 1 nothing changed: the single stream uses the
+primary session and mode commands fail with `station_busy` while it runs.
+
+- `setGuardMode` and the push-triggered snapshot refresh no longer wait for
+  extra sessions. Recording transfers, `load()` and `ensureLiveStopped` for a
+  camera without a stream still treat extra sessions as busy, because a
+  transfer during an extra-session stream is untested and the recovery path
+  renews the primary session.
+- Each stream's timer takes its bound from the start: `maxDurationMs` between
+  1000 ms and the client's `liveUpperBoundMs` ceiling (120000 to 3600000 ms,
+  default 120000), otherwise `invalid_live_bound`. Without a per-start value the
+  bound stays 120 seconds whatever the ceiling, so a longer stream is always an
+  explicit request. Abort, stream errors, session loss and the 8-second STOP
+  wait do not depend on the value.
+
+Regression tests: `test/live-bound.test.mjs` and `test/live-concurrent.test.mjs`.
+Bench evidence: [live bound note](research/LIVE_BOUND_2026-09-19.md).
+
 ## Test VM acceptance, 2026-09-09
 
 Production is intentionally disabled for development, with automatic restart and

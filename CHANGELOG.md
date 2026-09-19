@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.14.0 - Unreleased
+
+### Per-start live bound and a free primary session
+
+- Add `liveUpperBoundMs` (120000 to 3600000, default 120000) and
+  `startLive(cameraId, { signal?, maxDurationMs? })`. A stream may ask for a
+  bound between one second and the ceiling, otherwise `invalid_live_bound`.
+  Without a per-start value the bound stays 120 seconds whatever the ceiling.
+  `startLive(cameraId, signal?)` keeps working.
+- With `maxLiveStreamsPerStation` above 1, every live stream now uses its own
+  P2P session, including the first one, so the primary session stays free.
+  Mode commands, state refreshes and snapshots work while cameras stream.
+  Recording transfers, reloads and recovery of a camera without a stream still
+  fail with `station_busy` or `devices_busy` while any stream runs. With the
+  default of 1 nothing changed.
+- Bench evidence on one T8030 with one T8160, see
+  [the research note](docs/research/LIVE_BOUND_2026-09-19.md).
+
 ## 0.13.0 - 2026-09-18
 
 ### Concurrent live streams per station

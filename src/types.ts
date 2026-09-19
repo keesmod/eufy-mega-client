@@ -111,6 +111,11 @@ export interface ClientOptions {
    * further concurrent live camera on a station uses its own P2P session.
    */
   maxLiveStreamsPerStation?: number;
+  /**
+   * Ceiling for the per-start live bound in milliseconds, 120000 to 3600000,
+   * default 120000. A start may request up to this value with `maxDurationMs`.
+   */
+  liveUpperBoundMs?: number;
   diagnostics?: (event: Diagnostic) => void;
   /** Injectable for deterministic protocol tests. */
   fetch?: typeof fetch;
@@ -167,6 +172,14 @@ export interface LiveStream {
   audio: import('node:stream').Readable;
   ended: Promise<StreamStop>;
   stop(): Promise<StreamStop>;
+}
+export interface LiveStartOptions {
+  signal?: AbortSignal;
+  /**
+   * Upper bound for this stream in milliseconds, 1000 up to the client's
+   * `liveUpperBoundMs`, default 120000. The library sends STOP at the bound.
+   */
+  maxDurationMs?: number;
 }
 export interface Recording {
   id: string;
