@@ -55,7 +55,7 @@ interface ActiveLive {
   stop?: Promise<StreamStop>;
   acknowledged: boolean;
   stopped: boolean;
-  timer: NodeJS.Timeout;
+  timer: NodeJS.Timeout | undefined;
   abort?: () => void;
 }
 /** One additional P2P session per further concurrent live camera on a station. */
@@ -69,6 +69,23 @@ interface ExtraLive extends ActiveLive {
 const fail = (): never => {
   throw new EufyError('operation_outside_hardware_scope');
 };
+/**
+ * Research switches for #163 only, read from the environment so that the public
+ * API stays unchanged. Not for release. EUFY_RESEARCH_LIVE_BOUND_MS overrides the
+ * per-stream bound (0 disables the timer), EUFY_RESEARCH_FREE_PRIMARY routes the
+ * first live stream to an extra session and lets a mode command use the idle
+ * primary session, EUFY_RESEARCH_FORCE_MODE_WRITE sends a same-mode write.
+ */
+const research = {
+  liveBoundMs: ((): number => {
+    const raw = Number(process.env.EUFY_RESEARCH_LIVE_BOUND_MS);
+    return Number.isInteger(raw) && raw >= 0 ? raw : 120000;
+  })(),
+  freePrimary: process.env.EUFY_RESEARCH_FREE_PRIMARY === '1',
+  forceModeWrite: process.env.EUFY_RESEARCH_FORCE_MODE_WRITE === '1',
+};
+const liveTimer = (stop: () => void): NodeJS.Timeout | undefined =>
+  research.liveBoundMs > 0 ? setTimeout(stop, research.liveBoundMs) : undefined;
 
 /** Private adapter: protocol objects never cross the public library boundary. */
 export class DeviceTransport extends EventEmitter {
@@ -573,6 +590,9 @@ export class DeviceTransport extends EventEmitter {
         throw new EufyError('station_busy');
       return this.startExtraLive(id, camera, stationId, signal);
     }
+    // Research #163: keep the primary session idle for control.
+    if (research.freePrimary && this.liveCount(stationId) < this.liveLimit)
+      return this.startExtraLive(id, camera, stationId, signal);
     this.starting.set(stationId, channel);
     const operation = this.openLive(id, camera, stationId, station, signal);
     this.pendingStarts.add(operation);
@@ -623,7 +643,7 @@ export class DeviceTransport extends EventEmitter {
             finish,
             acknowledged: false,
             stopped: false,
-            timer: setTimeout(() => void this.stopLive(id), 120000),
+            timer: liveTimer(() => void this.stopLive(id)),
           };
           const abort = () => {
             if (this.lives.get(stationId)?.handle === handle)
@@ -868,7 +888,7 @@ export class DeviceTransport extends EventEmitter {
             finish,
             acknowledged: false,
             stopped: false,
-            timer: setTimeout(() => void this.stopExtraLive(key).catch(() => {}), 120000),
+            timer: liveTimer(() => void this.stopExtraLive(key).catch(() => {})),
           };
           const abort = () => {
             if (this.extraLives.get(key)?.handle === handle)
@@ -1012,7 +1032,7 @@ export class DeviceTransport extends EventEmitter {
       this.commands.has(id) ||
       this.lives.has(id) ||
       this.starting.has(id) ||
-      this.extraBusy(id) ||
+      (!research.freePrimary && this.extraBusy(id)) ||
       this.recordings.busy(id)
     )
       throw new EufyError('station_busy');
@@ -1022,7 +1042,8 @@ export class DeviceTransport extends EventEmitter {
     try {
       await this.connect(id, abort);
       const before = await readGuardMode(station, abort);
-      if (before === mode) return { confirmed: true, commandSent: false, state: this.state(id) };
+      if (before === mode && !research.forceModeWrite)
+        return { confirmed: true, commandSent: false, state: this.state(id) };
       await changeGuardMode(station, mode, abort);
       return { confirmed: true, commandSent: true, state: this.state(id) };
     } catch (error) {
