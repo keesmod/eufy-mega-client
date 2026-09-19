@@ -38,6 +38,14 @@ const snapshot = (dps) => ({ source: 'local-tuya-3.5', observedAt, dps });
 const decode = (dps, options = {}) => decodeMowerTelemetry(snapshot(dps), { schema, ...options });
 const candidates = E15_TELEMETRY_DEFINITIONS.filter((entry) => entry.dp === '107');
 const confirmed = candidates.map((entry) => ({ ...entry, level: 'confirmed' }));
+const observed = candidates.map((entry) => ({ ...entry, level: 'observed' }));
+const shipped = (value) => ({
+  state: 'reported',
+  value,
+  dp: ['107', '107', '107'],
+  source: 'local-tuya-3.5',
+  observedAt,
+});
 
 test('the parser exposes the established DP 107 envelope: ascending varint records with omitted zero fields', () => {
   assert.deepEqual(parseMowerWirePayload(status({ 1: 2, 3: 1 })), {
@@ -185,43 +193,66 @@ test('parser results are fresh copies that consumers can mutate safely', () => {
   assert.equal(a.fields[0].value.buffer.byteLength, 3);
 });
 
-test('the E15 registry withholds the observed DP 107 candidates and exposes only structure', () => {
+test('the E15 registry reports the confirmed DP 107 candidates and withholds every other payload', () => {
   assert.deepEqual(
     candidates.map((entry) => [entry.level, entry.decode.kind, entry.decode.activity]),
     [
-      ['observed', 'wire', 'mowing'],
-      ['observed', 'wire', 'paused'],
-      ['observed', 'wire', 'returning'],
+      ['confirmed', 'wire', 'mowing'],
+      ['confirmed', 'wire', 'paused'],
+      ['confirmed', 'wire', 'returning'],
     ],
   );
+  assert.ok(
+    candidates.every(
+      (entry) => entry.source === 'docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md',
+    ),
+  );
+  // The shapes reproduced in the 2026-09-19 window, including the transient field 2 values
+  // that arrive during defogging, at the change to mowing and while positioning.
   for (const [payload, activity] of [
     [status({ 1: 2, 3: 1 }), 'mowing'],
     [status({ 1: 2, 2: 9, 3: 1 }), 'mowing'],
+    [status({ 1: 2, 2: 3, 3: 1 }), 'mowing'],
     [status({ 1: 2, 3: 2 }), 'paused'],
     [status({ 1: 1, 3: 1 }), 'returning'],
-    [status({ 2: 5, 3: 1 }), undefined],
-    [status({ 6: 1 }), undefined],
-    ['AA==', undefined],
+    [status({ 1: 1, 2: 1, 3: 1 }), 'returning'],
   ]) {
     const telemetry = decode({ ...e15Dps, 107: payload });
-    assert.deepEqual(telemetry.status, { state: 'unconfirmed', level: 'observed' }, activity);
+    assert.deepEqual(telemetry.status, shipped(activity), payload);
     assert.equal(telemetry.fields['107'].valid, true);
     assert.equal(telemetry.fields['107'].type, 'raw');
     assert.equal(telemetry.fields['107'].code, 'robot_status');
-    assert.ok(['fields', 'default'].includes(telemetry.fields['107'].wire.shape));
+    assert.equal(telemetry.fields['107'].wire.shape, 'fields');
     assert.deepEqual(telemetry.battery.value, { percent: 73 });
     assert.deepEqual(telemetry.network.value, { kind: 'wifi', signalPercent: 54 });
     assert.equal(telemetry.dps['107'], payload);
   }
+  // Transitional first frames, the map-saving phase, field 6, the default payload and
+  // unknown combinations are withheld as invalid rather than guessed.
+  for (const payload of [
+    status({ 1: 2 }),
+    status({ 1: 1 }),
+    status({ 2: 5, 3: 1 }),
+    status({ 6: 1 }),
+    status({ 1: 2, 3: 3 }),
+    status({ 1: 3, 3: 1 }),
+    'AA==',
+  ]) {
+    const telemetry = decode({ ...e15Dps, 107: payload });
+    assert.deepEqual(telemetry.status, { state: 'invalid', dp: ['107', '107', '107'] }, payload);
+    assert.equal(telemetry.fields['107'].valid, true);
+    assert.ok(['fields', 'default'].includes(telemetry.fields['107'].wire.shape));
+    assert.deepEqual(telemetry.battery.value, { percent: 73 });
+  }
   const malformed = decode({ ...e15Dps, 107: b64([8]) });
-  assert.deepEqual(malformed.status, { state: 'unconfirmed', level: 'observed' });
+  assert.deepEqual(malformed.status, { state: 'invalid', dp: ['107', '107', '107'] });
   assert.deepEqual(malformed.fields['107'].wire, {
     shape: 'malformed',
     byteLength: 1,
     reason: 'truncated',
   });
   assert.equal(decode(e15Dps).fields['107'], undefined);
-  assert.deepEqual(decode(e15Dps).status, { state: 'unconfirmed', level: 'observed' });
+  assert.deepEqual(decode(e15Dps).status, { state: 'missing', dp: ['107', '107', '107'] });
   // Without the registry there is no structural parse either, and other raw points are untouched.
   const bare = decode({ ...e15Dps, 107: status({ 1: 2, 3: 1 }), 108: status({ 2: 1, 3: 1 }) });
   assert.equal(bare.fields['108'].wire, undefined);
@@ -229,6 +260,10 @@ test('the E15 registry withholds the observed DP 107 candidates and exposes only
   const optOut = decode({ ...e15Dps, 107: status({ 1: 2, 3: 1 }) }, { definitions: [] });
   assert.deepEqual(optOut.status, { state: 'unconfirmed' });
   assert.equal(optOut.fields['107'].wire, undefined);
+  // The same candidates at a lower level are withheld again and expose only structure.
+  const withheld = decode({ ...e15Dps, 107: status({ 1: 2, 3: 1 }) }, { definitions: observed });
+  assert.deepEqual(withheld.status, { state: 'unconfirmed', level: 'observed' });
+  assert.equal(withheld.fields['107'].wire.shape, 'fields');
   // A wrong-typed value or a non-raw declaration gets no structural parse.
   assert.equal(decode({ ...e15Dps, 107: 5 }).fields['107'].wire, undefined);
   assert.equal(decode({ ...e15Dps, 107: 5 }).fields['107'].valid, false);
@@ -289,7 +324,7 @@ test('a consumer with its own confirmed evidence receives typed activity only fo
   });
   assert.equal(typed({ 107: status({ 1: 2, 3: 1 }) }, [confirmed[0]]).value, 'mowing');
   // Mixed levels: only the confirmed candidate can report, the observed ones stay withheld.
-  const mixed = [confirmed[0], candidates[1], candidates[2]];
+  const mixed = [confirmed[0], observed[1], observed[2]];
   assert.equal(typed({ 107: status({ 1: 2, 3: 1 }) }, mixed).value, 'mowing');
   assert.deepEqual(typed({ 107: status({ 1: 2, 3: 2 }) }, mixed), {
     state: 'invalid',
@@ -348,5 +383,5 @@ test('the shipped DP 107 candidates are frozen and telemetry copies are isolated
     { number: 1, wire: 'varint', value: 2 },
     { number: 3, wire: 'varint', value: 1 },
   ]);
-  assert.deepEqual(decode(dps).status, { state: 'unconfirmed', level: 'observed' });
+  assert.deepEqual(decode(dps).status, shipped('mowing'));
 });

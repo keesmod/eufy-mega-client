@@ -419,8 +419,9 @@ conforms to both the definition and the device declaration. Otherwise it is
 The E15 defaults report battery percentage, the observed `Wifi` network kind
 and `network.value.signalPercent` from independently observed definitions.
 `signalPercent` is a 0 to 100 percentage and is not converted to dBm. Status
-and mowing progress remain `unconfirmed`, and unobserved network enum values
-are rejected. Consumers with their own confirmed evidence pass `definitions`,
+reports `mowing`, `paused` or `returning` from the confirmed DP 107 payloads,
+mowing progress remains `unconfirmed`, and unobserved network enum values are
+rejected. Consumers with their own confirmed evidence pass `definitions`,
 or `[]` to disable the defaults. See
 [typed mower telemetry](MOWER_TELEMETRY.md) for the definition format, levels,
 schema provenance and remaining acceptance.
@@ -440,13 +441,18 @@ const telemetry = decodeMowerTelemetry(report, { schema: session.schema });
 const wire = telemetry.fields['107']?.wire;
 if (wire?.shape === 'fields') {
   // Structural values only, for example [{ number: 1, wire: 'varint', value: 2 }, ...].
-  // telemetry.status stays { state: 'unconfirmed', level: 'observed' } until confirmed.
+  // telemetry.status reports 'mowing' for this payload from the confirmed E15 registry.
 }
 ```
 
-The shipped DP 107 candidates are `observed` and withheld. A `wire` definition
-at `confirmed` reports its activity only when every listed field matches. See
-the [DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).
+The shipped DP 107 definitions are `confirmed` for `mowing`, `paused` and
+`returning`. A `wire` definition reports its activity only when every listed
+field matches, so the transitional first frame after a control, the map-saving
+payload, field 6 and the default payload leave `status` `invalid` for that
+report. See the
+[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md)
+and the
+[reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md).
 
 ## Discovery relationships
 

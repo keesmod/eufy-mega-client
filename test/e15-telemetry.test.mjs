@@ -30,10 +30,11 @@ test('the E15 defaults report evidenced battery and network units without inferr
   assert.equal(telemetry.network.value.signalDbm, undefined);
   assert.equal(telemetry.fields['109'].unit, '%');
   assert.deepEqual(telemetry.dps, e15Dps);
-  // A full battery, an inactive task, an unverified status or map-save percentage is not
-  // current activity or mowing progress. These independently invented values stay raw.
+  // A full battery, an inactive task, an unverified enum or map-save percentage is not
+  // current activity or mowing progress. These independently invented values stay raw, and
+  // without DP 107 the confirmed activity definitions report nothing.
   const unsupported = decode({ ...e15Dps, 1: false, 5: 'charge_done', 8: 100, 118: 100 });
-  assert.deepEqual(unsupported.status, { state: 'unconfirmed', level: 'observed' });
+  assert.deepEqual(unsupported.status, { state: 'missing', dp: ['107', '107', '107'] });
   assert.deepEqual(unsupported.progress, { state: 'unconfirmed' });
   assert.equal(unsupported.dps['118'], 100);
   telemetry.dps['8'] = 0;
@@ -83,7 +84,7 @@ test('the public local session returns the confirmed E15 fields and releases its
   const telemetry = await session.queryTelemetry();
   assert.deepEqual(telemetry.battery.value, { percent: 73 });
   assert.deepEqual(telemetry.network.value, { kind: 'wifi', signalPercent: 54 });
-  assert.deepEqual(telemetry.status, { state: 'unconfirmed', level: 'observed' });
+  assert.deepEqual(telemetry.status, { state: 'missing', dp: ['107', '107', '107'] });
   assert.deepEqual(telemetry.progress, { state: 'unconfirmed' });
   assert.equal(telemetry.battery.source, 'local-tuya-3.5');
   assert.equal(telemetry.network.observedAt, telemetry.observedAt);

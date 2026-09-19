@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.15.0 - Unreleased
+
+### Confirmed E15 activity
+
+- `E15_TELEMETRY_DEFINITIONS` ships the three DP 107 `robot_status` payloads
+  at `confirmed`: fields 1 = 2 and 3 = 1 `mowing`, 1 = 2 and 3 = 2 `paused`,
+  1 = 1 and 3 = 1 `returning`. `queryTelemetry()` and `decodeMowerTelemetry`
+  now report `status` for these payloads on the owned E15 instead of
+  `{ state: 'unconfirmed', level: 'observed' }`. An absent DP 107 reports
+  `missing`, and a transitional, map-saving, field 6 or default payload
+  reports `invalid` for that report. The `mowing` payload also covers the
+  app's Defogging phase. Types and other definitions are unchanged.
+- Evidence: three further owner-operated start, pause and return cycles on
+  firmware 6.9.28 with app 6.1.00, see
+  [the reproduction receipt](docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md).
+  References #156.
+
 ## 0.14.0 - 2026-09-19
 
 ### Per-start live bound and a free primary session
