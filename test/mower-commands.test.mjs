@@ -84,7 +84,7 @@ const written = (peer) => peer.received.filter((x) => x.type === 13).length;
 /** Queries and control frames together, so a refusal proves no I/O beyond negotiation. */
 const queried = (peer) => peer.received.filter((x) => x.type === 13 || x.type === 16).length;
 
-test('the command table is frozen and can only write the four declared boolean points', () => {
+test('the command table is frozen and can only write the three declared boolean points', () => {
   assert.ok(Object.isFrozen(COMMANDS));
   assert.deepEqual(
     Object.entries(COMMANDS).map(([kind, c]) => [
@@ -93,17 +93,22 @@ test('the command table is frozen and can only write the four declared boolean p
       c.write.code,
       c.write.value,
       c.control,
-      c.activity,
+      c.activity ?? null,
+      c.payload ? [c.payload.name, c.payload.fields] : null,
+      c.requires ?? null,
     ]),
     [
-      ['start', '1', 'switch_go', true, '103', 'mowing'],
-      ['pause', '2', 'pause', true, '105', 'paused'],
-      ['resume', '2', 'pause', false, '106', 'mowing'],
-      ['return', '3', 'switch_charge', true, '103', 'returning'],
+      ['start', '1', 'switch_go', true, '103', 'mowing', null, null],
+      ['pause', '2', 'pause', true, '105', 'paused', null, null],
+      ['resume', '2', 'pause', false, '106', 'mowing', null, null],
+      ['stop', '1', 'switch_go', false, '104', null, ['map_saving', { 2: 5, 3: 1 }], null],
+      ['return', '3', 'switch_charge', true, '103', 'returning', null, 'stopped'],
     ],
   );
-  for (const c of Object.values(COMMANDS))
+  for (const c of Object.values(COMMANDS)) {
     assert.ok(Object.isFrozen(c) && Object.isFrozen(c.write));
+    if (c.payload) assert.ok(Object.isFrozen(c.payload) && Object.isFrozen(c.payload.fields));
+  }
 });
 
 test('without the opt-in every command is refused before any frame is written', async (t) => {
@@ -326,6 +331,12 @@ test('a reply without description and a nonzero return code is recorded but not 
 test('typed refusals are decided on a fresh query and nothing is written', async (t) => {
   for (const [kind, dps, code] of [
     ['return', { ...idle, 118: 50 }, 'mower_command_map_saving'],
+    ['return', { ...idle, 1: true }, 'mower_command_task_active'],
+    ['return', { ...idle, 1: true, 2: true }, 'mower_command_task_active'],
+    ['return', { ...idle, 1: undefined }, 'mower_command_task_active'],
+    ['return', { ...idle, 118: 0 }, 'mower_command_map_saving'],
+    ['stop', { ...idle, 1: true, 118: 40 }, 'mower_command_map_saving'],
+    ['stop', { ...idle }, 'mower_command_already_set'],
     ['start', { ...idle, 118: 1 }, 'mower_command_map_saving'],
     ['pause', { ...idle, 1: true, 118: 99 }, 'mower_command_map_saving'],
     ['return', { ...idle, 118: undefined }, 'mower_command_evidence_missing'],
@@ -395,8 +406,8 @@ test('invalid requests are refused before any query', async (t) => {
     null,
     'start',
     {},
-    { kind: 'stop' },
     { kind: 'charge' },
+    { kind: 'Stop' },
     { kind: 'start', readBackMs: 10 },
     { kind: 'start', readBackMs: 60_001 },
     { kind: 'start', readBackMs: '2000' },
@@ -514,4 +525,127 @@ test('outcomes are private copies without device identity and consumers cannot a
   assert.throws(() => {
     COMMANDS.start.write.value = false;
   }, TypeError);
+});
+
+test('stop writes switch_go false and reads the map-saving payload back as its reflection', async (t) => {
+  const { peer, session } = await setup(t, {
+    dps: { ...idle, 1: true },
+    peer: {
+      onWrite: (dps, report) => {
+        assert.deepEqual(dps, { 1: false });
+        // The order recorded after the app's Stop: control point, pause cleared, the map-saving
+        // payload, the save progress, then the written point and the field 6 payload.
+        report({ 104: control() }, { sequence: 81 });
+        report({ 2: false }, { sequence: 82 });
+        report({ 118: 0 }, { sequence: 83 });
+        report({ 107: status({ 2: 5, 3: 1 }) }, { sequence: 84 });
+        report({ 118: 1 }, { sequence: 85 });
+        report({ 1: false }, { sequence: 86 });
+        report({ 107: status({ 6: 1 }) }, { sequence: 87 });
+      },
+    },
+  });
+  const outcome = await session.sendCommand({ kind: 'stop' });
+  assert.equal(outcome.command, 'stop');
+  assert.deepEqual(outcome.write, { dp: '1', code: 'switch_go', value: false });
+  assert.equal(outcome.stage, 'reflected');
+  assert.equal(outcome.end, 'reflected');
+  assert.equal(outcome.acknowledgement.dp, '104');
+  assert.equal(outcome.acknowledgement.sequence, 81);
+  assert.equal(outcome.activity, undefined, 'stop has no confirmed activity');
+  assert.deepEqual(outcome.payload, {
+    observedAt: outcome.payload.observedAt,
+    sequence: 84,
+    name: 'map_saving',
+  });
+  assert.deepEqual(
+    outcome.reports.map((r) => r.sequence),
+    [81, 82, 83, 84],
+    'the read-back stops at the reflection',
+  );
+  assert.deepEqual(
+    peer.received.map((x) => x.type),
+    [3, 5, 16, 13],
+  );
+  assert.deepEqual(peer.writes[0].dps, { 1: false });
+});
+
+test('stop without the map-saving payload ends at the evidenced stage and other DP 107 shapes never reflect it', async (t) => {
+  for (const [name, reports, stage, ackDp] of [
+    ['only the written point', [{ 1: false }], 'acknowledged', '1'],
+    ['a mowing payload', [{ 107: status({ 1: 2, 3: 1 }) }], 'sent', undefined],
+    ['map saving plus field 6', [{ 107: status({ 2: 5, 3: 1, 6: 1 }) }], 'sent', undefined],
+    [
+      'map saving with a bytes record',
+      [{ 107: Buffer.from([0x12, 0x01, 0x05, 0x18, 0x01]).toString('base64') }],
+      'sent',
+      undefined,
+    ],
+    ['the default payload', [{ 107: '' }], 'sent', undefined],
+  ]) {
+    const { session } = await setup(t, {
+      dps: { ...idle, 1: true },
+      peer: {
+        onWrite: (_dps, report) => {
+          let sequence = 90;
+          for (const dps of reports) report(dps, { sequence: sequence++ });
+        },
+      },
+    });
+    const outcome = await session.sendCommand({ kind: 'stop', readBackMs: 1000 });
+    assert.equal(outcome.stage, stage, name);
+    assert.equal(outcome.end, 'timed_out', name);
+    assert.equal(outcome.payload, undefined, name);
+    assert.equal(outcome.acknowledgement?.dp, ackDp, name);
+    await session.disconnect();
+  }
+});
+
+test('return is written only from the stopped task, so stop then return runs on one session without replay', async (t) => {
+  const state = { ...idle, 1: true, 2: false };
+  const { peer, session } = await setup(t, {
+    peer: {
+      respond: () => JSON.stringify({ dps: state }),
+      onWrite: (dps, report) => {
+        if (dps[1] === false) {
+          report({ 104: control() }, { sequence: 91 });
+          report({ 107: status({ 2: 5, 3: 1 }) }, { sequence: 92 });
+          // The device finishes the save after the read-back returned.
+          state[1] = false;
+          state[118] = 100;
+          return;
+        }
+        assert.deepEqual(dps, { 3: true });
+        report({ 103: control() }, { sequence: 93 });
+        report({ 107: status({ 1: 1 }) }, { sequence: 94 });
+        report({ 107: status({ 1: 1, 3: 1 }) }, { sequence: 95 });
+      },
+    },
+  });
+  // Refused while the task is active: nothing written.
+  await assert.rejects(session.sendCommand({ kind: 'return' }), {
+    code: 'mower_command_task_active',
+  });
+  assert.equal(peer.writes.length, 0);
+  const stopped = await session.sendCommand({ kind: 'stop' });
+  assert.equal(stopped.end, 'reflected');
+  assert.equal(stopped.payload.name, 'map_saving');
+  const returned = await session.sendCommand({ kind: 'return' });
+  assert.equal(returned.command, 'return');
+  assert.deepEqual(returned.before.dps, { ...idle, 1: false, 2: false, 118: 100 });
+  assert.equal(returned.stage, 'reflected');
+  assert.deepEqual(returned.activity, {
+    observedAt: returned.activity.observedAt,
+    sequence: 95,
+    value: 'returning',
+  });
+  assert.deepEqual(
+    peer.received.map((x) => x.type),
+    [3, 5, 16, 16, 13, 16, 13],
+    'three fresh queries, two writes, nothing repeated',
+  );
+  assert.deepEqual(
+    peer.writes.map((w) => w.dps),
+    [{ 1: false }, { 3: true }],
+  );
 });

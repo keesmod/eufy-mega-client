@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.17.0 - Unreleased
+
+### Opt-in stop and the return precondition
+
+- Add the opt-in command class `stop`. `session.sendCommand({ kind: 'stop' })`
+  writes DP 1 `switch_go` false, the value the protocol owner assigns to
+  stopping the job and the value reported after every app Stop on the owned
+  E15. Its acknowledgement is DP 104 `stop_control` or the echo of the written
+  point, and its reflection is the map-saving DP 107 payload, fields 2 = 5 and
+  3 = 1 as the only records, reported in the new outcome field `payload`
+  instead of `activity`. The same opt-in, exclusive ownership, typed refusals,
+  bounded read-back and absence of retry, replay and reconnect apply.
+- `return` is refused before any write with the new `mower_command_task_active`
+  while DP 1 is not `false` on the fresh query, and with the existing
+  `mower_command_map_saving` unless DP 118 reads exactly 100. The official app
+  offers Charge only after Stop and the map save, and a return sent from
+  `paused` was ignored on firmware 6.9.28, so the library now sends `return`
+  only from the stopped task. The library cannot tell docked from stopped on
+  the lawn, so a return sent while docked is not refused.
+- Additive types: `MowerCommandKind` gains `stop` and `MowerCommandOutcome`
+  gains the optional `payload`. Synthetic tests cover the stop lifecycle, stop
+  without its reflection, the DP 107 shapes that never reflect it, the new
+  refusal and stop followed by return on one session. The contract and the
+  sources are in [Opt-in mower commands](docs/MOWER_COMMANDS.md).
+- Hardware evidence: none yet for `stop` and for `return` from the stopped
+  task. Both are software only until the owner-operated window of #173, which
+  also records whether a plain DP 1 false keeps or clears the mowing progress.
+  `start`, `pause` and `resume` keep their confirmed evidence from 0.16.0.
+  References #173.
+
+Use the compiled versioned 0.17.0 tarball and its verified integrity from the
+GitHub release. Without `mowers.commands` nothing changed. A consumer that
+opts in gains `stop` and must expect `mower_command_task_active` from a
+`return` sent while the task is active, where 0.16.0 wrote DP 3 and timed out.
+Until the window of #173 reports otherwise, `stop` and `return` from the
+stopped task are unconfirmed on hardware and `return` still has no confirmed
+route on firmware 6.9.28. Public types are additive, the telemetry definitions
+and the camera modules are unchanged. Retain the previous package and lockfile
+for rollback. The mower bridge pins this release separately in
+keesmod/eufy-robomow-ha. References #173.
+
 ## 0.16.0 - 2026-09-19
 
 ### Opt-in E15 commands

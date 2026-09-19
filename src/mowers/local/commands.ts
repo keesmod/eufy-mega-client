@@ -16,7 +16,17 @@ export interface CommandClass {
   /** Declared raw control point that reported within milliseconds of every app press. */
   readonly control: string;
   /** Confirmed DP 107 activity that must be reported before the lifecycle reads `reflected`. */
-  readonly activity: MowerActivity;
+  readonly activity?: MowerActivity;
+  /**
+   * DP 107 wire records that must be reported before the lifecycle reads `reflected`, for a
+   * class whose reflection is not a confirmed activity. Compared exactly, no other varint record.
+   */
+  readonly payload?: {
+    readonly name: 'map_saving';
+    readonly fields: Readonly<Record<number, number>>;
+  };
+  /** Extra precondition on the fresh query: the task must be stopped (DP 1 false, DP 118 at 100). */
+  readonly requires?: 'stopped';
 }
 
 /** The only writes the library can ever make. Rain, child protection and settings are absent. */
@@ -36,10 +46,16 @@ export const COMMANDS: Readonly<Record<MowerCommandKind, CommandClass>> = Object
     control: '106',
     activity: 'mowing',
   }),
+  stop: Object.freeze({
+    write: Object.freeze({ dp: '1', code: 'switch_go', value: false }),
+    control: '104',
+    payload: Object.freeze({ name: 'map_saving', fields: Object.freeze({ 2: 5, 3: 1 }) }),
+  }),
   return: Object.freeze({
     write: Object.freeze({ dp: '3', code: 'switch_charge', value: true }),
     control: '103',
     activity: 'returning',
+    requires: 'stopped',
   }),
 });
 
@@ -52,7 +68,9 @@ export const MAX_COMMAND_REPORTS = 64;
 export const MAP_SAVE_DP = '118';
 const MAX_STOP_ROUTE = 200;
 const STOP_ROUTE = /^[^\p{C}]+$/u;
-const KINDS = new Set<MowerCommandKind>(['start', 'pause', 'resume', 'return']);
+const KINDS = new Set<MowerCommandKind>(['start', 'pause', 'resume', 'stop', 'return']);
+/** Declared `switch_go`. False on the fresh query is the stopped task the app requires before Charge. */
+export const TASK_DP = '1';
 
 function bound(value: unknown): value is number {
   return (
@@ -118,13 +136,20 @@ export function requireDeclaredWrite(
 
 /**
  * Typed refusals decided on the fresh query taken right before the write. A running map save
- * refuses every command, and a point already at the written value cannot produce a fresh change.
+ * refuses every command, a point already at the written value cannot produce a fresh change, and
+ * a class that requires the stopped task refuses while DP 1 is true or the map save has not
+ * reached 100, because the app offers Charge only in that state.
  */
-export function requireWritable(before: MowerDpSnapshot, write: MowerCommandWrite): void {
+export function requireWritable(before: MowerDpSnapshot, command: CommandClass): void {
+  const { write } = command;
   const progress = before.dps[MAP_SAVE_DP];
   if (typeof progress !== 'number' || !Number.isInteger(progress) || progress < 0 || progress > 100)
     throw new EufyError('mower_command_evidence_missing');
   if (progress > 0 && progress < 100) throw new EufyError('mower_command_map_saving');
+  if (command.requires === 'stopped') {
+    if (before.dps[TASK_DP] !== false) throw new EufyError('mower_command_task_active');
+    if (progress !== 100) throw new EufyError('mower_command_map_saving');
+  }
   if (before.dps[write.dp] === write.value) throw new EufyError('mower_command_already_set');
 }
 
