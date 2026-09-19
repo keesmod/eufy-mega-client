@@ -454,6 +454,56 @@ report. See the
 and the
 [reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md).
 
+## Opt-in mower commands, 0.16.0
+
+Physical control is off unless the client is constructed with
+`mowers.commands`. The opt-in must be explicit and must name the consumer's
+own stop route. An invalid opt-in fails construction with
+`mower_invalid_options`. Without it `session.sendCommand()` reports
+`mower_commands_disabled` before any frame is written.
+
+```ts
+const client = new EufyClient({
+  mowers: {
+    credentials,
+    sessionStore,
+    commands: {
+      enabled: true,
+      stopRoute: 'pause then return through this session, official app at hand',
+      readBackMs: 10_000,
+    },
+  },
+});
+const session = await client.mowers.openLocalSession(mower.id, { host: '192.0.2.10' });
+const outcome = await session.sendCommand({ kind: 'pause' });
+if (outcome.end === 'reflected') {
+  // A fresh DP 107 report decoded to `paused`. Nothing else counts as success.
+}
+```
+
+`sendCommand({ kind, readBackMs? })` accepts `start`, `pause`, `resume` and
+`return`. It runs one fresh status query, returned as `before`, decides the
+typed refusals on it, writes one declared boolean point, then reads fresh
+reports back within the bound, default 10 seconds and at most 60. The result
+carries `write`, `sentAt`, the device's frame `reply` when one arrived, the
+first `acknowledgement` by a control-point or echo report, the first matching
+`activity` from the confirmed DP 107 definitions, every report received in
+`reports`, and `stage` with `end`. `stage` is `sent`, `acknowledged` or
+`reflected`. `end` is `reflected`, `rejected`, `timed_out` or `report_limit`.
+A timeout resolves rather than throws because the write already happened, and
+the library never resends it. There is no `completed` and dock arrival is
+never inferred.
+
+Refusals before any write are `mower_command_invalid`,
+`mower_command_undeclared`, `mower_command_evidence_missing`,
+`mower_command_map_saving` and `mower_command_already_set`. One command owns
+the session, so a concurrent read reports `mower_local_busy`. Peer loss during
+the read-back reports `mower_local_disconnected` and closes the session, which
+the consumer must reopen deliberately. `client.mowers.commandsEnabled` and
+`session.commandsEnabled` report the opt-in. The written points, their public
+sources, the frame format and the remaining hardware acceptance are in
+[Opt-in mower commands](MOWER_COMMANDS.md).
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,

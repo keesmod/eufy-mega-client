@@ -1,9 +1,13 @@
-// Read-only local Tuya 3.5 session owner for one E15. Protocol facts and their permitted
-// sources: docs/MOWER_TRANSPORT_PROVENANCE.md. No DP writes, commands or settings exist here.
+// Local Tuya 3.5 session owner for one E15. Protocol facts and their permitted sources:
+// docs/MOWER_TRANSPORT_PROVENANCE.md and docs/MOWER_COMMANDS.md. Reads never write. The only
+// writes are the opt-in command classes in commands.ts, one declared boolean point each.
 import net from 'node:net';
 import { once } from 'node:events';
 import { EufyError } from '../../types.js';
 import type {
+  MowerCommandOptions,
+  MowerCommandOutcome,
+  MowerCommandRequest,
   MowerDpSchemaEntry,
   MowerDpSnapshot,
   MowerDpReport,
@@ -15,10 +19,19 @@ import type {
 import { decodeMowerTelemetry } from '../telemetry/decode.js';
 import { copySchema } from '../telemetry/schema.js';
 import {
+  COMMANDS,
+  MAX_COMMAND_REPORTS,
+  controlDocument,
+  requireDeclaredWrite,
+  requireWritable,
+  validateCommandRequest,
+} from './commands.js';
+import {
   Command,
   FrameReader,
   LOCAL_PORT,
   MAX_FRAME_LENGTH,
+  controlPayload,
   decodeFrame,
   decodeStatus,
   deriveSessionKey,
@@ -73,6 +86,7 @@ export class LocalMowerSession implements MowerLocalSession {
   readonly #port: number;
   readonly #timeout: number;
   readonly #lifetime: AbortSignal;
+  readonly #commands?: MowerCommandOptions;
   #socket?: net.Socket;
   #socketConnected = false;
   #socketClosed = false;
@@ -92,12 +106,17 @@ export class LocalMowerSession implements MowerLocalSession {
   #wake?: () => void;
   readonly #onLifetimeAbort = () => this.#finish('shutdown');
 
-  constructor(options: MowerLocalSessionOptions, lifetime: AbortSignal) {
+  constructor(
+    options: MowerLocalSessionOptions,
+    lifetime: AbortSignal,
+    commands?: MowerCommandOptions,
+  ) {
     const valid = validateOptions(options);
     this.#host = valid.host;
     this.#port = valid.port;
     this.#timeout = valid.timeout;
     this.#lifetime = lifetime;
+    if (commands) this.#commands = { ...commands };
     this.closed = new Promise((resolve) => {
       this.#resolveClosed = resolve;
     });
@@ -107,6 +126,10 @@ export class LocalMowerSession implements MowerLocalSession {
 
   get connected(): boolean {
     return !!this.#key && !this.#end && !this.#socketClosed;
+  }
+
+  get commandsEnabled(): boolean {
+    return !!this.#commands;
   }
 
   get schema(): MowerDpSchemaEntry[] | undefined {
@@ -150,9 +173,7 @@ export class LocalMowerSession implements MowerLocalSession {
     return this.#operation(signal, async (abort) => {
       const key = this.#key;
       if (!key) throw new EufyError('mower_local_disconnected');
-      this.#send(key, Command.DP_QUERY_NEW, Buffer.from('{}'));
-      const frame = await this.#receive(key, abort, Command.DP_QUERY_NEW, true);
-      return this.#snapshot(frame);
+      return this.#query(key, abort);
     });
   }
 
@@ -165,29 +186,144 @@ export class LocalMowerSession implements MowerLocalSession {
     return this.#operation(signal, async (abort) => {
       const key = this.#key;
       if (!key) throw new EufyError('mower_local_disconnected');
-      // Tuya's LAN owner expires a connection after 30 seconds without incoming traffic.
-      // An empty command-9 frame maintains transport only, never refreshes or writes a DP.
-      let heartbeat: ReturnType<typeof setTimeout> | undefined;
-      const keepAlive = () => {
-        try {
-          if (performance.now() - this.#lastSentAt >= HEARTBEAT_INTERVAL_MS)
-            this.#send(key, Command.HEARTBEAT, Buffer.alloc(0));
-          heartbeat = setTimeout(
-            keepAlive,
-            Math.max(1, HEARTBEAT_INTERVAL_MS - (performance.now() - this.#lastSentAt)),
-          );
-        } catch {
-          this.#finish('peer_closed');
-        }
-      };
-      try {
-        keepAlive();
+      return this.#withHeartbeat(key, async () => {
         const frame = await this.#receive(key, abort, Command.STATUS_REPORT, true);
-        return { ...this.#snapshot(frame), kind: 'device-report', sequence: frame.sequence };
-      } finally {
-        clearTimeout(heartbeat);
-      }
+        return this.#report(frame);
+      });
     });
+  }
+
+  sendCommand(request: MowerCommandRequest, signal?: AbortSignal): Promise<MowerCommandOutcome> {
+    const commands = this.#commands;
+    if (!commands) return Promise.reject(new EufyError('mower_commands_disabled'));
+    let valid: ReturnType<typeof validateCommandRequest>;
+    try {
+      valid = validateCommandRequest(request, commands);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    const command = COMMANDS[valid.kind];
+    // The hard deadline covers the fresh query and the bounded read-back after the write.
+    return this.#operation(
+      signal,
+      async (abort) => {
+        const key = this.#key;
+        if (!key) throw new EufyError('mower_local_disconnected');
+        requireDeclaredWrite(command.write, this.#schema);
+        const before = await this.#query(key, abort);
+        requireWritable(before, command.write);
+        const outcome: MowerCommandOutcome = {
+          command: valid.kind,
+          write: { ...command.write },
+          before,
+          sentAt: new Date().toISOString(),
+          stage: 'sent',
+          end: 'timed_out',
+          reports: [],
+        };
+        this.#send(key, Command.CONTROL_NEW, controlPayload(controlDocument(command.write)));
+        const bound = AbortSignal.timeout(valid.readBackMs);
+        const readSignal = AbortSignal.any([abort, bound]);
+        const wanted = new Set([Command.CONTROL_NEW, Command.STATUS_REPORT]);
+        await this.#withHeartbeat(key, async () => {
+          while (true) {
+            let frame: ReceivedFrame;
+            try {
+              frame = await this.#next(key, readSignal, wanted, true);
+            } catch (error) {
+              if (bound.aborted && !abort.aborted) return;
+              throw error;
+            }
+            if (frame.command === Command.CONTROL_NEW) {
+              const { accepted, data } = splitReturnCode(frame.plaintext);
+              const rejected = data.length > 0;
+              frame.plaintext.fill(0);
+              outcome.reply ??= {
+                observedAt: frame.observedAt,
+                returnCodeZero: accepted,
+                rejected,
+              };
+              if (rejected) {
+                outcome.end = 'rejected';
+                return;
+              }
+              continue;
+            }
+            const report = this.#report(frame);
+            if (outcome.reports.length >= MAX_COMMAND_REPORTS) {
+              outcome.end = 'report_limit';
+              return;
+            }
+            outcome.reports.push(report);
+            // Frames queued before the write are kept as context but are not fresh evidence.
+            if (report.observedAt < outcome.sentAt) continue;
+            const dps = report.dps;
+            if (
+              !outcome.acknowledgement &&
+              (Object.hasOwn(dps, command.control) || dps[command.write.dp] === command.write.value)
+            ) {
+              outcome.acknowledgement = {
+                observedAt: report.observedAt,
+                sequence: report.sequence,
+                dp: Object.hasOwn(dps, command.control) ? command.control : command.write.dp,
+              };
+              outcome.stage = 'acknowledged';
+            }
+            if (!Object.hasOwn(dps, '107')) continue;
+            const status = decodeMowerTelemetry(report, { schema: this.#schema }).status;
+            if (status.state === 'reported' && status.value === command.activity) {
+              outcome.activity = {
+                observedAt: report.observedAt,
+                sequence: report.sequence,
+                value: status.value,
+              };
+              outcome.stage = 'reflected';
+              outcome.end = 'reflected';
+              return;
+            }
+          }
+        });
+        return outcome;
+      },
+      this.#timeout + valid.readBackMs,
+    );
+  }
+
+  async #query(key: Buffer, abort: AbortSignal): Promise<MowerDpSnapshot> {
+    this.#send(key, Command.DP_QUERY_NEW, Buffer.from('{}'));
+    const frame = await this.#receive(key, abort, Command.DP_QUERY_NEW, true);
+    return this.#snapshot(frame);
+  }
+
+  #report(frame: ReceivedFrame): MowerDpReport {
+    return { ...this.#snapshot(frame), kind: 'device-report', sequence: frame.sequence };
+  }
+
+  /**
+   * Tuya's LAN owner expires a connection after 30 seconds without incoming traffic. An empty
+   * command-9 frame maintains transport only, never refreshes or writes a DP, and is sent only
+   * while a read is pending.
+   */
+  async #withHeartbeat<T>(key: Buffer, task: () => Promise<T>): Promise<T> {
+    let heartbeat: ReturnType<typeof setTimeout> | undefined;
+    const keepAlive = () => {
+      try {
+        if (performance.now() - this.#lastSentAt >= HEARTBEAT_INTERVAL_MS)
+          this.#send(key, Command.HEARTBEAT, Buffer.alloc(0));
+        heartbeat = setTimeout(
+          keepAlive,
+          Math.max(1, HEARTBEAT_INTERVAL_MS - (performance.now() - this.#lastSentAt)),
+        );
+      } catch {
+        this.#finish('peer_closed');
+      }
+    };
+    try {
+      keepAlive();
+      return await task();
+    } finally {
+      clearTimeout(heartbeat);
+    }
   }
 
   #snapshot(frame: ReceivedFrame): MowerDpSnapshot {
@@ -211,13 +347,14 @@ export class LocalMowerSession implements MowerLocalSession {
   async #operation<T>(
     external: AbortSignal | undefined,
     task: (signal: AbortSignal) => Promise<T>,
+    deadlineMs = this.#timeout,
   ): Promise<T> {
     if (this.#end)
       throw new EufyError(this.#end === 'shutdown' ? 'client_closed' : 'mower_local_disconnected');
     if (this.#busy) throw new EufyError('mower_local_busy');
     this.#busy = true;
     const deadline = new AbortController();
-    const timer = setTimeout(() => deadline.abort(), this.#timeout);
+    const timer = setTimeout(() => deadline.abort(), deadlineMs);
     const signal = AbortSignal.any([
       deadline.signal,
       this.#lifetime,
@@ -242,7 +379,8 @@ export class LocalMowerSession implements MowerLocalSession {
         throw new EufyError('request_timeout');
       }
       if (error instanceof EufyError) {
-        if (error.code === 'mower_local_rejected') throw error;
+        if (error.code === 'mower_local_rejected' || error.code.startsWith('mower_command_'))
+          throw error;
         if (error.code === 'mower_local_disconnected') this.#finish(this.#failure ?? 'peer_closed');
         else if (error.code === 'mower_local_authentication_failed')
           this.#finish('authentication_failed');
@@ -305,10 +443,20 @@ export class LocalMowerSession implements MowerLocalSession {
     this.#lastSentAt = performance.now();
   }
 
-  async #receive(
+  #receive(
     key: Buffer,
     signal: AbortSignal,
     command: number,
+    skipOthers: boolean,
+  ): Promise<ReceivedFrame> {
+    return this.#next(key, signal, new Set([command]), skipOthers);
+  }
+
+  /** Return the next frame whose command is wanted. Other frames are skipped within a bound. */
+  async #next(
+    key: Buffer,
+    signal: AbortSignal,
+    wanted: ReadonlySet<number>,
     skipOthers: boolean,
   ): Promise<ReceivedFrame> {
     let skipped = 0;
@@ -326,7 +474,7 @@ export class LocalMowerSession implements MowerLocalSession {
         } finally {
           raw.fill(0);
         }
-        if (frame.command === command) return frame;
+        if (wanted.has(frame.command)) return frame;
         frame.plaintext.fill(0);
         if (!skipOthers || ++skipped > MAX_SKIPPED_FRAMES)
           throw new EufyError('mower_local_protocol_error');

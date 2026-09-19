@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.16.0 - Unreleased
+
+### Opt-in E15 commands
+
+- Add `mowers.commands: { enabled: true, stopRoute, readBackMs? }` as the only
+  way to enable physical control, and `session.sendCommand({ kind })` for
+  `start`, `pause`, `resume` and `return`. Each call runs one fresh status
+  query, writes one declared boolean point, DP 1 `switch_go`, DP 2 `pause` or
+  DP 3 `switch_charge`, and reads the lifecycle back from fresh reports within
+  a bound: `stage` is `sent`, `acknowledged` or `reflected` and `end` is
+  `reflected`, `rejected`, `timed_out` or `report_limit`. A sent command is
+  never reported as completed and dock arrival is never inferred.
+- Typed refusals before any write: `mower_commands_disabled`,
+  `mower_command_invalid`, `mower_command_undeclared`,
+  `mower_command_evidence_missing`, `mower_command_map_saving` and
+  `mower_command_already_set`. One command owns the session at a time. There
+  is no retry, replay or reconnect. Rain and child protection are never
+  touched. Without the opt-in nothing changed.
+- The control frame, its sources and the reasons for not writing the raw
+  control points are in [Opt-in mower commands](docs/MOWER_COMMANDS.md) and
+  the [control-point receipt](docs/research/E15_CONTROL_POINTS_2026-09-19.md).
+  No command has been sent to the owned E15 yet. References #169.
+
 ## 0.15.0 - 2026-09-19
 
 ### Confirmed E15 activity

@@ -89,6 +89,14 @@ GCM rejection, actual arrival times across buffered delivery, partial values,
 missing-report expiry, exclusive ownership, cancellation, shutdown, queue
 overflow and heartbeat cleanup. No device values or mower-fork code are used.
 
+## Control commands, issue #169
+
+The opt-in command path of 0.16.0 writes one declared boolean point per call
+through frame type `0x0d`. Its protocol facts, the pinned sources for the
+version header, document shape and device reply, and the reasons for not
+writing the raw control points are recorded in
+[Opt-in mower commands](MOWER_COMMANDS.md). Reads remain write-free.
+
 ## Independent reproduction
 
 `scripts/research/tuya35_vectors.py` runs tinytuya 1.20.0 offline with synthetic

@@ -55,6 +55,8 @@ export async function fakeMower(t, config = {}) {
     live: 0,
     negotiated: 0,
     received: [],
+    /** Decoded control commands: version header text, parsed document and data points. */
+    writes: [],
     faults: [],
     sockets: new Set(),
     reporters: new Set(),
@@ -190,6 +192,40 @@ export async function fakeMower(t, config = {}) {
           else answer();
         } else if (frame.type === 9) {
           write(socket, deviceFrame(secret, 0, 9, reply(0, Buffer.alloc(0))));
+        } else if (frame.type === 0x0d) {
+          // Device-side control handling: strip the 15-byte version header, require a
+          // JSON document with data.dps, answer with the device's own counter and return
+          // code 1, carrying a description only when the document is unusable.
+          const header = frame.data.subarray(0, 15);
+          let document;
+          let describe;
+          try {
+            document = JSON.parse(frame.data.subarray(15).toString('utf8'));
+            if (!document?.data?.dps || typeof document.data.dps !== 'object') throw new Error();
+          } catch {
+            describe = 'data format error';
+          }
+          const entry = {
+            sequence: frame.sequence,
+            version: header.subarray(0, 3).toString('latin1'),
+            headerZeros: header.subarray(3).every((byte) => byte === 0),
+            document,
+            dps: document?.data?.dps,
+          };
+          peer.writes.push(entry);
+          if (config.rejectControl) describe = 'data format error';
+          if (!config.silentControl) {
+            const text = Buffer.from(describe ?? '', 'utf8');
+            const out = deviceFrame(
+              secret,
+              outgoing++,
+              0x0d,
+              reply(config.controlCode ?? (describe ? 1 : 0), text),
+            );
+            if (config.delayControlMs) later(() => write(socket, out), config.delayControlMs);
+            else write(socket, out);
+          }
+          if (!describe) config.onWrite?.(entry.dps, report, entry);
         }
       }
     });
