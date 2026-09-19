@@ -454,7 +454,7 @@ report. See the
 and the
 [reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md).
 
-## Opt-in mower commands, 0.16.0
+## Opt-in mower commands, 0.16.0 and 0.17.0
 
 Physical control is off unless the client is constructed with
 `mowers.commands`. The opt-in must be explicit and must name the consumer's
@@ -481,14 +481,15 @@ if (outcome.end === 'reflected') {
 }
 ```
 
-`sendCommand({ kind, readBackMs? })` accepts `start`, `pause`, `resume` and
-`return`. It runs one fresh status query, returned as `before`, decides the
-typed refusals on it, writes one declared boolean point, then reads fresh
-reports back within the bound, default 10 seconds and at most 60. The result
-carries `write`, `sentAt`, the device's frame `reply` when one arrived, the
-first `acknowledgement` by a control-point or echo report, the first matching
-`activity` from the confirmed DP 107 definitions, every report received in
-`reports`, and `stage` with `end`. `stage` is `sent`, `acknowledged` or
+`sendCommand({ kind, readBackMs? })` accepts `start`, `pause`, `resume`,
+`stop` and `return`. It runs one fresh status query, returned as `before`,
+decides the typed refusals on it, writes one declared boolean point, then
+reads fresh reports back within the bound, default 10 seconds and at most 60.
+The result carries `write`, `sentAt`, the device's frame `reply` when one
+arrived, the first `acknowledgement` by a control-point or echo report, the
+first matching `activity` from the confirmed DP 107 definitions or, for
+`stop`, the first `payload` whose DP 107 records are exactly the map-saving
+payload, every report received in `reports`, and `stage` with `end`. `stage` is `sent`, `acknowledged` or
 `reflected`. `end` is `reflected`, `rejected`, `timed_out` or `report_limit`.
 A timeout resolves rather than throws because the write already happened, and
 the library never resends it. There is no `completed` and dock arrival is
@@ -496,8 +497,11 @@ never inferred.
 
 Refusals before any write are `mower_command_invalid`,
 `mower_command_undeclared`, `mower_command_evidence_missing`,
-`mower_command_map_saving` and `mower_command_already_set`. One command owns
-the session, so a concurrent read reports `mower_local_busy`. Peer loss during
+`mower_command_map_saving`, `mower_command_task_active` and
+`mower_command_already_set`. `return` is written only from the stopped task,
+DP 1 `switch_go` false with DP 118 at 100, the state in which the official app
+offers Charge, and `stop` over DP 1 false is the class that reaches it. One
+command owns the session, so a concurrent read reports `mower_local_busy`. Peer loss during
 the read-back reports `mower_local_disconnected` and closes the session, which
 the consumer must reopen deliberately. `client.mowers.commandsEnabled` and
 `session.commandsEnabled` report the opt-in. The written points, their public

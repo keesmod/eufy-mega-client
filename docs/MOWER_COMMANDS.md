@@ -1,13 +1,15 @@
 # Opt-in mower commands
 
 Implementation, software evidence and hardware evidence for
-[#169](https://github.com/keesmod/eufy-mega-client/issues/169). The command
+[#169](https://github.com/keesmod/eufy-mega-client/issues/169) and
+[#173](https://github.com/keesmod/eufy-mega-client/issues/173). The command
 path sits on the local session of
 [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) and the confirmed
 DP 107 activities of [typed mower telemetry](MOWER_TELEMETRY.md). Change class:
 additive extension of the mower module. Reads still never write. The session
-can write exactly four declared boolean points, only behind an explicit
-per-client opt-in, one command at a time, without retry, replay or reconnect.
+can write exactly three declared boolean points through five command
+classes, only behind an explicit per-client opt-in, one command at a time,
+without retry, replay or reconnect.
 
 ## Contract
 
@@ -21,7 +23,8 @@ with `mower_commands_disabled` before any frame is written, and
 `client.mowers.commandsEnabled` and `session.commandsEnabled` report `false`.
 
 `session.sendCommand({ kind, readBackMs? })` runs one command of the class
-`start`, `pause`, `resume` or `return` and resolves a `MowerCommandOutcome`:
+`start`, `pause`, `resume`, `stop` or `return` and resolves a
+`MowerCommandOutcome`:
 
 1. One fresh status query. Its snapshot is returned as `before`. The typed
    refusals below are decided on it, and nothing is written when one applies.
@@ -36,21 +39,25 @@ with `mower_commands_disabled` before any frame is written, and
 `stage` is the furthest stage evidenced by fresh reports and `end` says why
 the read-back stopped:
 
-| Stage          | Evidence                                                                                                                                                       |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sent`         | The frame was written. The device's frame reply, when one arrived, is in `reply` with `returnCodeZero` and `rejected`. A reply is not an acknowledgement       |
-| `acknowledged` | A fresh report carried the class's declared control point, DP 103 for start and return, DP 105 for pause, DP 106 for resume, or the written point at its value |
-| `reflected`    | A fresh DP 107 report decoded through the confirmed E15 definitions to the expected activity: `mowing` for start and resume, `paused`, `returning`             |
+| Stage          | Evidence                                                                                                                                                                                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sent`         | The frame was written. The device's frame reply, when one arrived, is in `reply` with `returnCodeZero` and `rejected`. A reply is not an acknowledgement                                                                                                                                                     |
+| `acknowledged` | A fresh report carried the class's declared control point, DP 103 for start and return, DP 104 for stop, DP 105 for pause, DP 106 for resume, or the written point at its value                                                                                                                              |
+| `reflected`    | A fresh DP 107 report decoded through the confirmed E15 definitions to the expected activity, `mowing` for start and resume, `paused` and `returning`, reported in `activity`. For `stop` the reflection is the map-saving payload, DP 107 fields 2 = 5 and 3 = 1 as its only records, reported in `payload` |
 
 | End            | Meaning                                                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `reflected`    | The expected activity was reported within the bound                                                                             |
+| `reflected`    | The expected activity, or for `stop` the map-saving payload, was reported within the bound                                      |
 | `rejected`     | The device answered the control frame with a description, which the reference implementation sends only for an unusable command |
 | `timed_out`    | The bound passed. The outcome is resolved, not thrown, because the write has already happened and must not be repeated          |
-| `report_limit` | 64 reports arrived without the expected activity                                                                                |
+| `report_limit` | 64 reports arrived without the expected reflection                                                                              |
 
 There is no `completed`. A reflected return means the mower reported
-`returning`. Dock arrival is not part of any lifecycle and is never inferred
+`returning`. A reflected stop means the mower reported the map-saving payload
+that followed every app Stop on the owned device, the app's `Saving the map`
+phase. The save itself, DP 118 rising to 100, DP 1 false, DP 107 field 6 = 1
+and the default payload, completes after the read-back and is not part of the
+lifecycle. Dock arrival is not part of any lifecycle and is never inferred
 from silence, from the read-back bound or from an acknowledgement. Rain and
 child protection are never read for a decision, never written and never
 bypassed. The library never sends a second frame for one call, never retries a
@@ -58,14 +65,23 @@ timed-out or rejected command and never reconnects a lost session.
 
 ### Typed refusals before any write
 
-| Code                             | Decided on                                                                                                                                                    |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mower_commands_disabled`        | The client has no valid opt-in                                                                                                                                |
-| `mower_command_invalid`          | Unknown `kind` or a `readBackMs` outside 1000 to 60000                                                                                                        |
-| `mower_command_undeclared`       | The session schema does not declare the point as a writable boolean with the expected code. A session without a schema cannot write                           |
-| `mower_command_evidence_missing` | The fresh query carries no valid DP 118 `save_map_process` percentage, so a running map save cannot be excluded                                               |
-| `mower_command_map_saving`       | DP 118 is strictly between 0 and 100. The app offers no control during a map save, and a return control pressed during one was ignored on the owned device    |
-| `mower_command_already_set`      | The fresh query already shows the written point at the written value, so the write cannot produce a fresh change and a repeated activity report could mislead |
+| Code                             | Decided on                                                                                                                                                                                                                                    |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mower_commands_disabled`        | The client has no valid opt-in                                                                                                                                                                                                                |
+| `mower_command_invalid`          | Unknown `kind` or a `readBackMs` outside 1000 to 60000                                                                                                                                                                                        |
+| `mower_command_undeclared`       | The session schema does not declare the point as a writable boolean with the expected code. A session without a schema cannot write                                                                                                           |
+| `mower_command_evidence_missing` | The fresh query carries no valid DP 118 `save_map_process` percentage, so a running map save cannot be excluded                                                                                                                               |
+| `mower_command_map_saving`       | DP 118 is strictly between 0 and 100 for every class, and for `return` also when it is not exactly 100. The app offers no control during a map save, and a return control pressed during one was ignored on the owned device                  |
+| `mower_command_task_active`      | Only `return`: DP 1 `switch_go` is not `false` on the fresh query. The app offers Charge only after Stop and the map save, and a return sent from `paused` was ignored on the owned device, so `return` is written only from the stopped task |
+| `mower_command_already_set`      | The fresh query already shows the written point at the written value, so the write cannot produce a fresh change and a repeated activity report could mislead                                                                                 |
+
+The stopped task is DP 1 `false` with DP 118 at 100. The library cannot tell a
+mower stopped on the lawn from a docked one, both read the same two values,
+so a `return` sent while docked is not refused. It also cannot tell the app's
+Loading phase, between DP 1 turning false and the default DP 107 payload about
+15 seconds later, from the state in which the app enables Charge. A consumer
+that follows the app waits for the default payload after a `stop` before it
+sends `return`.
 
 The existing session errors apply unchanged: `mower_local_busy` while another
 operation owns the session, `request_aborted` on cancellation,
@@ -76,21 +92,23 @@ consumer. Nothing is resent on the new session.
 
 ## The writes and their sources
 
-| Class    | Written point               | Control point that reported on every app press | Expected activity |
-| -------- | --------------------------- | ---------------------------------------------- | ----------------- |
-| `start`  | DP 1 `switch_go` = true     | DP 103 `start_control`                         | `mowing`          |
-| `pause`  | DP 2 `pause` = true         | DP 105 `pause_control`                         | `paused`          |
-| `resume` | DP 2 `pause` = false        | DP 106 `resume_control`                        | `mowing`          |
-| `return` | DP 3 `switch_charge` = true | DP 103 `start_control`                         | `returning`       |
+| Class    | Written point               | Control point that reported on every app press | Expected reflection                        |
+| -------- | --------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| `start`  | DP 1 `switch_go` = true     | DP 103 `start_control`                         | `mowing`                                   |
+| `pause`  | DP 2 `pause` = true         | DP 105 `pause_control`                         | `paused`                                   |
+| `resume` | DP 2 `pause` = false        | DP 106 `resume_control`                        | `mowing`                                   |
+| `stop`   | DP 1 `switch_go` = false    | DP 104 `stop_control`                          | Map-saving payload, fields 2 = 5 and 3 = 1 |
+| `return` | DP 3 `switch_charge` = true | DP 103 `start_control`                         | `returning`, only from the stopped task    |
 
-| Fact                                                                                                                                                                                                                                                                                                               | Permitted source                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The owned E15 declares DP 1 `switch_go`, DP 2 `pause` and DP 3 `switch_charge` as writable booleans, DP 103 to 106 as writable raw points, DP 118 `save_map_process` as a read-only percentage, and DP 5 `status` as an enum that never arrived in any report                                                      | Product schema retrieved through discovery, recorded in the [telemetry receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md). Product metadata, not a secret                                                                                                                                                                                                                                                                                                                                                                                   |
-| For the protocol owner's standard robot points, `switch_go` true starts and false stops the job, `pause` true pauses and false continues the current work state, `switch_charge` true starts and false stops a recharge, and the device reports the point after executing the command                              | Tuya Developer documentation, [Data Point (DP) for robot devices](https://developer.tuya.com/en/docs/iot-device-dev/robot_device_dp?id=Kd93ny7iall38) and [DPs and interaction logic of robot vacuum](https://developer.tuya.com/en/docs/iot-device-dev/basic_dp_interactive?id=Kf765i4rk91k1), read 2026-09-19. Public documentation of the protocol owner. It documents the standard codes, not this firmware                                                                                                                                     |
-| A LAN control command is frame type `0x0d`. Its plaintext is the 15-byte version header, the text `3.5` followed by twelve bytes for the unused checksum, serial and source fields, then a JSON document with `protocol`, `t` and `data`, where `data` must carry `dps`. The device hands `data` to its DP parser  | [tuya/TuyaOpen, 4e3147b3241ae15a171f284c3d812b20a26fe398](https://github.com/tuya/TuyaOpen/tree/4e3147b3241ae15a171f284c3d812b20a26fe398), `tuya_lan.c` `lan_protocol_process` cases `FRM_TP_CMD` and `FRM_TP_NEW_CMD`, `tuya_protocol.c` `__parse_data_with_lpv35` and its offsets, `dp_schema.c` `dp_data_recv_parse`. Apache-2.0, copyright Tuya Inc. Read only, no code copied. Same pinned revision and digests as the transport provenance, plus `tuya_protocol.c` SHA-256 `e7cce6a3e64e71edfa4b7e82b023d01105938e3a61b5fdf86d5f4e8d09375472` |
-| Client convention for a 3.5 device: `CONTROL` is sent as `CONTROL_NEW` `0x0d` with `{"protocol":5,"t":<seconds>,"data":{"dps":...}}` and the `3.5` version header, and no device identifier is required                                                                                                            | [jasonacox/tinytuya v1.20.0](https://github.com/jasonacox/tinytuya/tree/8512d8364a9d0e351bbec2597bafa17595545b13), `XenonDevice.py` `payload_dict` for v3.5 and `_encode_message`, `header.py` `NO_PROTOCOL_HEADER_CMDS`. MIT, copyright 2024 Jason Cox. Read only, no code copied                                                                                                                                                                                                                                                                  |
-| The reference device answers a control command with the same frame type, its own outgoing counter and return code 1, carrying a description text only when the document could not be parsed or lacks `dps`. Acceptance is therefore not readable from the return code                                              | TuyaOpen `tuya_lan.c` `lan_protocol_process` and `lan_send`. tinytuya `_get_retcode` records that 3.5 devices answer with a global counter                                                                                                                                                                                                                                                                                                                                                                                                          |
-| On the owned E15 every app press of Start, Pause, Continue and Charge was followed within milliseconds by a report of the matching raw control point and, for Start, Pause and Continue, by DP 1 or DP 2 changing to the value the standard assigns to that action. The app's Charge changed neither DP 1 nor DP 3 | [Reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md) and the [control-point receipt](research/E15_CONTROL_POINTS_2026-09-19.md)                                                                                                                                                                                                                                                                                                                                                                                             |
+| Fact                                                                                                                                                                                                                                                                                                                                              | Permitted source                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The owned E15 declares DP 1 `switch_go`, DP 2 `pause` and DP 3 `switch_charge` as writable booleans, DP 103 to 106 as writable raw points, DP 118 `save_map_process` as a read-only percentage, and DP 5 `status` as an enum that never arrived in any report                                                                                     | Product schema retrieved through discovery, recorded in the [telemetry receipt](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md). Product metadata, not a secret                                                                                                                                                                                                                                                                                                                                                                                   |
+| For the protocol owner's standard robot points, `switch_go` true starts and false stops the job, `pause` true pauses and false continues the current work state, `switch_charge` true starts and false stops a recharge, and the device reports the point after executing the command                                                             | Tuya Developer documentation, [Data Point (DP) for robot devices](https://developer.tuya.com/en/docs/iot-device-dev/robot_device_dp?id=Kd93ny7iall38) and [DPs and interaction logic of robot vacuum](https://developer.tuya.com/en/docs/iot-device-dev/basic_dp_interactive?id=Kf765i4rk91k1), read 2026-09-19. Public documentation of the protocol owner. It documents the standard codes, not this firmware                                                                                                                                     |
+| A LAN control command is frame type `0x0d`. Its plaintext is the 15-byte version header, the text `3.5` followed by twelve bytes for the unused checksum, serial and source fields, then a JSON document with `protocol`, `t` and `data`, where `data` must carry `dps`. The device hands `data` to its DP parser                                 | [tuya/TuyaOpen, 4e3147b3241ae15a171f284c3d812b20a26fe398](https://github.com/tuya/TuyaOpen/tree/4e3147b3241ae15a171f284c3d812b20a26fe398), `tuya_lan.c` `lan_protocol_process` cases `FRM_TP_CMD` and `FRM_TP_NEW_CMD`, `tuya_protocol.c` `__parse_data_with_lpv35` and its offsets, `dp_schema.c` `dp_data_recv_parse`. Apache-2.0, copyright Tuya Inc. Read only, no code copied. Same pinned revision and digests as the transport provenance, plus `tuya_protocol.c` SHA-256 `e7cce6a3e64e71edfa4b7e82b023d01105938e3a61b5fdf86d5f4e8d09375472` |
+| Client convention for a 3.5 device: `CONTROL` is sent as `CONTROL_NEW` `0x0d` with `{"protocol":5,"t":<seconds>,"data":{"dps":...}}` and the `3.5` version header, and no device identifier is required                                                                                                                                           | [jasonacox/tinytuya v1.20.0](https://github.com/jasonacox/tinytuya/tree/8512d8364a9d0e351bbec2597bafa17595545b13), `XenonDevice.py` `payload_dict` for v3.5 and `_encode_message`, `header.py` `NO_PROTOCOL_HEADER_CMDS`. MIT, copyright 2024 Jason Cox. Read only, no code copied                                                                                                                                                                                                                                                                  |
+| The reference device answers a control command with the same frame type, its own outgoing counter and return code 1, carrying a description text only when the document could not be parsed or lacks `dps`. Acceptance is therefore not readable from the return code                                                                             | TuyaOpen `tuya_lan.c` `lan_protocol_process` and `lan_send`. tinytuya `_get_retcode` records that 3.5 devices answer with a global counter                                                                                                                                                                                                                                                                                                                                                                                                          |
+| On the owned E15 every app press of Start, Pause, Continue and Charge was followed within milliseconds by a report of the matching raw control point and, for Start, Pause and Continue, by DP 1 or DP 2 changing to the value the standard assigns to that action. The app's Charge changed neither DP 1 nor DP 3                                | [Reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md) and the [control-point receipt](research/E15_CONTROL_POINTS_2026-09-19.md)                                                                                                                                                                                                                                                                                                                                                                                             |
+| Every app Stop with Clear Progress was followed within milliseconds by DP 104 `stop_control`, DP 2 false and the map-saving DP 107 payload with fields 2 = 5 and 3 = 1, then by DP 118 rising to 100, DP 1 false, DP 107 field 6 = 1 and the default payload, after which the app offered Charge. The library has never written DP 1 false itself | [Reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md), three cycles, and the [command window receipt](research/E15_COMMAND_WINDOW_2026-09-19.md), one cycle while the library listened                                                                                                                                                                                                                                                                                                                                       |
 
 ### Why the raw control points are not written
 
@@ -123,7 +141,14 @@ and default payloads, timeout with the evidenced stage, rejection, every typed
 refusal without a written frame, the schema veto, invalid requests, exclusive
 ownership, peer loss without reconnect, cancellation, shutdown, the report
 limit, the hard deadline, heartbeats during a long read-back and outcome
-isolation. All tests use loopback sockets and synthetic values.
+isolation. For `stop` and the return precondition they cover the lifecycle
+order recorded after the app's Stop, DP 104, DP 2 false, DP 118 reset, the
+map-saving payload as the reflection reported in `payload`, stop without that
+payload ending at the evidenced stage, DP 107 shapes that must never reflect
+it, the `mower_command_task_active` refusal without a written frame, and stop
+followed by return on one session against a synthetic state that finishes its
+map save between the two commands. All tests use loopback sockets and
+synthetic values.
 
 ## Hardware acceptance
 
@@ -155,7 +180,18 @@ the mower and confirmed each physical result before the next command.
   a map save, when DP 118 already reads 100, is not refused and is expected to
   end `timed_out` as well.
 
+`stop` and `return` from the stopped task are software only. The library has
+never written DP 1 `switch_go` false, and the owned device has only ever
+reached the stopped task through the app's Stop with Clear Progress. The
+second owner-operated window of
+[#173](https://github.com/keesmod/eufy-mega-client/issues/173) sends `stop`
+from mowing, waits for the default payload and sends `return` from the stopped
+task. Whether a plain DP 1 false keeps or clears the mowing progress, which the
+app offers as two separate Stop choices, is recorded from the device in that
+window and not assumed. If DP 3 is ignored from the stopped task as well, the
+library has no return route on firmware 6.9.28 and a consumer must keep using
+the app for it.
+
 One window and one cycle per class do not cover start after a Stop, pause while
 returning, commands during a map save, or refusals by low battery, rain or the
-child lock. Stop and stop-with-clear are not offered. Settings, zones,
-scheduling and map decoding stay out of scope.
+child lock. Settings, zones, scheduling and map decoding stay out of scope.
