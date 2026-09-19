@@ -212,3 +212,8 @@ task-specific approvals, required checks and acceptance gates to those actions.
   second concurrent live stream on a T8030 with STOP confirmed per session. The
   library design for more than one live camera per station follows in its
   next-step issue. The public one-live-per-station contract is unchanged.
+- [Live streams beyond 120 seconds and a free primary session](research/LIVE_BOUND_2026-09-19.md)
+  records the #163 bench result: a T8030 kept one T8160 live stream running for
+  ten minutes at a flat rate with STOP confirmed, and a guard mode command on an
+  idle primary session succeeded while the stream ran on an extra session. The
+  120-second bound stays until the next-step design issue lands.
