@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.14.0 - Unreleased
+## 0.14.0 - 2026-09-19
 
 ### Per-start live bound and a free primary session
 
@@ -17,6 +17,14 @@
   default of 1 nothing changed.
 - Bench evidence on one T8030 with one T8160, see
   [the research note](docs/research/LIVE_BOUND_2026-09-19.md).
+
+Use the compiled versioned 0.14.0 tarball and its verified integrity from the
+GitHub release. Both options keep their defaults, so consumers keep one live
+stream per station on the primary session with a 120-second bound until they
+opt in. A longer stream needs a raised `liveUpperBoundMs` and an explicit
+`maxDurationMs` per start. Retain the previous package and lockfile for
+rollback. The camera bridge pins this release separately in keesmod/ha-eufy-cam.
+References #163, #165 and #166.
 
 ## 0.13.0 - 2026-09-18
 
