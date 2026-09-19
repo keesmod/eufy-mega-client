@@ -69,6 +69,10 @@ interface ExtraLive extends ActiveLive {
 const fail = (): never => {
   throw new EufyError('operation_outside_hardware_scope');
 };
+/** Per-stream upper bound: 120 seconds unless a start asks for more, up to the ceiling. */
+const DEFAULT_LIVE_BOUND_MS = 120000;
+const MAX_LIVE_BOUND_MS = 3_600_000;
+const MIN_LIVE_BOUND_MS = 1000;
 
 /** Private adapter: protocol objects never cross the public library boundary. */
 export class DeviceTransport extends EventEmitter {
@@ -89,6 +93,7 @@ export class DeviceTransport extends EventEmitter {
   private extraLives = new Map<string, ExtraLive>();
   private extraStarting = new Map<string, string>();
   private readonly liveLimit: number;
+  private readonly liveUpperBound: number;
   private observedModes = new Map<string, { guard?: number; current?: number }>();
   private refreshTimers = new Map<string, NodeJS.Timeout>();
   private readonly lifetime = new AbortController();
@@ -129,12 +134,26 @@ export class DeviceTransport extends EventEmitter {
     setParameters: async () => fail(),
     updateUserPassword: async () => fail(),
   };
-  constructor(options: { maxLiveStreamsPerStation?: number } = {}) {
+  constructor(options: { maxLiveStreamsPerStation?: number; liveUpperBoundMs?: number } = {}) {
     super();
     const limit = options.maxLiveStreamsPerStation ?? 1;
     if (!Number.isInteger(limit) || limit < 1 || limit > 4)
       throw new EufyError('invalid_live_stream_limit');
     this.liveLimit = limit;
+    const bound = options.liveUpperBoundMs ?? DEFAULT_LIVE_BOUND_MS;
+    if (!Number.isInteger(bound) || bound < DEFAULT_LIVE_BOUND_MS || bound > MAX_LIVE_BOUND_MS)
+      throw new EufyError('invalid_live_bound');
+    this.liveUpperBound = bound;
+  }
+  private liveBound(maxDurationMs?: number): number {
+    if (maxDurationMs === undefined) return DEFAULT_LIVE_BOUND_MS;
+    if (
+      !Number.isInteger(maxDurationMs) ||
+      maxDurationMs < MIN_LIVE_BOUND_MS ||
+      maxDurationMs > this.liveUpperBound
+    )
+      throw new EufyError('invalid_live_bound');
+    return maxDurationMs;
   }
   private cameraWire(raw: WireDevice): DeviceListResponse {
     return { ...raw, station_sn: raw.parent_sn } as unknown as DeviceListResponse;
@@ -555,7 +574,8 @@ export class DeviceTransport extends EventEmitter {
     const abort = AbortSignal.any([this.lifetime.signal, ...(signal ? [signal] : [])]);
     return awaitEvent(source, event, issue, accept, abort, timeout);
   }
-  async startLive(id: string, signal?: AbortSignal): Promise<LiveStream> {
+  async startLive(id: string, signal?: AbortSignal, maxDurationMs?: number): Promise<LiveStream> {
+    const bound = this.liveBound(maxDurationMs);
     const camera = this.camera(id, 'live'),
       stationId = camera.getStationSerial(),
       station = this.station(stationId),
@@ -565,16 +585,17 @@ export class DeviceTransport extends EventEmitter {
       throw new EufyError('station_busy');
     if (this.extraLives.has(key) || this.extraStarting.has(key))
       throw new EufyError('station_busy');
-    // The primary session carries the first live stream on a station. Every
-    // further concurrent camera gets its own session, up to the configured limit.
-    const primary = this.lives.get(stationId)?.channel ?? this.starting.get(stationId);
-    if (primary !== undefined) {
-      if (primary === channel || this.liveCount(stationId) >= this.liveLimit)
-        throw new EufyError('station_busy');
-      return this.startExtraLive(id, camera, stationId, signal);
+    // With concurrency enabled every live stream gets its own session, so the
+    // primary session stays free for control, snapshots and recordings. With
+    // the default limit of 1 the single stream uses the primary session.
+    if (this.liveLimit > 1) {
+      if (this.liveCount(stationId) >= this.liveLimit) throw new EufyError('station_busy');
+      return this.startExtraLive(id, camera, stationId, bound, signal);
     }
+    if (this.lives.has(stationId) || this.starting.has(stationId))
+      throw new EufyError('station_busy');
     this.starting.set(stationId, channel);
-    const operation = this.openLive(id, camera, stationId, station, signal);
+    const operation = this.openLive(id, camera, stationId, station, bound, signal);
     this.pendingStarts.add(operation);
     try {
       return await operation;
@@ -588,6 +609,7 @@ export class DeviceTransport extends EventEmitter {
     camera: ProtocolDevice,
     stationId: string,
     station: Station,
+    bound: number,
     signal?: AbortSignal,
   ): Promise<LiveStream> {
     let issued = false;
@@ -623,7 +645,7 @@ export class DeviceTransport extends EventEmitter {
             finish,
             acknowledged: false,
             stopped: false,
-            timer: setTimeout(() => void this.stopLive(id), 120000),
+            timer: setTimeout(() => void this.stopLive(id), bound),
           };
           const abort = () => {
             if (this.lives.get(stationId)?.handle === handle)
@@ -794,13 +816,14 @@ export class DeviceTransport extends EventEmitter {
     id: string,
     camera: ProtocolDevice,
     stationId: string,
+    bound: number,
     signal?: AbortSignal,
   ): Promise<LiveStream> {
     const key = this.liveKey(stationId, camera.getChannel());
     if (this.extraLives.has(key) || this.extraStarting.has(key))
       throw new EufyError('station_busy');
     this.extraStarting.set(key, stationId);
-    const operation = this.openExtraLive(id, camera, stationId, key, signal);
+    const operation = this.openExtraLive(id, camera, stationId, key, bound, signal);
     this.pendingStarts.add(operation);
     try {
       return await operation;
@@ -814,6 +837,7 @@ export class DeviceTransport extends EventEmitter {
     camera: ProtocolDevice,
     stationId: string,
     key: string,
+    bound: number,
     signal?: AbortSignal,
   ): Promise<LiveStream> {
     const station = await this.createExtraStation(stationId);
@@ -868,7 +892,7 @@ export class DeviceTransport extends EventEmitter {
             finish,
             acknowledged: false,
             stopped: false,
-            timer: setTimeout(() => void this.stopExtraLive(key).catch(() => {}), 120000),
+            timer: setTimeout(() => void this.stopExtraLive(key).catch(() => {}), bound),
           };
           const abort = () => {
             if (this.extraLives.get(key)?.handle === handle)
@@ -979,10 +1003,10 @@ export class DeviceTransport extends EventEmitter {
       this.refreshTimers.delete(id);
       const station = this.stations.get(id);
       if (!station?.isConnected() || this.lifetime.signal.aborted) return;
+      // Extra sessions do not occupy the primary session, so snapshots keep flowing.
       if (
         this.lives.has(id) ||
         this.starting.has(id) ||
-        this.extraBusy(id) ||
         this.recordings.busy(id) ||
         this.commands.has(id)
       ) {
@@ -1008,11 +1032,11 @@ export class DeviceTransport extends EventEmitter {
     signal?: AbortSignal,
   ): Promise<{ confirmed: true; commandSent: boolean; state: StationState }> {
     if (!guardModes.has(mode)) throw new EufyError('invalid_guard_mode');
+    // Streams on extra sessions leave the primary session free for this command.
     if (
       this.commands.has(id) ||
       this.lives.has(id) ||
       this.starting.has(id) ||
-      this.extraBusy(id) ||
       this.recordings.busy(id)
     )
       throw new EufyError('station_busy');

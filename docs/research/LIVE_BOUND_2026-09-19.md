@@ -126,6 +126,29 @@ client's interlock, which treats every live session on the station as busy.
   station code sends it without comparing the current mode, and the station
   acknowledged it with return code 0 and reported the mode again afterwards.
 
+## Implementation check, 2026-09-19
+
+The probe ran once more against the implementation for
+[#165](https://github.com/keesmod/eufy-mega-client/issues/165) on the public
+API instead of the prototype switches: `maxLiveStreamsPerStation` 2,
+`liveUpperBoundMs` 180000 and `startLive(cameraId, { maxDurationMs: 180000 })`,
+same bench, same camera at 86 percent, a fresh login into a separate session
+store, the production bridge paused for the window and restored afterwards.
+Times are seconds since the live start.
+
+| Step             | Observation                                                                                                                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Bound validation | A start with `maxDurationMs` one above the ceiling was rejected with `invalid_live_bound` before any station contact                                                                                                                                                     |
+| Start            | The stream took an extra session, the primary session owned no stream, first media 3.2 s after the call, observed H.264 3840 by 2160 with AAC                                                                                                                            |
+| Control at 30 s  | Cached state fine, state refresh over the primary session in 69 ms, fresh cover snapshot in 65 ms, `setGuardMode` with the mode read before (1) passed the interlock and confirmed in 123 ms without a write, mode unchanged on the check afterwards                     |
+| 0 to 180 s       | Six windows between 14.7 and 15.3 chunks per second, one window with a per-second minimum of 6 and two seconds below 10 around the third minute, no second without video, process 5.0 to 6.4 percent of one core                                                         |
+| Bound at 180 s   | The library's timer sent STOP on the extra session 180.0 s after the stream handle was created, the session reported the stream stopped 2 ms later, device acknowledgement with return code 0 after 17 ms, `ended` resolved confirmed, extra session closed and released |
+| After            | Primary session connected, state refreshed in 360 ms with guard mode 1 and current mode 1, fresh snapshot in 68 ms, battery 86 percent, no extra session and no primary stream left                                                                                      |
+
+Totals: 2709 video chunks in 180 counted seconds, 56.58 MB of video, 2813
+audio chunks. The bridge came back with its stored token valid this time, see
+the side finding below for the case where it does not.
+
 ## Side finding, bridge token after a second login
 
 The production bridge came back after the window with its stored cloud token
