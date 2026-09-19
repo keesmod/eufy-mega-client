@@ -17,6 +17,7 @@ import type {
   MowerTelemetry,
 } from '../../modular-types.js';
 import { decodeMowerTelemetry } from '../telemetry/decode.js';
+import { parseMowerWirePayload, wireVarints } from '../telemetry/wire.js';
 import { copySchema } from '../telemetry/schema.js';
 import {
   COMMANDS,
@@ -211,7 +212,7 @@ export class LocalMowerSession implements MowerLocalSession {
         if (!key) throw new EufyError('mower_local_disconnected');
         requireDeclaredWrite(command.write, this.#schema);
         const before = await this.#query(key, abort);
-        requireWritable(before, command.write);
+        requireWritable(before, command);
         const outcome: MowerCommandOutcome = {
           command: valid.kind,
           write: { ...command.write },
@@ -270,6 +271,20 @@ export class LocalMowerSession implements MowerLocalSession {
               outcome.stage = 'acknowledged';
             }
             if (!Object.hasOwn(dps, '107')) continue;
+            if (command.payload) {
+              // Exact wire match of the expected records, no activity decoding involved.
+              if (matchesPayload(dps['107'], command.payload.fields)) {
+                outcome.payload = {
+                  observedAt: report.observedAt,
+                  sequence: report.sequence,
+                  name: command.payload.name,
+                };
+                outcome.stage = 'reflected';
+                outcome.end = 'reflected';
+                return;
+              }
+              continue;
+            }
             const status = decodeMowerTelemetry(report, { schema: this.#schema }).status;
             if (status.state === 'reported' && status.value === command.activity) {
               outcome.activity = {
@@ -507,4 +522,13 @@ export class LocalMowerSession implements MowerLocalSession {
     else socket.destroy();
     this.#wake?.();
   }
+}
+
+/** True when the DP 107 value holds exactly the expected varint records and nothing else. */
+function matchesPayload(value: unknown, expected: Readonly<Record<number, number>>): boolean {
+  const varints = wireVarints(parseMowerWirePayload(value));
+  if (!varints) return false;
+  const wanted = Object.entries(expected);
+  if (varints.size !== wanted.length) return false;
+  return wanted.every(([number, want]) => varints.get(Number(number)) === want);
 }

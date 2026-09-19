@@ -84,7 +84,7 @@ export interface MowerCommandOptions {
   readBackMs?: number;
 }
 
-export type MowerCommandKind = 'start' | 'pause' | 'resume' | 'return';
+export type MowerCommandKind = 'start' | 'pause' | 'resume' | 'stop' | 'return';
 
 export interface MowerCommandRequest {
   kind: MowerCommandKind;
@@ -118,8 +118,13 @@ export interface MowerCommandOutcome {
   reply?: { observedAt: string; returnCodeZero: boolean; rejected: boolean };
   /** First fresh report carrying the class's control point or the written point at its value. */
   acknowledgement?: { observedAt: string; sequence: number; dp: string };
-  /** First fresh DP 107 report that decodes to the expected confirmed activity. */
+  /** First fresh DP 107 report that decodes to the expected confirmed activity, for the classes that expect one. */
   activity?: { observedAt: string; sequence: number; value: MowerActivity };
+  /**
+   * First fresh DP 107 report whose wire records equal the class's expected payload. Only `stop`
+   * uses this: its reflection is the map-saving payload (fields 2 = 5 and 3 = 1), not an activity.
+   */
+  payload?: { observedAt: string; sequence: number; name: 'map_saving' };
   /** Every report received during the read-back in arrival order, at most 64. */
   reports: MowerDpReport[];
 }
