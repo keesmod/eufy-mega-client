@@ -1,6 +1,6 @@
 # Opt-in mower commands
 
-Implementation and software evidence for
+Implementation, software evidence and hardware evidence for
 [#169](https://github.com/keesmod/eufy-mega-client/issues/169). The command
 path sits on the local session of
 [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) and the confirmed
@@ -125,18 +125,37 @@ ownership, peer loss without reconnect, cancellation, shutdown, the report
 limit, the hard deadline, heartbeats during a long read-back and outcome
 isolation. All tests use loopback sockets and synthetic values.
 
-## Remaining acceptance
+## Hardware acceptance
 
-No command has been sent to the owned E15 by this library. The hardware
-acceptance is one bounded owner-operated window with the owner at the mower,
-current telemetry, the official app as the independent reference, the owner's
-explicit confirmation of every prerequisite and opt-in for each command class,
-physical confirmations in chat, recovery evidence and verified cleanup. Until
-that receipt exists the command path is software coverage only, and the model
-matrix records it as unconfirmed. The app's return control did not change DP 3
-on the owned device, so `return` through `switch_charge` is documented and
-declared but unobserved, and the hardware window decides whether this firmware
-honours it. A return sent during the app's Loading phase after a map save, when
-DP 118 already reads 100, is not refused and is expected to end `timed_out`
-without effect, as the app's own press did. Stop and stop-with-clear are not
-offered. Settings, zones, scheduling and map decoding stay out of scope.
+One bounded owner-operated window on 2026-09-19 sent the library's commands to
+the owned E15 on firmware 6.9.28 with app 6.1.00 as the independent reference,
+recorded in the
+[command window receipt](research/E15_COMMAND_WINDOW_2026-09-19.md). The owner
+confirmed every prerequisite and opted in per command class in chat, stood at
+the mower and confirmed each physical result before the next command.
+
+- `start` from docked, `pause` from mowing, `resume` from paused and a second
+  `pause` each ended `reflected`: the written point echoed 0.35 to 0.95
+  seconds after the write and the confirmed DP 107 activity followed about 0.2
+  seconds later, within 1.2 seconds in total. The app displayed `Mowing…`,
+  `Mowing Paused` and `Mowing…` again, and the owner saw the mower leave the
+  dock, stand still, mow and stand still.
+- `return` through DP 3 `switch_charge` from paused was accepted at frame
+  level and ignored. No report arrived in 60 seconds, the app stayed
+  `Mowing Paused` and the mower did not move. The outcome was `timed_out` at
+  stage `sent`. Firmware 6.9.28 does not honour `return`, a consumer must treat
+  a `timed_out` return as no effect, and the working return route on this
+  device is the app's Stop, Clear Progress and Charge sequence over the raw
+  control points DP 104 and DP 103, which the library does not write. The
+  library listened to that sequence and to the dock arrival on the same
+  session afterwards.
+- None of the library's writes produced a DP 103, 105 or 106 report, so those
+  points come from the app's own writes and the `acknowledged` stage fired only
+  through the written point. A return sent during the app's Loading phase after
+  a map save, when DP 118 already reads 100, is not refused and is expected to
+  end `timed_out` as well.
+
+One window and one cycle per class do not cover start after a Stop, pause while
+returning, commands during a map save, or refusals by low battery, rain or the
+child lock. Stop and stop-with-clear are not offered. Settings, zones,
+scheduling and map decoding stay out of scope.

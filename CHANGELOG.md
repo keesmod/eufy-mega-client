@@ -21,7 +21,16 @@
 - The control frame, its sources and the reasons for not writing the raw
   control points are in [Opt-in mower commands](docs/MOWER_COMMANDS.md) and
   the [control-point receipt](docs/research/E15_CONTROL_POINTS_2026-09-19.md).
-  No command has been sent to the owned E15 yet. References #169.
+- Hardware evidence: one owner-operated window on firmware 6.9.28 with app
+  6.1.00, see
+  [the command window receipt](docs/research/E15_COMMAND_WINDOW_2026-09-19.md).
+  `start`, `pause`, `resume` and a second `pause` ended `reflected` within 1.2
+  seconds of the write. `return` over DP 3 `switch_charge` ended `timed_out`
+  without any report or effect, so firmware 6.9.28 does not honour it and a
+  consumer must treat a `timed_out` return as no effect. The app's Stop, Clear
+  Progress and Charge returned the mower while the library listened. The model
+  matrix records start, pause and resume as confirmed and return as not
+  honoured. References #169.
 
 ## 0.15.0 - 2026-09-19
 
