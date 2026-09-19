@@ -6,7 +6,9 @@ This receipt derives the binary envelope and field boundaries of the E15
 reports, records what each observed field value coincided with, and states the
 evidence level of every candidate meaning. It follows the
 [report-acquisition receipt](E15_ACTIVITY_REPORTS_2026-09-16.md), which recorded
-how the reports were obtained.
+how the reports were obtained. The evidence levels below are those of
+2026-09-16. The [reproduction receipt](E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md)
+of 2026-09-19 promotes the three shipped candidates to `confirmed`.
 
 ## Boundary
 

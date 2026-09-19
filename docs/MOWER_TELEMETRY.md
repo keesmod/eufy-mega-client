@@ -70,21 +70,26 @@ confirm battery, Wifi and a device-declared signal percentage on E15/T2880
 firmware 6.9.28. Definitions come from that device's schema and repeated
 read-only responses, independently of the unlicensed mower fork.
 
-| Field                   | Data point | Level                | Definition                                                                                                             |
-| ----------------------- | ---------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `status`                | 107        | observed, withheld   | `robot_status` wire candidates: fields 1 = 2 and 3 = 1 `mowing`, 1 = 2 and 3 = 2 `paused`, 1 = 1 and 3 = 1 `returning` |
-| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`                                                                            |
-| `progress`              | none       | none                 | No current mowing-progress definition observed                                                                         |
-| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`                                                                                |
-| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`                                                                          |
+| Field                   | Data point | Level                | Definition                                                                                                           |
+| ----------------------- | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `status`                | 107        | confirmed            | `robot_status` wire payloads: fields 1 = 2 and 3 = 1 `mowing`, 1 = 2 and 3 = 2 `paused`, 1 = 1 and 3 = 1 `returning` |
+| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`                                                                          |
+| `progress`              | none       | none                 | No current mowing-progress definition observed                                                                       |
+| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`                                                                              |
+| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`                                                                        |
 
 Every confirmed row cites the same receipt above. `None` and `Cellular` are
 declared but not observed, so they remain unmapped. DP 109 is a percentage,
-not a negative dBm reading. The three `status` candidates cite the
-[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md).
-They come from one owner-operated cycle, stay `observed` and are withheld, so
-`status` reports `{ state: 'unconfirmed', level: 'observed' }` on the owned
-device. Progress remains `unconfirmed` without a candidate. Passing
+not a negative dBm reading. The three `status` definitions were derived in the
+[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md)
+and reproduced in the
+[2026-09-19 reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md),
+which they cite. Each reached at least four app-correlated transitions across
+two owner-operated windows, so `status` reports `mowing`, `paused` or
+`returning` on the owned device. The `mowing` payload also covers the app's
+Defogging phase. A transitional first frame, the map-saving payload, field 6
+and the default payload make `status` `invalid` for that report, and an absent
+DP 107 makes it `missing`. Progress remains `unconfirmed` without a candidate. Passing
 `definitions: []` explicitly opts out of the built-in registry. Built-in
 definitions and their decode rules are frozen so consumers cannot alter the
 defaults shared by other sessions.
@@ -193,14 +198,20 @@ The earlier idle-window silence does not describe this active test. See its
 
 The DP 107 envelope and field boundaries are established in the
 [contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md) for
-[#153](https://github.com/keesmod/eufy-mega-client/issues/153). Activity
-meanings remain `observed` at best: one mowing, pause and return cycle does not
-independently reproduce each candidate three times, Defogging has no identified
-field value, and field 2 substates, field 6 and the default payload have no
-correlated app state. The mowing-progress source remains unidentified. The app
-displayed 0% mowing progress, so the windows did not establish a changing
-value. DP 118 changed during the app's separate map-saving phase and remains
-map-save progress. Cloud cached values are not substituted for local
-observations. Other network modes and firmware remain untested. The remaining
-hardware step is one bounded owner-operated window with further cycles.
-Physical control, settings and map decoding remain separate work.
+[#153](https://github.com/keesmod/eufy-mega-client/issues/153). The
+[reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md)
+for [#156](https://github.com/keesmod/eufy-mega-client/issues/156) confirms
+`mowing`, `paused` and `returning` through three further owner-operated start,
+pause and return cycles. Defogging shares the `mowing` payload and is
+indistinguishable in the persistent fields. Field 2 = 9 during defogging has
+two app-correlated reproductions, field 2 = 3 coincides with the displayed
+change to mowing three times but is transient, field 2 = 1 during returning
+has no correlated app change, and field 6 = 1 and the default payload follow
+every map save in the field and at the dock, so none of them is decoded. The
+map-saving payload is reproduced but has no `MowerActivity` value. No payload
+identifies `docked`, `charging`, `idle` or `error`. The mowing-progress source
+remains unidentified. The app displayed 0% and once 1%, and no data point
+changed alongside it. DP 118 remains map-save progress. Cloud cached values
+are not substituted for local observations. `None` as network kind was
+observed once and stays unmapped. Other firmware remains untested. Physical
+control, settings and map decoding remain separate work.
