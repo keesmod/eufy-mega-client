@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.0 - Unreleased
+## 0.16.0 - 2026-09-19
 
 ### Opt-in E15 commands
 
@@ -31,6 +31,19 @@
   Progress and Charge returned the mower while the library listened. The model
   matrix records start, pause and resume as confirmed and return as not
   honoured. References #169.
+
+Use the compiled versioned 0.16.0 tarball and its verified integrity from the
+GitHub release. Without `mowers.commands` nothing changed: the local session
+still never writes and `sendCommand()` is refused with
+`mower_commands_disabled` before any frame. A consumer that opts in must name
+its stop route, send one command at a time and treat `timed_out` as an unknown
+device state that is never retried. On the owned E15 with firmware 6.9.28
+`start`, `pause` and `resume` are confirmed and `return` over DP 3 has no
+effect, so a consumer must not offer return as a working control on this
+firmware. Public types are additive, the telemetry definitions and the camera
+modules are unchanged. Retain the previous package and lockfile for rollback.
+The mower bridge pins this release separately in keesmod/eufy-robomow-ha.
+References #169, #171 and #172.
 
 ## 0.15.0 - 2026-09-19
 
