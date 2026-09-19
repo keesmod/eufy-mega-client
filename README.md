@@ -52,7 +52,7 @@ or add results to the existing issue for your problem. See
 `EufyMegaClient` remains available. `EufyClient` adds independent `security` and
 `mowers` modules with separate credentials and sessions. Mower support includes
 E15 authentication/discovery, a read-only local status session with a typed
-telemetry decoder, opt-in start, pause, resume and return commands with
+telemetry decoder, opt-in start, pause, resume, stop and return commands with
 fresh-report read-back, and a separate read-only map acquisition API. E15 battery,
 Wifi, signal percentage and the mowing, paused and returning activities have
 dated hardware observations. Mowing progress, physical controls and decoded
