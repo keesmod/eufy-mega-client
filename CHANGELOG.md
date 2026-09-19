@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.15.0 - Unreleased
+## 0.15.0 - 2026-09-19
 
 ### Confirmed E15 activity
 
@@ -16,6 +16,17 @@
   firmware 6.9.28 with app 6.1.00, see
   [the reproduction receipt](docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md).
   References #156.
+
+Use the compiled versioned 0.15.0 tarball and its verified integrity from the
+GitHub release. The only runtime change is the E15 registry: `status` now
+reports `mowing`, `paused` or `returning` from DP 107 instead of
+`{ state: 'unconfirmed', level: 'observed' }`, reports `missing` without DP
+107 and `invalid` for the transitional, map-saving, field 6 and default
+payloads. A consumer that branched on the unconfirmed state should handle the
+reported, missing and invalid states. Public types, the other definitions and
+the camera modules are unchanged. Retain the previous package and lockfile for
+rollback. The mower bridge pins this release separately in
+keesmod/eufy-robomow-ha. References #156 and #168.
 
 ## 0.14.0 - 2026-09-19
 
