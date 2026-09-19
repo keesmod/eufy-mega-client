@@ -1,13 +1,15 @@
 import type { MowerTelemetryDefinition } from '../../modular-types.js';
 
 const source = 'docs/research/E15_TELEMETRY_OBSERVATION_2026-09-16.md';
-const activity = 'docs/research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md';
+const activity = 'docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md';
 
 /**
  * Independently observed E15/T2880 definitions, firmware 6.9.28. Schema declarations and
  * repeated local queries confirm battery, Wifi and signal percentage. The DP 107 candidates
- * come from one owner-operated start, pause and return cycle. They stay `observed` and are
- * withheld until three app-correlated reproductions exist. See both receipts.
+ * were derived from one owner-operated cycle and reproduced in three further app-correlated
+ * start, pause and return cycles, so they ship as `confirmed`. Defogging shares the `mowing`
+ * payload, and the map-saving, transitional, field 6 and default payloads stay withheld. See
+ * both receipts.
  */
 export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Object.freeze([
   Object.freeze({
@@ -34,7 +36,7 @@ export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Ob
   Object.freeze({
     field: 'status',
     dp: '107',
-    level: 'observed',
+    level: 'confirmed',
     source: activity,
     decode: Object.freeze({
       kind: 'wire',
@@ -45,7 +47,7 @@ export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Ob
   Object.freeze({
     field: 'status',
     dp: '107',
-    level: 'observed',
+    level: 'confirmed',
     source: activity,
     decode: Object.freeze({
       kind: 'wire',
@@ -56,7 +58,7 @@ export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Ob
   Object.freeze({
     field: 'status',
     dp: '107',
-    level: 'observed',
+    level: 'confirmed',
     source: activity,
     decode: Object.freeze({
       kind: 'wire',
