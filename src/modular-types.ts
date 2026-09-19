@@ -63,6 +63,65 @@ export interface MowerOptions extends MowerAdapterContext {
   home?: MowerHomeOptions;
   /** Created lazily once per module. Return a fresh adapter for each client. */
   adapter?: (context: MowerAdapterContext) => MowerAdapter;
+  /** Physical control stays off unless this explicit opt-in is present and valid. */
+  commands?: MowerCommandOptions;
+}
+
+/**
+ * Explicit per-client opt-in for physical control. Without it every `sendCommand()` call is
+ * refused with `mower_commands_disabled`. Nothing here is persisted or sent to the device.
+ */
+export interface MowerCommandOptions {
+  /** Must be literally `true`. */
+  enabled: true;
+  /**
+   * The consumer's own stop route in words, for example "pause then return through this
+   * session with the official app at hand". Required, 1 to 200 printable characters. The
+   * library never executes it and never retries or replays a command on the consumer's behalf.
+   */
+  stopRoute: string;
+  /** Bound for the read-back after every write, default 10000 ms, 1000 to 60000. */
+  readBackMs?: number;
+}
+
+export type MowerCommandKind = 'start' | 'pause' | 'resume' | 'return';
+
+export interface MowerCommandRequest {
+  kind: MowerCommandKind;
+  /** Overrides the opt-in read-back bound for this command only, 1000 to 60000 ms. */
+  readBackMs?: number;
+}
+
+/** The one declared boolean data point written for a command class. See docs/MOWER_COMMANDS.md. */
+export interface MowerCommandWrite {
+  dp: string;
+  code: string;
+  value: boolean;
+}
+
+/** Furthest stage evidenced by fresh reports. A sent command is never `completed`. */
+export type MowerCommandStage = 'sent' | 'acknowledged' | 'reflected';
+/** Why the read-back ended. Only `reflected` means the expected activity was reported. */
+export type MowerCommandEnd = 'reflected' | 'rejected' | 'timed_out' | 'report_limit';
+
+/** Lifecycle of one command from fresh reports only. Nothing is inferred from age or silence. */
+export interface MowerCommandOutcome {
+  command: MowerCommandKind;
+  write: MowerCommandWrite;
+  /** The status query taken immediately before the write. The refusals are decided on it. */
+  before: MowerDpSnapshot;
+  /** Local time the control frame was written to the socket. */
+  sentAt: string;
+  stage: MowerCommandStage;
+  end: MowerCommandEnd;
+  /** The device's frame reply to the control command, when one arrived during the read-back. */
+  reply?: { observedAt: string; returnCodeZero: boolean; rejected: boolean };
+  /** First fresh report carrying the class's control point or the written point at its value. */
+  acknowledgement?: { observedAt: string; sequence: number; dp: string };
+  /** First fresh DP 107 report that decodes to the expected confirmed activity. */
+  activity?: { observedAt: string; sequence: number; value: MowerActivity };
+  /** Every report received during the read-back in arrival order, at most 64. */
+  reports: MowerDpReport[];
 }
 
 /** Options for one read-only local session. The host is the mower's LAN address. */
@@ -237,9 +296,14 @@ export type MowerLocalSessionEnd =
   | 'authentication_failed'
   | 'protocol_error';
 
-/** One authenticated TCP session to one E15. Read-only: no DP writes, commands or settings. */
+/**
+ * One authenticated TCP session to one E15. Reads never write. Commands exist only behind the
+ * explicit `commands` opt-in and write one declared boolean point each, never a setting.
+ */
 export interface MowerLocalSession {
   readonly connected: boolean;
+  /** True only when the owning client opted in with valid `MowerCommandOptions`. */
+  readonly commandsEnabled: boolean;
   /** Resolves once the socket is closed and all owned resources are released. */
   readonly closed: Promise<MowerLocalSessionEnd>;
   /** Copy of the device's declared data points from discovery, when the cloud supplied one. */
@@ -253,12 +317,21 @@ export interface MowerLocalSession {
    * arrived, including when it arrived before this call. Consumers must check that time.
    */
   receiveReport(signal?: AbortSignal): Promise<MowerDpReport>;
+  /**
+   * Send one opt-in command and read its lifecycle back from fresh reports within the bound.
+   * One fresh status query precedes the write and decides the typed refusals. One command owns
+   * the session at a time. Nothing is retried, replayed or reconnected. Resolves `timed_out`
+   * rather than throwing when the bound passes, because the write has already happened.
+   */
+  sendCommand(request: MowerCommandRequest, signal?: AbortSignal): Promise<MowerCommandOutcome>;
   /** Idempotent. Resolves when the socket has actually closed. */
   disconnect(): Promise<void>;
 }
 
 /** Protocol features will be added by their owning stories after evidence review. */
 export interface MowerModule extends ModuleLifecycle {
+  /** True only when this client was constructed with a valid `commands` opt-in. */
+  readonly commandsEnabled: boolean;
   discover(signal?: AbortSignal): Promise<MowerDevice[]>;
   /**
    * Open a read-only local Tuya 3.5 session to one discovered mower. The private local key is

@@ -213,5 +213,8 @@ identifies `docked`, `charging`, `idle` or `error`. The mowing-progress source
 remains unidentified. The app displayed 0% and once 1%, and no data point
 changed alongside it. DP 118 remains map-save progress. Cloud cached values
 are not substituted for local observations. `None` as network kind was
-observed once and stays unmapped. Other firmware remains untested. Physical
-control, settings and map decoding remain separate work.
+observed once and stays unmapped. Other firmware remains untested. The opt-in
+command path of [#169](https://github.com/keesmod/eufy-mega-client/issues/169)
+reads these confirmed activities back after a write, see
+[Opt-in mower commands](MOWER_COMMANDS.md). Settings and map decoding remain
+separate work.

@@ -26,6 +26,7 @@ over direct LAN Tuya 3.5. This is separate from the camera catalogue below.
 | Spontaneous LAN report acquisition          | Two owner-operated transition windows received 93 authenticated reports, including 20 DP 107 reports and four DP 108 reports                                                                                                                                                              | Receipt age is known, device measurement time is not. HA recovered after temporary unavailability during observation                                                                                             |
 | Activity                                    | DP 107 envelope established as wire records in fields 1, 2, 3 and 6 plus a default payload. `mowing`, `paused` and `returning` confirmed through four owner-operated cycles on 2026-09-16 and 2026-09-19, at least four app-correlated transitions each, shipped as confirmed definitions | Defogging shares the `mowing` payload. Field 2 values, field 6, the default payload and the map-saving payload are reproduced or observed but not decoded. No payload identifies docked, charging, idle or error |
 | Mowing progress                             | Unconfirmed, app displayed 0% and once 1% during the short mowing cycles, no data point changed alongside it                                                                                                                                                                              | Identify a fresh source and reproduce changing app-correlated values. DP 118 is map-save progress                                                                                                                |
+| Commands                                    | Software only. Opt-in start, pause, resume and return over the declared booleans DP 1, 2 and 3 with fresh-report read-back, synthetic tests, no command sent to the owned device yet                                                                                                      | One bounded owner-operated window per the control-point receipt. DP 3 `switch_charge` is declared and documented but unobserved on this device                                                                   |
 
 The library leaves unconfirmed fields withheld and exposes raw snapshots
 unchanged. Commands, settings, map decoding and existing HA consumer behavior
@@ -42,8 +43,13 @@ owner-operated reproduction window of
 [#156](https://github.com/keesmod/eufy-mega-client/issues/156) is recorded in
 the [reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md)
 with firmware 6.9.28 and app 6.1.00, three cycles, HA recovery and cleanup.
-Remaining hardware work is the mowing-progress source, the undecoded DP 107
-values and any dock, charging, idle or error payload.
+The opt-in command path of
+[#169](https://github.com/keesmod/eufy-mega-client/issues/169) is recorded in
+the [control-point receipt](research/E15_CONTROL_POINTS_2026-09-19.md) and
+[Opt-in mower commands](MOWER_COMMANDS.md) as software coverage without a
+hardware window. Remaining hardware work is the command acceptance window, the
+mowing-progress source, the undecoded DP 107 values and any dock, charging,
+idle or error payload.
 
 ## Community evidence, 2026-09-11
 

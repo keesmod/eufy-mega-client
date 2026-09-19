@@ -40,8 +40,21 @@ export const Command = Object.freeze({
   STATUS_REPORT: 0x08,
   HEARTBEAT: 0x09,
   DP_QUERY: 0x0a,
+  CONTROL_NEW: 0x0d,
   DP_QUERY_NEW: 0x10,
 });
+
+/**
+ * Client control payloads carry the 15-byte version header before the JSON document: the
+ * text `3.5` followed by twelve zero bytes for the unused checksum, serial and source fields.
+ */
+export function controlPayload(document: string): Buffer {
+  return Buffer.concat([
+    Buffer.from('3.5', 'latin1'),
+    Buffer.alloc(VERSION_HEADER_LENGTH - 3),
+    Buffer.from(document, 'utf8'),
+  ]);
+}
 
 export interface DecodedFrame {
   sequence: number;
