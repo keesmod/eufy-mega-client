@@ -21,6 +21,7 @@ export type {
   MediaMetadata,
   StreamStop,
   LiveStream,
+  LiveStartOptions,
   Recording,
   DetectionEvent,
   EventSession,
