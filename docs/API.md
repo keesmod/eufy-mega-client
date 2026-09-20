@@ -500,7 +500,10 @@ Refusals before any write are `mower_command_invalid`,
 `mower_command_map_saving`, `mower_command_task_active` and
 `mower_command_already_set`. `return` is written only from the stopped task,
 DP 1 `switch_go` false with DP 118 at 100, the state in which the official app
-offers Charge, and `stop` over DP 1 false is the class that reaches it. One
+offers Charge. On the owned E15 `stop` over DP 1 false ends the task and the
+mower returns to the dock by itself, and `return` over DP 3 was ignored from
+`paused` and from the stopped task, see the hardware acceptance in
+[Opt-in mower commands](MOWER_COMMANDS.md). One
 command owns the session, so a concurrent read reports `mower_local_busy`. Peer loss during
 the read-back reports `mower_local_disconnected` and closes the session, which
 the consumer must reopen deliberately. `client.mowers.commandsEnabled` and
