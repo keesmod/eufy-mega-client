@@ -299,6 +299,20 @@ copied `lastComplete` transport files and supports `acquire`, `disconnect`,
 and preserves the existing camera and mower module interfaces. See the
 [full contract, bounds and feature evidence](MAP_ACQUISITION.md).
 
+## Decoded mower map geometry, 0.18.0
+
+`decodeMowerMapSnapshot` turns one `lastComplete` snapshot into read-only
+geometry: `map` with identity, grid, bounds, station pose, region boundaries,
+obstacles, forbidden zones, walls, tunnels, required and pass-through zones,
+`cleaningPath` with point kinds and end pose, and the display-only
+`navigationPose`. `decodeMowerMapFile`, `decodeMowerPathFile` and
+`decodeMowerPoseFile` decode one file each. Every file decodes independently,
+none of the functions throws on malformed input, faults name the reason, byte
+offset and message path, unknown enumeration values keep their code and
+undecoded field numbers are listed. Integers stay integers and nothing is
+selectable or editable. See the
+[field semantics, confirmation levels and provenance](MAP_GEOMETRY.md).
+
 ## Read-only local mower session, 0.13.0
 
 `client.mowers.openLocalSession(id, { host, port?, timeoutMs? }, signal?)` opens one
