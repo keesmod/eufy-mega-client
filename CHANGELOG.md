@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Hardware evidence for stop and return, documentation only
+
+- The owner-operated window of 2026-09-20 recorded in the
+  [stop and return receipt](docs/research/E15_STOP_RETURN_WINDOW_2026-09-20.md)
+  confirms the 0.17.0 `stop` class on the owned E15 with firmware 6.9.28:
+  DP 1 `switch_go` false was echoed 0.6 seconds after the write, the device
+  reported `returning` 0.3 seconds after it and drove to the dock by itself,
+  and the map-saving payload reported in `payload` arrived at dock arrival 30
+  seconds after the write. A plain DP 1 false therefore ends the task and
+  returns the mower, it does not leave it stopped on the lawn with or without
+  its progress. `return` over DP 3 `switch_charge` sent from the stopped task
+  that the app's Stop with Clear Progress had reached ended `timed_out`
+  without a report or a physical effect, as it had from `paused`. The
+  library has no DP 3 return route on this firmware, `stop` is the library
+  route that brings the mower home, and the app's Charge over the raw control
+  points remains the only way back from a task stopped on the lawn. Model
+  matrix, [Opt-in mower commands](docs/MOWER_COMMANDS.md) and the API notes
+  carry the evidence. No code, type or package change. References #173.
+
 ## 0.17.0 - 2026-09-19
 
 ### Opt-in stop and the return precondition

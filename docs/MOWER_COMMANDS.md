@@ -81,7 +81,9 @@ so a `return` sent while docked is not refused. It also cannot tell the app's
 Loading phase, between DP 1 turning false and the default DP 107 payload about
 15 seconds later, from the state in which the app enables Charge. A consumer
 that follows the app waits for the default payload after a `stop` before it
-sends `return`.
+sends `return`. On the owned device a library `stop` returned the mower to
+the dock by itself, so the stopped task on the lawn was reached only through
+the app's Stop, see the hardware acceptance below.
 
 The existing session errors apply unchanged: `mower_local_busy` while another
 operation owns the session, `request_aborted` on cancellation,
@@ -152,46 +154,62 @@ synthetic values.
 
 ## Hardware acceptance
 
-One bounded owner-operated window on 2026-09-19 sent the library's commands to
-the owned E15 on firmware 6.9.28 with app 6.1.00 as the independent reference,
-recorded in the
-[command window receipt](research/E15_COMMAND_WINDOW_2026-09-19.md). The owner
-confirmed every prerequisite and opted in per command class in chat, stood at
-the mower and confirmed each physical result before the next command.
+Two bounded owner-operated windows sent the library's commands to the owned
+E15 on firmware 6.9.28 with app 6.1.00 as the independent reference: the
+[command window receipt](research/E15_COMMAND_WINDOW_2026-09-19.md) of #169 on
+2026-09-19 and the
+[stop and return receipt](research/E15_STOP_RETURN_WINDOW_2026-09-20.md) of
+#173 on 2026-09-20. In both the owner confirmed every prerequisite and opted
+in per command class in chat, stood at the mower and confirmed each physical
+result before the next command.
 
-- `start` from docked, `pause` from mowing, `resume` from paused and a second
-  `pause` each ended `reflected`: the written point echoed 0.35 to 0.95
-  seconds after the write and the confirmed DP 107 activity followed about 0.2
-  seconds later, within 1.2 seconds in total. The app displayed `Mowing…`,
+- `start` from docked in three cycles, `pause` from mowing, `resume` from
+  paused and a second `pause` each ended `reflected`: the written point echoed
+  0.35 to 0.96 seconds after the write and the confirmed DP 107 activity
+  followed about 0.2 seconds later. The app displayed `Mowing…`,
   `Mowing Paused` and `Mowing…` again, and the owner saw the mower leave the
-  dock, stand still, mow and stand still.
-- `return` through DP 3 `switch_charge` from paused was accepted at frame
-  level and ignored. No report arrived in 60 seconds, the app stayed
-  `Mowing Paused` and the mower did not move. The outcome was `timed_out` at
-  stage `sent`. Firmware 6.9.28 does not honour `return`, a consumer must treat
-  a `timed_out` return as no effect, and the working return route on this
-  device is the app's Stop, Clear Progress and Charge sequence over the raw
-  control points DP 104 and DP 103, which the library does not write. The
-  library listened to that sequence and to the dock arrival on the same
-  session afterwards.
-- None of the library's writes produced a DP 103, 105 or 106 report, so those
-  points come from the app's own writes and the `acknowledged` stage fired only
-  through the written point. A return sent during the app's Loading phase after
-  a map save, when DP 118 already reads 100, is not refused and is expected to
-  end `timed_out` as well.
+  dock, stand still, mow and stand still. On 2026-09-20 the app showed
+  `Defogging…` for about half a minute after each start before `Mowing…`,
+  while DP 107 already reported `mowing`.
+- `stop` from mowing ended `reflected` on 2026-09-20, but not with the mower
+  stopped on the lawn. DP 107 reported `returning` 0.28 seconds after the
+  write, DP 1 false echoed 0.56 seconds after it as the `acknowledged` anchor,
+  the app showed `Returning…` and the owner saw the mower drive back. The
+  map-saving payload that the class reports in `payload` arrived 29.8 seconds
+  after the write as the dock arrival anchor with DP 118 reset to 0 and DP 1
+  true, then DP 118 rose to 100, DP 1 turned false, DP 107 field 6 = 1 and the
+  default payload followed, and the app offered Start with 0.0 m² and 0 s. A
+  plain DP 1 `switch_go` false on this firmware ends the task and returns the
+  mower to the dock. It does not keep the mower in place with or without its
+  progress, which is what the app's Stop dialog offers. A consumer that wants
+  the mower home can use `stop` and must read the map-saving `payload` as the
+  dock arrival, not as a stop in place.
+- `return` through DP 3 `switch_charge` was accepted at frame level and
+  ignored in both windows: from `paused` on 2026-09-19 and from the stopped
+  task on 2026-09-20, the state the app's Stop with Clear Progress had
+  reached, with DP 1 false and DP 118 at 100 on the fresh query and Charge
+  enabled in the app. No report arrived in 60 seconds, the app did not change
+  and the mower did not move. Both outcomes were `timed_out` at stage `sent`.
+  Firmware 6.9.28 does not honour DP 3, a consumer must treat a `timed_out`
+  return as no effect, and the library has no DP 3 return route. The route
+  back from a task stopped on the lawn remains the app's Charge over the raw
+  control point DP 103, which the library does not write. The library
+  listened to that sequence and to the dock arrival on the same session both
+  times.
+- None of the library's writes produced a DP 103, 104, 105 or 106 report, so
+  those points come from the app's own writes and the `acknowledged` stage
+  fired only through the written point. The app's Stop with Clear Progress
+  produced DP 104 and its Charge produced DP 103 with distinct field 1 values
+  again while the library listened.
+- After about fourteen hours docked, the first fresh query of 2026-09-20
+  carried no DP 1, DP 2 or DP 3 and DP 118 at 0. `start` has no precondition
+  on those points and ran. A `return` sent in that state is refused with
+  `mower_command_task_active`, because an absent DP 1 is not `false`, and
+  would be refused with `mower_command_map_saving` because DP 118 is not 100.
+  After the first activity the query carried DP 1, DP 2 and DP 118 at 100
+  again. The refusal is conservative and costs nothing on this firmware.
 
-`stop` and `return` from the stopped task are software only. The library has
-never written DP 1 `switch_go` false, and the owned device has only ever
-reached the stopped task through the app's Stop with Clear Progress. The
-second owner-operated window of
-[#173](https://github.com/keesmod/eufy-mega-client/issues/173) sends `stop`
-from mowing, waits for the default payload and sends `return` from the stopped
-task. Whether a plain DP 1 false keeps or clears the mowing progress, which the
-app offers as two separate Stop choices, is recorded from the device in that
-window and not assumed. If DP 3 is ignored from the stopped task as well, the
-library has no return route on firmware 6.9.28 and a consumer must keep using
-the app for it.
-
-One window and one cycle per class do not cover start after a Stop, pause while
-returning, commands during a map save, or refusals by low battery, rain or the
-child lock. Settings, zones, scheduling and map decoding stay out of scope.
+Two windows with one cycle per class do not cover `stop` from `paused`, start
+after the app's Stop with the mower kept in place, pause while returning,
+commands during a map save, or refusals by low battery, rain or the child
+lock. Settings, zones, scheduling and map decoding stay out of scope.
