@@ -72,6 +72,49 @@ export { decodeMowerTelemetry } from './mowers/telemetry/decode.js';
 export { E15_TELEMETRY_DEFINITIONS } from './mowers/telemetry/definitions.js';
 export { parseMowerWirePayload } from './mowers/telemetry/wire.js';
 export { PortableMapAcquisition } from './mowers/maps/acquisition.js';
+export {
+  decodeMowerMapFile,
+  decodeMowerPathFile,
+  decodeMowerPoseFile,
+  decodeMowerMapSnapshot,
+} from './mowers/maps/geometry.js';
+export type {
+  MowerMapPoint,
+  MowerMapPose,
+  MowerMapPolygon,
+  MowerMapLine,
+  MowerMapEllipse,
+  MowerMapZoneShape,
+  MowerMapForbiddenZone,
+  MowerMapPhysicalForbiddenZone,
+  MowerMapRequiredZone,
+  MowerMapPassThroughZone,
+  MowerMapVirtualWall,
+  MowerMapTunnel,
+  MowerMapMarker,
+  MowerMapTrappedPoint,
+  MowerMapMaintenancePoint,
+  MowerMapSubRegion,
+  MowerMapRegion,
+  MowerMapTimestamp,
+  MowerMapState,
+  MowerMapKind,
+  MowerMapIssue,
+  MowerMapBounds,
+  MowerMap,
+  MowerPathKind,
+  MowerPathPointKind,
+  MowerPathPoint,
+  MowerPath,
+  MowerMapChannelKind,
+  MowerMultiMapKind,
+  MowerMultiMap,
+  MowerMapChannelMessage,
+  MowerMapFileFault,
+  MowerMapFileResult,
+  MowerMapGeometry,
+} from './mowers/maps/geometry.js';
+export type { MapWireFault } from './mowers/maps/protobuf.js';
 export type {
   MapSessionProvisioning,
   MapStreamName,
