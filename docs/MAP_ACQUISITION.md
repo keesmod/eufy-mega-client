@@ -35,9 +35,10 @@ async function readMaps(provisioning: MapSessionProvisioning, signal: AbortSigna
 The default is 30 seconds, with a 1 to 60,000 ms bound. There is no quiet-time
 completion heuristic. A later full path can arrive after an initial empty
 cleaning-path update. Each is a complete transport file if its framing and byte
-count agree. Geometry interpretation and persistent path accumulation belong to
-existing [#51](https://github.com/keesmod/eufy-mega-client/issues/51) and
-[#52](https://github.com/keesmod/eufy-mega-client/issues/52).
+count agree. [Decoded mower map geometry](MAP_GEOMETRY.md) from
+[#51](https://github.com/keesmod/eufy-mega-client/issues/51) types these files
+read-only. Persistent path accumulation is the next step,
+[#178](https://github.com/keesmod/eufy-mega-client/issues/178).
 
 The first snapshot of each demand requires complete files for all three names
 from that demand and a correlated download acceptance. Subsequent complete
@@ -113,12 +114,13 @@ It does not change `observe_only` or the existing Android map source.
 
 ## Feature evidence
 
-| Device and route                                                        | Feature                                                                                      | Evidence                                                                                                                                                                                                                                                        | Claim                                             |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| E15 T2880, owner-reported firmware 6.9.28, authenticated MQTT/TCP relay | Album and exact three-file transfer                                                          | [#49 live receipt](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md)                                                                                                                                                                                            | Prior standalone Linux research hardware proof    |
-| Same independently evidenced profile                                    | Library acquisition, last-complete preservation, cancellation and cleanup                    | [Implementation](../src/mowers/maps/acquisition.ts), [negative and lifecycle tests](../test/map-acquisition.test.mjs), existing CI                                                                                                                              | Experimental software coverage from #50           |
-| E15                                                                     | Geometry decoding, persistent path history, source compatibility and architecture acceptance | Existing [#51](https://github.com/keesmod/eufy-mega-client/issues/51), [#52](https://github.com/keesmod/eufy-mega-client/issues/52), [#53](https://github.com/keesmod/eufy-mega-client/issues/53), [#54](https://github.com/keesmod/eufy-mega-client/issues/54) | Separate existing feature obligations remain open |
-| E18 or other route/firmware                                             | Portable acquisition                                                                         | No hardware evidence                                                                                                                                                                                                                                            | Unclaimed                                         |
+| Device and route                                                        | Feature                                                                   | Evidence                                                                                                                                               | Claim                                             |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| E15 T2880, owner-reported firmware 6.9.28, authenticated MQTT/TCP relay | Album and exact three-file transfer                                       | [#49 live receipt](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md)                                                                                   | Prior standalone Linux research hardware proof    |
+| Same independently evidenced profile                                    | Library acquisition, last-complete preservation, cancellation and cleanup | [Implementation](../src/mowers/maps/acquisition.ts), [negative and lifecycle tests](../test/map-acquisition.test.mjs), existing CI                     | Experimental software coverage from #50           |
+| E15                                                                     | Geometry decoding                                                         | [Decoded mower map geometry](MAP_GEOMETRY.md) from [#51](https://github.com/keesmod/eufy-mega-client/issues/51)                                        | Experimental software coverage, capture-validated |
+| E15                                                                     | Persistent path history, source compatibility and architecture acceptance | [#178](https://github.com/keesmod/eufy-mega-client/issues/178) and the 2026-09-16 list on [#51](https://github.com/keesmod/eufy-mega-client/issues/51) | Separate existing feature obligations remain open |
+| E18 or other route/firmware                                             | Portable acquisition                                                      | No hardware evidence                                                                                                                                   | Unclaimed                                         |
 
 The new tests use synthetic peer bytes, authenticated signaling and carrier
 framing. They exercise late full paths after 900 ms, invalid replacements,

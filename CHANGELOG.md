@@ -1,6 +1,31 @@
 # Changelog
 
-## Unreleased
+## 0.18.0 - Unreleased
+
+### Typed E15 map geometry decoding
+
+- Add `decodeMowerMapSnapshot`, `decodeMowerMapFile`, `decodeMowerPathFile` and
+  `decodeMowerPoseFile` with the `MowerMap`, `MowerPath`, `MowerMapPose` and
+  related types. They decode the three files that `PortableMapAcquisition`
+  retains into read-only geometry: map identity, grid and bounds, station
+  pose, region boundaries with sub-regions, obstacles, virtual and physical
+  forbidden zones, virtual walls, cross-boundary tunnels, pass-through and
+  required zones, trap and maintenance markers, the mowing history path with
+  point kinds and end pose, and the six-byte pose record of
+  `navPath.bin.stream`. The numbering comes from the original parser and is
+  validated against the retained captures, recorded with its provenance in
+  [Decoded mower map geometry](docs/MAP_GEOMETRY.md).
+- Every file decodes independently and never throws. Malformed input reports
+  the structural reason, byte offset and message path per file, unknown
+  enumeration values keep their code, undecoded field numbers are listed,
+  degenerate polygons, lines and ellipses are flagged and never repaired, and
+  grid issues are reported. Integers stay integers because no source states
+  the unit, and the pose values are display only. No mowing zone is invented,
+  nothing is editable and E18 is not covered.
+- Upgrade: additive API on the same `PortableMapAcquisition` contract, no
+  change to acquisition, commands, telemetry, camera identifiers or persisted
+  sessions. Rollback: install the previous package. References #51, next step
+  #178.
 
 ### Hardware evidence for stop and return, documentation only
 
