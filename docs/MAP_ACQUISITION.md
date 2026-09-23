@@ -37,8 +37,10 @@ completion heuristic. A later full path can arrive after an initial empty
 cleaning-path update. Each is a complete transport file if its framing and byte
 count agree. [Decoded mower map geometry](MAP_GEOMETRY.md) from
 [#51](https://github.com/keesmod/eufy-mega-client/issues/51) types these files
-read-only. Persistent path accumulation is the next step,
-[#178](https://github.com/keesmod/eufy-mega-client/issues/178).
+read-only, and the
+[accumulated cleaning-path history](MAP_GEOMETRY.md#accumulated-cleaning-path-history)
+from [#178](https://github.com/keesmod/eufy-mega-client/issues/178) merges the
+decoded paths of successive acquisitions without changing this adapter.
 
 The first snapshot of each demand requires complete files for all three names
 from that demand and a correlated download acceptance. Subsequent complete
@@ -114,13 +116,14 @@ It does not change `observe_only` or the existing Android map source.
 
 ## Feature evidence
 
-| Device and route                                                        | Feature                                                                   | Evidence                                                                                                                                               | Claim                                             |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| E15 T2880, owner-reported firmware 6.9.28, authenticated MQTT/TCP relay | Album and exact three-file transfer                                       | [#49 live receipt](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md)                                                                                   | Prior standalone Linux research hardware proof    |
-| Same independently evidenced profile                                    | Library acquisition, last-complete preservation, cancellation and cleanup | [Implementation](../src/mowers/maps/acquisition.ts), [negative and lifecycle tests](../test/map-acquisition.test.mjs), existing CI                     | Experimental software coverage from #50           |
-| E15                                                                     | Geometry decoding                                                         | [Decoded mower map geometry](MAP_GEOMETRY.md) from [#51](https://github.com/keesmod/eufy-mega-client/issues/51)                                        | Experimental software coverage, capture-validated |
-| E15                                                                     | Persistent path history, source compatibility and architecture acceptance | [#178](https://github.com/keesmod/eufy-mega-client/issues/178) and the 2026-09-16 list on [#51](https://github.com/keesmod/eufy-mega-client/issues/51) | Separate existing feature obligations remain open |
-| E18 or other route/firmware                                             | Portable acquisition                                                      | No hardware evidence                                                                                                                                   | Unclaimed                                         |
+| Device and route                                                        | Feature                                                                   | Evidence                                                                                                                                                   | Claim                                                                                              |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| E15 T2880, owner-reported firmware 6.9.28, authenticated MQTT/TCP relay | Album and exact three-file transfer                                       | [#49 live receipt](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md)                                                                                       | Prior standalone Linux research hardware proof                                                     |
+| Same independently evidenced profile                                    | Library acquisition, last-complete preservation, cancellation and cleanup | [Implementation](../src/mowers/maps/acquisition.ts), [negative and lifecycle tests](../test/map-acquisition.test.mjs), existing CI                         | Experimental software coverage from #50                                                            |
+| E15                                                                     | Geometry decoding                                                         | [Decoded mower map geometry](MAP_GEOMETRY.md) from [#51](https://github.com/keesmod/eufy-mega-client/issues/51)                                            | Experimental software coverage, capture-validated                                                  |
+| E15                                                                     | Persistent path history                                                   | [Accumulated cleaning-path history](MAP_GEOMETRY.md#accumulated-cleaning-path-history) from [#178](https://github.com/keesmod/eufy-mega-client/issues/178) | Experimental software coverage, capture-validated for the placeholder, repeat and generation cases |
+| E15                                                                     | Source compatibility and architecture acceptance                          | The 2026-09-16 list on [#51](https://github.com/keesmod/eufy-mega-client/issues/51)                                                                        | Separate existing feature obligations remain open, not scheduled                                   |
+| E18 or other route/firmware                                             | Portable acquisition                                                      | No hardware evidence                                                                                                                                       | Unclaimed                                                                                          |
 
 The new tests use synthetic peer bytes, authenticated signaling and carrier
 framing. They exercise late full paths after 900 ms, invalid replacements,

@@ -27,6 +27,31 @@
   sessions. Rollback: install the previous package. References #51, next step
   #178.
 
+### Accumulated cleaning-path history
+
+- Add `MowerPathAccumulator` with the `MowerPathHistory`, `MowerPathSegment`,
+  `MowerMapGeneration`, `MowerPathMergeInput`, `MowerPathMergeResult`,
+  `MowerPathStartReason`, `MowerPathRejection` and
+  `MowerPathAccumulatorOptions` types. `merge` takes the decoded geometry of
+  each acquisition snapshot in receipt order and keeps one ordered history per
+  map identity and generation: successive `history` paths of one map extend
+  it by the points they add, every segment records the acquisition revision
+  and `receivedAt` it came from, the end pose and the path kind follow the
+  latest history or complete path, and every point keeps its kind and code.
+  A changed map id, path id or map generation (grid, origin or save time) and
+  a history that diverges from the confirmed points start a new history and
+  return the previous one instead of mixing. A `realtime` path only extends
+  the history provisionally and never replaces its points, kind or end pose,
+  the empty realtime placeholder that opens each demand changes nothing, and
+  malformed, duplicate, out-of-order and oversized inputs are rejected with a
+  reason while the existing history stays untouched. Histories are frozen
+  plain data and the merge invents no point, order or timing.
+- Upgrade: additive API on the same `PortableMapAcquisition` contract and the
+  #51 decoder, no change to acquisition, commands, telemetry, camera
+  identifiers or persisted sessions. Rollback: install the previous package.
+  Software evidence only, the merge rules and their confirmation levels are in
+  [Decoded mower map geometry](docs/MAP_GEOMETRY.md). References #178.
+
 ### Hardware evidence for stop and return, documentation only
 
 - The owner-operated window of 2026-09-20 recorded in the

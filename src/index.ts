@@ -115,6 +115,17 @@ export type {
   MowerMapGeometry,
 } from './mowers/maps/geometry.js';
 export type { MapWireFault } from './mowers/maps/protobuf.js';
+export { MowerPathAccumulator } from './mowers/maps/history.js';
+export type {
+  MowerMapGeneration,
+  MowerPathSegment,
+  MowerPathHistory,
+  MowerPathMergeInput,
+  MowerPathStartReason,
+  MowerPathRejection,
+  MowerPathMergeResult,
+  MowerPathAccumulatorOptions,
+} from './mowers/maps/history.js';
 export type {
   MapSessionProvisioning,
   MapStreamName,
