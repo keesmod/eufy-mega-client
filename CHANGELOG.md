@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.18.1 - Unreleased
+## 0.18.1 - 2026-09-23
 
 ### Video Doorbell C30 reported with device type 96
 
@@ -16,6 +16,15 @@
   [Battery doorbell evidence](docs/BATTERY_DOORBELLS.md#reported-c30-type-96-0181).
 - Upgrade: no API, identifier or session change. Rollback: install 0.18.0,
   which rejects the pair again. References #183.
+
+Use the compiled versioned 0.18.1 tarball and its verified integrity from the
+GitHub release. Only discovery and media admission of the exact `T8224` type
+`96` pair change. Protocol, commands, media code, camera identifiers and
+persisted sessions are unchanged. The change is software-verified only: CI and
+synthetic adapter, media, lifecycle, capability and discovery tests. The
+reported C30 has not been tested on hardware. Retain the previous package and
+lockfile for rollback. The camera bridge pins this release separately in
+keesmod/ha-eufy-cam. References #183.
 
 ## 0.18.0 - 2026-09-23
 
