@@ -171,6 +171,7 @@ export function pathMessage(overrides = {}) {
     ...overrides,
   };
   const parts = [w.varint(2, o.mapId), w.varint(3, o.kind)];
+  if (o.id !== undefined) parts.unshift(w.varint(1, o.id));
   if (o.compressed) parts.push(w.bytes(4, o.compressed));
   if (o.endPose) parts.push(w.bytes(5, pose(...o.endPose)));
   parts.push(w.bytes(6, point(-1, -1)));
