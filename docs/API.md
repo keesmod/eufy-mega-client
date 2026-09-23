@@ -313,6 +313,21 @@ undecoded field numbers are listed. Integers stay integers and nothing is
 selectable or editable. See the
 [field semantics, confirmation levels and provenance](MAP_GEOMETRY.md).
 
+## Accumulated cleaning-path history, 0.18.0
+
+`MowerPathAccumulator` merges the decoded cleaning paths of successive
+acquisition snapshots into one ordered `MowerPathHistory` per map identity and
+generation. `merge` takes the `MowerMapGeometry` of each snapshot in receipt
+order and reports `started`, `extended`, `unchanged`, `empty` or `rejected`
+with a reason. Every segment records the acquisition revision and `receivedAt`
+it came from, the end pose and the path kind follow the latest history or
+complete path, point kinds stay unchanged, a `realtime` path never replaces
+established points, and empty, malformed, duplicate and out-of-order inputs
+leave the history untouched. A changed identity or generation and a diverging
+history path start a new history and return the previous one. Histories are
+frozen plain data, `history` returns the current one and `clear` drops it.
+See the [merge rules and confirmation levels](MAP_GEOMETRY.md#accumulated-cleaning-path-history).
+
 ## Read-only local mower session, 0.13.0
 
 `client.mowers.openLocalSession(id, { host, port?, timeoutMs? }, signal?)` opens one

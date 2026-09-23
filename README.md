@@ -53,8 +53,10 @@ or add results to the existing issue for your problem. See
 `mowers` modules with separate credentials and sessions. Mower support includes
 E15 authentication/discovery, a read-only local status session with a typed
 telemetry decoder, opt-in start, pause, resume, stop and return commands with
-fresh-report read-back, a separate read-only map acquisition API and a typed
-map geometry decoder from the original parser's numbering. E15 battery, Wifi,
+fresh-report read-back, a separate read-only map acquisition API, a typed
+map geometry decoder from the original parser's numbering and an accumulator
+that merges successive decoded cleaning paths into one ordered history. E15
+battery, Wifi,
 signal percentage and the mowing, paused and returning activities have dated
 hardware observations. Mowing progress, physical controls, map units and pose
 semantics remain incomplete. See the
