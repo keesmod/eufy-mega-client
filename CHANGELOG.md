@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.18.0 - Unreleased
+## 0.18.0 - 2026-09-23
 
 ### Typed E15 map geometry decoding
 
@@ -70,6 +70,21 @@
   points remains the only way back from a task stopped on the lawn. Model
   matrix, [Opt-in mower commands](docs/MOWER_COMMANDS.md) and the API notes
   carry the evidence. No code, type or package change. References #173.
+
+Use the compiled versioned 0.18.0 tarball and its verified integrity from the
+GitHub release. Without the map API nothing changed. A consumer of
+`PortableMapAcquisition` gains the read-only decoding of #51 and the history
+accumulator of #178 as additive functions and types on the same snapshot
+contract, and the stop and return evidence of #173 is documentation only. Both
+map changes are software-verified only: CI, synthetic fixtures and the retained
+captures of 2026-09-10 decoded and replayed locally without wire-type
+conflicts. A fresh acquisition decoded end to end on the owned E15, the
+coordinate and heading units, the meaning of `navPath.bin.stream` and the
+merged history against the app's displayed path remain open hardware
+obligations, so the pose values stay display only. Commands, telemetry, the
+camera modules and persisted sessions are unchanged. Retain the previous
+package and lockfile for rollback. The mower bridge pins this release
+separately in keesmod/eufy-robomow-ha. References #51, #178 and #173.
 
 ## 0.17.0 - 2026-09-19
 
