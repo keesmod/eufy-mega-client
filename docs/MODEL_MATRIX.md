@@ -167,6 +167,18 @@ This supersedes historical B1/U media cells only for that exact profile. No H
 cells change. [#58], [#35], [#36], [E2] and [E6] retain hardware, other owners,
 standalone and candidate inventory obligations.
 
+## Reported C30 type 96, 0.18.1
+
+A reporter's bounded discovery report on
+[ha-eufy-cam#40](https://github.com/keesmod/ha-eufy-cam/issues/40#issuecomment-5801839459),
+posted on 2026-09-23 with bridge 0.8.25 and client 0.14.0, shows a C30 received as
+T8224 with type 96, camera firmware 3.4.9.2, under a T8030 owner on firmware
+3.8.5.2. Type 96 is the catalogue's C31 row below, and that row is unchanged.
+[#183](https://github.com/keesmod/eufy-mega-client/issues/183) admits exactly this
+received pair with the T8224/95 policy, as described in
+[BATTERY_DOORBELLS.md](BATTERY_DOORBELLS.md#reported-c30-type-96-0181). This is a
+reported inventory tuple, not a hardware observation. No H or P cell changes.
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)

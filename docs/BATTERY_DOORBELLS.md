@@ -9,6 +9,7 @@ bounded discovery and state/event slice in unreleased 0.8.0.
 | T8214/94   | BatteryDoorbellCamera | Software                    | Observed only        | Software           | Unverified               |
 | T8224/95   | BatteryDoorbellCamera | Software                    | Observed only        | Software           | Unverified               |
 | T8223/96   | BatteryDoorbellCamera | Software                    | Observed only        | Software           | Unverified               |
+| T8224/96   | BatteryDoorbellCamera | Software, reported tuple    | Observed only        | Software           | Unverified               |
 
 All rows require the actual admitted T8030/type 18 HomeBase owner. Transport is
 the existing local LAN-derived credential path. Model/type associations use the
@@ -97,6 +98,7 @@ MIT adapter at `e968376f176cfb91f1dc4a74d43fe82a40c2d190`, specifically
 | T8214/94   | E340 doorbell envelope   | Software        | Software                | Software            |
 | T8224/95   | Generic payload          | Software        | Software                | Software            |
 | T8223/96   | Generic payload          | Software        | Software                | Software            |
+| T8224/96   | Generic payload          | Software        | Software                | Software            |
 
 New media requires the actual matching T8030/type 18 parent with a T8030 serial
 prefix and a four-part numeric owner firmware at or above 2.0.9.7. Unknown,
@@ -149,3 +151,29 @@ presentation, with migration, release and legacy retirement still required by
 the camera chain. Version 0.9.0 is unreleased and needs no store migration.
 Retain the preceding package and private store for rollback. No live device was
 tested for this software story.
+
+## Reported C30 type 96, 0.18.1
+
+A bounded discovery report on
+[ha-eufy-cam#40](https://github.com/keesmod/ha-eufy-cam/issues/40#issuecomment-5801839459)
+shows a Video Doorbell C30 received as `device_model=T8224` with `device_type=96`,
+camera firmware 3.4.9.2, under a T8030 owner on firmware 3.8.5.2. The pinned
+catalogue assigns 96 to the C31 (`T8223`), so 0.18.0 and earlier reject the pair
+as `unsupported_device`. This is reported, not independently reproduced, and the
+upstream catalogue and its C30/C31 issue contain no other observation of the pair.
+
+[#183](https://github.com/keesmod/eufy-mega-client/issues/183) admits exactly
+T8224/96 through `reportedTypes` on the T8224 profile, with the same H3 topology
+and media policy as T8224/95. Every other model keeps one exact type, and T8224
+with any other type, including 97, stays `unsupported_device`. The vendored
+adapter selects its behavior from the received type, so T8224/96 follows the C31
+branches. The C30 and C31 property metadata and command lists in the pinned
+catalogue are identical, both select `BatteryDoorbellCamera`, and both use the
+generic C30/C31 live payload. The only type-specific difference is a motion
+sensitivity setter this client does not expose.
+
+The per-model [adapter tests](../test/battery-doorbell.test.mjs), the
+[shared media fixtures](../test/fixtures/battery-doorbell-media.mjs) and the
+[profile tests](../test/device-profiles.test.mjs) cover T8224/96 like the other
+rows. Discovery, state, events and media of the reported C30 on hardware remain
+unverified until the reporter tests a release with this change.

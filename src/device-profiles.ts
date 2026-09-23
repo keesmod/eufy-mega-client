@@ -17,6 +17,8 @@ export type CameraFamily =
 export type CameraTopology = 'h3' | 'h3-or-standalone' | 'standalone';
 export interface DeviceProfile {
   readonly type: number;
+  // Received types beyond the catalogue type, each with a dated report in MODEL_MATRIX.md.
+  readonly reportedTypes?: readonly number[];
   readonly kind: 'camera' | 'station';
   readonly family: CameraFamily | 'homebase';
   readonly topology: CameraTopology | 'owner';
@@ -40,8 +42,16 @@ const camera = (
   family: CameraFamily,
   topology: CameraTopology,
   features: MediaPolicy,
+  reportedTypes?: readonly number[],
 ): DeviceProfile =>
-  Object.freeze({ type, kind: 'camera', family, topology, features: Object.freeze(features) });
+  Object.freeze({
+    type,
+    ...(reportedTypes && { reportedTypes: Object.freeze([...reportedTypes]) }),
+    kind: 'camera',
+    family,
+    topology,
+    features: Object.freeze(features),
+  });
 
 // Existing additional-H3 software boundary, not a measured minimum for every model.
 export const h3MediaOwner = Object.freeze({
@@ -88,7 +98,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8203: camera(93, 'wired-doorbell', 'standalone', blockedMedia),
   T8213: camera(91, 'battery-doorbell', 'h3', establishedMedia),
   T8214: camera(94, 'battery-doorbell', 'h3', h3Media),
-  T8224: camera(95, 'battery-doorbell', 'h3', h3Media),
+  // ha-eufy-cam#40: an inventory reports a C30 with the C31 type. Only this exact pair.
+  T8224: camera(95, 'battery-doorbell', 'h3', h3Media, [96]),
   T8223: camera(96, 'battery-doorbell', 'h3', h3Media),
   T8142: camera(15, 'eufycam', 'h3', establishedMedia),
   T8130: camera(32, 'solo', 'h3-or-standalone', h3Media),
@@ -120,7 +131,10 @@ export function modelProfile(model: unknown): DeviceProfile | undefined {
 
 export function exactDeviceProfile(raw: WireDevice): DeviceProfile | undefined {
   const profile = modelProfile(raw.device_model);
-  return profile?.type === raw.device_type ? profile : undefined;
+  return profile &&
+    (profile.type === raw.device_type || profile.reportedTypes?.includes(raw.device_type))
+    ? profile
+    : undefined;
 }
 
 // Software evidence only. Dated hardware observations stay in MODEL_MATRIX.md.

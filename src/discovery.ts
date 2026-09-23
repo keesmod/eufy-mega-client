@@ -128,8 +128,7 @@ export function discover(items: unknown): Inventory {
       reject(index, item.device_sn, 'invalid_device_relationship');
       return;
     }
-    const profile = modelProfile(item.device_model);
-    if (!profile || profile.type !== item.device_type) {
+    if (!exactDeviceProfile(item)) {
       // These bounds restrict diagnostics only, never recognition. Do not trim,
       // truncate or coerce values: a serial prefix is not a received model code.
       issues.push({

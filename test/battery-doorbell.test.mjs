@@ -12,11 +12,13 @@ import { EufyMegaClient } from '../dist/index.js';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // Independently authored tuples from the pinned catalogue and MODEL_MATRIX.md.
+// T8224/96 is the reported C30 pair from ha-eufy-cam#40.
 const models = [
   ['T8213', 91],
   ['T8214', 94],
   ['T8224', 95],
   ['T8223', 96],
+  ['T8224', 96],
 ];
 const owner = (id = 'T8030_OWNER') => ({
   category: 'eufy_security',
@@ -111,7 +113,7 @@ for (const [model, type] of models) {
       }
     });
   });
-  test(`${model} rejects missing/malformed state and accepts zero and runtime owner/channel`, async () => {
+  test(`${model}/${type} rejects missing/malformed state and accepts zero and runtime owner/channel`, async () => {
     for (const value of [undefined, null, '', '12bad', ' ', true, -1, 101]) {
       await fixture(
         [owner(), doorbell(model, type, { main_sw_version: '', params: params(value, value) })],
@@ -155,7 +157,7 @@ for (const [model, type] of models) {
       assert.equal(old.listenerCount('rings'), 0);
     });
   });
-  test(`${model} preserves cross-transport detection settling, distinct rings and replay filtering`, async () => {
+  test(`${model}/${type} preserves cross-transport detection settling, distinct rings and replay filtering`, async () => {
     const raw = doorbell(model, type);
     await fixture([owner(), owner('T8030_SECOND'), raw], async (t) => {
       const events = new EventTransport(
@@ -231,14 +233,19 @@ test('unknown candidate pairs, wrong types, unavailable owners and broken initia
 });
 test('public doorbell identity and observations agree across discovery and lazy state access', async () => {
   const cloud = cloudFixture({
-    inventory: [owner(), ...models.map(([m, t]) => doorbell(m, t, { params: params('61', '1') }))],
+    inventory: [
+      owner(),
+      ...models.map(([m, t]) =>
+        doorbell(m, t, { device_sn: `${m}_${t}_FIXTURE`, params: params('61', '1') }),
+      ),
+    ],
   });
   const client = new EufyMegaClient(cloud.options);
   try {
     await client.connect();
     const listed = await client.listDevices();
-    for (const [model] of models) {
-      const state = await client.getDeviceState(model + '_FIXTURE');
+    for (const [model, type] of models) {
+      const state = await client.getDeviceState(`${model}_${type}_FIXTURE`);
       assert.deepEqual(
         state,
         listed.find((d) => d.id === state.id),
