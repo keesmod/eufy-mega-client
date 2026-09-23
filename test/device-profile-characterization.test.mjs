@@ -62,8 +62,9 @@ for (const [model, type, kind, family, standalone, h3, media] of profileBaseline
       assert.deepEqual(result.relationships.get('CAMERA'), expected);
       assert.equal(result.result.devices[1].kind, kind);
     }
+    // T8224 also admits its reported type 96 (ha-eufy-cam#40), so its wrong type skips it.
     for (const bad of [
-      { ...camera, device_type: type + 1 },
+      { ...camera, device_type: model === 'T8224' ? type + 2 : type + 1 },
       { ...camera, device_model: 'T9999' },
       { ...camera, device_model: model.toLowerCase() },
     ]) {

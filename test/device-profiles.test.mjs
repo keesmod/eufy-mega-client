@@ -34,6 +34,34 @@ test('registry contains exactly the characterized profiles with explicit immutab
   }
 });
 
+test('only T8224 admits a reported type, and only for that exact pair', () => {
+  for (const [model, profile] of Object.entries(deviceProfiles))
+    if (model !== 'T8224') assert.equal(profile.reportedTypes, undefined, model);
+  const c30 = deviceProfiles.T8224;
+  assert.deepEqual(c30.reportedTypes, [96]);
+  assert.equal(Object.isFrozen(c30.reportedTypes), true);
+  assert.equal(exactDeviceProfile({ device_model: 'T8224', device_type: 96 }), c30);
+  for (const [device_model, device_type] of [
+    ['T8224', 97],
+    ['T8224', '96'],
+    ['T8223', 95],
+    ['T8214', 96],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined);
+  const owner = {
+    device_model: 'T8030',
+    device_type: 18,
+    device_sn: 'T8030_SYNTHETIC',
+    main_sw_version: '2.0.9.7',
+  };
+  const camera = { device_model: 'T8224', device_type: 96, parent_sn: owner.device_sn };
+  for (const feature of ['snapshot', 'live', 'recordings']) {
+    assert.equal(hasCameraMedia(camera, owner, feature), true);
+    assert.equal(hasCameraMedia(camera, { ...owner, main_sw_version: '2.0.9.6' }, feature), false);
+    assert.equal(hasCameraMedia({ ...camera, device_type: 97 }, owner, feature), false);
+  }
+});
+
 test('object keys, coercible objects and malformed identities never become profiles', () => {
   for (const device_model of [
     undefined,

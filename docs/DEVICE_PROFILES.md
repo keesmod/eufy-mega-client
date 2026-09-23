@@ -101,6 +101,9 @@ owner firmware at or above 2.0.9.7.
 | T8790 | 90    | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
 | T85V0 | 203   | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
 
+T8224 also admits the reported type 96 with the same policy.
+See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
+
 <!-- generated device profiles: end -->
 
 ## Reviewing a known-family addition

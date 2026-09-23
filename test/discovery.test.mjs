@@ -271,15 +271,16 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
     result.devices.map((d) => d.id),
     ['HB', 'CAM'],
   );
-  assert.deepEqual(issue('T8224', 96).issues[0], {
+  assert.deepEqual(issue('T8224', 97).issues[0], {
     index: 2,
     deviceId: 'PRIVATE_SERIAL',
     code: 'unsupported_device',
     deviceModel: 'T8224',
-    deviceType: 96,
+    deviceType: 97,
   });
-  // Recognition is unchanged. A valid C30 pair still passes with its real parent.
+  // A valid C30 pair, including the reported type 96, still passes with its real parent.
   assert.equal(issue('T8224').devices.length, 3);
+  assert.equal(issue('T8224', 96).devices.length, 3);
   for (const model of [
     undefined,
     null,
