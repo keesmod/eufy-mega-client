@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.18.1 - Unreleased
+
+### Video Doorbell C30 reported with device type 96
+
+- Discovery admits a C30 that Eufy reports as model `T8224` with device type
+  `96`, as in the report on
+  [ha-eufy-cam#40](https://github.com/keesmod/ha-eufy-cam/issues/40). It gets
+  the same battery doorbell adapter, HomeBase 3 topology and snapshot, live and
+  recording policy as `T8224` with type `95`. Earlier versions rejected it as
+  `unsupported_device`. Only this exact pair is added. Every other model keeps
+  its single type, and `T8224` with any other type stays unsupported.
+- The pair is a reported inventory value, not independently reproduced, and no
+  hardware was tested. Details are in
+  [Battery doorbell evidence](docs/BATTERY_DOORBELLS.md#reported-c30-type-96-0181).
+- Upgrade: no API, identifier or session change. Rollback: install 0.18.0,
+  which rejects the pair again. References #183.
+
 ## 0.18.0 - 2026-09-23
 
 ### Typed E15 map geometry decoding

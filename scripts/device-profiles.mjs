@@ -20,6 +20,13 @@ export async function renderDeviceProfiles(text) {
     '| Model | Type | Kind | Family | Discovery topology | Snapshot | Live | Recordings | Software evidence |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...rows,
+    ...Object.entries(deviceProfiles)
+      .filter(([, profile]) => profile.reportedTypes)
+      .flatMap(([model, profile]) => [
+        '',
+        `${model} also admits the reported type ${profile.reportedTypes.join(', ')} with the same policy.`,
+        'See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.',
+      ]),
   ].join('\n');
   const sections = text.split(start);
   if (sections.length !== 2 || sections[1].split(end).length !== 2)

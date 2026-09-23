@@ -17,7 +17,7 @@ export function hasCameraMedia(
   if (admission === 'established') return true;
   if (
     admission !== 'h3' ||
-    profile?.type !== camera.device_type ||
+    !exactDeviceProfile(camera) ||
     owner?.device_model !== h3MediaOwner.model ||
     exactDeviceProfile(owner)?.kind !== 'station' ||
     owner.device_sn !== camera.parent_sn ||
