@@ -90,7 +90,24 @@ export interface MowerCommandRequest {
   kind: MowerCommandKind;
   /** Overrides the opt-in read-back bound for this command only, 1000 to 60000 ms. */
   readBackMs?: number;
+  /**
+   * Called synchronously for each fresh progress observation while the read-back runs, so a
+   * consumer can show what the mower does before the outcome arrives. Errors it throws are
+   * ignored. It cannot change, end, retry or replay the command, and the outcome stays the
+   * only result.
+   */
+  onProgress?: (progress: MowerCommandProgress) => void;
 }
+
+/**
+ * One fresh observation during a command's read-back. `acknowledged` is the first report
+ * carrying the class's control point or the written point at its value, as in the outcome.
+ * `activity` is every fresh DP 107 report that decodes to a confirmed activity, for example
+ * `returning` within a second of a `stop`, long before its map-saving reflection.
+ */
+export type MowerCommandProgress =
+  | { kind: 'acknowledged'; observedAt: string; sequence: number; dp: string }
+  | { kind: 'activity'; observedAt: string; sequence: number; value: MowerActivity };
 
 /** The one declared boolean data point written for a command class. See docs/MOWER_COMMANDS.md. */
 export interface MowerCommandWrite {

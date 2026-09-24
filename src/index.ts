@@ -46,6 +46,7 @@ export type {
   MowerCommandOptions,
   MowerCommandKind,
   MowerCommandRequest,
+  MowerCommandProgress,
   MowerCommandWrite,
   MowerCommandStage,
   MowerCommandEnd,

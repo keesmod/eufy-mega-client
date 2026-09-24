@@ -5,6 +5,7 @@ import type {
   MowerActivity,
   MowerCommandKind,
   MowerCommandOptions,
+  MowerCommandProgress,
   MowerCommandRequest,
   MowerCommandWrite,
   MowerDpSchemaEntry,
@@ -106,16 +107,23 @@ export function validateCommandOptions(options: unknown): MowerCommandOptions | 
 export function validateCommandRequest(
   request: unknown,
   options: MowerCommandOptions,
-): { kind: MowerCommandKind; readBackMs: number } {
+): {
+  kind: MowerCommandKind;
+  readBackMs: number;
+  onProgress?: (progress: MowerCommandProgress) => void;
+} {
   if (!request || typeof request !== 'object' || Array.isArray(request))
     throw new EufyError('mower_command_invalid');
-  const { kind, readBackMs } = request as Record<string, unknown>;
+  const { kind, readBackMs, onProgress } = request as Record<string, unknown>;
   if (typeof kind !== 'string' || !KINDS.has(kind as MowerCommandKind))
     throw new EufyError('mower_command_invalid');
   if (readBackMs !== undefined && !bound(readBackMs)) throw new EufyError('mower_command_invalid');
+  if (onProgress !== undefined && typeof onProgress !== 'function')
+    throw new EufyError('mower_command_invalid');
   return {
     kind: kind as MowerCommandKind,
     readBackMs: readBackMs ?? options.readBackMs ?? DEFAULT_READ_BACK_MS,
+    ...(onProgress ? { onProgress: onProgress as (progress: MowerCommandProgress) => void } : {}),
   };
 }
 

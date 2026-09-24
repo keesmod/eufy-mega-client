@@ -524,6 +524,16 @@ A timeout resolves rather than throws because the write already happened, and
 the library never resends it. There is no `completed` and dock arrival is
 never inferred.
 
+An optional `onProgress` callback receives fresh observations while the
+read-back runs: `{ kind: 'acknowledged', observedAt, sequence, dp }` once, as
+in the outcome, and `{ kind: 'activity', observedAt, sequence, value }` for
+every fresh DP 107 report that decodes to a confirmed activity. After a `stop`
+on the owned E15 that is `returning` within a second, about 30 seconds before
+the map-saving reflection ends the read-back. The callback is called
+synchronously with frozen copies. Errors it throws are ignored. It cannot
+change, end, retry or replay the command, and the outcome stays the only
+result. A non-function `onProgress` is refused with `mower_command_invalid`.
+
 Refusals before any write are `mower_command_invalid`,
 `mower_command_undeclared`, `mower_command_evidence_missing`,
 `mower_command_map_saving`, `mower_command_task_active` and
