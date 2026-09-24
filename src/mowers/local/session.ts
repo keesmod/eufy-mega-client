@@ -7,6 +7,7 @@ import { EufyError } from '../../types.js';
 import type {
   MowerCommandOptions,
   MowerCommandOutcome,
+  MowerCommandProgress,
   MowerCommandRequest,
   MowerDpSchemaEntry,
   MowerDpSnapshot,
@@ -222,6 +223,15 @@ export class LocalMowerSession implements MowerLocalSession {
           end: 'timed_out',
           reports: [],
         };
+        // A consumer's progress callback sees private copies and can never change the command.
+        const progress = (event: MowerCommandProgress): void => {
+          if (!valid.onProgress) return;
+          try {
+            valid.onProgress(Object.freeze({ ...event }));
+          } catch {
+            // Ignored: the outcome stays the only result.
+          }
+        };
         this.#send(key, Command.CONTROL_NEW, controlPayload(controlDocument(command.write)));
         const bound = AbortSignal.timeout(valid.readBackMs);
         const readSignal = AbortSignal.any([abort, bound]);
@@ -269,8 +279,17 @@ export class LocalMowerSession implements MowerLocalSession {
                 dp: Object.hasOwn(dps, command.control) ? command.control : command.write.dp,
               };
               outcome.stage = 'acknowledged';
+              progress({ kind: 'acknowledged', ...outcome.acknowledgement });
             }
             if (!Object.hasOwn(dps, '107')) continue;
+            const status = decodeMowerTelemetry(report, { schema: this.#schema }).status;
+            if (status.state === 'reported')
+              progress({
+                kind: 'activity',
+                observedAt: report.observedAt,
+                sequence: report.sequence,
+                value: status.value,
+              });
             if (command.payload) {
               // Exact wire match of the expected records, no activity decoding involved.
               if (matchesPayload(dps['107'], command.payload.fields)) {
@@ -285,7 +304,6 @@ export class LocalMowerSession implements MowerLocalSession {
               }
               continue;
             }
-            const status = decodeMowerTelemetry(report, { schema: this.#schema }).status;
             if (status.state === 'reported' && status.value === command.activity) {
               outcome.activity = {
                 observedAt: report.observedAt,

@@ -411,6 +411,8 @@ test('invalid requests are refused before any query', async (t) => {
     { kind: 'start', readBackMs: 10 },
     { kind: 'start', readBackMs: 60_001 },
     { kind: 'start', readBackMs: '2000' },
+    { kind: 'start', onProgress: 'report' },
+    { kind: 'start', onProgress: {} },
   ])
     await assert.rejects(session.sendCommand(request), { code: 'mower_command_invalid' });
   assert.equal(queried(peer), 0);
@@ -568,6 +570,90 @@ test('stop writes switch_go false and reads the map-saving payload back as its r
     [3, 5, 16, 13],
   );
   assert.deepEqual(peer.writes[0].dps, { 1: false });
+});
+
+test('stop reports its progress while the read-back runs and a failing callback changes nothing', async (t) => {
+  const reports = (report) => {
+    // As recorded on 2026-09-20: the control point, `returning` within a second, the written
+    // point, then the map-saving payload at the dock arrival.
+    report({ 104: control() }, { sequence: 91 });
+    report({ 107: status({ 1: 1, 3: 1 }) }, { sequence: 92 });
+    report({ 1: false }, { sequence: 93 });
+    report({ 107: status({ 1: 1, 2: 1, 3: 1 }) }, { sequence: 94 });
+    report({ 107: status({ 2: 5, 3: 1 }) }, { sequence: 95 });
+  };
+  const events = [];
+  const { session } = await setup(t, {
+    dps: { ...idle, 1: true },
+    peer: { onWrite: (_dps, report) => reports(report) },
+  });
+  const outcome = await session.sendCommand({
+    kind: 'stop',
+    onProgress: (event) => events.push(event),
+  });
+  assert.equal(outcome.end, 'reflected');
+  assert.equal(outcome.payload.sequence, 95);
+  assert.deepEqual(
+    events.map(({ kind, sequence, dp, value }) => ({
+      kind,
+      sequence,
+      ...(dp ? { dp } : {}),
+      ...(value ? { value } : {}),
+    })),
+    [
+      { kind: 'acknowledged', sequence: 91, dp: '104' },
+      { kind: 'activity', sequence: 92, value: 'returning' },
+      { kind: 'activity', sequence: 94, value: 'returning' },
+    ],
+    'the acknowledgement and every confirmed activity, never the map-saving payload',
+  );
+  assert.ok(
+    events.every((event) => Object.isFrozen(event) && typeof event.observedAt === 'string'),
+  );
+  assert.equal(outcome.activity, undefined, 'progress never adds an activity to a stop outcome');
+
+  const failing = await setup(t, {
+    dps: { ...idle, 1: true },
+    peer: { onWrite: (_dps, report) => reports(report) },
+  });
+  const unchanged = await failing.session.sendCommand({
+    kind: 'stop',
+    onProgress: () => {
+      throw new Error('consumer failure');
+    },
+  });
+  assert.equal(unchanged.end, 'reflected');
+  assert.equal(unchanged.stage, 'reflected');
+  assert.deepEqual(
+    unchanged.reports.map((r) => r.sequence),
+    [91, 92, 93, 94, 95],
+  );
+  assert.equal(written(failing.peer), 1, 'written once, never again');
+});
+
+test('start reports the acknowledgement and the reflecting activity as progress', async (t) => {
+  const events = [];
+  const { session } = await setup(t, {
+    peer: {
+      onWrite: (_dps, report) => {
+        report({ 103: control() }, { sequence: 11 });
+        report({ 107: status({ 1: 2, 3: 1 }) }, { sequence: 12 });
+      },
+    },
+  });
+  const outcome = await session.sendCommand({
+    kind: 'start',
+    onProgress: (event) => events.push(event),
+  });
+  assert.equal(outcome.end, 'reflected');
+  assert.deepEqual(
+    events.map(({ kind, sequence }) => [kind, sequence]),
+    [
+      ['acknowledged', 11],
+      ['activity', 12],
+    ],
+  );
+  assert.equal(events[1].value, 'mowing');
 });
 
 test('stop without the map-saving payload ends at the evidenced stage and other DP 107 shapes never reflect it', async (t) => {
