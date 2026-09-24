@@ -22,7 +22,7 @@ the official app at hand". An invalid opt-in fails client construction with
 with `mower_commands_disabled` before any frame is written, and
 `client.mowers.commandsEnabled` and `session.commandsEnabled` report `false`.
 
-`session.sendCommand({ kind, readBackMs? })` runs one command of the class
+`session.sendCommand({ kind, readBackMs?, onProgress? })` runs one command of the class
 `start`, `pause`, `resume`, `stop` or `return` and resolves a
 `MowerCommandOutcome`:
 
@@ -62,6 +62,14 @@ from silence, from the read-back bound or from an acknowledgement. Rain and
 child protection are never read for a decision, never written and never
 bypassed. The library never sends a second frame for one call, never retries a
 timed-out or rejected command and never reconnects a lost session.
+
+`onProgress` reports the same evidence while the read-back still runs: the
+acknowledgement once and every fresh DP 107 report that decodes to a confirmed
+activity. It adds no evidence and no stage. A `stop` on the owned E15 reported
+`returning` 0.28 seconds after the write and its map-saving reflection 29.8
+seconds after it on 2026-09-20, so a consumer can show the drive home instead
+of the earlier activity. The callback runs synchronously with frozen copies,
+its errors are ignored and it cannot influence the command.
 
 ### Typed refusals before any write
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.19.0 - 2026-09-24
+
+### Command progress while the read-back runs
+
+- `session.sendCommand()` accepts an optional `onProgress` callback. It
+  receives the acknowledgement once and every fresh DP 107 report that decodes
+  to a confirmed activity while the read-back still runs, as frozen copies.
+  After a `stop` on the owned E15 that is `returning` within a second, where
+  the outcome arrives only with the map-saving payload at the dock arrival
+  about 30 seconds later. The mower bridge in keesmod/eufy-robomow-ha uses it
+  to show the drive home, a finding of the control window of 2026-09-24 in
+  keesmod/eufy-robomow-ha#8.
+- The callback adds no evidence and no stage. Its errors are ignored and it
+  cannot change, end, retry or replay a command. A non-function value is
+  refused with `mower_command_invalid`. Without it nothing changes.
+- Upgrade: additive, no identifier, session or outcome change. Rollback:
+  install 0.18.1 and drop the callback.
+
+Use the compiled versioned 0.19.0 tarball and its verified integrity from the
+GitHub release. Only the command read-back gains the optional callback. The
+change is software-verified: CI and synthetic command tests with the report
+order recorded on 2026-09-20. No new hardware test was needed because the
+callback only forwards reports the confirmed definitions already decode. Retain
+the previous package and lockfile for rollback.
+
 ## 0.18.1 - 2026-09-23
 
 ### Video Doorbell C30 reported with device type 96
