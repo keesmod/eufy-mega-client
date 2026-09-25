@@ -20,7 +20,7 @@
   `LiveStartStage` and `LiveStartProgress` are exported. Rollback: install
   0.20.0 and drop `onProgress`.
 
-## 0.20.0 - Unreleased
+## 0.20.0 - 2026-09-25
 
 ### Opt-in mower settings
 
@@ -58,9 +58,13 @@
   for example in a test double, adds them. Rollback: install 0.19.0 and drop
   the `settings` opt-in and the new calls.
 
-The change is software-verified: CI and synthetic tests against the local
-peer. The supervised change, read-back and restore of the mow height on the
-owned E15 is pending in keesmod/eufy-robomow-ha#8.
+Use the compiled versioned 0.20.0 tarball and its verified integrity from the
+GitHub release. The change is software-verified: CI and synthetic tests against
+the local peer, with the device's own declarations read in a read-only readout
+on the owned E15 on 2026-09-25. No setting has been written on hardware yet.
+The supervised change, read-back and restore of the mow height is pending in
+keesmod/eufy-robomow-ha#8. Retain the previous package and lockfile for
+rollback.
 
 ## 0.19.0 - 2026-09-24
 
