@@ -13,6 +13,8 @@ import type {
   MowerHomeOptions,
 } from '../modular-types.js';
 import { copySchema, parseSchema } from './telemetry/schema.js';
+import { mapMqttFromLogin, mapProvisioningFromRtc, readMapMqtt } from './maps/provisioning.js';
+import type { MapSessionProvisioning, MqttCredentials } from './maps/types.js';
 import { WORK_PARAMETERS_DP } from './work-parameters.js';
 import {
   APP_QUERY,
@@ -55,6 +57,7 @@ interface Session {
   timezone: string;
   phoneCode: string;
   expiresAt: number;
+  mapMqtt?: MqttCredentials;
 }
 interface Binding {
   deviceId: string;
@@ -79,7 +82,7 @@ export interface CloudWorkParameters {
   readonly value: string | null | undefined;
 }
 
-/** Independent Home/Tuya owner. No security imports, commands, RTC or map transport. */
+/** Independent Home/Tuya owner. No security imports, physical commands or map transport. */
 export class EufyHomeAdapter implements MowerAdapter {
   #credentials: Credentials;
   #store: MowerAdapterContext['sessionStore'];
@@ -91,8 +94,12 @@ export class EufyHomeAdapter implements MowerAdapter {
   #discovering = false;
   #bindings = new Map<string, Binding>();
   #pending = new Set<Promise<unknown>>();
+  #mapProvisioning: boolean;
 
   constructor(context: MowerAdapterContext, options: MowerHomeOptions = {}) {
+    if (options.mapProvisioning !== undefined && typeof options.mapProvisioning !== 'boolean')
+      throw new EufyError('mower_invalid_options');
+    this.#mapProvisioning = options.mapProvisioning === true;
     this.#credentials = { ...context.credentials };
     this.#store = context.sessionStore;
     this.#fetch = options.fetch ?? globalThis.fetch;
@@ -255,7 +262,7 @@ export class EufyHomeAdapter implements MowerAdapter {
           const raw = object(JSON.parse(string(envelope.data)));
           if (raw.account === this.#account()) {
             previous = this.#readSession(raw);
-            if (previous.expiresAt > Date.now()) {
+            if (previous.expiresAt > Date.now() && (!this.#mapProvisioning || previous.mapMqtt)) {
               // A persisted SID is only connected after server-side validation.
               try {
                 list(await this.#tuya(previous, 'tuya.m.location.list', '2.1', undefined, abort));
@@ -355,6 +362,7 @@ export class EufyHomeAdapter implements MowerAdapter {
       session.region = Object.entries(REGIONS).find(
         ([, origin]) => origin === session.origin,
       )![0] as Region;
+      if (this.#mapProvisioning) session.mapMqtt = mapMqttFromLogin(login, session.region);
       if (abort.aborted) throw new EufyError('request_aborted');
       try {
         await this.#store.save({ version: 1, data: JSON.stringify(session) });
@@ -402,6 +410,8 @@ export class EufyHomeAdapter implements MowerAdapter {
     )
       throw new EufyError('session_unreadable');
     result.expiresAt = raw.expiresAt;
+    if (raw.mapMqtt !== undefined)
+      result.mapMqtt = readMapMqtt(raw.mapMqtt, result.accountUid, result.region);
     return result;
   }
   #requireSession(): Session {
@@ -503,6 +513,23 @@ export class EufyHomeAdapter implements MowerAdapter {
       return { observedAt, value: typeof value === 'string' ? value : null };
     });
   }
+  /** Internal-only producer. No generic cloud request or raw response escapes. */
+  provisionMapSession(id: string, signal: AbortSignal): Promise<MapSessionProvisioning> {
+    return this.withConnection(id, signal, async (binding, lease) => {
+      if (!this.#mapProvisioning) throw new EufyError('mower_maps_disabled');
+      const session = this.#requireSession();
+      if (!session.mapMqtt) throw new EufyError('mower_map_invalid_provisioning');
+      const rtc = await this.#tuya(
+        session,
+        'tuya.m.rtc.config.get',
+        '1.0',
+        { devId: binding.deviceId },
+        lease,
+      );
+      return mapProvisioningFromRtc({ ...binding, mqtt: session.mapMqtt }, rtc);
+    });
+  }
+
   async shutdown(): Promise<void> {
     this.#lifetime.abort();
     await Promise.allSettled([...this.#pending]);
@@ -512,6 +539,8 @@ export class EufyHomeAdapter implements MowerAdapter {
   }
 }
 const SAFE_CODES = new Set([
+  'mower_maps_disabled',
+  'mower_map_invalid_provisioning',
   'authentication_failed',
   'authentication_required',
   'request_aborted',

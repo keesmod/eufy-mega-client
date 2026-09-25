@@ -4,6 +4,7 @@ import { inspect } from 'node:util';
 import { EufyClient } from '../dist/index.js';
 import { EufyHomeAdapter } from '../dist/mowers/home.js';
 import { derivePassword, encryptPassword, mobileOrigin, sign } from '../dist/mowers/protocol.js';
+import { mapLogin, mapRtc } from './fixtures/map-provisioning.mjs';
 
 const credentials = {
   email: 'synthetic@example.invalid',
@@ -24,6 +25,7 @@ function fixture({
   origin,
   hook,
   store,
+  mapProvisioning,
 } = {}) {
   let stored;
   const calls = [];
@@ -95,7 +97,11 @@ function fixture({
       });
     throw Error('unexpected synthetic action');
   };
-  const options = { credentials, sessionStore, home: { fetch: request, requestTimeoutMs: 50 } };
+  const options = {
+    credentials,
+    sessionStore,
+    home: { fetch: request, requestTimeoutMs: 50, mapProvisioning },
+  };
   return {
     options,
     calls,
@@ -109,6 +115,124 @@ function fixture({
 }
 function noSecrets(value) {
   for (const secret of ['PRIVATE-', credentials.email]) assert.ok(!value.includes(secret), value);
+}
+
+function mapFixture(hook) {
+  return fixture({
+    mapProvisioning: true,
+    hook: async (request) => {
+      const overridden = await hook?.(request);
+      if (overridden) return overridden;
+      if (request.action === 'tuya.m.user.uid.password.login.reg')
+        return response({ result: mapLogin() });
+      if (request.action === 'tuya.m.device.get')
+        return response({ result: { devId: privateId, localKey: 'PRIVATE-LOCALKEY' } });
+      if (request.action === 'tuya.m.rtc.config.get') return response({ result: mapRtc() });
+    },
+  });
+}
+
+test('map provisioning is opt-in and makes one bound RTC read per explicit call', async () => {
+  const disabled = fixture();
+  const off = new EufyClient({ mowers: disabled.options });
+  await off.mowers.connect();
+  const [offDevice] = await off.mowers.discover();
+  await assert.rejects(off.mowers.provisionMapSession(offDevice.id), {
+    code: 'mower_maps_disabled',
+  });
+  assert.ok(!disabled.calls.some((call) => call.action === 'tuya.m.rtc.config.get'));
+  await off.close();
+
+  const f = mapFixture();
+  const client = new EufyClient({ mowers: f.options });
+  await assert.rejects(client.mowers.provisionMapSession('unknown'), {
+    code: 'authentication_required',
+  });
+  await client.mowers.connect();
+  await assert.rejects(client.mowers.provisionMapSession('unknown'), {
+    code: 'mower_binding_unavailable',
+  });
+  const [device] = await client.mowers.discover();
+  const before = f.calls.length;
+  const privateResult = await client.mowers.provisionMapSession(device.id);
+  assert.equal(f.calls.length, before + 1);
+  const call = f.calls.at(-1);
+  assert.equal(call.action, 'tuya.m.rtc.config.get');
+  assert.deepEqual(JSON.parse(new URLSearchParams(call.init.body).get('postData')), {
+    devId: privateId,
+  });
+  assert.equal(privateResult.peer, privateId);
+  noSecrets(JSON.stringify(device) + inspect(client, { showHidden: true }));
+  await client.mowers.provisionMapSession(device.id);
+  assert.equal(f.calls.length, before + 2);
+  await client.close();
+  await assert.rejects(client.mowers.provisionMapSession(device.id), { code: 'client_closed' });
+});
+
+test('map credentials survive restart, and enabling maps on an old session refreshes only on connect', async () => {
+  const f = mapFixture();
+  f.options.home.mapProvisioning = false;
+  const first = new EufyClient({ mowers: f.options });
+  await first.mowers.connect();
+  const initial = await first.mowers.discover();
+  await first.close();
+  assert.equal(JSON.parse(f.stored.data).mapMqtt, undefined);
+  f.options.home.mapProvisioning = true;
+  for (let restart = 0; restart < 2; restart++) {
+    const next = new EufyClient({ mowers: f.options });
+    await next.mowers.connect();
+    assert.deepEqual(await next.mowers.discover(), initial);
+    await next.mowers.provisionMapSession(initial[0].id);
+    await next.close();
+  }
+  assert.equal(f.calls.filter((c) => c.action === '/v1/user/email/login').length, 2);
+  assert.equal(f.calls.filter((c) => c.action === 'tuya.m.location.list').length, 1);
+});
+
+for (const mode of ['cancel', 'shutdown', 'timeout', 'revoked']) {
+  test(`map provisioning ${mode} stops without replay, relogin or private errors`, async () => {
+    let entered;
+    const started = new Promise((resolve) => {
+      entered = resolve;
+    });
+    const f = mapFixture(({ action, init }) => {
+      if (action !== 'tuya.m.rtc.config.get') return;
+      entered();
+      if (mode === 'revoked')
+        return response({ success: false, errorCode: 'USER_SESSION_INVALID', msg: key });
+      return new Promise((_resolve, reject) => {
+        init.signal.addEventListener('abort', () => reject(Error('PRIVATE-RTC-ERROR')), {
+          once: true,
+        });
+      });
+    });
+    const client = new EufyClient({ mowers: f.options });
+    await client.mowers.connect();
+    const [device] = await client.mowers.discover();
+    const abort = new AbortController();
+    const check = assert.rejects(
+      client.mowers.provisionMapSession(device.id, abort.signal),
+      (error) => {
+        noSecrets(inspect(error, { showHidden: true }));
+        assert.equal(
+          error.code,
+          mode === 'timeout'
+            ? 'request_timeout'
+            : mode === 'revoked'
+              ? 'authentication_required'
+              : 'request_aborted',
+        );
+        return true;
+      },
+    );
+    await started;
+    if (mode === 'cancel') abort.abort('PRIVATE-CANCEL');
+    if (mode === 'shutdown') await client.close();
+    await check;
+    assert.equal(f.calls.filter((c) => c.action === 'tuya.m.rtc.config.get').length, 1);
+    assert.equal(f.calls.filter((c) => c.action === '/v1/user/email/login').length, 1);
+    await client.close();
+  });
 }
 
 for (const [selectedRegion, host] of Object.entries({

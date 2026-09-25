@@ -13,7 +13,19 @@ fresh private `MapSessionProvisioning` from the current RTC/MQTT route. It has
 the [independently established provisioning fields](research/E15_LINUX_PEER_RESPONSE_2026-09-10.md#provisioning-and-execution-boundary).
 The adapter owns signaling, authentication, TCP transport, file acquisition and
 cleanup. It does not obtain provisioning from a helper or invoke another runtime.
-Cloud provisioning is an explicit caller input, not an automatic login or retry.
+Cloud provisioning remains an explicit input. Since 0.24.0, the mower module
+can produce it from its own authenticated Home/Tuya session after opting in
+with `mowers.home.mapProvisioning: true`. Call
+`await client.mowers.provisionMapSession(device.id, signal)` for each new
+acquisition after connecting and discovering the device. This is one bounded
+RTC read, without automatic login or retry. The returned object contains
+credentials and must remain private. The session store also gains derived
+MQTT credentials and needs the same protection as the existing login session.
+The producer is experimental pending fresh end-to-end hardware acceptance.
+See [provisioning provenance and validation](research/E15_MAP_PROVISIONING.md).
+
+Omitting `mqttHeader` now generates a fresh header from the original SDK
+contract. Existing caller-provided headers retain their behavior.
 
 ```ts
 import { PortableMapAcquisition, type MapSessionProvisioning } from '@keesmod/eufy-mega-client';

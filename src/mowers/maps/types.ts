@@ -25,7 +25,8 @@ export interface MapSessionProvisioning {
   iceTokens: unknown[];
   tcpToken: RelayToken;
   mqtt: MqttCredentials;
-  mqttHeader: string;
+  /** Legacy caller-provided header. Omit for a fresh header from the original SDK contract. */
+  mqttHeader?: string;
   subscribeTopics: string[];
   publishTopic: string;
 }
