@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.23.0 - Unreleased
+## 0.23.0 - 2026-09-25
 
 ### Mower work parameters
 
@@ -39,6 +39,22 @@
   implements these interfaces itself, for example in a test double, adds them.
   The settings opt-in now also allows the two work parameter writes through
   the new call. Rollback: install 0.22.0 and drop the new calls.
+
+Use the compiled versioned 0.23.0 tarball and its verified integrity from the
+GitHub release. The change is verified in two ways:
+
+- In software, by CI and synthetic tests of the decoder, the cloud reading, the
+  one partial message per write, every refusal before a write and the
+  read-back from fresh reports.
+- On hardware, outside this code: the owned E15's cloud record carried DP 155
+  with the same value as the cloud's data point request, and the E15 merged a
+  partial DP 155 message written over the LAN and reported the complete
+  message within about 0.2 seconds, both on 2026-09-25.
+
+No work parameter has been written through the library on hardware. A
+supervised window through the mower bridge, which pins this release, is the
+next check in keesmod/eufy-robomow-ha#8. Retain the previous package and
+lockfile for rollback.
 
 ## 0.22.0 - 2026-09-25
 
