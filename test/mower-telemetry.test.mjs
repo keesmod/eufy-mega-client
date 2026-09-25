@@ -402,7 +402,7 @@ test('a session exposes the device schema and decodes telemetry through the mowe
   });
   assert.deepEqual(telemetry.fields['200'], { id: '200', value: 'undeclared', declared: false });
   // The shipped registry carries confirmed DP 107 candidates, so an absent point is missing.
-  assert.deepEqual(telemetry.status, { state: 'missing', dp: ['107', '107', '107'] });
+  assert.deepEqual(telemetry.status, { state: 'missing', dp: ['107', '107', '107', '107'] });
   assert.deepEqual(telemetry.progress, { state: 'unconfirmed' });
   // This invented product schema does not supply valid E15 battery/network data points.
   assert.deepEqual(telemetry.battery, { state: 'invalid', dp: ['8'] });

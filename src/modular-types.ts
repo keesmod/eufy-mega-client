@@ -330,6 +330,19 @@ export type MowerTelemetryDefinition = {
             kind: 'wire';
             match: Record<number, number>;
             activity: MowerActivity;
+          }
+        | {
+            /**
+             * A mission status message read by its fields: 1 mission, 2 sub-mission, 3 state
+             * (1 running, 2 paused) and 5 an error flag, each a varint, an absent field counting
+             * as zero. A running or paused mission listed in `mowing` reads `mowing` or
+             * `paused`, a running mission listed in `returning` reads `returning`, and a message
+             * without mission, sub-mission, state or error flag, the empty or single-zero-byte
+             * payload included, reads `idle`. Anything else is not claimed.
+             */
+            kind: 'mission_status';
+            mowing: readonly number[];
+            returning: readonly number[];
           };
     }
   | { field: 'battery' | 'progress'; decode: { kind: 'percent' } }

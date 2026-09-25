@@ -472,6 +472,8 @@ The E15 defaults report battery percentage, the observed `Wifi` network kind
 and `network.value.signalPercent` from independently observed definitions.
 `signalPercent` is a 0 to 100 percentage and is not converted to dBm. Status
 reports `mowing`, `paused` or `returning` from the confirmed DP 107 payloads,
+and since 0.22.0 from the mission status, which adds the app's other mowing
+missions and `idle` for a message without a mission,
 mowing progress remains `unconfirmed`, and unobserved network enum values are
 rejected. Consumers with their own confirmed evidence pass `definitions`,
 or `[]` to disable the defaults. See
