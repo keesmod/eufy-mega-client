@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.22.0 - Unreleased
+## 0.22.0 - 2026-09-25
 
 ### DP 107 read as the mower's mission status
 
@@ -30,6 +30,20 @@
   `wire` definitions are unchanged, so `status.dp` lists `107` four times.
 - Upgrade: additive. A consumer that treats `idle` as unknown keeps its
   earlier behaviour. Rollback: install 0.21.0.
+
+Use the compiled versioned 0.22.0 tarball and its verified integrity from the
+GitHub release. The change is verified in two ways:
+
+- In software, by CI and synthetic tests of every mowing mission, the recharge
+  mission, the idle message with each power mode and the withheld payloads,
+  and by Box pause and resume reflection in the command session.
+- On hardware, by every DP 107 value the owned E15 reported in the windows of
+  2026-09-16 to 2026-09-25, recorded in the mission status receipt.
+
+It changes the reading of DP 107 only, no device command, write, timeout or
+transport, so no new physical test gates it. The field check is bridge mode on
+the owned E15 once the mower bridge pins this release. Retain the previous
+package and lockfile for rollback.
 
 ## 0.21.0 - 2026-09-25
 
