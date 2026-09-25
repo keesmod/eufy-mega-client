@@ -64,6 +64,20 @@ export type {
   MowerSettingStage,
   MowerSettingEnd,
   MowerSettingOutcome,
+  MowerMowSpeed,
+  MowerBladeSpeed,
+  MowerDirectionMode,
+  MowerDirectionConfig,
+  MowerWorkParameters,
+  MowerWorkParametersFault,
+  MowerWorkParametersDecoding,
+  MowerWorkParametersReading,
+  MowerWritableMowSpeed,
+  MowerWorkParameterName,
+  MowerWorkParameterValue,
+  MowerWorkParameterRequest,
+  MowerWorkParameterWrite,
+  MowerWorkParameterOutcome,
   MowerDpSnapshot,
   MowerDpReport,
   MowerDpValue,
@@ -84,6 +98,7 @@ export type {
 } from './modular-types.js';
 export { decodeMowerTelemetry } from './mowers/telemetry/decode.js';
 export { decodeMowerSettings } from './mowers/local/settings.js';
+export { decodeMowerWorkParameters, WRITABLE_WORK_PARAMETERS } from './mowers/work-parameters.js';
 export { E15_TELEMETRY_DEFINITIONS } from './mowers/telemetry/definitions.js';
 export { parseMowerWirePayload } from './mowers/telemetry/wire.js';
 export { PortableMapAcquisition } from './mowers/maps/acquisition.js';

@@ -253,6 +253,154 @@ export interface MowerSettingOutcome {
   reports: MowerDpReport[];
 }
 
+/** The app's mow speed, MowSpeedType 0 to 3 on the wire. */
+export type MowerMowSpeed = 'low' | 'medium' | 'adaptive_high' | 'auto';
+/** The app's blade disk speed, BladeDiskSpeedType 0 to 2 on the wire. */
+export type MowerBladeSpeed = 'low' | 'medium' | 'high';
+/** The app's main direction mode, 0 to 2 on the wire. */
+export type MowerDirectionMode = 'single' | 'multiple' | 'auto_rotate';
+
+/**
+ * The main direction configuration. `mode` is the proto3 default `single` when its field is
+ * absent. Every other field exists only when it is on the wire, and a present configuration
+ * message without its value reads as zero.
+ */
+export interface MowerDirectionConfig {
+  mode: MowerDirectionMode | { unknown: number };
+  singleAngle?: number;
+  multipleAngles?: number[];
+  autoRotateInterval?: number;
+  currentAngle?: number;
+}
+
+/**
+ * The DP 155 work parameters as the device's integers and enumerations. A field exists only
+ * when its wrapper message is on the wire, and an empty wrapper is a present zero. An
+ * enumeration value the app does not name keeps its number. No unit is confirmed by a source.
+ * Numbering and provenance: docs/MOWER_WORK_PARAMETERS.md.
+ */
+export interface MowerWorkParameters {
+  mowHeight?: number;
+  mowSpeed?: MowerMowSpeed | { unknown: number };
+  /** Raw device integer. */
+  edgeDistance?: number;
+  direction?: MowerDirectionConfig;
+  /** Raw device integer. */
+  mowSpacing?: number;
+  bladeSpeed?: MowerBladeSpeed | { unknown: number };
+  /** A plain integer field, present only when it is on the wire. Proto3 never encodes a zero. */
+  currentMowSpacing?: number;
+}
+
+export type MowerWorkParametersFault =
+  | 'not_text'
+  | 'not_base64'
+  | 'too_long'
+  | 'truncated'
+  | 'field_number'
+  | 'wire_type'
+  | 'field_type'
+  | 'varint'
+  | 'too_many_fields'
+  | 'too_deep';
+
+/**
+ * One DP 155 value decoded from base64. `undecodedFields` lists, in ascending order, every
+ * top-level field number that is unknown or whose message carried a field the decoder does not
+ * know. `malformed` names the first fault.
+ */
+export type MowerWorkParametersDecoding =
+  | { shape: 'decoded'; parameters: MowerWorkParameters; undecodedFields: number[] }
+  | { shape: 'malformed'; reason: MowerWorkParametersFault };
+
+/**
+ * DP 155 from the bound mower's cloud record. The cloud value is a cache, not a device report,
+ * and `observedAt` is the library's receipt time of the cloud response, not device time.
+ * `missing` means the record carries no DP 155, `invalid` that its value does not decode.
+ */
+export type MowerWorkParametersReading =
+  | {
+      source: 'cloud';
+      observedAt: string;
+      state: 'reported';
+      parameters: MowerWorkParameters;
+      undecodedFields: number[];
+    }
+  | { source: 'cloud'; observedAt: string; state: 'missing' }
+  | { source: 'cloud'; observedAt: string; state: 'invalid' };
+
+/** The mow speeds the library writes: the three that both of the app's mow speed types name. */
+export type MowerWritableMowSpeed = 'low' | 'medium' | 'adaptive_high';
+
+/**
+ * The work parameters the library writes behind the settings opt-in, each as one partial DP 155
+ * message. Edge distance, mow spacing, the direction and the mow height in DP 155 are read only.
+ * Values and sources: docs/MOWER_WORK_PARAMETERS.md.
+ */
+export type MowerWorkParameterName = 'mowSpeed' | 'bladeSpeed';
+export type MowerWorkParameterValue = MowerWritableMowSpeed | MowerBladeSpeed;
+
+export interface MowerWorkParameterRequest {
+  name: MowerWorkParameterName;
+  /**
+   * `low`, `medium` or `adaptive_high` for `mowSpeed`, `low`, `medium` or `high` for
+   * `bladeSpeed`. Any other pair is refused with `mower_setting_invalid` before any I/O.
+   */
+  value: MowerWorkParameterValue;
+  /** Overrides the opt-in read-back bound for this write only, 1000 to 60000 ms. */
+  readBackMs?: number;
+}
+
+/** The one partial DP 155 message written for a work parameter. */
+export interface MowerWorkParameterWrite {
+  dp: '155';
+  code: 'reserved_raw_155';
+  /** The top-level field of the app's message that the write carries, and nothing else. */
+  field: number;
+  value: MowerWorkParameterValue;
+  /** The message as the base64 text sent in the control frame. */
+  encoded: string;
+}
+
+/** Lifecycle of one work parameter write from fresh reports only. Nothing is inferred from silence. */
+export interface MowerWorkParameterOutcome {
+  name: MowerWorkParameterName;
+  write: MowerWorkParameterWrite;
+  /**
+   * The cloud reading that supplied the value before the write, because the local status query
+   * does not carry DP 155. A cache with the library's receipt time, not a device report.
+   */
+  cloud: { observedAt: string; parameters: MowerWorkParameters };
+  /** The status query taken immediately before the write. The map-save refusal is decided on it. */
+  before: MowerDpSnapshot;
+  /** The parameter's value in the cloud reading, the value a deliberate restore writes back. */
+  previous: MowerWorkParameterValue;
+  /** Local time the control frame was written to the socket. */
+  sentAt: string;
+  stage: MowerSettingStage;
+  end: MowerSettingEnd;
+  /** The device's frame reply to the control command, when one arrived during the read-back. */
+  reply?: { observedAt: string; returnCodeZero: boolean; rejected: boolean };
+  /**
+   * First fresh report whose DP 155 carried the parameter at the written value, with every
+   * parameter that report decoded to.
+   */
+  reflection?: {
+    observedAt: string;
+    sequence: number;
+    value: MowerWorkParameterValue;
+    parameters: MowerWorkParameters;
+  };
+  /** Latest fresh report whose DP 155 carried the parameter at another value, when one arrived. */
+  other?: {
+    observedAt: string;
+    sequence: number;
+    value: MowerMowSpeed | MowerBladeSpeed | { unknown: number };
+  };
+  /** Every report received during the read-back in arrival order, at most 64. */
+  reports: MowerDpReport[];
+}
+
 /** Options for one read-only local session. The host is the mower's LAN address. */
 export interface MowerLocalSessionOptions {
   host: string;
@@ -478,6 +626,18 @@ export interface MowerLocalSession {
    * deliberate call. Resolves `timed_out` rather than throwing when the bound passes.
    */
   setSetting(request: MowerSettingRequest, signal?: AbortSignal): Promise<MowerSettingOutcome>;
+  /**
+   * Write one opt-in work parameter as a partial DP 155 message and read it back from fresh
+   * reports within the bound. The settings opt-in covers it. One cloud reading supplies the
+   * value before the write, because the local status query does not carry DP 155, and one fresh
+   * status query right before the write decides the map-save refusal. Nothing is retried,
+   * replayed or reconnected, and a restore is a separate deliberate call. Resolves `timed_out`
+   * rather than throwing when the bound passes.
+   */
+  setWorkParameter(
+    request: MowerWorkParameterRequest,
+    signal?: AbortSignal,
+  ): Promise<MowerWorkParameterOutcome>;
   /** Idempotent. Resolves when the socket has actually closed. */
   disconnect(): Promise<void>;
 }
@@ -498,6 +658,12 @@ export interface MowerModule extends ModuleLifecycle {
     options: MowerLocalSessionOptions,
     signal?: AbortSignal,
   ): Promise<MowerLocalSession>;
+  /**
+   * Read DP 155, the work parameters, of one discovered mower from its cloud record through the
+   * request discovery makes. The device's local status replies do not carry DP 155. The cloud
+   * value is a cache with the library's receipt time. Never writes, retries or caches.
+   */
+  queryWorkParameters(id: string, signal?: AbortSignal): Promise<MowerWorkParametersReading>;
 }
 
 export interface EufyClientOptions {

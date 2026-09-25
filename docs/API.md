@@ -631,6 +631,79 @@ Upgrade note: `MowerLocalSession` gains `settingsEnabled`, `querySettings()`
 and `setSetting()`, and `MowerModule` gains `settingsEnabled`. A consumer that
 implements these interfaces itself, for example in a test double, adds them.
 
+## Mower work parameters, 0.23.0
+
+`client.mowers.queryWorkParameters(id, signal?)` reads DP 155, the work
+parameters of one discovered E15, from the Tuya cloud's device record through
+the request discovery already makes. The E15's local status replies do not
+carry DP 155. The result is a `MowerWorkParametersReading` with
+`source: 'cloud'` and `observedAt`, the library's receipt time of the cloud
+response. The cloud value is a cache, so it can be older than that time.
+
+```ts
+const [mower] = await client.mowers.discover();
+const reading = await client.mowers.queryWorkParameters(mower.id);
+if (reading.state === 'reported') {
+  const { mowSpeed, bladeSpeed, direction } = reading.parameters;
+  // Each field exists only when the value carried it. Nothing was written.
+}
+```
+
+`state` is `reported` with `parameters` and `undecodedFields`, `missing` when
+the record carries no DP 155, or `invalid` when its value does not decode. The
+parameters are `mowHeight`, `mowSpeed`, `edgeDistance`, `direction`,
+`mowSpacing`, `bladeSpeed` and `currentMowSpacing`, as the device's integers
+and the app's enumeration names, with `{ unknown: number }` for an unnamed
+enumeration value. `decodeMowerWorkParameters(value)` is the same pure decoder
+for a base64 value you already hold. It returns `shape: 'decoded'` or
+`shape: 'malformed'` with a `reason`, is bounded to 256 bytes, 64 records and
+three nested messages, and never throws. Only DP 155 leaves the adapter. No
+identifier, key or other data point of the record is returned.
+
+Discovery must have succeeded on the same connected module, otherwise the
+call reports `authentication_required` or `mower_binding_unavailable`. A
+custom adapter without the capability reports `mower_protocol_unavailable`.
+Cloud errors are `mower_request_failed`, `mower_invalid_response`,
+`request_timeout`, `request_aborted` and `client_closed`. Each call makes one
+request, without retry or caching. The numbering, its source and the decoding
+rules are in [Mower work parameters](MOWER_WORK_PARAMETERS.md).
+
+Behind the settings opt-in, `session.setWorkParameter({ name, value,
+readBackMs? })` writes the mow speed or the blade speed as one partial DP 155
+message on an open local session:
+
+```ts
+const outcome = await session.setWorkParameter({ name: 'bladeSpeed', value: 'high' });
+if (outcome.end === 'reflected') {
+  // A fresh report carried DP 155 with the blade speed at high. A restore is a second call:
+  await session.setWorkParameter({ name: 'bladeSpeed', value: outcome.previous });
+}
+```
+
+`mowSpeed` takes `low`, `medium` or `adaptive_high`, and `bladeSpeed` takes
+`low`, `medium` or `high`, as the exported frozen `WRITABLE_WORK_PARAMETERS`
+table lists them. Edge distance, mow spacing, the direction, the mow
+height and the current mow spacing are refused as read only. One cloud
+reading, like `queryWorkParameters()`, supplies `previous`, because the LAN
+status query does not carry DP 155, and one fresh status query decides the
+map-save refusal. The write sends only the parameter's field, then reads fresh
+reports back like `setSetting()`. `reflection` carries every parameter the
+reflecting report decoded to. The outcome also carries `cloud`, the reading
+the write was decided on, and `write.encoded`, the base64 message sent.
+
+Refusals before any write are the settings refusals: `mower_settings_disabled`,
+`mower_setting_invalid`, `mower_setting_read_only`,
+`mower_setting_undeclared`, `mower_setting_evidence_missing`, which includes a
+failed or late cloud reading, `mower_setting_map_saving` and
+`mower_setting_already_set`. They leave the session open. The written values
+and their sources are in [Mower work parameters](MOWER_WORK_PARAMETERS.md).
+
+Upgrade note: `MowerModule` gains `queryWorkParameters()` and
+`MowerLocalSession` gains `setWorkParameter()`. A consumer that implements
+these interfaces itself, for example in a test double, adds them. The
+settings opt-in now also allows the two work parameter writes, and only
+through this new call.
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,
