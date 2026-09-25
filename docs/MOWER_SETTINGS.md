@@ -1,6 +1,7 @@
 # Opt-in mower settings
 
-Implementation and software evidence for the settings workstream of
+Implementation, software evidence and hardware evidence for the settings
+workstream of
 [keesmod/eufy-robomow-ha#8](https://github.com/keesmod/eufy-robomow-ha/issues/8).
 The write path sits on the local session of
 [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) and uses the
@@ -167,10 +168,17 @@ loopback sockets and synthetic values.
 
 ## Hardware acceptance
 
-Not run yet. The planned acceptance is one supervised change, read-back and
-restore of `mowHeight` from 40 to 45 and back to 40 mm on the owned E15
-through the mower bridge, with the owner's explicit opt-in under the
+On 2026-09-25 one supervised change, read-back and restore of `mowHeight`
+ran on the owned E15 through Home Assistant integration 0.14.2 and mower
+bridge 0.10.1 on library 0.22.0, whose settings code equals 0.20.0, recorded
+in the [settings window receipt](research/E15_SETTINGS_WINDOW_2026-09-25.md).
+The mower stayed in the dock with the owner at the mower, rain and child
+protection on and the official app as the independent reference, under the
 conditions of
-[keesmod/eufy-robomow-ha#8](https://github.com/keesmod/eufy-robomow-ha/issues/8)
-and the app as the independent reference. Until then every setting write is
-software-verified only, and the receipt will be linked here.
+[keesmod/eufy-robomow-ha#8](https://github.com/keesmod/eufy-robomow-ha/issues/8).
+The change from 40 to 45 mm and the restore to 40 each returned `confirmed`,
+within 99 and 71 milliseconds for the whole Home Assistant call. A later
+fresh query reported each value, and the app's Grass Height showed 45 and then
+40 mm, so a DP 110 write reaches the app on this firmware. `volume`,
+`smartNoGoZones` and `sparseLawnOptimization` remain software-verified only,
+as do writes while mowing, during a map save or at the bounds.
