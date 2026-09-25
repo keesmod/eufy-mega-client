@@ -550,6 +550,62 @@ the consumer must reopen deliberately. `client.mowers.commandsEnabled` and
 sources, the frame format and the remaining hardware acceptance are in
 [Opt-in mower commands](MOWER_COMMANDS.md).
 
+## Opt-in mower settings, 0.20.0
+
+Setting writes are off unless the client is constructed with
+`mowers.settings`, an opt-in separate from `commands`. An invalid opt-in fails
+construction with `mower_invalid_options`. Without it `session.setSetting()`
+reports `mower_settings_disabled` before any frame is written. Reading needs
+no opt-in.
+
+```ts
+const client = new EufyClient({
+  mowers: { credentials, sessionStore, settings: { enabled: true, readBackMs: 10_000 } },
+});
+const session = await client.mowers.openLocalSession(mower.id, { host: '192.0.2.10' });
+const { settings } = await session.querySettings();
+if (settings.mowHeight.state === 'reported' && settings.mowHeight.writable) {
+  const outcome = await session.setSetting({ name: 'mowHeight', value: 45 });
+  if (outcome.end === 'reflected') {
+    // A fresh report carried DP 110 at 45. A restore is a second, deliberate call:
+    await session.setSetting({ name: 'mowHeight', value: outcome.previous });
+  }
+}
+```
+
+`querySettings()` runs one status query and `decodeMowerSettings(snapshot,
+{ schema })` decodes an existing snapshot without I/O. Each of `mowHeight`,
+`volume`, `smartNoGoZones`, `sparseLawnOptimization`, `rainAutoReturn`,
+`childLock` and `birdViewCapture` is `reported` with `dp`, `type`, `value` and
+`writable`, plus `min`, `max`, `step` and `unit` for the two value settings,
+or `missing` or `invalid`. `writable` requires the library's table and the
+session schema, not the opt-in.
+
+`setSetting({ name, value, readBackMs? })` writes only `mowHeight` (25 to 75
+mm), `volume` (0 to 100 %), `smartNoGoZones` and `sparseLawnOptimization`. It
+runs one fresh status query, returned as `before` with the current value as
+`previous`, decides the typed refusals on it, writes one declared point in the
+control frame of the commands, then reads fresh reports back within the
+bound, default 10 seconds and at most 60. `stage` is `sent` or `reflected`.
+`end` is `reflected`, `rejected`, `timed_out` or `report_limit`. The first
+fresh report with the written value is `reflection`, the latest fresh report
+with another value is `other`. A timeout resolves because the write already
+happened, and the library never resends or restores it.
+
+Refusals before any write are `mower_setting_invalid`,
+`mower_setting_read_only`, `mower_setting_undeclared`,
+`mower_setting_evidence_missing`, `mower_setting_map_saving` and
+`mower_setting_already_set`. Rain and child protection, `rainAutoReturn` and
+`childLock`, are read only in either direction, as is `birdViewCapture`. One
+write owns the session like a command. `client.mowers.settingsEnabled` and
+`session.settingsEnabled` report the opt-in. The data points, their permitted
+sources and the pending hardware acceptance are in
+[Opt-in mower settings](MOWER_SETTINGS.md).
+
+Upgrade note: `MowerLocalSession` gains `settingsEnabled`, `querySettings()`
+and `setSetting()`, and `MowerModule` gains `settingsEnabled`. A consumer that
+implements these interfaces itself, for example in a test double, adds them.
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,

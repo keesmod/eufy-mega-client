@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.20.0 - Unreleased
+
+### Opt-in mower settings
+
+- `session.querySettings()` and the pure `decodeMowerSettings(snapshot,
+{ schema })` read seven E15 settings from one local status snapshot: mow
+  height, volume, smart no-go zone suggestions, sparse lawn optimization,
+  rain auto return, child lock and bird-view capture. Each is `reported`,
+  `missing` or `invalid`, with its bound, step and unit for the value settings
+  and `writable` from the library's table and the device's declaration.
+- `session.setSetting({ name, value, readBackMs? })` writes one of four
+  settings, `mowHeight` from 25 to 75 mm, `volume` from 0 to 100 %,
+  `smartNoGoZones` and `sparseLawnOptimization`, behind a new explicit
+  `mowers.settings` opt-in that is separate from `commands`. It follows the
+  command lifecycle: one fresh status query, typed refusals before any write,
+  one control frame, and a bounded read-back that ends `reflected` only when a
+  fresh report carries the written value. The outcome returns the `previous`
+  value. A restore is a second deliberate call. Nothing is retried, replayed,
+  reconnected or restored by the library.
+- Rain and child protection, DP 101 and DP 47, are read only in either
+  direction, as the owner decided in keesmod/eufy-robomow-ha#8. The bird-view
+  capture of the app's Real Lawn map is read only too. `setSetting()` refuses
+  them with `mower_setting_read_only`.
+- New refusals `mower_settings_disabled`, `mower_setting_invalid`,
+  `mower_setting_read_only`, `mower_setting_undeclared`,
+  `mower_setting_evidence_missing`, `mower_setting_map_saving` and
+  `mower_setting_already_set`. New `client.mowers.settingsEnabled` and
+  `session.settingsEnabled`.
+- Sources: the device's own declaration, read in a read-only readout on the
+  owned E15 on 2026-09-25, and the product script of the official app on the
+  owner's Mac. See [Opt-in mower settings](docs/MOWER_SETTINGS.md) and the
+  [settings schema receipt](docs/research/E15_SETTINGS_SCHEMA_2026-09-25.md).
+- Upgrade: additive for callers. `MowerLocalSession` gains `settingsEnabled`,
+  `querySettings()` and `setSetting()`, and `MowerModule` gains
+  `settingsEnabled`, so a consumer that implements these interfaces itself,
+  for example in a test double, adds them. Rollback: install 0.19.0 and drop
+  the `settings` opt-in and the new calls.
+
+The change is software-verified: CI and synthetic tests against the local
+peer. The supervised change, read-back and restore of the mow height on the
+owned E15 is pending in keesmod/eufy-robomow-ha#8.
+
 ## 0.19.0 - 2026-09-24
 
 ### Command progress while the read-back runs
