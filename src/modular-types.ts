@@ -253,6 +253,82 @@ export interface MowerSettingOutcome {
   reports: MowerDpReport[];
 }
 
+/** The app's mow speed, MowSpeedType 0 to 3 on the wire. */
+export type MowerMowSpeed = 'low' | 'medium' | 'adaptive_high' | 'auto';
+/** The app's blade disk speed, BladeDiskSpeedType 0 to 2 on the wire. */
+export type MowerBladeSpeed = 'low' | 'medium' | 'high';
+/** The app's main direction mode, 0 to 2 on the wire. */
+export type MowerDirectionMode = 'single' | 'multiple' | 'auto_rotate';
+
+/**
+ * The main direction configuration. `mode` is the proto3 default `single` when its field is
+ * absent. Every other field exists only when it is on the wire, and a present configuration
+ * message without its value reads as zero.
+ */
+export interface MowerDirectionConfig {
+  mode: MowerDirectionMode | { unknown: number };
+  singleAngle?: number;
+  multipleAngles?: number[];
+  autoRotateInterval?: number;
+  currentAngle?: number;
+}
+
+/**
+ * The DP 155 work parameters as the device's integers and enumerations. A field exists only
+ * when its wrapper message is on the wire, and an empty wrapper is a present zero. An
+ * enumeration value the app does not name keeps its number. No unit is confirmed by a source.
+ * Numbering and provenance: docs/MOWER_WORK_PARAMETERS.md.
+ */
+export interface MowerWorkParameters {
+  mowHeight?: number;
+  mowSpeed?: MowerMowSpeed | { unknown: number };
+  /** Raw device integer. */
+  edgeDistance?: number;
+  direction?: MowerDirectionConfig;
+  /** Raw device integer. */
+  mowSpacing?: number;
+  bladeSpeed?: MowerBladeSpeed | { unknown: number };
+  /** A plain integer field, present only when it is on the wire. Proto3 never encodes a zero. */
+  currentMowSpacing?: number;
+}
+
+export type MowerWorkParametersFault =
+  | 'not_text'
+  | 'not_base64'
+  | 'too_long'
+  | 'truncated'
+  | 'field_number'
+  | 'wire_type'
+  | 'field_type'
+  | 'varint'
+  | 'too_many_fields'
+  | 'too_deep';
+
+/**
+ * One DP 155 value decoded from base64. `undecodedFields` lists, in ascending order, every
+ * top-level field number that is unknown or whose message carried a field the decoder does not
+ * know. `malformed` names the first fault.
+ */
+export type MowerWorkParametersDecoding =
+  | { shape: 'decoded'; parameters: MowerWorkParameters; undecodedFields: number[] }
+  | { shape: 'malformed'; reason: MowerWorkParametersFault };
+
+/**
+ * DP 155 from the bound mower's cloud record. The cloud value is a cache, not a device report,
+ * and `observedAt` is the library's receipt time of the cloud response, not device time.
+ * `missing` means the record carries no DP 155, `invalid` that its value does not decode.
+ */
+export type MowerWorkParametersReading =
+  | {
+      source: 'cloud';
+      observedAt: string;
+      state: 'reported';
+      parameters: MowerWorkParameters;
+      undecodedFields: number[];
+    }
+  | { source: 'cloud'; observedAt: string; state: 'missing' }
+  | { source: 'cloud'; observedAt: string; state: 'invalid' };
+
 /** Options for one read-only local session. The host is the mower's LAN address. */
 export interface MowerLocalSessionOptions {
   host: string;
@@ -498,6 +574,12 @@ export interface MowerModule extends ModuleLifecycle {
     options: MowerLocalSessionOptions,
     signal?: AbortSignal,
   ): Promise<MowerLocalSession>;
+  /**
+   * Read DP 155, the work parameters, of one discovered mower from its cloud record through the
+   * request discovery makes. The device's local status replies do not carry DP 155. The cloud
+   * value is a cache with the library's receipt time. Never writes, retries or caches.
+   */
+  queryWorkParameters(id: string, signal?: AbortSignal): Promise<MowerWorkParametersReading>;
 }
 
 export interface EufyClientOptions {

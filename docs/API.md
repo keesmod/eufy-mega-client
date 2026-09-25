@@ -631,6 +631,47 @@ Upgrade note: `MowerLocalSession` gains `settingsEnabled`, `querySettings()`
 and `setSetting()`, and `MowerModule` gains `settingsEnabled`. A consumer that
 implements these interfaces itself, for example in a test double, adds them.
 
+## Work parameters read from the cloud, unreleased
+
+`client.mowers.queryWorkParameters(id, signal?)` reads DP 155, the work
+parameters of one discovered E15, from the Tuya cloud's device record through
+the request discovery already makes. The E15's local status replies do not
+carry DP 155. The result is a `MowerWorkParametersReading` with
+`source: 'cloud'` and `observedAt`, the library's receipt time of the cloud
+response. The cloud value is a cache, so it can be older than that time.
+
+```ts
+const [mower] = await client.mowers.discover();
+const reading = await client.mowers.queryWorkParameters(mower.id);
+if (reading.state === 'reported') {
+  const { mowSpeed, bladeSpeed, direction } = reading.parameters;
+  // Each field exists only when the value carried it. Nothing was written.
+}
+```
+
+`state` is `reported` with `parameters` and `undecodedFields`, `missing` when
+the record carries no DP 155, or `invalid` when its value does not decode. The
+parameters are `mowHeight`, `mowSpeed`, `edgeDistance`, `direction`,
+`mowSpacing`, `bladeSpeed` and `currentMowSpacing`, as the device's integers
+and the app's enumeration names, with `{ unknown: number }` for an unnamed
+enumeration value. `decodeMowerWorkParameters(value)` is the same pure decoder
+for a base64 value you already hold. It returns `shape: 'decoded'` or
+`shape: 'malformed'` with a `reason`, is bounded to 256 bytes, 64 records and
+three nested messages, and never throws. Only DP 155 leaves the adapter. No
+identifier, key or other data point of the record is returned. There is no
+write path for DP 155.
+
+Discovery must have succeeded on the same connected module, otherwise the
+call reports `authentication_required` or `mower_binding_unavailable`. A
+custom adapter without the capability reports `mower_protocol_unavailable`.
+Cloud errors are `mower_request_failed`, `mower_invalid_response`,
+`request_timeout`, `request_aborted` and `client_closed`. Each call makes one
+request, without retry or caching. The numbering, its source and the decoding
+rules are in [Mower work parameters](MOWER_WORK_PARAMETERS.md).
+
+Upgrade note: `MowerModule` gains `queryWorkParameters()`. A consumer that
+implements this interface itself, for example in a test double, adds it.
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,
