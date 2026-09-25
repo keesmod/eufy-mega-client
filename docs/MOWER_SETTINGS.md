@@ -139,11 +139,17 @@ used. The names follow the device's declared codes.
 ### Why nothing else is written
 
 - DP 155 is declared as a reserved raw point. The app writes it as one
-  protobuf message that carries mow height, mow speed, edge distance, mow
-  spacing, blade speed and the direction configuration together, so a write
-  replaces all of them. It needs its own evidence and stays a later step.
+  protobuf message for mow height, mow speed, edge distance, mow spacing,
+  blade speed and the direction configuration, and sets only the fields it
+  changes. On 2026-09-25 the owned E15 kept every field that a partial
+  message did not carry, see the
+  [settings window receipt](research/E15_SETTINGS_WINDOW_2026-09-25.md). The
+  LAN status query does not carry DP 155, so the value before a write needs
+  the cloud. It stays a separate step.
 - DP 139 `follow_edge_distance` is declared from -10000 to 10000 mm and the
-  app checks no range before it writes it, so there is no usable bound.
+  app checks no range before it writes it, so there is no usable bound. It
+  read 0 on 2026-09-25 while the edge distance in DP 155 read 150, so it is
+  not the app's edge distance.
 - The other writable declarations, for example `edge_trim`, the work angle,
   cellular, language and unit, are outside this first slice. Reserved points
   are never written.
@@ -168,17 +174,21 @@ loopback sockets and synthetic values.
 
 ## Hardware acceptance
 
-On 2026-09-25 one supervised change, read-back and restore of `mowHeight`
-ran on the owned E15 through Home Assistant integration 0.14.2 and mower
-bridge 0.10.1 on library 0.22.0, whose settings code equals 0.20.0, recorded
-in the [settings window receipt](research/E15_SETTINGS_WINDOW_2026-09-25.md).
-The mower stayed in the dock with the owner at the mower, rain and child
+Two supervised windows on 2026-09-25 ran on the owned E15 through Home
+Assistant integration 0.14.2 and mower bridge 0.10.1 on library 0.22.0, whose
+settings code equals 0.20.0. Both are recorded in the
+[settings window receipt](research/E15_SETTINGS_WINDOW_2026-09-25.md). The
+mower stayed in the dock with the owner at the mower, rain and child
 protection on and the official app as the independent reference, under the
 conditions of
 [keesmod/eufy-robomow-ha#8](https://github.com/keesmod/eufy-robomow-ha/issues/8).
-The change from 40 to 45 mm and the restore to 40 each returned `confirmed`,
-within 99 and 71 milliseconds for the whole Home Assistant call. A later
-fresh query reported each value, and the app's Grass Height showed 45 and then
-40 mm, so a DP 110 write reaches the app on this firmware. `volume`,
-`smartNoGoZones` and `sparseLawnOptimization` remain software-verified only,
-as do writes while mowing, during a map save or at the bounds.
+
+- The first window changed `mowHeight` from 40 to 45 mm and restored it.
+- The second window changed and restored `volume` from 0 to 20 %,
+  `smartNoGoZones` from on to off, `sparseLawnOptimization` from off to on,
+  and `mowHeight` from 40 to both bounds, 25 and 75 mm, and back to 40.
+
+Every write returned `confirmed`, within 71 to 103 milliseconds for the whole
+Home Assistant call, and a later fresh query reported each value. The app's
+Grass Height showed every mow height, so a DP 110 write reaches the app on
+this firmware. Writes while mowing or during a map save remain untested.
