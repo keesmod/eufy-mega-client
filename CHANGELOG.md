@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.21.0 - Unreleased
+## 0.21.0 - 2026-09-25
 
 ### Live start stages
 
@@ -19,6 +19,14 @@
 - Upgrade: additive. `LiveStartOptions` gains `onProgress`, and the types
   `LiveStartStage` and `LiveStartProgress` are exported. Rollback: install
   0.20.0 and drop `onProgress`.
+
+Use the compiled versioned 0.21.0 tarball and its verified integrity from the
+GitHub release. The change is software-verified: CI and synthetic tests of the
+five start cases on an extra and the primary session, and of the P2P session's
+new event. It observes the start only and changes no device command, timeout
+or media path, so no new physical test gates it. The field check is the next
+live start without media on keesmod/ha-eufy-cam#94 once the camera bridge pins
+this release. Retain the previous package and lockfile for rollback.
 
 ## 0.20.0 - 2026-09-25
 
