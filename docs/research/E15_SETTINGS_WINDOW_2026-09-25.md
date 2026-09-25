@@ -3,11 +3,13 @@
 Hardware acceptance for [Opt-in mower settings](../MOWER_SETTINGS.md) and the
 settings workstream of
 [keesmod/eufy-robomow-ha#8](https://github.com/keesmod/eufy-robomow-ha/issues/8).
-Two supervised windows ran on the owned E15 in the dock. The first changed and
-restored the mow height through Home Assistant, the mower bridge and this
+Three supervised windows ran on the owned E15 in the dock. The first changed
+and restored the mow height through Home Assistant, the mower bridge and this
 library. The second did the same for every writable setting and both bounds of
 the mow height, and then tested one write of the DP 155 work parameters over
-the LAN outside this library.
+the LAN outside this library. The third changed and restored the mow speed and
+the blade speed through Home Assistant, mower bridge 0.11.0 and this library's
+0.23.0.
 
 ## First window, the mow height
 
@@ -157,14 +159,69 @@ sparse lawn optimization off. The bridge app ran with its original options.
   write can only come from the cloud, because the LAN status query does not
   carry DP 155.
 
+## Third window, the work parameter speeds
+
+### Setup
+
+- The same mower and reference. Library 0.23.0 inside mower bridge app 0.11.0
+  and Home Assistant integration 0.15.0, deployed an hour earlier.
+- The owner opted in to the window in the settings thread while standing at
+  the mower in dry weather. The mower stayed in the dock, rain and child
+  protection were on before, during and after the window, and no mowing
+  command was sent.
+- The same scripts as the first two windows opened the bridge's settings route
+  and switched the integration to the bridge backend in `control` from
+  14:03:54 to 14:04:01 UTC, and back from 14:05:14 to 14:05:19 UTC.
+- In bridge mode the integration showed the same five DP 155 values as on its
+  local backend, from the bridge's cloud reading of 14:03:59.
+
+### Timeline
+
+Each row is one Home Assistant call on the entity's select. Every call returned
+without an error, which the integration allows only for a `confirmed` outcome.
+The bridge then served the work parameters from the reflecting LAN report, with
+its receipt time.
+
+| UTC          | Parameter    | Change                      | Call returned after | Reflecting report |
+| ------------ | ------------ | --------------------------- | ------------------- | ----------------- |
+| 14:04:16.052 | `mowSpeed`   | `medium` to `adaptive_high` | 333 ms              | 14:04:16.366      |
+| 14:04:33.989 | `mowSpeed`   | `adaptive_high` to `medium` | 347 ms              | 14:04:34.319      |
+| 14:04:41.567 | `bladeSpeed` | `medium` to `high`          | 332 ms              | 14:04:41.879      |
+| 14:04:54.275 | `bladeSpeed` | `high` to `medium`          | 449 ms              | 14:04:54.705      |
+
+- Home Assistant showed each new value 15 to 17 milliseconds before its call
+  returned.
+- Every reflecting report kept the other parameters, the edge distance and
+  the mow spacing unchanged.
+- Separate read-only cloud readings matched: mow speed 2 at 14:04:28, mow
+  speed 1 and blade speed 2 at 14:04:48, and both 1 with every field equal to
+  the start at 14:05:06. Each restore was therefore decided on a cloud reading
+  that already carried the change.
+- At 14:05:04.973 an edge distance change through Home Assistant was refused
+  in 5 milliseconds as read only, before any request.
+
+### Result
+
+- `setWorkParameter` writes the mow speed and the blade speed of the owned E15
+  as one partial DP 155 message each and reads the written value back from a
+  fresh LAN report. Each Home Assistant call, which covers the library's cloud
+  reading, fresh query, single write and read-back, took 332 to 449
+  milliseconds.
+- `queryWorkParameters` read the owned E15's values through the bridge, and the
+  cloud reflected every change within 12 seconds.
+- Recorded in
+  [keesmod/eufy-robomow-ha#8](https://github.com/keesmod/eufy-robomow-ha/issues/8#issuecomment-5833748272).
+
 ## Not covered
 
 - Writes while mowing or during a map save.
 - The library's outcome fields, stage, end and the reflection's receipt time,
-  were not captured separately. The integration's success stands for
-  `confirmed`.
-- A DP 155 write through this library, any work parameter other than the blade
-  disk speed, and the app's display of the blade disk speed.
+  were not captured separately in the first two windows. The integration's
+  success stands for `confirmed`. The third window captured the reflection's
+  receipt time through the bridge.
+- The `low` mow and blade speeds, and the app's display of the speeds, which
+  the app shows only in a mode tab this workstream does not tap. Edge
+  distance, mow spacing and the direction are read only.
 - Any other firmware or installation.
 
 The traces, script outputs and the call helpers stay private on the owner's
