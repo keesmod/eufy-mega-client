@@ -65,6 +65,8 @@ export interface MowerOptions extends MowerAdapterContext {
   adapter?: (context: MowerAdapterContext) => MowerAdapter;
   /** Physical control stays off unless this explicit opt-in is present and valid. */
   commands?: MowerCommandOptions;
+  /** Setting writes stay off unless this explicit opt-in is present and valid. */
+  settings?: MowerSettingsOptions;
 }
 
 /**
@@ -142,6 +144,111 @@ export interface MowerCommandOutcome {
    * uses this: its reflection is the map-saving payload (fields 2 = 5 and 3 = 1), not an activity.
    */
   payload?: { observedAt: string; sequence: number; name: 'map_saving' };
+  /** Every report received during the read-back in arrival order, at most 64. */
+  reports: MowerDpReport[];
+}
+
+/**
+ * Explicit per-client opt-in for setting writes, separate from `commands`. Without it every
+ * `setSetting()` call is refused with `mower_settings_disabled`. Reading settings needs no
+ * opt-in. Nothing here is persisted or sent to the device.
+ */
+export interface MowerSettingsOptions {
+  /** Must be literally `true`. */
+  enabled: true;
+  /** Bound for the read-back after every write, default 10000 ms, 1000 to 60000. */
+  readBackMs?: number;
+}
+
+/**
+ * The settings the library reads, named after the device's declared codes. `mowHeight`,
+ * `volume`, `smartNoGoZones` and `sparseLawnOptimization` can be written behind the opt-in.
+ * `rainAutoReturn`, `childLock` and `birdViewCapture` are read only and never written.
+ * Data points and sources: docs/MOWER_SETTINGS.md.
+ */
+export type MowerSettingName =
+  | 'mowHeight'
+  | 'volume'
+  | 'smartNoGoZones'
+  | 'sparseLawnOptimization'
+  | 'rainAutoReturn'
+  | 'childLock'
+  | 'birdViewCapture';
+
+export type MowerSettingValue = boolean | number;
+
+/** One setting from one snapshot. Nothing is inferred when the point is absent or invalid. */
+export type MowerSettingField =
+  | {
+      state: 'reported';
+      dp: string;
+      type: 'bool' | 'value';
+      value: MowerSettingValue;
+      /**
+       * True when the library writes this setting and the device declares the point writable
+       * with the expected code and type. The client's settings opt-in is reported separately.
+       */
+      writable: boolean;
+      /** Value settings only: the app's own input bound narrowed by the device's declaration. */
+      min?: number;
+      max?: number;
+      step?: number;
+      unit?: string;
+    }
+  | { state: 'missing'; dp: string }
+  | { state: 'invalid'; dp: string };
+
+/** Typed settings decoded from one local snapshot. */
+export interface MowerSettings {
+  source: 'local-tuya-3.5';
+  /** Receipt time of the snapshot, not device time. */
+  observedAt: string;
+  settings: Record<MowerSettingName, MowerSettingField>;
+}
+
+export interface MowerSettingsDecodeOptions {
+  /** The session's declared data points. Without it no setting reads as writable. */
+  schema?: readonly MowerDpSchemaEntry[];
+}
+
+export interface MowerSettingRequest {
+  name: MowerSettingName;
+  /** A boolean for a switch setting, an integer within the setting's bound for a value setting. */
+  value: MowerSettingValue;
+  /** Overrides the opt-in read-back bound for this write only, 1000 to 60000 ms. */
+  readBackMs?: number;
+}
+
+/** The one declared data point written for a setting. See docs/MOWER_SETTINGS.md. */
+export interface MowerSettingWrite {
+  dp: string;
+  code: string;
+  value: MowerSettingValue;
+}
+
+/** Furthest stage evidenced by fresh reports. A sent setting is never `completed`. */
+export type MowerSettingStage = 'sent' | 'reflected';
+/** Why the read-back ended. Only `reflected` means the device reported the written value. */
+export type MowerSettingEnd = 'reflected' | 'rejected' | 'timed_out' | 'report_limit';
+
+/** Lifecycle of one setting write from fresh reports only. Nothing is inferred from silence. */
+export interface MowerSettingOutcome {
+  setting: MowerSettingName;
+  write: MowerSettingWrite;
+  /** The status query taken immediately before the write. The refusals are decided on it. */
+  before: MowerDpSnapshot;
+  /** The setting's value on that query, the value a deliberate restore writes back. */
+  previous: MowerSettingValue;
+  /** Local time the control frame was written to the socket. */
+  sentAt: string;
+  stage: MowerSettingStage;
+  end: MowerSettingEnd;
+  /** The device's frame reply to the control command, when one arrived during the read-back. */
+  reply?: { observedAt: string; returnCodeZero: boolean; rejected: boolean };
+  /** First fresh report that carried the written point at the written value. */
+  reflection?: { observedAt: string; sequence: number; value: MowerSettingValue };
+  /** Latest fresh report that carried the written point at another value, when one arrived. */
+  other?: { observedAt: string; sequence: number; value: MowerDpValue };
   /** Every report received during the read-back in arrival order, at most 64. */
   reports: MowerDpReport[];
 }
@@ -320,12 +427,15 @@ export type MowerLocalSessionEnd =
 
 /**
  * One authenticated TCP session to one E15. Reads never write. Commands exist only behind the
- * explicit `commands` opt-in and write one declared boolean point each, never a setting.
+ * explicit `commands` opt-in and write one declared boolean point each. Settings exist only
+ * behind the separate `settings` opt-in and write one declared setting point each.
  */
 export interface MowerLocalSession {
   readonly connected: boolean;
   /** True only when the owning client opted in with valid `MowerCommandOptions`. */
   readonly commandsEnabled: boolean;
+  /** True only when the owning client opted in with valid `MowerSettingsOptions`. */
+  readonly settingsEnabled: boolean;
   /** Resolves once the socket is closed and all owned resources are released. */
   readonly closed: Promise<MowerLocalSessionEnd>;
   /** Copy of the device's declared data points from discovery, when the cloud supplied one. */
@@ -346,6 +456,15 @@ export interface MowerLocalSession {
    * rather than throwing when the bound passes, because the write has already happened.
    */
   sendCommand(request: MowerCommandRequest, signal?: AbortSignal): Promise<MowerCommandOutcome>;
+  /** One status query decoded into typed settings with the session schema. Never writes. */
+  querySettings(signal?: AbortSignal): Promise<MowerSettings>;
+  /**
+   * Write one opt-in setting and read it back from fresh reports within the bound. One fresh
+   * status query precedes the write and decides the typed refusals. Rain and child protection
+   * are never written. Nothing is retried, replayed or reconnected, and a restore is a separate
+   * deliberate call. Resolves `timed_out` rather than throwing when the bound passes.
+   */
+  setSetting(request: MowerSettingRequest, signal?: AbortSignal): Promise<MowerSettingOutcome>;
   /** Idempotent. Resolves when the socket has actually closed. */
   disconnect(): Promise<void>;
 }
@@ -354,6 +473,8 @@ export interface MowerLocalSession {
 export interface MowerModule extends ModuleLifecycle {
   /** True only when this client was constructed with a valid `commands` opt-in. */
   readonly commandsEnabled: boolean;
+  /** True only when this client was constructed with a valid `settings` opt-in. */
+  readonly settingsEnabled: boolean;
   discover(signal?: AbortSignal): Promise<MowerDevice[]>;
   /**
    * Open a read-only local Tuya 3.5 session to one discovered mower. The private local key is

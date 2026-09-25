@@ -216,5 +216,6 @@ are not substituted for local observations. `None` as network kind was
 observed once and stays unmapped. Other firmware remains untested. The opt-in
 command path of [#169](https://github.com/keesmod/eufy-mega-client/issues/169)
 reads these confirmed activities back after a write, see
-[Opt-in mower commands](MOWER_COMMANDS.md). Settings and map decoding remain
-separate work.
+[Opt-in mower commands](MOWER_COMMANDS.md). Settings have their own decoder,
+see [Opt-in mower settings](MOWER_SETTINGS.md), and map decoding is separate
+work.

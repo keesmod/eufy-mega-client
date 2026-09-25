@@ -1,6 +1,7 @@
 import { EufyHomeAdapter } from './mowers/home.js';
 import { LocalMowerSession, type LocalBinding } from './mowers/local/session.js';
 import { validateCommandOptions } from './mowers/local/commands.js';
+import { validateSettingsOptions } from './mowers/local/settings.js';
 import { EufyMegaClient } from './client.js';
 import { EufyError, type AuthAnswer, type AuthState, type ClientOptions } from './types.js';
 import type {
@@ -120,19 +121,26 @@ class Mowers implements MowerModule {
   #localSessions = new Set<LocalMowerSession>();
 
   constructor(options: MowerOptions) {
-    // An invalid opt-in fails construction so control can never be enabled by accident.
+    // An invalid opt-in fails construction so control or setting writes can never be enabled
+    // by accident.
     const commands = validateCommandOptions(options.commands);
+    const settings = validateSettingsOptions(options.settings);
     this.#options = {
       credentials: { ...options.credentials },
       sessionStore: options.sessionStore,
       adapter: options.adapter,
       home: options.home ? { ...options.home } : undefined,
       ...(commands ? { commands } : {}),
+      ...(settings ? { settings } : {}),
     };
   }
 
   get commandsEnabled(): boolean {
     return !!this.#options.commands;
+  }
+
+  get settingsEnabled(): boolean {
+    return !!this.#options.settings;
   }
 
   get lifecycle(): ModuleLifecycleState {
@@ -223,7 +231,12 @@ class Mowers implements MowerModule {
         throw new EufyError('mower_protocol_unavailable');
       if (typeof id !== 'string') throw new EufyError('mower_binding_unavailable');
       // The session is tracked before any I/O so shutdown and failures always release it.
-      const session = new LocalMowerSession(options, this.#lifetime.signal, this.#options.commands);
+      const session = new LocalMowerSession(
+        options,
+        this.#lifetime.signal,
+        this.#options.commands,
+        this.#options.settings,
+      );
       this.#localSessions.add(session);
       session.closed.then(() => this.#localSessions.delete(session));
       try {

@@ -97,6 +97,13 @@ version header, document shape and device reply, and the reasons for not
 writing the raw control points are recorded in
 [Opt-in mower commands](MOWER_COMMANDS.md). Reads remain write-free.
 
+## Settings, 0.20.0
+
+The opt-in settings of 0.20.0 write one declared setting point per call
+through the same frame type, behind their own opt-in. The points, their
+permitted sources and the lifecycle are recorded in
+[Opt-in mower settings](MOWER_SETTINGS.md). Reads remain write-free.
+
 ## Independent reproduction
 
 `scripts/research/tuya35_vectors.py` runs tinytuya 1.20.0 offline with synthetic
