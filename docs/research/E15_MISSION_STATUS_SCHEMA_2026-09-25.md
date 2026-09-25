@@ -39,9 +39,9 @@ in field 7. The library does not read them.
   the [reproduction receipt](E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md) and
   the [stop and return receipt](E15_STOP_RETURN_WINDOW_2026-09-20.md) cover
   these values, each app-correlated:
-  - missions 1 and 2 with states 1 and 2;
-  - sub-missions 1 (Positioning…), 3, 5 (Saving the map), 6 and 9 (Defogging…);
-  - field 6 right after each map save;
+  - missions 1 and 2 with states 1 and 2
+  - sub-missions 1 (Positioning…), 3, 5 (Saving the map), 6 and 9 (Defogging…)
+  - field 6 right after each map save
   - the default payload with the idle controls.
 - **Window of 2026-09-25.** It sampled the cloud copy of DP 107 every two
   seconds through the integration's cloud client, with the app read on the
@@ -84,16 +84,39 @@ own decoder of this data point together with reproductions on the owned E15:
 
 Still withheld as `invalid`:
 
-- the map save, sub-mission 5 without a mission;
-- the first frame of a start, a mission without a state;
-- a paused return;
+- the map save, sub-mission 5 without a mission
+- the first frame of a start, a mission without a state
+- a paused return
 - missions that do not mow, such as mapping without mowing or driving to a
-  target point;
-- aborted and completed states;
+  target point
+- aborted and completed states
 - the error flag.
+
+## Field check in bridge mode
+
+The owner opted in at the mower on 2026-09-25 under the conditions of
+keesmod/eufy-robomow-ha#8: dry, lawn clear, rain stop and child protection on,
+the app at hand. Mower bridge 0.10.1 ran on this release in `control` with a
+60-second read-back, and the integration 0.14.2 used it as its backend. Times
+are UTC.
+
+- A Box task started in the app at 10:05:20. The cloud copy of DP 107 showed
+  mission 17 running, at times with sub-mission 3.
+- A pause through Home Assistant at 10:06:31.444 was reflected as `paused`
+  0.56 seconds later. The app showed Mowing Paused, and the cloud showed
+  mission 17 paused.
+- A resume at 10:06:45.048 was reflected as `mowing` 0.58 seconds later.
+- A stop at 10:07:02.559 reported `returning` as progress, which the cloud
+  matched with the recharge mission at 10:07:04. It was reflected by the
+  map-saving payload at the dock arrival 44.9 seconds after the write.
+- Afterwards the integration went back to its local backend, the bridge to
+  `observe_only`, and the app's mowing mode to Entire.
+
+Before this release the Box payloads were not claimed, so the pause and the
+resume could not have been reflected.
 
 ## Not done
 
-No command, setting or map request was sent for this receipt, and no capture,
+Apart from the field check above, no command, setting or map request was sent for this receipt, and no capture,
 identifier, address or lawn geometry is recorded. The script stays on the
 owner's Mac.
