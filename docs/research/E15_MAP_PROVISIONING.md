@@ -86,8 +86,24 @@ revocation, identity mismatch, expiry, regional broker validation, copied
 results, cached-secret exclusion and acquisition with a generated header.
 Existing explicit provisioning and camera behavior remain covered.
 
-These checks do not establish a new end-to-end hardware session. The producer
-and generated header remain experimental until one bounded acquisition from
-fresh provisioning succeeds on the owned E15 with confirmed cancellation and
-cleanup. The Android helper stays recoverable until native acceptance and the
-map-source migration rehearsal pass. No E18 support is claimed.
+## Fresh hardware acquisition
+
+On 2026-09-25, released library 0.24.0 supplied two fresh map sessions to mower
+bridge/app 0.12.1 on Home Assistant OS amd64, with the owned E15/T2880 on
+firmware 6.9.28 docked. Android was stopped with the owner's approval and the
+macOS app was closed. No caller-maintained provisioning file was used.
+
+Snapshots arrived at 16:24:41.026 and 16:24:48.665 UTC, with a bridge restart
+and empty map cache between them. Both decoded successfully and exactly
+matched the external source's static geometry. Both demands ended after the
+complete history path, with cancellation and cleanup confirmed, one published
+snapshot, no rejected snapshot and no acquisition error. This exercises the
+producer and generated signaling header on the device. The
+[consumer receipt](https://github.com/keesmod/eufy-robomow-ha/issues/8#issuecomment-5835828129)
+records versions, the app bootstrap correction, timing and recovery.
+
+This is two docked downloads, not continuous streaming, a normal refresh-interval
+measurement or validation of path growth during mowing. Native-source outage
+and migration checks remain open. The Android source and original options
+were restored and verified. No physical commands or settings writes were sent,
+and no E18 support is claimed.
