@@ -21,7 +21,8 @@
   message with only that field, the way the app writes one change. The
   read-back ends `reflected` only when a fresh report's DP 155 carries the
   written value, and returns every parameter of that report. A restore is a
-  second deliberate call.
+  second deliberate call. The frozen `WRITABLE_WORK_PARAMETERS` export lists
+  the written values.
 - Edge distance, mow spacing, the direction, the mow height and the current
   mow spacing are read only. No permitted source gives the first two a bound,
   and a direction write replaces a nested configuration.

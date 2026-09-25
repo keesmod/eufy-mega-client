@@ -681,7 +681,8 @@ if (outcome.end === 'reflected') {
 ```
 
 `mowSpeed` takes `low`, `medium` or `adaptive_high`, and `bladeSpeed` takes
-`low`, `medium` or `high`. Edge distance, mow spacing, the direction, the mow
+`low`, `medium` or `high`, as the exported frozen `WRITABLE_WORK_PARAMETERS`
+table lists them. Edge distance, mow spacing, the direction, the mow
 height and the current mow spacing are refused as read only. One cloud
 reading, like `queryWorkParameters()`, supplies `previous`, because the LAN
 status query does not carry DP 155, and one fresh status query decides the

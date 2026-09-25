@@ -4,7 +4,7 @@
 // with invented numbers, never from a capture. See docs/MOWER_WORK_PARAMETERS.md.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EufyClient } from '../dist/index.js';
+import { EufyClient, WRITABLE_WORK_PARAMETERS as exported } from '../dist/index.js';
 import { WRITABLE_WORK_PARAMETERS } from '../dist/mowers/work-parameters.js';
 import { fakeMower } from './fixtures/local-mower.mjs';
 import { cloud, credentials, memory } from './fixtures/mower-cloud.mjs';
@@ -143,6 +143,7 @@ function merging(state, record) {
 }
 
 test('the writable work parameters are frozen and limited to the two speeds', () => {
+  assert.equal(exported, WRITABLE_WORK_PARAMETERS, 'the package entry exports the same table');
   assert.ok(Object.isFrozen(WRITABLE_WORK_PARAMETERS));
   assert.deepEqual(
     Object.entries(WRITABLE_WORK_PARAMETERS).map(([name, p]) => [name, p.field, [...p.values]]),
