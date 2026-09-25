@@ -13,6 +13,7 @@ import type {
   MowerHomeOptions,
 } from '../modular-types.js';
 import { copySchema, parseSchema } from './telemetry/schema.js';
+import { WORK_PARAMETERS_DP } from './work-parameters.js';
 import {
   APP_QUERY,
   REGIONS,
@@ -69,6 +70,13 @@ export interface PrivateMowerConnection {
   readonly schema?: readonly MowerDpSchemaEntry[];
   readonly region: Region;
   readonly expiresAt: number;
+}
+/** Internal-only result. DP 155 from the bound device's cloud record and nothing else of it. */
+export interface CloudWorkParameters {
+  /** Local receipt time of the cloud response as an ISO 8601 UTC timestamp, not device time. */
+  readonly observedAt: string;
+  /** The value when it is text, `null` when it has another type, undefined when absent. */
+  readonly value: string | null | undefined;
 }
 
 /** Independent Home/Tuya owner. No security imports, commands, RTC or map transport. */
@@ -466,6 +474,33 @@ export class EufyHomeAdapter implements MowerAdapter {
       );
       if (lease.aborted) throw new EufyError('request_aborted');
       return result;
+    });
+  }
+  /**
+   * Internal library consumers only. Reads the bound device's cloud record through the request
+   * discovery makes and returns DP 155 alone with the receipt time. The device ID stays inside.
+   */
+  readCloudWorkParameters(id: string, signal: AbortSignal): Promise<CloudWorkParameters> {
+    return this.#track(signal, async (abort) => {
+      const session = this.#requireSession();
+      const binding = this.#bindings.get(id);
+      if (!binding) throw new EufyError('mower_binding_unavailable');
+      const record = object(
+        await this.#tuya(session, 'tuya.m.device.get', '1.0', { devId: binding.deviceId }, abort),
+      );
+      const observedAt = new Date().toISOString();
+      if (record.devId !== binding.deviceId) throw new EufyError('mower_binding_unavailable');
+      // Only the one point is read. A record without an object of data points carries none.
+      const dps = record.dps;
+      if (
+        !dps ||
+        typeof dps !== 'object' ||
+        Array.isArray(dps) ||
+        !Object.hasOwn(dps, WORK_PARAMETERS_DP)
+      )
+        return { observedAt, value: undefined };
+      const value = (dps as ObjectValue)[WORK_PARAMETERS_DP];
+      return { observedAt, value: typeof value === 'string' ? value : null };
     });
   }
   async shutdown(): Promise<void> {

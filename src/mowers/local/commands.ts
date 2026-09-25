@@ -165,9 +165,12 @@ export function requireWritable(before: MowerDpSnapshot, command: CommandClass):
   if (before.dps[write.dp] === write.value) throw new EufyError('mower_command_already_set');
 }
 
-/** JSON document of the 3.5 LAN control command. The frame codec adds the version header. */
+/**
+ * JSON document of the 3.5 LAN control command. The frame codec adds the version header. A raw
+ * point's value is its message as base64 text.
+ */
 export function controlDocument(
-  write: { readonly dp: string; readonly value: boolean | number },
+  write: { readonly dp: string; readonly value: boolean | number | string },
   now = Date.now(),
 ): string {
   return JSON.stringify({

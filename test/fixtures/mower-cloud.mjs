@@ -21,8 +21,11 @@ export function memory() {
   };
 }
 
-/** Minimal flat Home login, Tuya login, one T2880 device and its private record. */
-export function cloud({ id = deviceId, key = localKey, schema } = {}) {
+/**
+ * Minimal flat Home login, Tuya login, one T2880 device and its private record. `dps` is the
+ * record's cached data points, omitted unless given.
+ */
+export function cloud({ id = deviceId, key = localKey, schema, dps } = {}) {
   return async (url) => {
     const parsed = new URL(url);
     const action = parsed.searchParams.get('a') ?? parsed.pathname;
@@ -51,7 +54,12 @@ export function cloud({ id = deviceId, key = localKey, schema } = {}) {
         return json({ items: [{ device: { id, product: { product_code: 'T2880' } } }] });
       case 'tuya.m.device.get':
         return json({
-          result: { devId: id, localKey: key, ...(schema === undefined ? {} : { schema }) },
+          result: {
+            devId: id,
+            localKey: key,
+            ...(schema === undefined ? {} : { schema }),
+            ...(dps === undefined ? {} : { dps }),
+          },
         });
       default:
         throw new Error('unexpected request');

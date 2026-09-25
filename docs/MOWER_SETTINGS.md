@@ -10,7 +10,9 @@ additive extension of the mower module. Reads still never write. The session
 can write exactly four declared setting points, only behind an explicit
 per-client opt-in that is separate from the command opt-in, one write at a
 time, without retry, replay or reconnect. Rain and child protection are read
-only.
+only. Since 0.23.0 the same opt-in also covers the mow speed and the blade
+speed in the DP 155 work parameters, written through their own call, see
+[Mower work parameters](MOWER_WORK_PARAMETERS.md).
 
 ## Contract
 
@@ -145,7 +147,9 @@ used. The names follow the device's declared codes.
   message did not carry, see the
   [settings window receipt](research/E15_SETTINGS_WINDOW_2026-09-25.md). The
   LAN status query does not carry DP 155, so the value before a write needs
-  the cloud. It stays a separate step.
+  the cloud. `setSetting()` never writes it. Since 0.23.0
+  `setWorkParameter()` writes its mow speed and blade speed, see
+  [Mower work parameters](MOWER_WORK_PARAMETERS.md).
 - DP 139 `follow_edge_distance` is declared from -10000 to 10000 mm and the
   app checks no range before it writes it, so there is no usable bound. It
   read 0 on 2026-09-25 while the edge distance in DP 155 read 150, so it is
