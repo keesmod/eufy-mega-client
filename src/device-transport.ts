@@ -43,9 +43,11 @@ import {
   type StationState,
   type Snapshot,
   type LiveStream,
+  type LiveStartProgress,
   type StreamStop,
   type MediaMetadata,
 } from './types.js';
+import { LiveStartObserver } from './live-start.js';
 
 import { mediaMetadata } from './media.js';
 interface ActiveLive {
@@ -574,7 +576,13 @@ export class DeviceTransport extends EventEmitter {
     const abort = AbortSignal.any([this.lifetime.signal, ...(signal ? [signal] : [])]);
     return awaitEvent(source, event, issue, accept, abort, timeout);
   }
-  async startLive(id: string, signal?: AbortSignal, maxDurationMs?: number): Promise<LiveStream> {
+  async startLive(
+    id: string,
+    signal?: AbortSignal,
+    maxDurationMs?: number,
+    onProgress?: (progress: LiveStartProgress) => void,
+  ): Promise<LiveStream> {
+    const progress = new LiveStartObserver(onProgress);
     const bound = this.liveBound(maxDurationMs);
     const camera = this.camera(id, 'live'),
       stationId = camera.getStationSerial(),
@@ -590,12 +598,12 @@ export class DeviceTransport extends EventEmitter {
     // the default limit of 1 the single stream uses the primary session.
     if (this.liveLimit > 1) {
       if (this.liveCount(stationId) >= this.liveLimit) throw new EufyError('station_busy');
-      return this.startExtraLive(id, camera, stationId, bound, signal);
+      return this.startExtraLive(id, camera, stationId, bound, progress, signal);
     }
     if (this.lives.has(stationId) || this.starting.has(stationId))
       throw new EufyError('station_busy');
     this.starting.set(stationId, channel);
-    const operation = this.openLive(id, camera, stationId, station, bound, signal);
+    const operation = this.openLive(id, camera, stationId, station, bound, progress, signal);
     this.pendingStarts.add(operation);
     try {
       return await operation;
@@ -610,20 +618,26 @@ export class DeviceTransport extends EventEmitter {
     stationId: string,
     station: Station,
     bound: number,
+    progress: LiveStartObserver,
     signal?: AbortSignal,
   ): Promise<LiveStream> {
     let issued = false;
+    let unwatch = () => {};
     try {
       await this.connect(stationId, signal);
+      progress.mark('session_ready');
+      unwatch = progress.watch(station, camera.getChannel());
       return await this.wait(
         station,
         'livestream start',
         () => {
           issued = true;
+          progress.mark('start_issued');
           station.startLivestream(camera);
         },
         (_s, channel, metadata: StreamMetadata, video: Readable, audio: Readable) => {
           if (channel !== camera.getChannel()) return undefined;
+          progress.mark('metadata');
           let finish!: (result: StreamStop) => void;
           const ended = new Promise<StreamStop>((resolve) => {
             finish = resolve;
@@ -679,6 +693,8 @@ export class DeviceTransport extends EventEmitter {
         }
       }
       throw error;
+    } finally {
+      unwatch();
     }
   }
   private async confirmStop(
@@ -817,13 +833,14 @@ export class DeviceTransport extends EventEmitter {
     camera: ProtocolDevice,
     stationId: string,
     bound: number,
+    progress: LiveStartObserver,
     signal?: AbortSignal,
   ): Promise<LiveStream> {
     const key = this.liveKey(stationId, camera.getChannel());
     if (this.extraLives.has(key) || this.extraStarting.has(key))
       throw new EufyError('station_busy');
     this.extraStarting.set(key, stationId);
-    const operation = this.openExtraLive(id, camera, stationId, key, bound, signal);
+    const operation = this.openExtraLive(id, camera, stationId, key, bound, progress, signal);
     this.pendingStarts.add(operation);
     try {
       return await operation;
@@ -838,10 +855,12 @@ export class DeviceTransport extends EventEmitter {
     stationId: string,
     key: string,
     bound: number,
+    progress: LiveStartObserver,
     signal?: AbortSignal,
   ): Promise<LiveStream> {
     const station = await this.createExtraStation(stationId);
     let issued = false;
+    let unwatch = () => {};
     try {
       this.bindExtra(station, key);
       await this.wait(
@@ -856,15 +875,19 @@ export class DeviceTransport extends EventEmitter {
         signal,
         20000,
       );
+      progress.mark('session_ready');
+      unwatch = progress.watch(station, camera.getChannel());
       return await this.wait(
         station,
         'livestream start',
         () => {
           issued = true;
+          progress.mark('start_issued');
           station.startLivestream(camera);
         },
         (_s, channel, metadata: StreamMetadata, video: Readable, audio: Readable) => {
           if (channel !== camera.getChannel()) return undefined;
+          progress.mark('metadata');
           let finish!: (result: StreamStop) => void;
           const ended = new Promise<StreamStop>((resolve) => {
             finish = resolve;
@@ -924,6 +947,8 @@ export class DeviceTransport extends EventEmitter {
       }
       await station.dispose();
       throw error;
+    } finally {
+      unwatch();
     }
   }
   private bindExtra(station: Station, key: string): void {

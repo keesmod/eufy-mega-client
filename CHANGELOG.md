@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.21.0 - Unreleased
+
+### Live start stages
+
+- `startLive(cameraId, { onProgress })` reports each stage of a start once,
+  with the milliseconds since the call: `session_ready`, `start_issued`,
+  `start_result` with the station's numeric `returnCode`, `no_data_end` and
+  `metadata`. A start without media now says whether the station refused
+  START, accepted it and sent nothing, or never answered. Before, the answer
+  to START was dropped and a consumer saw only a start that did not resolve.
+  Refs #187 and keesmod/ha-eufy-cam#94.
+- The P2P session emits `livestream no data`, which the station forwards,
+  when it ends a video stream that never started. It ended such a stream
+  silently before. See [live start stages](docs/API.md#live-start-stages-0210).
+- Start, stop, cancellation, timeouts and the concurrency limit are unchanged.
+  The stages carry no identifiers and every value is bounded.
+- Upgrade: additive. `LiveStartOptions` gains `onProgress`, and the types
+  `LiveStartStage` and `LiveStartProgress` are exported. Rollback: install
+  0.20.0 and drop `onProgress`.
+
 ## 0.20.0 - Unreleased
 
 ### Opt-in mower settings

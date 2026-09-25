@@ -33,8 +33,9 @@ old media timers before a P2P state reset; closing the actual UDP socket on
 device END; renewing the UDP endpoint after confirmed STOP recovery; and
 sharing concurrent transport-close operations; and a separate startup deadline
 that preserves the shorter timeout for stalled media; and a three-second
-audio-discovery window for delayed first AAC packets. Those changes
-must not be attributed to the original upstream release.
+audio-discovery window for delayed first AAC packets. A `livestream no data`
+event reports a video stream that the library ends before it started. Those
+changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter
 

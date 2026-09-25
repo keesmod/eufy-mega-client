@@ -194,9 +194,9 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     return (await this.deviceTransport()).snapshot(id, signal);
   }
   async startLive(id: string, options?: AbortSignal | LiveStartOptions): Promise<LiveStream> {
-    const { signal, maxDurationMs } =
+    const { signal, maxDurationMs, onProgress } =
       options instanceof AbortSignal ? { signal: options } : (options ?? {});
-    return (await this.deviceTransport()).startLive(id, signal, maxDurationMs);
+    return (await this.deviceTransport()).startLive(id, signal, maxDurationMs, onProgress);
   }
   async stopLive(id: string): Promise<StreamStop> {
     if (!this.transport) throw new EufyError('live_session_not_found');
