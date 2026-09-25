@@ -1,6 +1,7 @@
 // Local Tuya 3.5 session owner for one E15. Protocol facts and their permitted sources:
-// docs/MOWER_TRANSPORT_PROVENANCE.md and docs/MOWER_COMMANDS.md. Reads never write. The only
-// writes are the opt-in command classes in commands.ts, one declared boolean point each.
+// docs/MOWER_TRANSPORT_PROVENANCE.md, docs/MOWER_COMMANDS.md and docs/MOWER_SETTINGS.md. Reads
+// never write. The only writes are the opt-in command classes in commands.ts, one declared
+// boolean point each, and the opt-in settings in settings.ts, one declared setting point each.
 import net from 'node:net';
 import { once } from 'node:events';
 import { EufyError } from '../../types.js';
@@ -15,6 +16,10 @@ import type {
   MowerLocalSession,
   MowerLocalSessionEnd,
   MowerLocalSessionOptions,
+  MowerSettingOutcome,
+  MowerSettingRequest,
+  MowerSettings,
+  MowerSettingsOptions,
   MowerTelemetry,
 } from '../../modular-types.js';
 import { decodeMowerTelemetry } from '../telemetry/decode.js';
@@ -28,6 +33,12 @@ import {
   requireWritable,
   validateCommandRequest,
 } from './commands.js';
+import {
+  decodeMowerSettings,
+  requireDeclaredSetting,
+  requireSettingWritable,
+  validateSettingRequest,
+} from './settings.js';
 import {
   Command,
   FrameReader,
@@ -89,6 +100,7 @@ export class LocalMowerSession implements MowerLocalSession {
   readonly #timeout: number;
   readonly #lifetime: AbortSignal;
   readonly #commands?: MowerCommandOptions;
+  readonly #settings?: MowerSettingsOptions;
   #socket?: net.Socket;
   #socketConnected = false;
   #socketClosed = false;
@@ -112,6 +124,7 @@ export class LocalMowerSession implements MowerLocalSession {
     options: MowerLocalSessionOptions,
     lifetime: AbortSignal,
     commands?: MowerCommandOptions,
+    settings?: MowerSettingsOptions,
   ) {
     const valid = validateOptions(options);
     this.#host = valid.host;
@@ -119,6 +132,7 @@ export class LocalMowerSession implements MowerLocalSession {
     this.#timeout = valid.timeout;
     this.#lifetime = lifetime;
     if (commands) this.#commands = { ...commands };
+    if (settings) this.#settings = { ...settings };
     this.closed = new Promise((resolve) => {
       this.#resolveClosed = resolve;
     });
@@ -132,6 +146,10 @@ export class LocalMowerSession implements MowerLocalSession {
 
   get commandsEnabled(): boolean {
     return !!this.#commands;
+  }
+
+  get settingsEnabled(): boolean {
+    return !!this.#settings;
   }
 
   get schema(): MowerDpSchemaEntry[] | undefined {
@@ -246,15 +264,9 @@ export class LocalMowerSession implements MowerLocalSession {
               throw error;
             }
             if (frame.command === Command.CONTROL_NEW) {
-              const { accepted, data } = splitReturnCode(frame.plaintext);
-              const rejected = data.length > 0;
-              frame.plaintext.fill(0);
-              outcome.reply ??= {
-                observedAt: frame.observedAt,
-                returnCodeZero: accepted,
-                rejected,
-              };
-              if (rejected) {
+              const reply = controlReply(frame);
+              outcome.reply ??= reply;
+              if (reply.rejected) {
                 outcome.end = 'rejected';
                 return;
               }
@@ -314,6 +326,99 @@ export class LocalMowerSession implements MowerLocalSession {
               outcome.end = 'reflected';
               return;
             }
+          }
+        });
+        return outcome;
+      },
+      this.#timeout + valid.readBackMs,
+    );
+  }
+
+  async querySettings(signal?: AbortSignal): Promise<MowerSettings> {
+    const snapshot = await this.queryStatus(signal);
+    return decodeMowerSettings(snapshot, { schema: this.#schema });
+  }
+
+  setSetting(request: MowerSettingRequest, signal?: AbortSignal): Promise<MowerSettingOutcome> {
+    const settings = this.#settings;
+    if (!settings) return Promise.reject(new EufyError('mower_settings_disabled'));
+    let valid: ReturnType<typeof validateSettingRequest>;
+    try {
+      valid = validateSettingRequest(request, settings);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    const { setting, value } = valid;
+    // The hard deadline covers the fresh query and the bounded read-back after the write.
+    return this.#operation(
+      signal,
+      async (abort) => {
+        const key = this.#key;
+        if (!key) throw new EufyError('mower_local_disconnected');
+        requireDeclaredSetting(setting, value, this.#schema);
+        const before = await this.#query(key, abort);
+        const previous = requireSettingWritable(before, setting, value);
+        const write = { dp: setting.dp, code: setting.code, value };
+        const outcome: MowerSettingOutcome = {
+          setting: valid.name,
+          write: { ...write },
+          before,
+          previous,
+          sentAt: new Date().toISOString(),
+          stage: 'sent',
+          end: 'timed_out',
+          reports: [],
+        };
+        this.#send(key, Command.CONTROL_NEW, controlPayload(controlDocument(write)));
+        const bound = AbortSignal.timeout(valid.readBackMs);
+        const readSignal = AbortSignal.any([abort, bound]);
+        const wanted = new Set([Command.CONTROL_NEW, Command.STATUS_REPORT]);
+        await this.#withHeartbeat(key, async () => {
+          while (true) {
+            let frame: ReceivedFrame;
+            try {
+              frame = await this.#next(key, readSignal, wanted, true);
+            } catch (error) {
+              if (bound.aborted && !abort.aborted) return;
+              throw error;
+            }
+            if (frame.command === Command.CONTROL_NEW) {
+              const reply = controlReply(frame);
+              outcome.reply ??= reply;
+              if (reply.rejected) {
+                outcome.end = 'rejected';
+                return;
+              }
+              continue;
+            }
+            const report = this.#report(frame);
+            if (outcome.reports.length >= MAX_COMMAND_REPORTS) {
+              outcome.end = 'report_limit';
+              return;
+            }
+            outcome.reports.push(report);
+            // Frames queued before the write are kept as context but are not fresh evidence.
+            if (report.observedAt < outcome.sentAt) continue;
+            const reported = Object.hasOwn(report.dps, setting.dp)
+              ? report.dps[setting.dp]
+              : undefined;
+            if (reported === undefined) continue;
+            if (reported === value) {
+              outcome.reflection = {
+                observedAt: report.observedAt,
+                sequence: report.sequence,
+                value,
+              };
+              outcome.stage = 'reflected';
+              outcome.end = 'reflected';
+              return;
+            }
+            // Another value is evidence too, but never a reason to write again.
+            outcome.other = {
+              observedAt: report.observedAt,
+              sequence: report.sequence,
+              value: structuredClone(reported),
+            };
           }
         });
         return outcome;
@@ -412,7 +517,12 @@ export class LocalMowerSession implements MowerLocalSession {
         throw new EufyError('request_timeout');
       }
       if (error instanceof EufyError) {
-        if (error.code === 'mower_local_rejected' || error.code.startsWith('mower_command_'))
+        // Typed refusals leave the session open: nothing was written.
+        if (
+          error.code === 'mower_local_rejected' ||
+          error.code.startsWith('mower_command_') ||
+          error.code.startsWith('mower_setting_')
+        )
           throw error;
         if (error.code === 'mower_local_disconnected') this.#finish(this.#failure ?? 'peer_closed');
         else if (error.code === 'mower_local_authentication_failed')
@@ -540,6 +650,18 @@ export class LocalMowerSession implements MowerLocalSession {
     else socket.destroy();
     this.#wake?.();
   }
+}
+
+/** The device's frame reply to a control command. A description marks an unusable document. */
+function controlReply(frame: ReceivedFrame): {
+  observedAt: string;
+  returnCodeZero: boolean;
+  rejected: boolean;
+} {
+  const { accepted, data } = splitReturnCode(frame.plaintext);
+  const rejected = data.length > 0;
+  frame.plaintext.fill(0);
+  return { observedAt: frame.observedAt, returnCodeZero: accepted, rejected };
 }
 
 /** True when the DP 107 value holds exactly the expected varint records and nothing else. */

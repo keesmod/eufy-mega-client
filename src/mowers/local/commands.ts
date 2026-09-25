@@ -1,5 +1,6 @@
 // Opt-in command classes over the device's declared boolean points. Every fact, its permitted
-// source and the owned-device evidence: docs/MOWER_COMMANDS.md. The session writes nothing else.
+// source and the owned-device evidence: docs/MOWER_COMMANDS.md. The only other writes are the
+// opt-in settings in settings.ts.
 import { EufyError } from '../../types.js';
 import type {
   MowerActivity,
@@ -30,7 +31,7 @@ export interface CommandClass {
   readonly requires?: 'stopped';
 }
 
-/** The only writes the library can ever make. Rain, child protection and settings are absent. */
+/** The only command writes the library can make. Rain and child protection are absent. */
 export const COMMANDS: Readonly<Record<MowerCommandKind, CommandClass>> = Object.freeze({
   start: Object.freeze({
     write: Object.freeze({ dp: '1', code: 'switch_go', value: true }),
@@ -73,7 +74,8 @@ const KINDS = new Set<MowerCommandKind>(['start', 'pause', 'resume', 'stop', 're
 /** Declared `switch_go`. False on the fresh query is the stopped task the app requires before Charge. */
 export const TASK_DP = '1';
 
-function bound(value: unknown): value is number {
+/** Shared read-back bound of commands and settings, 1000 to 60000 ms. */
+export function readBackBound(value: unknown): value is number {
   return (
     typeof value === 'number' &&
     Number.isInteger(value) &&
@@ -96,7 +98,8 @@ export function validateCommandOptions(options: unknown): MowerCommandOptions | 
     !STOP_ROUTE.test(stopRoute)
   )
     throw new EufyError('mower_invalid_options');
-  if (readBackMs !== undefined && !bound(readBackMs)) throw new EufyError('mower_invalid_options');
+  if (readBackMs !== undefined && !readBackBound(readBackMs))
+    throw new EufyError('mower_invalid_options');
   return {
     enabled: true,
     stopRoute: stopRoute.trim(),
@@ -117,7 +120,8 @@ export function validateCommandRequest(
   const { kind, readBackMs, onProgress } = request as Record<string, unknown>;
   if (typeof kind !== 'string' || !KINDS.has(kind as MowerCommandKind))
     throw new EufyError('mower_command_invalid');
-  if (readBackMs !== undefined && !bound(readBackMs)) throw new EufyError('mower_command_invalid');
+  if (readBackMs !== undefined && !readBackBound(readBackMs))
+    throw new EufyError('mower_command_invalid');
   if (onProgress !== undefined && typeof onProgress !== 'function')
     throw new EufyError('mower_command_invalid');
   return {
@@ -162,7 +166,10 @@ export function requireWritable(before: MowerDpSnapshot, command: CommandClass):
 }
 
 /** JSON document of the 3.5 LAN control command. The frame codec adds the version header. */
-export function controlDocument(write: MowerCommandWrite, now = Date.now()): string {
+export function controlDocument(
+  write: { readonly dp: string; readonly value: boolean | number },
+  now = Date.now(),
+): string {
   return JSON.stringify({
     protocol: 5,
     t: Math.floor(now / 1000),

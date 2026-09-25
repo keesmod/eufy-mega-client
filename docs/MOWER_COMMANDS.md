@@ -6,10 +6,11 @@ Implementation, software evidence and hardware evidence for
 path sits on the local session of
 [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) and the confirmed
 DP 107 activities of [typed mower telemetry](MOWER_TELEMETRY.md). Change class:
-additive extension of the mower module. Reads still never write. The session
-can write exactly three declared boolean points through five command
+additive extension of the mower module. Reads still never write. The command
+path can write exactly three declared boolean points through five command
 classes, only behind an explicit per-client opt-in, one command at a time,
-without retry, replay or reconnect.
+without retry, replay or reconnect. Settings have their own opt-in, table and
+lifecycle in [Opt-in mower settings](MOWER_SETTINGS.md).
 
 ## Contract
 
@@ -220,4 +221,5 @@ result before the next command.
 Two windows with one cycle per class do not cover `stop` from `paused`, start
 after the app's Stop with the mower kept in place, pause while returning,
 commands during a map save, or refusals by low battery, rain or the child
-lock. Settings, zones, scheduling and map decoding stay out of scope.
+lock. Settings are covered by [Opt-in mower settings](MOWER_SETTINGS.md).
+Zones, scheduling and map decoding stay out of scope.
