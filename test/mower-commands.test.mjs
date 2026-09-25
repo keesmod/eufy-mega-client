@@ -237,6 +237,23 @@ for (const [kind, dps, write, controlDp, scripted, activity] of [
     { 1: 1, 3: 1 },
     'returning',
   ],
+  // A Box task started in the app, mission 17, is reflected like the whole lawn.
+  [
+    'pause',
+    { ...idle, 1: true },
+    { dp: '2', code: 'pause', value: true },
+    '105',
+    { 1: 17, 3: 2 },
+    'paused',
+  ],
+  [
+    'resume',
+    { ...idle, 1: true, 2: true },
+    { dp: '2', code: 'pause', value: false },
+    '106',
+    { 1: 17, 3: 1 },
+    'mowing',
+  ],
 ]) {
   test(`${kind} writes its declared point and is reflected only by the matching confirmed activity`, async (t) => {
     const { peer, session } = await setup(t, {

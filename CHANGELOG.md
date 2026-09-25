@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.22.0 - Unreleased
+
+### DP 107 read as the mower's mission status
+
+- The E15 registry gains a `mission_status` definition for DP 107
+  `robot_status`. The official app's decoder reads DP 107 as the mower's
+  mission status: field 1 is the mission, 2 the sub-mission, 3 the state, 4
+  the power mode, 5 an error flag and 6 a saving-data flag.
+- Every mowing mission now reports `mowing` while running and `paused` while
+  paused. That covers the whole lawn, scheduled, zone, box and edge-trim tasks,
+  mapping while mowing, temporary and remote-controlled mowing.
+- The recharge mission reports `returning` while running.
+- A message without mission, sub-mission, state or error flag reports
+  `idle`. That includes the default payload, standby and hibernation (field 4
+  = 2), and the saving-data flag after a map save.
+- Before, only the whole-lawn and recharge payloads reported. A Box, zone or
+  scheduled task and the idle message were `invalid`. The map save, the first
+  frame of a start, a paused return, missions that do not mow and the error
+  flag stay `invalid`. `idle` is not `docked`, because the same message
+  follows the app's Stop on the lawn. See the
+  [mission status receipt](docs/research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md).
+- Commands follow the same reading. A pause or resume of a Box task is now
+  reflected by its `paused` or `mowing` report. A start sent while the app's
+  mode is Box is reflected too. A stop still needs the exact map-saving
+  payload, and command progress may now carry `idle`.
+- `MowerTelemetryDefinition` gains a `mission_status` decode for status
+  fields, with `mowing` and `returning` mission lists. The three existing
+  `wire` definitions are unchanged, so `status.dp` lists `107` four times.
+- Upgrade: additive. A consumer that treats `idle` as unknown keeps its
+  earlier behaviour. Rollback: install 0.21.0.
+
 ## 0.21.0 - 2026-09-25
 
 ### Live start stages

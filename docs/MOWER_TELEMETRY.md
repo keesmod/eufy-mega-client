@@ -70,13 +70,13 @@ confirm battery, Wifi and a device-declared signal percentage on E15/T2880
 firmware 6.9.28. Definitions come from that device's schema and repeated
 read-only responses, independently of the unlicensed mower fork.
 
-| Field                   | Data point | Level                | Definition                                                                                                           |
-| ----------------------- | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `status`                | 107        | confirmed            | `robot_status` wire payloads: fields 1 = 2 and 3 = 1 `mowing`, 1 = 2 and 3 = 2 `paused`, 1 = 1 and 3 = 1 `returning` |
-| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`                                                                          |
-| `progress`              | none       | none                 | No current mowing-progress definition observed                                                                       |
-| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`                                                                              |
-| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`                                                                        |
+| Field                   | Data point | Level                | Definition                                                                                                                                                                                                                                                     |
+| ----------------------- | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                | 107        | confirmed            | `robot_status` wire payloads: fields 1 = 2 and 3 = 1 `mowing`, 1 = 2 and 3 = 2 `paused`, 1 = 1 and 3 = 1 `returning`. Since 0.22.0 also the mission status: every mowing mission running or paused, the recharge mission running, and `idle` without a mission |
+| `battery`               | 8          | confirmed            | `battery_percentage`, integer 0 to 100, `%`                                                                                                                                                                                                                    |
+| `progress`              | none       | none                 | No current mowing-progress definition observed                                                                                                                                                                                                                 |
+| `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`                                                                                                                                                                                                                        |
+| `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`                                                                                                                                                                                                                  |
 
 Every confirmed row cites the same receipt above. `None` and `Cellular` are
 declared but not observed, so they remain unmapped. DP 109 is a percentage,
@@ -138,6 +138,27 @@ records, and any combination no confirmed candidate claims are withheld as
 `invalid` rather than guessed. Several candidates may share one data point with
 their own levels. An empty `match` or an activity outside `MowerActivity` is an
 invalid definition. No enum is inferred from the wire format itself.
+
+A `mission_status` definition, since 0.22.0, reads the same envelope by its
+fields, as the official app's decoder reads DP 107:
+
+- field 1 is the mission, 2 the sub-mission and 3 the state, with 1 running
+  and 2 paused;
+- field 5 is an error flag;
+- an absent field counts as zero, and the default payload is the message with
+  every field at zero.
+
+A running or paused mission listed in `mowing` reports `mowing` or `paused`, and
+a running mission listed in `returning` reports `returning`. A message without
+mission, sub-mission, state or error flag reports `idle`, whatever the power
+mode in field 4 or the saving-data flag in field 6. Anything else is not
+claimed, so the map save, the first frame of a start, a paused return and
+missions that do not mow stay `invalid`. Empty lists or missions that are not
+positive integers make the definition invalid. The E15 registry lists its
+mowing missions and the recharge mission. See the
+[mission status receipt](research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md)
+for the source and the observed values. `idle` means no mission and is not
+`docked`, because the same message follows the app's Stop on the lawn.
 
 | Fact                                                                                                                                                           | Permitted source                                                                                                                                                                                                                                                                                                                                                                                              |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

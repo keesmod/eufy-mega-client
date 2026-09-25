@@ -42,7 +42,7 @@ const observed = candidates.map((entry) => ({ ...entry, level: 'observed' }));
 const shipped = (value) => ({
   state: 'reported',
   value,
-  dp: ['107', '107', '107'],
+  dp: ['107', '107', '107', '107'],
   source: 'local-tuya-3.5',
   observedAt,
 });
@@ -200,13 +200,18 @@ test('the E15 registry reports the confirmed DP 107 candidates and withholds eve
       ['confirmed', 'wire', 'mowing'],
       ['confirmed', 'wire', 'paused'],
       ['confirmed', 'wire', 'returning'],
+      ['confirmed', 'mission_status', undefined],
     ],
   );
-  assert.ok(
-    candidates.every(
-      (entry) => entry.source === 'docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md',
-    ),
+  assert.deepEqual(
+    candidates.map((entry) => entry.source),
+    [
+      ...Array(3).fill('docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md'),
+      'docs/research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md',
+    ],
   );
+  assert.deepEqual(candidates[3].decode.mowing, [2, 4, 5, 7, 8, 9, 10, 16, 17, 18, 22]);
+  assert.deepEqual(candidates[3].decode.returning, [1]);
   // The shapes reproduced in the 2026-09-19 window, including the transient field 2 values
   // that arrive during defogging, at the change to mowing and while positioning.
   for (const [payload, activity] of [
@@ -227,32 +232,53 @@ test('the E15 registry reports the confirmed DP 107 candidates and withholds eve
     assert.deepEqual(telemetry.network.value, { kind: 'wifi', signalPercent: 54 });
     assert.equal(telemetry.dps['107'], payload);
   }
-  // Transitional first frames, the map-saving phase, field 6, the default payload and
-  // unknown combinations are withheld as invalid rather than guessed.
+  // The mission status definition reads the app's other mowing missions and the idle message:
+  // no mission, sub-mission, state or error flag, whatever the power mode or saving-data flag.
+  for (const [payload, activity] of [
+    [status({ 1: 17, 3: 1 }), 'mowing'],
+    [status({ 1: 17, 2: 3, 3: 1 }), 'mowing'],
+    [status({ 1: 17, 3: 2 }), 'paused'],
+    [status({ 1: 10, 3: 1 }), 'mowing'],
+    [status({ 1: 8, 3: 2 }), 'paused'],
+    [status({ 4: 2 }), 'idle'],
+    [status({ 4: 1 }), 'idle'],
+    [status({ 6: 1 }), 'idle'],
+    ['AA==', 'idle'],
+    ['', 'idle'],
+  ]) {
+    assert.deepEqual(decode({ ...e15Dps, 107: payload }).status, shipped(activity), payload);
+  }
+  // Transitional first frames, the map-saving phase, an error flag, missions without a
+  // mowing or returning reading and unknown combinations are withheld as invalid.
   for (const payload of [
     status({ 1: 2 }),
     status({ 1: 1 }),
     status({ 2: 5, 3: 1 }),
-    status({ 6: 1 }),
+    status({ 5: 1 }),
     status({ 1: 2, 3: 3 }),
     status({ 1: 3, 3: 1 }),
-    'AA==',
+    status({ 1: 1, 3: 2 }),
+    status({ 1: 21, 3: 1 }),
   ]) {
     const telemetry = decode({ ...e15Dps, 107: payload });
-    assert.deepEqual(telemetry.status, { state: 'invalid', dp: ['107', '107', '107'] }, payload);
+    assert.deepEqual(
+      telemetry.status,
+      { state: 'invalid', dp: ['107', '107', '107', '107'] },
+      payload,
+    );
     assert.equal(telemetry.fields['107'].valid, true);
     assert.ok(['fields', 'default'].includes(telemetry.fields['107'].wire.shape));
     assert.deepEqual(telemetry.battery.value, { percent: 73 });
   }
   const malformed = decode({ ...e15Dps, 107: b64([8]) });
-  assert.deepEqual(malformed.status, { state: 'invalid', dp: ['107', '107', '107'] });
+  assert.deepEqual(malformed.status, { state: 'invalid', dp: ['107', '107', '107', '107'] });
   assert.deepEqual(malformed.fields['107'].wire, {
     shape: 'malformed',
     byteLength: 1,
     reason: 'truncated',
   });
   assert.equal(decode(e15Dps).fields['107'], undefined);
-  assert.deepEqual(decode(e15Dps).status, { state: 'missing', dp: ['107', '107', '107'] });
+  assert.deepEqual(decode(e15Dps).status, { state: 'missing', dp: ['107', '107', '107', '107'] });
   // Without the registry there is no structural parse either, and other raw points are untouched.
   const bare = decode({ ...e15Dps, 107: status({ 1: 2, 3: 1 }), 108: status({ 2: 1, 3: 1 }) });
   assert.equal(bare.fields['108'].wire, undefined);
@@ -283,7 +309,7 @@ test('a consumer with its own confirmed evidence receives typed activity only fo
   const reported = (value) => ({
     state: 'reported',
     value,
-    dp: ['107', '107', '107'],
+    dp: ['107', '107', '107', '107'],
     source: 'local-tuya-3.5',
     observedAt,
   });
@@ -294,16 +320,18 @@ test('a consumer with its own confirmed evidence receives typed activity only fo
   assert.deepEqual(typed({ 107: status({ 1: 1, 2: 1, 3: 1 }) }), reported('returning'));
   // Unknown combinations, the default payload, an omitted matched field, unknown wire types,
   // repeated fields and malformed input are withheld as invalid, never guessed.
+  assert.deepEqual(typed({ 107: status({ 1: 7, 3: 1 }) }), reported('mowing'));
+  assert.deepEqual(typed({ 107: status({ 6: 1 }) }), reported('idle'));
+  assert.deepEqual(typed({ 107: 'AA==' }), reported('idle'));
+  assert.deepEqual(typed({ 107: '' }), reported('idle'));
   for (const payload of [
     status({ 1: 2 }),
     status({ 1: 1 }),
-    status({ 1: 7, 3: 1 }),
+    status({ 1: 3, 3: 1 }),
     status({ 1: 2, 3: 3 }),
     status({ 2: 5, 3: 1 }),
     status({ 3: 1 }),
-    status({ 6: 1 }),
-    'AA==',
-    '',
+    status({ 2: 9 }),
     b64([...record(1, 0, varint(2)), ...record(3, 2, [1])]),
     b64([...record(1, 0, varint(2)), ...record(1, 0, varint(2)), ...record(3, 0, varint(1))]),
     b64([8]),
@@ -311,12 +339,12 @@ test('a consumer with its own confirmed evidence receives typed activity only fo
   ])
     assert.deepEqual(
       typed({ 107: payload }),
-      { state: 'invalid', dp: ['107', '107', '107'] },
+      { state: 'invalid', dp: ['107', '107', '107', '107'] },
       payload,
     );
-  assert.deepEqual(typed({}), { state: 'missing', dp: ['107', '107', '107'] });
-  assert.deepEqual(typed({ 107: 2 }), { state: 'invalid', dp: ['107', '107', '107'] });
-  assert.deepEqual(typed({ 107: null }), { state: 'invalid', dp: ['107', '107', '107'] });
+  assert.deepEqual(typed({}), { state: 'missing', dp: ['107', '107', '107', '107'] });
+  assert.deepEqual(typed({ 107: 2 }), { state: 'invalid', dp: ['107', '107', '107', '107'] });
+  assert.deepEqual(typed({ 107: null }), { state: 'invalid', dp: ['107', '107', '107', '107'] });
   // A single confirmed candidate reports only itself.
   assert.deepEqual(typed({ 107: status({ 1: 2, 3: 2 }) }, [confirmed[0]]), {
     state: 'invalid',
@@ -372,6 +400,13 @@ test('the shipped DP 107 candidates are frozen and telemetry copies are isolated
   }, TypeError);
   assert.throws(() => {
     candidate.decode.activity = 'docked';
+  }, TypeError);
+  const missionStatus = candidates.find((entry) => entry.decode.kind === 'mission_status');
+  assert.throws(() => {
+    missionStatus.decode.mowing.push(3);
+  }, TypeError);
+  assert.throws(() => {
+    missionStatus.decode.returning = [];
   }, TypeError);
   const dps = { ...e15Dps, 107: status({ 1: 2, 3: 1 }) };
   const telemetry = decode(dps);
