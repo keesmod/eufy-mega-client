@@ -1,4 +1,5 @@
 import type { EufyMegaClient } from './client.js';
+import type { MapSessionProvisioning } from './mowers/maps/types.js';
 import type { AuthAnswer, AuthState, ClientOptions, Credentials } from './types.js';
 
 export type ModuleLifecycleState = 'open' | 'closing' | 'closed';
@@ -48,6 +49,8 @@ export interface MowerAdapter {
 
 export interface MowerHomeOptions {
   requestTimeoutMs?: number;
+  /** Retain MQTT credentials at explicit login for read-only map provisioning. Off by default. */
+  mapProvisioning?: boolean;
   /** Injectable for deterministic tests. Receives private HTTP data. */
   fetch?: typeof fetch;
 }
@@ -664,6 +667,12 @@ export interface MowerModule extends ModuleLifecycle {
    * value is a cache with the library's receipt time. Never writes, retries or caches.
    */
   queryWorkParameters(id: string, signal?: AbortSignal): Promise<MowerWorkParametersReading>;
+  /**
+   * Read fresh RTC provisioning for one discovered mower. Requires home.mapProvisioning.
+   * This private result contains credentials. Never log it or expose it in diagnostics.
+   * No broker connection, map acquisition, command, retry or login is performed here.
+   */
+  provisionMapSession(id: string, signal?: AbortSignal): Promise<MapSessionProvisioning>;
 }
 
 export interface EufyClientOptions {

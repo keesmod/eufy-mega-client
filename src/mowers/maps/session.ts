@@ -4,6 +4,7 @@ import {
   createDecipheriv,
   createHash,
   randomBytes,
+  randomInt,
   timingSafeEqual,
 } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
@@ -74,6 +75,23 @@ export function decodeSignal(
     throw new Error('foreign-signal');
   return body.data;
 }
+/** Original SDK: version, S, O, zero flag. Retain the older explicit-header contract. */
+export function mapSignalHeader(legacy?: string): Buffer {
+  if (legacy !== undefined) {
+    if (!/^322e33[0-9a-f]{18}$/i.test(legacy)) throw new Error('invalid-header-profile');
+    const header = Buffer.from(legacy, 'hex');
+    header.writeUInt32BE((header.readUInt32BE(7) + 1) >>> 0, 7);
+    return header;
+  }
+  const header = Buffer.alloc(12);
+  header.write('2.3', 0, 'ascii');
+  // SandO starts S at 2 and increments it before the first publication. O is
+  // an independent random integer in [1000, 1000999] for this new session.
+  header.writeUInt32BE(3, 3);
+  header.writeUInt32BE(randomInt(1000, 1_001_000), 7);
+  return header;
+}
+
 export function validateInputs(inputs: MapSessionProvisioning, now = Date.now()) {
   const text = (value: unknown, max = 128) =>
     typeof value === 'string' && value.length > 0 && value.length <= max;
@@ -99,7 +117,7 @@ export function validateInputs(inputs: MapSessionProvisioning, now = Date.now())
     inputs.mqtt?.port !== 8883 ||
     !text(inputs.mqtt?.clientId, 256) ||
     !inputs.mqtt.clientId.endsWith('/mb/' + inputs.accountUid) ||
-    !/^322e33[0-9a-f]{18}$/i.test(inputs.mqttHeader ?? '') ||
+    (inputs.mqttHeader !== undefined && !/^322e33[0-9a-f]{18}$/i.test(inputs.mqttHeader)) ||
     !Array.isArray(inputs.subscribeTopics) ||
     inputs.subscribeTopics.length < 1 ||
     inputs.subscribeTopics.length > 4 ||
@@ -193,10 +211,7 @@ export async function runMapSession(
   const mqtt = await owner.negotiating(network.mqtt(owner, inputs.mqtt));
   await owner.negotiating(mqtt.subscribe(inputs.subscribeTopics));
 
-  const outer = Buffer.from(inputs.mqttHeader, 'hex');
-  if (outer.length !== 12 || outer.subarray(0, 3).toString() !== '2.3')
-    throw new Error('invalid-header-profile');
-  outer.writeUInt32BE((outer.readUInt32BE(7) + 1) >>> 0, 7);
+  const outer = mapSignalHeader(inputs.mqttHeader);
   mqtt.publish(inputs.publishTopic, signalEnvelope(localKey, outer, offer));
 
   const expected = {

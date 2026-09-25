@@ -78,7 +78,7 @@ export function fakePeer(t, config = {}) {
   t.after(() => {
     for (const timer of timers) clearTimeout(timer);
   });
-  let offer, key, token, answer;
+  let offer, key, token, answer, signalHeader;
   t.mock.method(mapNetwork, 'mqtt', async (owner) => {
     peer.live++;
     owner.own({
@@ -91,6 +91,7 @@ export function fakePeer(t, config = {}) {
     return {
       subscribe: async () => {},
       publish: (_topic, payload) => {
+        signalHeader = Buffer.from(payload.subarray(0, 12));
         const decipher = createDecipheriv(
           'aes-128-gcm',
           Buffer.from(inputs.localKey),
@@ -112,11 +113,7 @@ export function fakePeer(t, config = {}) {
       },
       receive: async () => ({
         topic: inputs.subscribeTopics[0],
-        payload: signalEnvelope(
-          Buffer.from(inputs.localKey),
-          Buffer.from(inputs.mqttHeader, 'hex'),
-          answer,
-        ),
+        payload: signalEnvelope(Buffer.from(inputs.localKey), signalHeader, answer),
         retained: false,
         duplicate: false,
       }),
