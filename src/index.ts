@@ -22,6 +22,8 @@ export type {
   StreamStop,
   LiveStream,
   LiveStartOptions,
+  LiveStartStage,
+  LiveStartProgress,
   Recording,
   DetectionEvent,
   EventSession,

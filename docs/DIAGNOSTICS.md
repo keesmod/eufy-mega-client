@@ -54,3 +54,13 @@ consumer correlation. A present row does not imply a supported or connected
 HomeBase. No field is guessed from a serial. Consumers must construct an allowlist
 and omit both `deviceId` and `context.parentId` from logs or shared downloads.
 No extra requests, model admission changes or device commands are involved.
+
+## Live start stages
+
+A live start without media can be recorded with the `onProgress` callback of
+`startLive`, see [live start stages](API.md#live-start-stages-0210). Each
+stage carries only its name, the milliseconds since the call and, for the
+station's answer to START, a numeric return code. There are no serials,
+addresses, keys or device text, so a consumer can log the stages as they are.
+Record how far the start got together with the model, firmware, library
+version and the number of concurrent live streams on the station.

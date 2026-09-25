@@ -180,6 +180,30 @@ export interface LiveStartOptions {
    * `liveUpperBoundMs`, default 120000. The library sends STOP at the bound.
    */
   maxDurationMs?: number;
+  /**
+   * Called synchronously once per stage of this start, from the call until the
+   * start resolves, fails or is cancelled, so a consumer can record how far a
+   * start without media got. Errors it throws are ignored. It cannot change,
+   * end or retry the start. See docs/API.md, live start stages.
+   */
+  onProgress?: (progress: LiveStartProgress) => void;
+}
+/**
+ * `session_ready`: the P2P session that carries the stream is connected and
+ * encrypted. `start_issued`: START was handed to that session.
+ * `start_result`: the station answered START, with `returnCode`.
+ * `no_data_end`: the P2P library ended the stream because no media followed.
+ * `metadata`: the stream's metadata arrived and the start resolves.
+ */
+export type LiveStartStage =
+  'session_ready' | 'start_issued' | 'start_result' | 'no_data_end' | 'metadata';
+/** One stage of a live start. No identifiers, and every value is bounded. */
+export interface LiveStartProgress {
+  stage: LiveStartStage;
+  /** Milliseconds since the `startLive` call, 0 to 3600000. */
+  elapsedMs: number;
+  /** Only with `start_result`: the station's numeric return code, 0 for success. */
+  returnCode?: number;
 }
 export interface Recording {
   id: string;

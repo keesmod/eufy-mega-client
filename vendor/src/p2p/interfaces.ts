@@ -40,6 +40,7 @@ export interface P2PClientProtocolEvents {
   ) => void;
   "livestream stopped": (channel: number) => void;
   "livestream error": (channel: number, error: Error) => void;
+  "livestream no data": (channel: number) => void;
   "wifi rssi": (channel: number, rssi: number) => void;
   "rtsp url": (channel: number, rtspUrl: string) => void;
   parameter: (channel: number, param: number, value: string) => void;

@@ -2238,6 +2238,11 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
       rootP2PLogger.info(
         `Stopping the station stream for the device ${this.deviceSNs[this.currentMessageState[dataType].p2pStreamChannel]?.sn}, because we haven't received any data for ${timeout / 1000} seconds`
       );
+      // endStream stays silent about a video stream that never started, so a
+      // caller's start would keep waiting. Report that the library gave it up.
+      const state = this.currentMessageState[dataType];
+      if (dataType === P2PDataType.VIDEO && state.p2pStreaming && state.p2pStreamNotStarted)
+        this.emit("livestream no data", state.p2pStreamChannel);
       this.endStream(dataType, sendStopCommand);
     }, timeout);
   }

@@ -198,6 +198,29 @@ the bound the library sends STOP and the stream ends with the device's
 acknowledgement like any other stop. The caller's abort signal also stops an
 established stream.
 
+### Live start stages, 0.21.0
+
+`startLive(cameraId, { onProgress })` reports each stage of that start once, in
+the order observed, with `elapsedMs` since the call:
+
+| Stage           | Meaning                                                                                                                                 |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `session_ready` | The P2P session that carries the stream is connected and encrypted                                                                      |
+| `start_issued`  | START was handed to that session                                                                                                        |
+| `start_result`  | The station answered START, with its numeric `returnCode`, 0 for success                                                                |
+| `no_data_end`   | The P2P library ended the stream because no media followed: 5 seconds after the station's answer, or 20 seconds after START without one |
+| `metadata`      | The stream's metadata arrived and the start resolves                                                                                    |
+
+The callback runs synchronously from the call until the start resolves, fails
+or is cancelled, also while an issued start awaits its STOP. Errors it throws
+are ignored, and it cannot change, end or retry the start. A stage carries no
+identifiers. `elapsedMs` is bounded to one hour and `returnCode` to a 32-bit
+integer, and a code outside that range is omitted. Only the first answer to
+START counts. A start that ends after `start_issued` got no answer from the
+station, a non-zero `returnCode` is a refusal, and `start_result` 0 followed
+by `no_data_end` or by the caller's cancellation is a start the station
+accepted without sending media.
+
 Two concurrent streams are verified on one HomeBase 3 with two eufyCam 3
 cameras, see the [research note](research/CONCURRENT_LIVE_2026-09-18.md).
 Three or four streams are permitted by the option but unverified on hardware. A

@@ -242,6 +242,7 @@ export class Station extends TypedEmitter<StationEvents> {
     );
     this.p2pSession.on("livestream stopped", (channel: number) => this.onStopLivestream(channel));
     this.p2pSession.on("livestream error", (channel: number, error: Error) => this.onErrorLivestream(channel, error));
+    this.p2pSession.on("livestream no data", (channel: number) => this.emit("livestream no data", this, channel));
     this.p2pSession.on("wifi rssi", (channel: number, rssi: number) => this.onWifiRssiChanged(channel, rssi));
     this.p2pSession.on("rtsp livestream started", (channel: number) => this.onStartRTSPLivestream(channel));
     this.p2pSession.on("rtsp livestream stopped", (channel: number) => this.onStopRTSPLivestream(channel));
