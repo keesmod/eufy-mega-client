@@ -143,6 +143,34 @@ function decodeOne(
       );
       return matched ? { state: 'reported', value: decode.activity } : { state: 'unmatched' };
     }
+    case 'mission_status': {
+      const missions = [...decode.mowing, ...decode.returning];
+      if (
+        !missions.length ||
+        !missions.every((mission) => Number.isInteger(mission) && mission > 0)
+      )
+        return { state: 'invalid' };
+      if (typeof value !== 'string' || (entry && entry.type !== 'raw')) return { state: 'invalid' };
+      const payload = parseMowerWirePayload(value);
+      if (payload.shape === 'malformed') return { state: 'invalid' };
+      // The empty or single-zero-byte payload is the message with every field at zero.
+      const varints =
+        payload.shape === 'default' ? new Map<number, number>() : wireVarints(payload);
+      if (!varints) return { state: 'unmatched' };
+      const mission = varints.get(1) ?? 0;
+      const state = varints.get(3) ?? 0;
+      if (mission === 0) {
+        const idle = (varints.get(2) ?? 0) === 0 && state === 0 && (varints.get(5) ?? 0) === 0;
+        return idle ? { state: 'reported', value: 'idle' } : { state: 'unmatched' };
+      }
+      if (decode.mowing.includes(mission)) {
+        if (state === 1) return { state: 'reported', value: 'mowing' };
+        if (state === 2) return { state: 'reported', value: 'paused' };
+      }
+      if (decode.returning.includes(mission) && state === 1)
+        return { state: 'reported', value: 'returning' };
+      return { state: 'unmatched' };
+    }
   }
 }
 
@@ -196,7 +224,7 @@ export function decodeMowerTelemetry(
   for (const [id, value] of Object.entries(dps)) fields[id] = resolve(id, value, schema.get(id));
   // Structure without meaning: parse raw payloads named by a wire definition of any level.
   for (const definition of definitions) {
-    if (definition.decode.kind !== 'wire') continue;
+    if (definition.decode.kind !== 'wire' && definition.decode.kind !== 'mission_status') continue;
     const value = fields[definition.dp];
     if (!value || value.wire || typeof value.value !== 'string') continue;
     if (value.declared && value.type !== 'raw') continue;
