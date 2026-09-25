@@ -185,8 +185,16 @@ LAN reports only.
   this library. The E15 kept every field the message did not carry and
   reported the complete message within about 0.2 seconds, and the cloud
   matched. The restore behaved the same.
-- No write has run through this library on the owned E15. The mow speed has
-  not been written on hardware at all.
+- The third [settings window](research/E15_SETTINGS_WINDOW_2026-09-25.md), also
+  on 2026-09-25, ran this library's 0.23.0 inside mower bridge 0.11.0 through
+  Home Assistant. `queryWorkParameters` read the owned E15's values, and
+  `setWorkParameter` changed the mow speed from `medium` to `adaptive_high`
+  and back and the blade speed from `medium` to `high` and back. Each write
+  was `reflected` by a fresh LAN report that kept every other field, the whole
+  Home Assistant call took 332 to 449 milliseconds, and later cloud readings
+  matched each change.
+- The `low` speeds and writes while mowing or during a map save have not run
+  on hardware.
 
 ## Provenance
 
@@ -223,5 +231,5 @@ a late cloud reading that leave the session open, another reported value as
 `other` with a timeout and no second write, a rejected control reply and the
 session held for the whole write.
 
-The read and the write have not run against the owned E15 through this code.
-The observations of 2026-09-25 above were made without it.
+The read and both writes have since run on the owned E15, see
+[Hardware evidence](#hardware-evidence).
