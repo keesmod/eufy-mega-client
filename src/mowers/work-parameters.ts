@@ -1,20 +1,30 @@
-// Pure decoding of DP 155, the E15 work parameters, and a one-field encoder that nothing calls
-// yet. The message numbering comes from the official app's product script and the wire rules
-// from Google's public encoding guide, both recorded in docs/MOWER_WORK_PARAMETERS.md. No fork
-// schema, constant, fixture or test. No I/O and no mutation of the input.
+// Pure decoding of DP 155, the E15 work parameters, a one-field encoder and the checks of the
+// opt-in write path in the local session. The message numbering comes from the official app's
+// product script and the wire rules from Google's public encoding guide, both recorded in
+// docs/MOWER_WORK_PARAMETERS.md. No fork schema, constant, fixture or test. No I/O and no
+// mutation of the input.
 import { EufyError } from '../types.js';
 import type {
   MowerBladeSpeed,
   MowerDirectionConfig,
   MowerDirectionMode,
+  MowerDpSchemaEntry,
+  MowerDpSnapshot,
   MowerMowSpeed,
+  MowerSettingsOptions,
+  MowerWorkParameterName,
+  MowerWorkParameterValue,
   MowerWorkParameters,
   MowerWorkParametersDecoding,
   MowerWorkParametersFault,
+  MowerWorkParametersReading,
 } from '../modular-types.js';
+import { DEFAULT_READ_BACK_MS, MAP_SAVE_DP, readBackBound } from './local/commands.js';
 
 /** The declared raw data point `reserved_raw_155` that carries the message. */
 export const WORK_PARAMETERS_DP = '155';
+/** The device's own declared code for DP 155, checked against the session schema before a write. */
+export const WORK_PARAMETERS_CODE = 'reserved_raw_155';
 /** Largest accepted decoded value. */
 export const MAX_WORK_PARAMETER_BYTES = 256;
 /** Largest number of records read in one value, every level and packed element included. */
@@ -343,9 +353,10 @@ function changeValue(names: readonly string[] | undefined, value: unknown): numb
  * Encode one work parameter as a partial DP 155 message in base64, the way the app's encoder
  * sets only the changed field: the field's wrapper message around field 1, left empty for a
  * zero because proto3 omits it, with a negative integer as a ten-byte varint. Pure, nothing is
- * sent and no library path calls it yet. Direction and mow height are not encoded, mow height
- * has its own DP 110 setting. Throws `mower_setting_invalid` for an unknown name, a value of
- * the wrong type, a non-integer or an integer outside int32.
+ * sent. The write path calls it only for the parameters of `WRITABLE_WORK_PARAMETERS`, the
+ * integer parameters wait for a source of their bounds. Direction and mow height are not
+ * encoded, mow height has its own DP 110 setting. Throws `mower_setting_invalid` for an unknown
+ * name, a value of the wrong type, a non-integer or an integer outside int32.
  */
 export function encodeMowerWorkParameter(change: MowerWorkParameterChange): string {
   if (!change || typeof change !== 'object' || Array.isArray(change))
@@ -366,4 +377,131 @@ export function encodeMowerWorkParameter(change: MowerWorkParameterChange): stri
   writeVarint(out, (BigInt(field) << 3n) | 2n);
   writeVarint(out, BigInt(inner.length));
   return Buffer.from([...out, ...inner]).toString('base64');
+}
+
+/**
+ * The work parameters the write path writes and the values it writes for each. The mow speeds
+ * are the three that both of the app's mow speed types name, the blade speeds the app's whole
+ * blade disk speed type. Edge distance and mow spacing have no bound from a permitted source,
+ * and a direction write replaces a nested configuration, so all three stay read only.
+ */
+export const WRITABLE_WORK_PARAMETERS: Readonly<
+  Record<MowerWorkParameterName, { readonly field: number; readonly values: readonly string[] }>
+> = Object.freeze({
+  mowSpeed: Object.freeze({
+    field: FIELDS.mowSpeed,
+    values: Object.freeze(['low', 'medium', 'adaptive_high']),
+  }),
+  bladeSpeed: Object.freeze({ field: FIELDS.bladeSpeed, values: BLADE_SPEEDS }),
+});
+/** The decoded parameters that the write path refuses as read only whatever the value. */
+const READ_ONLY: readonly string[] = Object.freeze([
+  'mowHeight',
+  'edgeDistance',
+  'direction',
+  'mowSpacing',
+  'currentMowSpacing',
+]);
+
+export interface ValidWorkParameterRequest {
+  name: MowerWorkParameterName;
+  field: number;
+  value: MowerWorkParameterValue;
+  encoded: string;
+  readBackMs: number;
+}
+
+/** Decided before any I/O. A read-only parameter is refused whatever the value. */
+export function validateWorkParameterRequest(
+  request: unknown,
+  options: MowerSettingsOptions,
+): ValidWorkParameterRequest {
+  if (!request || typeof request !== 'object' || Array.isArray(request))
+    throw new EufyError('mower_setting_invalid');
+  const { name, value, readBackMs } = request as Record<string, unknown>;
+  if (typeof name === 'string' && READ_ONLY.includes(name))
+    throw new EufyError('mower_setting_read_only');
+  if (typeof name !== 'string' || !Object.hasOwn(WRITABLE_WORK_PARAMETERS, name))
+    throw new EufyError('mower_setting_invalid');
+  const parameter = WRITABLE_WORK_PARAMETERS[name as MowerWorkParameterName];
+  if (typeof value !== 'string' || !parameter.values.includes(value))
+    throw new EufyError('mower_setting_invalid');
+  if (readBackMs !== undefined && !readBackBound(readBackMs))
+    throw new EufyError('mower_setting_invalid');
+  const change = { name, value } as MowerWorkParameterChange;
+  return {
+    name: name as MowerWorkParameterName,
+    field: parameter.field,
+    value: value as MowerWorkParameterValue,
+    encoded: encodeMowerWorkParameter(change),
+    readBackMs: readBackMs ?? options.readBackMs ?? DEFAULT_READ_BACK_MS,
+  };
+}
+
+/** The device itself must declare DP 155 as a readable and writable raw point with its code. */
+export function requireDeclaredWorkParameters(
+  schema: readonly MowerDpSchemaEntry[] | undefined,
+): void {
+  const entry = schema?.find((item) => item.id === WORK_PARAMETERS_DP);
+  if (
+    !entry ||
+    entry.type !== 'raw' ||
+    entry.mode !== 'rw' ||
+    (entry.code !== undefined && entry.code !== WORK_PARAMETERS_CODE)
+  )
+    throw new EufyError('mower_setting_undeclared');
+}
+
+/**
+ * Typed refusals decided on the cloud reading and the fresh query taken right before the write.
+ * Without a writable value in a decoded reading there is nothing to restore, a running map save
+ * refuses like a command, and a parameter already at the requested value cannot produce a fresh
+ * change. Returns the value before the write and a copy of the reading's parameters.
+ */
+export function requireWorkParameterWritable(
+  reading: MowerWorkParametersReading,
+  before: MowerDpSnapshot,
+  request: ValidWorkParameterRequest,
+): {
+  previous: MowerWorkParameterValue;
+  cloud: { observedAt: string; parameters: MowerWorkParameters };
+} {
+  const progress = before.dps[MAP_SAVE_DP];
+  if (
+    reading.state !== 'reported' ||
+    typeof progress !== 'number' ||
+    !Number.isInteger(progress) ||
+    progress < 0 ||
+    progress > 100
+  )
+    throw new EufyError('mower_setting_evidence_missing');
+  const current = reading.parameters[request.name];
+  if (
+    reading.undecodedFields.includes(request.field) ||
+    typeof current !== 'string' ||
+    !WRITABLE_WORK_PARAMETERS[request.name].values.includes(current)
+  )
+    throw new EufyError('mower_setting_evidence_missing');
+  if (progress > 0 && progress < 100) throw new EufyError('mower_setting_map_saving');
+  if (current === request.value) throw new EufyError('mower_setting_already_set');
+  return {
+    previous: current as MowerWorkParameterValue,
+    cloud: { observedAt: reading.observedAt, parameters: structuredClone(reading.parameters) },
+  };
+}
+
+/** The parameter in one reported DP 155 value, or undefined when the value carries none. */
+export function reportedWorkParameter(
+  value: unknown,
+  name: MowerWorkParameterName,
+):
+  | {
+      value: MowerMowSpeed | MowerBladeSpeed | { unknown: number };
+      parameters: MowerWorkParameters;
+    }
+  | undefined {
+  const decoded = decodeMowerWorkParameters(value);
+  if (decoded.shape !== 'decoded') return undefined;
+  const reported = decoded.parameters[name];
+  return reported === undefined ? undefined : { value: reported, parameters: decoded.parameters };
 }

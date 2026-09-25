@@ -237,12 +237,14 @@ class Mowers implements MowerModule {
       if (typeof owner?.withConnection !== 'function')
         throw new EufyError('mower_protocol_unavailable');
       if (typeof id !== 'string') throw new EufyError('mower_binding_unavailable');
-      // The session is tracked before any I/O so shutdown and failures always release it.
+      // The session is tracked before any I/O so shutdown and failures always release it. A work
+      // parameter write takes the value before it from this module's cloud reading of the mower.
       const session = new LocalMowerSession(
         options,
         this.#lifetime.signal,
         this.#options.commands,
         this.#options.settings,
+        (reading) => this.queryWorkParameters(id, reading),
       );
       this.#localSessions.add(session);
       session.closed.then(() => this.#localSessions.delete(session));

@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.23.0 - Unreleased
+
+### Mower work parameters
+
+- `client.mowers.queryWorkParameters(id, signal?)` reads DP 155, the E15's
+  work parameters, from the cloud record that discovery already requests,
+  because the E15's local status replies do not carry it. The reading is
+  `reported`, `missing` or `invalid`, with `source: 'cloud'` and the
+  library's receipt time. The pure `decodeMowerWorkParameters(value)` decodes
+  a base64 value with the numbering of the official app's product script:
+  mow height, mow speed, edge distance, the direction configuration, mow
+  spacing, blade speed and the current mow spacing. It is bounded and never
+  throws.
+- `session.setWorkParameter({ name, value, readBackMs? })` writes the mow
+  speed (`low`, `medium`, `adaptive_high`) or the blade speed (`low`,
+  `medium`, `high`) behind the existing `mowers.settings` opt-in. One cloud
+  reading supplies the value before the write, one fresh status query decides
+  the map-save refusal, and one control frame carries a partial DP 155
+  message with only that field, the way the app writes one change. The
+  read-back ends `reflected` only when a fresh report's DP 155 carries the
+  written value, and returns every parameter of that report. A restore is a
+  second deliberate call.
+- Edge distance, mow spacing, the direction, the mow height and the current
+  mow spacing are read only. No permitted source gives the first two a bound,
+  and a direction write replaces a nested configuration.
+- The settings refusals apply. A failed, late or unusable cloud reading is
+  `mower_setting_evidence_missing` and sends nothing. Refusals leave the
+  session open.
+- Sources: the app's product script on the owner's Mac for the numbering and
+  the written values, and the second settings window of 2026-09-25, in which
+  the owned E15 merged a partial DP 155 message written over the LAN outside
+  the library. See [Mower work parameters](docs/MOWER_WORK_PARAMETERS.md) and
+  the [settings window receipt](docs/research/E15_SETTINGS_WINDOW_2026-09-25.md).
+- Upgrade: additive for callers. `MowerModule` gains `queryWorkParameters()`
+  and `MowerLocalSession` gains `setWorkParameter()`, so a consumer that
+  implements these interfaces itself, for example in a test double, adds them.
+  The settings opt-in now also allows the two work parameter writes through
+  the new call. Rollback: install 0.22.0 and drop the new calls.
+
 ## 0.22.0 - 2026-09-25
 
 ### DP 107 read as the mower's mission status

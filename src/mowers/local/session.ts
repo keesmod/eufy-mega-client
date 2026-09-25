@@ -1,7 +1,9 @@
 // Local Tuya 3.5 session owner for one E15. Protocol facts and their permitted sources:
-// docs/MOWER_TRANSPORT_PROVENANCE.md, docs/MOWER_COMMANDS.md and docs/MOWER_SETTINGS.md. Reads
-// never write. The only writes are the opt-in command classes in commands.ts, one declared
-// boolean point each, and the opt-in settings in settings.ts, one declared setting point each.
+// docs/MOWER_TRANSPORT_PROVENANCE.md, docs/MOWER_COMMANDS.md, docs/MOWER_SETTINGS.md and
+// docs/MOWER_WORK_PARAMETERS.md. Reads never write. The only writes are the opt-in command
+// classes in commands.ts, one declared boolean point each, the opt-in settings in settings.ts,
+// one declared setting point each, and the opt-in work parameters in ../work-parameters.ts, one
+// field of the declared DP 155 message each.
 import net from 'node:net';
 import { once } from 'node:events';
 import { EufyError } from '../../types.js';
@@ -21,6 +23,9 @@ import type {
   MowerSettings,
   MowerSettingsOptions,
   MowerTelemetry,
+  MowerWorkParameterOutcome,
+  MowerWorkParameterRequest,
+  MowerWorkParametersReading,
 } from '../../modular-types.js';
 import { decodeMowerTelemetry } from '../telemetry/decode.js';
 import { parseMowerWirePayload, wireVarints } from '../telemetry/wire.js';
@@ -39,6 +44,14 @@ import {
   requireSettingWritable,
   validateSettingRequest,
 } from './settings.js';
+import {
+  WORK_PARAMETERS_CODE,
+  WORK_PARAMETERS_DP,
+  reportedWorkParameter,
+  requireDeclaredWorkParameters,
+  requireWorkParameterWritable,
+  validateWorkParameterRequest,
+} from '../work-parameters.js';
 import {
   Command,
   FrameReader,
@@ -74,6 +87,9 @@ interface ReceivedFrame extends DecodedFrame {
 }
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i;
 
+/** The owning module's cloud reading of DP 155 for this session's mower. */
+export type WorkParametersReader = (signal: AbortSignal) => Promise<MowerWorkParametersReading>;
+
 function validateOptions(options: MowerLocalSessionOptions) {
   const host = options?.host;
   if (
@@ -101,6 +117,7 @@ export class LocalMowerSession implements MowerLocalSession {
   readonly #lifetime: AbortSignal;
   readonly #commands?: MowerCommandOptions;
   readonly #settings?: MowerSettingsOptions;
+  readonly #workParameters?: WorkParametersReader;
   #socket?: net.Socket;
   #socketConnected = false;
   #socketClosed = false;
@@ -125,6 +142,7 @@ export class LocalMowerSession implements MowerLocalSession {
     lifetime: AbortSignal,
     commands?: MowerCommandOptions,
     settings?: MowerSettingsOptions,
+    workParameters?: WorkParametersReader,
   ) {
     const valid = validateOptions(options);
     this.#host = valid.host;
@@ -133,6 +151,7 @@ export class LocalMowerSession implements MowerLocalSession {
     this.#lifetime = lifetime;
     if (commands) this.#commands = { ...commands };
     if (settings) this.#settings = { ...settings };
+    if (workParameters) this.#workParameters = workParameters;
     this.closed = new Promise((resolve) => {
       this.#resolveClosed = resolve;
     });
@@ -425,6 +444,134 @@ export class LocalMowerSession implements MowerLocalSession {
       },
       this.#timeout + valid.readBackMs,
     );
+  }
+
+  setWorkParameter(
+    request: MowerWorkParameterRequest,
+    signal?: AbortSignal,
+  ): Promise<MowerWorkParameterOutcome> {
+    const settings = this.#settings;
+    if (!settings) return Promise.reject(new EufyError('mower_settings_disabled'));
+    let valid: ReturnType<typeof validateWorkParameterRequest>;
+    try {
+      valid = validateWorkParameterRequest(request, settings);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    // The hard deadline covers the bounded cloud reading, the fresh query and the read-back.
+    return this.#operation(
+      signal,
+      async (abort) => {
+        const key = this.#key;
+        if (!key) throw new EufyError('mower_local_disconnected');
+        requireDeclaredWorkParameters(this.#schema);
+        const reading = await this.#cloudReading(abort);
+        const before = await this.#query(key, abort);
+        const { previous, cloud } = requireWorkParameterWritable(reading, before, valid);
+        const write = {
+          dp: WORK_PARAMETERS_DP,
+          code: WORK_PARAMETERS_CODE,
+          field: valid.field,
+          value: valid.value,
+          encoded: valid.encoded,
+        } as const;
+        const outcome: MowerWorkParameterOutcome = {
+          name: valid.name,
+          write: { ...write },
+          cloud,
+          before,
+          previous,
+          sentAt: new Date().toISOString(),
+          stage: 'sent',
+          end: 'timed_out',
+          reports: [],
+        };
+        this.#send(
+          key,
+          Command.CONTROL_NEW,
+          controlPayload(controlDocument({ dp: write.dp, value: write.encoded })),
+        );
+        const bound = AbortSignal.timeout(valid.readBackMs);
+        const readSignal = AbortSignal.any([abort, bound]);
+        const wanted = new Set([Command.CONTROL_NEW, Command.STATUS_REPORT]);
+        await this.#withHeartbeat(key, async () => {
+          while (true) {
+            let frame: ReceivedFrame;
+            try {
+              frame = await this.#next(key, readSignal, wanted, true);
+            } catch (error) {
+              if (bound.aborted && !abort.aborted) return;
+              throw error;
+            }
+            if (frame.command === Command.CONTROL_NEW) {
+              const reply = controlReply(frame);
+              outcome.reply ??= reply;
+              if (reply.rejected) {
+                outcome.end = 'rejected';
+                return;
+              }
+              continue;
+            }
+            const report = this.#report(frame);
+            if (outcome.reports.length >= MAX_COMMAND_REPORTS) {
+              outcome.end = 'report_limit';
+              return;
+            }
+            outcome.reports.push(report);
+            // Frames queued before the write are kept as context but are not fresh evidence.
+            if (report.observedAt < outcome.sentAt) continue;
+            if (!Object.hasOwn(report.dps, write.dp)) continue;
+            // A value that does not decode or lacks the parameter is no evidence either way.
+            const reported = reportedWorkParameter(report.dps[write.dp], valid.name);
+            if (!reported) continue;
+            if (reported.value === valid.value) {
+              outcome.reflection = {
+                observedAt: report.observedAt,
+                sequence: report.sequence,
+                value: valid.value,
+                parameters: reported.parameters,
+              };
+              outcome.stage = 'reflected';
+              outcome.end = 'reflected';
+              return;
+            }
+            // Another value is evidence too, but never a reason to write again.
+            outcome.other = {
+              observedAt: report.observedAt,
+              sequence: report.sequence,
+              value: reported.value,
+            };
+          }
+        });
+        return outcome;
+      },
+      2 * this.#timeout + valid.readBackMs,
+    );
+  }
+
+  /**
+   * One cloud reading of DP 155 within the session timeout. A reading that fails or takes longer
+   * refuses the write before anything is sent, and the session stays open. The bound holds even
+   * when a reader ignores its signal, and a late answer is discarded.
+   */
+  async #cloudReading(abort: AbortSignal): Promise<MowerWorkParametersReading> {
+    const read = this.#workParameters;
+    if (!read) throw new EufyError('mower_setting_evidence_missing');
+    const signal = AbortSignal.any([abort, AbortSignal.timeout(this.#timeout)]);
+    let onAbort = (): void => undefined;
+    const stopped = new Promise<never>((_, reject) => {
+      onAbort = () => reject(new Error('aborted'));
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
+    try {
+      if (signal.aborted) throw new Error('aborted');
+      return await Promise.race([read(signal), stopped]);
+    } catch (error) {
+      if (abort.aborted) throw error;
+      throw new EufyError('mower_setting_evidence_missing');
+    } finally {
+      signal.removeEventListener('abort', onAbort);
+    }
   }
 
   async #query(key: Buffer, abort: AbortSignal): Promise<MowerDpSnapshot> {

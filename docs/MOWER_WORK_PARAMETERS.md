@@ -1,11 +1,14 @@
 # Mower work parameters
 
-Read-only access to DP 155 of the E15, the message the official app calls its
-main-page work parameters. Change class: additive extension of the mower
-module, unreleased. The library reads and decodes the value. It does not write
-it.
+Access to DP 155 of the E15, the message the official app calls its main-page
+work parameters. Change class: additive extension of the mower module, 0.23.0.
+The library reads and decodes the value from the cloud record. Behind the
+settings opt-in of [Opt-in mower settings](MOWER_SETTINGS.md) it writes the
+mow speed and the blade speed, one field in one partial message per write,
+and reads the value back from fresh LAN reports. Edge distance, mow spacing,
+the direction and the mow height in DP 155 are read only.
 
-## Contract
+## Reading
 
 `client.mowers.queryWorkParameters(id, signal?)` reads DP 155 of one
 discovered E15 and resolves a `MowerWorkParametersReading`, always with
@@ -104,27 +107,96 @@ follows on this firmware, see the
   known schema is exactly three messages deep, so the decoder cannot reach
   `too_deep`. The reader enforces that bound on its own.
 
-## Writing is not implemented
+## Writing
 
-The app's encoder sets only the fields that change, each in its wrapper, so
-one message can carry a single field. `encodeMowerWorkParameter` in
-`src/mowers/work-parameters.ts` encodes one such partial message for
-`mowSpeed`, `bladeSpeed`, `edgeDistance` or `mowSpacing`, with a zero as an
-empty wrapper and a negative value as a ten-byte varint, and refuses anything
-else with `mower_setting_invalid`. It is not exported from the package entry
-point and nothing calls it. Direction and mow height are not encoded.
+`session.setWorkParameter({ name, value, readBackMs? }, signal?)` writes one
+work parameter on an open local session. It needs the settings opt-in,
+`mowers.settings`, and reports `mower_settings_disabled` without it. It
+writes only these values:
 
-There is no write path. Three things are not established: whether the device
-merges a partial message or resets the fields it does not carry, which
-transport a write would use, and how it would be read back.
+| Parameter    | Field | Values written                   | Why only these                                                                                |
+| ------------ | ----- | -------------------------------- | --------------------------------------------------------------------------------------------- |
+| `mowSpeed`   | 2     | `low`, `medium`, `adaptive_high` | The three speed types that both of the app's mow speed enumerations name. `auto` is read only |
+| `bladeSpeed` | 6     | `low`, `medium`, `high`          | The app's whole blade disk speed enumeration                                                  |
+
+`edgeDistance`, `mowSpacing`, `direction`, `mowHeight` and `currentMowSpacing`
+are refused with `mower_setting_read_only` whatever the value. No permitted
+source gives a bound for the edge distance or the mow spacing. The app's
+control handler checks only that they are numbers. The app's Mowing Parameters
+panel, opened read only on 2026-09-25, showed its Customized Mode with a zone
+map and no values, and its Default Mode tab was not opened because a tap on it
+may change the mode. A direction write would replace a nested configuration.
+The mow height has its own DP 110 setting.
+
+One write runs these steps and stops at the first refusal, before anything is
+sent:
+
+1. The request is checked without I/O: `mower_setting_invalid` for another
+   name, value or read-back bound, `mower_setting_read_only` for the
+   parameters above.
+2. The session schema must declare DP 155 `reserved_raw_155` as a readable and
+   writable raw point, otherwise `mower_setting_undeclared`.
+3. One cloud reading of DP 155 through the module, as
+   `queryWorkParameters()` makes it, within the session timeout. The LAN
+   status query does not carry DP 155, so this cloud cache is the only source
+   of the value before the write. A failed or late reading, a reading that is
+   not `reported`, a parameter that is absent, carries an unknown field or
+   holds a value the library does not write is
+   `mower_setting_evidence_missing`.
+4. One fresh LAN status query. DP 118 must hold a map-save percentage, or the
+   write is `mower_setting_evidence_missing`, and a running map save is
+   `mower_setting_map_saving`.
+5. A parameter already at the requested value in the cloud reading is
+   `mower_setting_already_set`.
+6. One control frame with DP 155 as the base64 text of a partial message that
+   carries only the parameter's field, the way the app's encoder writes one
+   change. `low` is an empty wrapper, because proto3 leaves a zero out.
+7. Fresh reports are read back within the bound, default 10 seconds and at
+   most 60, like a setting. The first report received after the write whose
+   DP 155 carries the parameter at the written value is `reflection`, with
+   every parameter it decoded to. The latest one with another value is
+   `other`. A value that does not decode or lacks the parameter is no evidence
+   either way.
+
+The outcome carries `write` with the field and the `encoded` message, `cloud`
+with the reading's receipt time and parameters, `before`, `previous`,
+`sentAt`, `stage`, `end`, `reply`, `reflection`, `other` and `reports`, with
+the stages and ends of a setting. A timeout resolves because the write already
+happened. Nothing is retried, replayed or restored. A restore is a second
+deliberate call with `previous`, decided on its own cloud reading. Typed
+refusals leave the session open. One write owns the session like a command or
+a setting.
+
+The cloud value is a cache. When the app changed a parameter moments before,
+the reading can still hold the older value, so `previous` and the
+`already_set` refusal follow the cache, and the read-back decides on fresh
+LAN reports only.
+
+## Hardware evidence
+
+- On 2026-09-25 a read-only comparison on the owner's installation found that
+  the owned E15's `tuya.m.device.get` record carries the same 86 data points
+  as the cloud's data point request, DP 155 included with the same value. The
+  comparison used the Home Assistant integration's own cloud client and
+  printed only key counts, types and lengths.
+- The same day the second
+  [settings window](research/E15_SETTINGS_WINDOW_2026-09-25.md) wrote a
+  partial DP 155 message with only the blade disk speed over the LAN, outside
+  this library. The E15 kept every field the message did not carry and
+  reported the complete message within about 0.2 seconds, and the cloud
+  matched. The restore behaved the same.
+- No write has run through this library on the owned E15. The mow speed has
+  not been written on hardware at all.
 
 ## Provenance
 
-| Fact                                                                                         | Permitted source                                                                                                                                                                                                                                                      |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Message names, field numbers, types and enumerations, the empty 0x00 message, partial writes | The message serializers and the encoder in the product script of the installed Anker eufy app 6.1.00 on the owner's Mac, the script recorded with its SHA-256 in the [settings schema receipt](research/E15_SETTINGS_SCHEMA_2026-09-25.md). Read only, no code copied |
-| Varints, sign extension, packed repeated fields, proto3 defaults, unknown fields             | The Protocol Buffers encoding and proto3 guides pinned in [typed mower telemetry](MOWER_TELEMETRY.md)                                                                                                                                                                 |
-| `tuya.m.device.get` returns the device's data points next to its schema                      | The sources pinned in [typed mower telemetry](MOWER_TELEMETRY.md#device-schema)                                                                                                                                                                                       |
+| Fact                                                                                                                    | Permitted source                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Message names, field numbers, types and enumerations, the empty 0x00 message, partial writes                            | The message serializers and the encoder in the product script of the installed Anker eufy app 6.1.00 on the owner's Mac, the script recorded with its SHA-256 in the [settings schema receipt](research/E15_SETTINGS_SCHEMA_2026-09-25.md). Read only, no code copied |
+| The E15 merges a partial message written over the LAN and reports the complete message                                  | Owner-supervised window of 2026-09-25, recorded in the [settings window receipt](research/E15_SETTINGS_WINDOW_2026-09-25.md)                                                                                                                                          |
+| The written values: three mow speed types that both mow speed enumerations name, the whole blade disk speed enumeration | The product script above: `MowSpeedType` with four values, the extended settings' `MowSpeed.SpeedType` with the first three, and `BladeDiskSpeedType` with three                                                                                                      |
+| Varints, sign extension, packed repeated fields, proto3 defaults, unknown fields                                        | The Protocol Buffers encoding and proto3 guides pinned in [typed mower telemetry](MOWER_TELEMETRY.md)                                                                                                                                                                 |
+| `tuya.m.device.get` returns the device's data points next to its schema                                                 | The sources pinned in [typed mower telemetry](MOWER_TELEMETRY.md#device-schema)                                                                                                                                                                                       |
 
 No code, schema, constant, fixture, test or table from the unlicensed mower
 fork was used.
@@ -141,5 +213,15 @@ bytes and its refusals, and the module read: reported, missing, invalid, an
 unknown or foreign binding, a module that is not connected, a custom adapter
 without the capability, sanitized cloud failures, cancellation and shutdown.
 
-This read has not run against the owned E15. The observation of 2026-09-25
-above was not made with this code.
+`test/mower-work-parameter-write.test.mjs` covers the write path on a
+loopback device: the frozen table of written values, the opt-in, invalid and
+read-only requests, the declaration, the one partial message in the control
+frame for a speed and for a zero, the merged report read back with its
+parameters, a restore as a second write on its own reading, every refusal of
+the cloud reading and of the fresh query without a control frame, a failed and
+a late cloud reading that leave the session open, another reported value as
+`other` with a timeout and no second write, a rejected control reply and the
+session held for the whole write.
+
+The read and the write have not run against the owned E15 through this code.
+The observations of 2026-09-25 above were made without it.
