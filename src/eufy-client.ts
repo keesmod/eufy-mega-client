@@ -1,4 +1,5 @@
 import { EufyHomeAdapter, type CloudWorkParameters } from './mowers/home.js';
+import type { MapSessionProvisioning } from './mowers/maps/types.js';
 import { LocalMowerSession, type LocalBinding } from './mowers/local/session.js';
 import { validateCommandOptions } from './mowers/local/commands.js';
 import { validateSettingsOptions } from './mowers/local/settings.js';
@@ -30,6 +31,11 @@ interface BindingOwner {
 /** Internal owner capability: DP 155 from one bound device's cloud record. Not public API. */
 interface CloudRecordOwner {
   readCloudWorkParameters(id: string, signal: AbortSignal): Promise<CloudWorkParameters>;
+}
+
+/** Internal owner capability. Private map credentials never enter discovery or diagnostics. */
+interface MapProvisioningOwner {
+  provisionMapSession(id: string, signal: AbortSignal): Promise<MapSessionProvisioning>;
 }
 
 function authState(value: AuthState): AuthState {
@@ -86,6 +92,8 @@ class SecurityClient extends EufyMegaClient implements SecurityModule {
 // Adapter errors are reduced to known public codes, without upstream payloads or causes.
 function mowerError(error: unknown): EufyError {
   const codes = [
+    'mower_maps_disabled',
+    'mower_map_invalid_provisioning',
     'authentication_required',
     'authentication_failed',
     'session_unreadable',
@@ -289,6 +297,25 @@ class Mowers implements MowerModule {
         parameters: decoded.parameters,
         undecodedFields: decoded.undecodedFields,
       };
+    } catch (error) {
+      throw mowerError(error);
+    }
+  }
+
+  async provisionMapSession(id: string, signal?: AbortSignal): Promise<MapSessionProvisioning> {
+    if (this.#lifecycle !== 'open') throw new EufyError('client_closed');
+    const abort = AbortSignal.any([this.#lifetime.signal, ...(signal ? [signal] : [])]);
+    try {
+      if (abort.aborted) throw new EufyError('request_aborted');
+      if (!this.connected) throw new EufyError('authentication_required');
+      if (this.#options.home?.mapProvisioning !== true) throw new EufyError('mower_maps_disabled');
+      const owner = this.#adapter as Partial<MapProvisioningOwner> | undefined;
+      if (typeof owner?.provisionMapSession !== 'function')
+        throw new EufyError('mower_protocol_unavailable');
+      if (typeof id !== 'string') throw new EufyError('mower_binding_unavailable');
+      const provisioning = await owner.provisionMapSession(id, abort);
+      if (abort.aborted) throw new EufyError('request_aborted');
+      return provisioning;
     } catch (error) {
       throw mowerError(error);
     }

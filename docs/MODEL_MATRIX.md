@@ -36,6 +36,12 @@ unchanged. Existing HA consumer behavior is outside this evidence. Map decoding 
 [Decoded mower map geometry](MAP_GEOMETRY.md) from
 [#51](https://github.com/keesmod/eufy-mega-client/issues/51). The implementation work is tracked in
 [#149](https://github.com/keesmod/eufy-mega-client/issues/149).
+The opt-in [private map provisioning producer](research/E15_MAP_PROVISIONING.md)
+in 0.24.0 has synthetic lifecycle and protocol coverage plus independent
+original-SDK evidence. Fresh provisioning through acquisition, cancellation
+and cleanup has not yet been accepted on hardware. This remains part of
+[mower acceptance #8](https://github.com/keesmod/eufy-robomow-ha/issues/8), with
+the existing Android map source retained for recovery.
 The report acquisition work is
 [#150](https://github.com/keesmod/eufy-mega-client/issues/150).
 Its [report-acquisition receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md)

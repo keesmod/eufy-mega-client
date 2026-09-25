@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.24.0 - 2026-09-25
+
+### Private mower map provisioning
+
+- `mowers.home.mapProvisioning: true` enables
+  `client.mowers.provisionMapSession(id, signal?)`. One current RTC read
+  produces private provisioning for the discovered mower from its Home/Tuya
+  session. The library checks account/device binding, regional MQTT endpoint
+  and expiry. There is no automatic login, retry, acquisition or physical
+  command in this call. The opt-in defaults to off.
+- The existing private session store gains derived MQTT credentials. On
+  explicit connect, an older session without these credentials is refreshed
+  once while preserving the mower's opaque identity.
+- `MapSessionProvisioning.mqttHeader` becomes optional. Without it, each
+  acquisition creates a fresh original-SDK 2.3 header. Existing explicit
+  headers keep their historical behavior. The implementation uses original
+  vendor protocol observations, with no helper or Android runtime dependency.
+- Synthetic tests cover lifecycle, identity, expiry, privacy, session reuse
+  and the generated header. Fresh hardware acceptance remains open in
+  keesmod/eufy-robomow-ha#8. No E18 claim is added.
+
+Upgrade: add `provisionMapSession` to custom `MowerModule` test doubles, enable
+the option only for the intended map owner, and pass fresh provisioning to
+each acquisition. Protect the private session store. Rollback: disable the
+new option and use 0.23.0 with the previous caller-provided provisioning.
+The existing Android source remains recoverable. No public release or live
+source migration is established by these code changes.
+
+See [source evidence and limits](docs/research/E15_MAP_PROVISIONING.md).
+
 ## 0.23.0 - 2026-09-25
 
 ### Mower work parameters
