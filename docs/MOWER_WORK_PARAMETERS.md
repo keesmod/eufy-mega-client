@@ -10,6 +10,12 @@ the direction and the mow height in DP 155 are read only.
 
 ## Reading
 
+`client.mowers.queryCloudState(id, signal?)` reads DP 107 activity and DP 155
+together with one request. Its `workParameters` field has the reading contract
+below, with the same cloud receipt time as its status. Consumers that need both
+fields can use it to avoid a second cloud request. See
+[Mower cloud state](API.md#mower-cloud-state).
+
 `client.mowers.queryWorkParameters(id, signal?)` reads DP 155 of one
 discovered E15 and resolves a `MowerWorkParametersReading`, always with
 `source: 'cloud'` and `observedAt`:

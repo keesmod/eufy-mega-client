@@ -332,6 +332,23 @@ export type MowerWorkParametersReading =
   | { source: 'cloud'; observedAt: string; state: 'missing' }
   | { source: 'cloud'; observedAt: string; state: 'invalid' };
 
+/** Confirmed DP 107 activity from a cloud record. Missing or unrecognized values stay explicit. */
+export type MowerCloudStatus =
+  { state: 'reported'; value: MowerActivity } | { state: 'missing' } | { state: 'invalid' };
+
+/**
+ * DP 107 activity and DP 155 work parameters from one bound mower's cloud record. These are
+ * cached cloud values, not device reports. `observedAt` is the library's receipt time, shared
+ * by `workParameters`, not the time the device last changed either value. Never use this
+ * reading as confirmation of a command or setting write.
+ */
+export interface MowerCloudStateReading {
+  source: 'cloud';
+  observedAt: string;
+  status: MowerCloudStatus;
+  workParameters: MowerWorkParametersReading;
+}
+
 /** The mow speeds the library writes: the three that both of the app's mow speed types name. */
 export type MowerWritableMowSpeed = 'low' | 'medium' | 'adaptive_high';
 
@@ -667,6 +684,12 @@ export interface MowerModule extends ModuleLifecycle {
    * value is a cache with the library's receipt time. Never writes, retries or caches.
    */
   queryWorkParameters(id: string, signal?: AbortSignal): Promise<MowerWorkParametersReading>;
+  /**
+   * Read activity and work parameters together from one discovered mower's cloud record.
+   * The cache has the library's receipt time, not device time. Never writes, retries or caches.
+   * Cloud activity is separate from local telemetry and cannot confirm a physical command.
+   */
+  queryCloudState(id: string, signal?: AbortSignal): Promise<MowerCloudStateReading>;
   /**
    * Read fresh RTC provisioning for one discovered mower. Requires home.mapProvisioning.
    * This private result contains credentials. Never log it or expose it in diagnostics.

@@ -129,6 +129,35 @@ test('late data at cancellation cannot change the selected snapshot', async (t) 
   assert.equal(result.cancellationConfirmed, true);
   assert.equal(peer.live, 0);
 });
+for (const stop of ['deadline', 'abort']) {
+  test(`${stop} drains an interrupted file before its correlated cancel reply without changing the snapshot`, async (t) => {
+    const peer = fakePeer(t, {
+      download: (p) => {
+        p.complete();
+        p.file(names[1], 'partial', { end: 0, total: 100 });
+      },
+      cancel: (p) => p.raw(filePacket(names[1], -1, Buffer.alloc(0), { task: p.task })),
+    });
+    const adapter = new PortableMapAcquisition(peer.inputs);
+    const controller = new AbortController();
+    const work = adapter.acquire({
+      demandMs: stop === 'deadline' ? 40 : 5000,
+      signal: controller.signal,
+    });
+    if (stop === 'abort') {
+      await snapshot(adapter);
+      controller.abort();
+    }
+    const result = await work;
+    assert.equal(result.reason, stop === 'deadline' ? 'demand_expired' : 'aborted');
+    assert.equal(result.cancellationConfirmed, true);
+    assert.equal(result.cancellationFailure, undefined);
+    assert.equal(result.cleanupConfirmed, true);
+    assert.equal(Buffer.from(result.lastComplete.files[names[1]]).toString(), 'synthetic-1');
+    assert.equal(peer.commands.filter((command) => command === 'cancel').length, 1);
+    assert.equal(peer.live, 0);
+  });
+}
 test('download acceptance can follow files without publishing unaccepted data', async (t) => {
   const peer = fakePeer(t, { delayedAcceptance: true });
   const result = await new PortableMapAcquisition(peer.inputs).acquire({ demandMs: 30 });
@@ -137,16 +166,23 @@ test('download acceptance can follow files without publishing unaccepted data', 
 });
 test('wrong cancellation is never confirmed', async (t) => {
   const peer = fakePeer(t, { wrongCancel: true });
-  const result = await new PortableMapAcquisition(peer.inputs).acquire({ demandMs: 30 });
+  const adapter = new PortableMapAcquisition(peer.inputs);
+  const result = await adapter.acquire({ demandMs: 30 });
+  assert.equal(result.reason, 'cancel_unconfirmed');
   assert.equal(result.cancellationConfirmed, false);
+  assert.equal(result.cancellationFailure, 'response_mismatch');
   assert.equal(result.cleanupConfirmed, true);
   assert.equal(peer.live, 0);
+  assert.deepEqual(adapter.lastComplete, result.lastComplete);
+  await assert.rejects(adapter.acquire({ demandMs: 20 }), { code: 'client_closed' });
+  assert.equal(peer.sessions.length, 1, 'uncertain cancellation cannot start another session');
 });
 test('unconfirmed cancellation forcibly closes at its own bounded deadline', async (t) => {
   const peer = fakePeer(t, { noCancel: true });
   const result = await new PortableMapAcquisition(peer.inputs).acquire({ demandMs: 20 });
   assert.equal(result.reason, 'cancel_unconfirmed');
   assert.equal(result.cancellationConfirmed, false);
+  assert.equal(result.cancellationFailure, 'timeout');
   assert.equal(result.cleanupConfirmed, true);
   assert.equal(peer.live, 0);
 });
