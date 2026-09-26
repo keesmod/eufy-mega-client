@@ -114,7 +114,11 @@ Protocol exceptions never expose upstream payloads, credentials or endpoints.
   owned by the caller.
 - Command and file channels have independent bounded KCP ordering. At most five
   application sends are possible: authorization, version, album, download and
-  cancellation. No arbitrary filename or operation is accepted.
+  cancellation. No arbitrary filename or operation is accepted. After carrier
+  authentication, a separate empty transport heartbeat is sent every second,
+  including during the bounded cancellation exchange. Incoming traffic does not
+  postpone it. The owner clears its timer on closure and a heartbeat write failure
+  ends the pending read. See the [native carrier contract](research/E15_KEY_CARRIER_CONTRACT_2026-09-10.md#carrier-heartbeat-lifecycle).
 - Sockets register before I/O. Hard closure destroys them, waits for their close
   events, settles negotiation producers, clears timers and drops parser state.
   Runtime-owned key buffers and retained scratch bytes are cleared on closure.

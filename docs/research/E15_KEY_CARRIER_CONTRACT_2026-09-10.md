@@ -215,6 +215,30 @@ TCP encoder and inverse. Independent tests cover every split point of a pair of
 coalesced records, bytewise delivery and invalid headers. The hash-pinned native
 HMAC implementations also matched standard SHA-1 and SHA-256 results directly.
 
+### Carrier heartbeat lifecycle
+
+The 2026-09-26 extension to the same hash-pinned
+[offline oracle](../../scripts/research/e15_contract_oracle.py) executes the
+native established-state entry, heartbeat timer callback and receive routine.
+The established-state entry at `0xbe4f4` starts a timer after 1,000 ms, repeating
+every 1,000 ms. Its callback at `0xbea08` constructs and sends exactly
+`f5 00 00 00`, an empty `0xf500` carrier record. It is independent of application
+traffic and KCP sequence numbers.
+
+The native receive routine at `0xbeaf4` consumes that record and restarts a
+separate 10,000 ms liveness timer. It sends no echo and does not change the
+outgoing timer. The oracle verifies these timer arguments, the emitted record,
+the receive-side restart and the absence of a receive-side write. Only libuv
+ownership and I/O calls are adapted. The protocol routines execute from the
+original artifact without network access.
+
+The portable client now sends this heartbeat after its authenticated carrier
+handshake. The same owner bounds the demand, cancellation and heartbeat timer.
+Stopping a demand retains transport maintenance until the correlated cancel
+response or bounded cleanup. Synthetic tests cover a quiet 30-second demand,
+abort, delayed cancellation, write failure and no sends after closure. These
+checks establish software behavior, not long-duration or physical mower proof.
+
 ## Reproduction and research locators
 
 Run the [offline oracle](../../scripts/research/e15_contract_oracle.py) with a

@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.25.1 - 2026-09-26
+
+### Keep the native map carrier alive through cancellation
+
+The unpublished 0.25.0 candidate adds typed cloud mower activity and stricter
+map cancellation. Its dock trial exposed a second failure: a ten-second demand
+cancelled successfully, while a thirty-second demand lost the carrier before
+receiving its cancellation reply.
+
+- Send the original carrier's empty heartbeat every second after the verified
+  handshake, through the bounded cancellation window. The timer belongs to the
+  acquisition lifetime and is cleared during cleanup. This is transport
+  maintenance, with no mower movement, settings write or command retry.
+- Keep strict cancellation correlation and stop reuse after uncertain
+  cancellation. A downloaded map alone still does not prove a clean demand.
+- The protocol is derived from the hash-pinned original vendor artifact and
+  owned read-only E15 traffic. Runtime code and regression fixtures are
+  independently authored. No Android or vendor binary is a runtime dependency.
+
+This version includes the cloud API and cancellation changes listed under
+0.25.0, which was not published. Upgrade consumers from 0.24.0, preserve private
+state and retain the previous package and lockfile for rollback. Moving-map
+acceptance remains in keesmod/eufy-robomow-ha#8. No E18 support claim is added.
+
 ## 0.25.0 - 2026-09-26
 
 ### Mower cloud activity and map cancellation
