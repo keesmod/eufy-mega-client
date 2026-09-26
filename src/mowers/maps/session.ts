@@ -32,6 +32,7 @@ import {
   cbcDecrypt,
   dataRecord,
   decodeData,
+  carrierHeartbeat,
 } from './wire.js';
 import type { MapSessionProvisioning, RelayToken, MapStreamName } from './types.js';
 interface SignalMessage {
@@ -308,6 +309,23 @@ export async function runMapSession(
   )
     throw new Error('carrier-complete-invalid');
 
+  // The original carrier sends an empty heartbeat every second after establishment.
+  // Incoming traffic does not reset this timer. Keep it alive through the bounded
+  // cancel exchange, then let the owner clear it with the rest of the session.
+  const heartbeatFailure = new Promise<never>((_resolve, reject) => {
+    const tick = () => {
+      if (owner.signal.aborted) return;
+      try {
+        io.write(carrierHeartbeat());
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      owner.timer(tick, 1000);
+    };
+    owner.timer(tick, 1000);
+  });
+
   const kcp = new MapKcp({ sendLimit: 5, messageLimit: 16384 });
   const filesKcp = new MapKcp({ channel: 5, sendLimit: 0, messageLimit: 16384 });
   const commands = new CommandReader();
@@ -366,7 +384,7 @@ export async function runMapSession(
       send(cancelRequest(cancelId));
       cancelTimer = owner.timer(() => owner.hard.abort(), 5000);
     }
-    pending ??= receiveRecord();
+    pending ??= Promise.race([receiveRecord(), heartbeatFailure]);
     // Keep the existing read when demand ends. Never install a competing reader.
     const record = stage === 'cancel' ? await pending : await Promise.race([pending, stopRead]);
     if (!record) continue;

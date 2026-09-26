@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import net from 'node:net';
 import { once } from 'node:events';
-import { setTimeout as delay } from 'node:timers/promises';
+import { setTimeout as delay, setImmediate as flush } from 'node:timers/promises';
 import { PortableMapAcquisition, EufyMegaClient } from '../dist/index.js';
 import { MapFileReader, FILES } from '../dist/mowers/maps/framing.js';
 import { MapLifetime } from '../dist/mowers/maps/lifetime.js';
@@ -46,6 +46,101 @@ test('quiet time is not completion: later full path replaces the initially empty
   assert.equal(result.lastComplete.revision, 2);
   assert.equal(peer.live, 0);
 });
+for (const stop of ['deadline', 'abort']) {
+  test(`carrier heartbeats preserve a quiet demand and its delayed ${stop} cancellation`, async (t) => {
+    const now = Date.now();
+    t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now });
+    let receivedHeartbeat = now;
+    const peer = fakePeer(t, {
+      heartbeat: () => {
+        receivedHeartbeat = Date.now();
+      },
+      download: (p) => {
+        p.complete();
+        const keepalive = () => {
+          if (Date.now() - receivedHeartbeat >= 10000) return p.drop();
+          p.heartbeat();
+          p.later(keepalive, 1000);
+        };
+        p.later(keepalive, 1000);
+      },
+      cancelDelayMs: 2500,
+    });
+    const controller = new AbortController();
+    const adapter = new PortableMapAcquisition(peer.inputs);
+    const work = adapter.acquire({ demandMs: 30000, signal: controller.signal });
+    await flush();
+    const before = adapter.lastComplete;
+    assert.ok(before);
+    const seconds = stop === 'deadline' ? 30 : 12;
+    for (let i = 0; i < seconds; i++) {
+      // Incoming carrier traffic cannot postpone our independent outgoing timer.
+      peer.heartbeat();
+      await flush();
+      t.mock.timers.tick(1000);
+      await flush();
+    }
+    if (stop === 'abort') controller.abort();
+    await flush();
+    assert.equal(peer.commands.filter((command) => command === 'cancel').length, 1);
+    for (const ms of [1000, 1000, 500]) {
+      t.mock.timers.tick(ms);
+      await flush();
+    }
+    const result = await work;
+    assert.equal(result.reason, stop === 'deadline' ? 'demand_expired' : 'aborted');
+    assert.equal(result.cancellationConfirmed, true);
+    assert.equal(result.cancellationFailure, undefined);
+    assert.equal(result.cleanupConfirmed, true);
+    assert.deepEqual(result.lastComplete, before);
+    assert.deepEqual(
+      peer.heartbeats,
+      Array.from({ length: seconds + 2 }, (_, i) => now + (i + 1) * 1000),
+    );
+    assert.deepEqual(peer.commands, ['auth', 'version', 'album', 'download', 'cancel']);
+    assert.equal(peer.live, 0);
+    const sent = peer.heartbeats.length;
+    t.mock.timers.tick(60000);
+    await flush();
+    assert.equal(peer.heartbeats.length, sent, 'closed acquisitions never send another heartbeat');
+  });
+}
+
+for (const phase of ['download', 'cancel']) {
+  test(`carrier heartbeat write failure during ${phase} settles the pending read and preserves the complete snapshot`, async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const peer = fakePeer(t, {
+      heartbeat: () => {
+        throw new Error('socket-closed');
+      },
+      noCancel: phase === 'cancel',
+    });
+    const adapter = new PortableMapAcquisition(peer.inputs);
+    const work = adapter.acquire({ demandMs: phase === 'cancel' ? 500 : 30000 });
+    await flush();
+    const before = adapter.lastComplete;
+    assert.ok(before);
+    if (phase === 'cancel') {
+      t.mock.timers.tick(500);
+      await flush();
+      assert.equal(peer.commands.at(-1), 'cancel');
+    }
+    t.mock.timers.tick(phase === 'cancel' ? 500 : 1000);
+    await flush();
+    assert.equal(peer.heartbeats.length, 1);
+    const result = await work;
+    assert.equal(result.reason, phase === 'cancel' ? 'cancel_unconfirmed' : 'connection_failed');
+    assert.equal(result.cancellationConfirmed, false);
+    assert.equal(result.cancellationFailure, phase === 'cancel' ? 'connection_failed' : undefined);
+    assert.equal(result.cleanupConfirmed, true);
+    assert.deepEqual(result.lastComplete, before);
+    assert.equal(peer.live, 0);
+    t.mock.timers.tick(60000);
+    await flush();
+    assert.equal(peer.heartbeats.length, 1);
+    if (phase === 'cancel') await assert.rejects(adapter.acquire(), { code: 'client_closed' });
+  });
+}
 for (const kind of [
   'partial',
   'oversized',
