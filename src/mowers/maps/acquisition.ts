@@ -78,6 +78,7 @@ export class PortableMapAcquisition {
   async #run(inputs: MapSessionProvisioning, owner: MapLifetime): Promise<MapAcquisitionResult> {
     const files = new Map<MapStreamName, Buffer>();
     let cancellationConfirmed = false;
+    let cancellationFailure: MapAcquisitionResult['cancellationFailure'];
     let failure: MapAcquisitionEnd | undefined;
     try {
       if (!owner.reason)
@@ -101,15 +102,23 @@ export class PortableMapAcquisition {
     } catch (error) {
       // Never propagate network payloads, hostnames, keys or arbitrary exception messages.
       const message = error instanceof Error ? error.message : '';
-      if (owner.signal.aborted || (owner.reason && message !== 'session-stopped'))
+      if (owner.signal.aborted || (owner.reason && message !== 'session-stopped')) {
         failure = 'cancel_unconfirmed';
-      else if (!owner.reason)
+        // Fixed categories only. Never expose peer payloads or arbitrary exception text.
+        cancellationFailure = owner.signal.aborted
+          ? 'timeout'
+          : ['socket-closed', 'socket-failed'].includes(message)
+            ? 'connection_failed'
+            : ['uncorrelated-map-command', 'unexpected-command'].includes(message)
+              ? 'response_mismatch'
+              : 'protocol_error';
+      } else if (!owner.reason)
         failure = ['socket-closed', 'socket-failed'].includes(message)
           ? 'connection_failed'
           : 'protocol_error';
     }
     const cleanupConfirmed = await owner.close();
-    if (!cleanupConfirmed) this.#inputs = undefined;
+    if (!cleanupConfirmed || failure === 'cancel_unconfirmed') this.#inputs = undefined;
     for (const bytes of files.values()) bytes.fill(0);
     files.clear();
     return {
@@ -117,6 +126,7 @@ export class PortableMapAcquisition {
         ? 'cleanup_unconfirmed'
         : (failure ?? owner.reason ?? 'protocol_error'),
       cancellationConfirmed,
+      ...(cancellationFailure ? { cancellationFailure } : {}),
       cleanupConfirmed,
       lastComplete: this.lastComplete,
     };

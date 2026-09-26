@@ -1,6 +1,7 @@
 // Pure decoder from one raw snapshot to typed telemetry. No I/O, no inference from age.
 import type {
   MowerActivity,
+  MowerCloudStatus,
   MowerDpSchemaEntry,
   MowerDpSnapshot,
   MowerDpValue,
@@ -174,14 +175,18 @@ function decodeOne(
   }
 }
 
-function field<T>(
+type DecodedField<T> =
+  | { state: 'reported'; value: T; dp: string[] }
+  | Exclude<MowerTelemetryField<T>, { state: 'reported' }>;
+
+/** Decode meaning without attaching a transport source or an observation time. */
+function decodedField<T>(
   name: MowerTelemetryDefinition['field'],
   definitions: MowerTelemetryDefinition[],
   dps: Record<string, MowerDpValue>,
   schema: Map<string, MowerDpSchemaEntry>,
-  snapshot: MowerDpSnapshot,
   build: (values: Decoded<never>[], definitions: MowerTelemetryDefinition[]) => T | undefined,
-): MowerTelemetryField<T> {
+): DecodedField<T> {
   const own = definitions.filter((definition) => definition.field === name);
   const confirmed = own.filter((definition) => definition.level === 'confirmed');
   if (!confirmed.length) return unconfirmed(own);
@@ -191,13 +196,40 @@ function field<T>(
   if (decoded.every((item) => item.state === 'missing')) return { state: 'missing', dp };
   const value = build(decoded as Decoded<never>[], confirmed);
   if (value === undefined) return { state: 'invalid', dp };
-  return {
-    state: 'reported',
-    value,
-    dp,
-    source: snapshot.source,
-    observedAt: snapshot.observedAt,
-  };
+  return { state: 'reported', value, dp };
+}
+
+function field<T>(
+  name: MowerTelemetryDefinition['field'],
+  definitions: MowerTelemetryDefinition[],
+  dps: Record<string, MowerDpValue>,
+  schema: Map<string, MowerDpSchemaEntry>,
+  snapshot: MowerDpSnapshot,
+  build: (values: Decoded<never>[], definitions: MowerTelemetryDefinition[]) => T | undefined,
+): MowerTelemetryField<T> {
+  const decoded = decodedField(name, definitions, dps, schema, build);
+  return decoded.state === 'reported'
+    ? { ...decoded, source: snapshot.source, observedAt: snapshot.observedAt }
+    : decoded;
+}
+
+/** Internal cloud consumer of the confirmed E15 status definitions. No LAN metadata is added. */
+export function decodeMowerCloudStatus(
+  value: unknown,
+  declaration?: MowerDpSchemaEntry,
+): MowerCloudStatus {
+  if (value === undefined) return { state: 'missing' };
+  if (typeof value !== 'string') return { state: 'invalid' };
+  const decoded = decodedField<MowerActivity>(
+    'status',
+    [...E15_TELEMETRY_DEFINITIONS],
+    { 107: value },
+    new Map(declaration ? [[declaration.id, declaration]] : []),
+    (values) => values.find((item) => item.state === 'reported')?.value,
+  );
+  if (decoded.state === 'reported') return { state: 'reported', value: decoded.value };
+  // With the shipped confirmed registry a present but unclaimed payload stays invalid.
+  return { state: 'invalid' };
 }
 
 /**

@@ -72,6 +72,8 @@ export type {
   MowerWorkParametersFault,
   MowerWorkParametersDecoding,
   MowerWorkParametersReading,
+  MowerCloudStatus,
+  MowerCloudStateReading,
   MowerWritableMowSpeed,
   MowerWorkParameterName,
   MowerWorkParameterValue,

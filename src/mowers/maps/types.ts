@@ -51,6 +51,8 @@ export type MapAcquisitionEnd =
 export interface MapAcquisitionResult {
   reason: MapAcquisitionEnd;
   cancellationConfirmed: boolean;
+  /** Bounded failure category, present only when cancellation could not be confirmed. */
+  cancellationFailure?: 'timeout' | 'connection_failed' | 'response_mismatch' | 'protocol_error';
   cleanupConfirmed: boolean;
   lastComplete?: MapAcquisitionSnapshot;
 }

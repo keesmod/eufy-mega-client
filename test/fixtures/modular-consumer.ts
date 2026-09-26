@@ -8,6 +8,9 @@ import {
   type Device,
   type DiscoveryResult,
   type MowerAdapter,
+  type MowerCloudStateReading,
+  type MowerCloudStatus,
+  type MowerDpSnapshot,
   type MowerModule,
   type MowerSession,
   type MowerSessionStore,
@@ -33,6 +36,11 @@ const mower = new EufyClient({
 });
 const module: MowerModule | undefined = mower.mowers;
 const state: AuthState | undefined = module?.authState;
+const cloudState: Promise<MowerCloudStateReading> | undefined = module?.queryCloudState('fixture');
+declare const cloudReading: MowerCloudStateReading;
+const cloudStatus: MowerCloudStatus = cloudReading.status;
+// @ts-expect-error Cloud receipt evidence cannot masquerade as a local device observation.
+const localSource: MowerDpSnapshot['source'] = cloudReading.source;
 const opaque: MowerSession = { version: 1, data: 'opaque-fixture' };
 // @ts-expect-error Opaque mower persistence cannot be used as a security session.
 const securitySession: Session = opaque;
@@ -47,3 +55,4 @@ new EufyClient({ security: { credentials, sessionStore: store } });
 void [devices, state, securitySession, new EufyError('fixture')];
 
 void discovery;
+void [cloudState, cloudStatus, localSource];

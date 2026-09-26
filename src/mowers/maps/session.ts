@@ -362,6 +362,7 @@ export async function runMapSession(
     if (owner.reason && stage !== 'cancel') {
       if (stage !== 'download') throw new Error('session-stopped');
       stage = 'cancel';
+      fileReader.close();
       send(cancelRequest(cancelId));
       cancelTimer = owner.timer(() => owner.hard.abort(), 5000);
     }
@@ -383,22 +384,23 @@ export async function runMapSession(
       try {
         if (conversation === 5) {
           if (stage !== 'download' && stage !== 'cancel') throw new Error('early-file-data');
+          // The peer may terminate an incomplete file while handling our cancel. Continue
+          // acknowledging and draining channel 5, but never parse or publish its late data.
+          // Only the correlated command reply below can confirm cancellation.
+          if (owner.reason || stage === 'cancel') continue;
           const completed = fileReader.push(clear);
-          // A cancellation freezes publication. Late packets can only confirm closure.
-          if (stage === 'download' && !owner.reason) {
-            if (acceptedDownload) publish(completed);
-            else {
-              for (const file of completed) {
-                const old = staged.find((f) => f.name === file.name);
-                if (old) {
-                  old.data.fill(0);
-                  staged = staged.filter((f) => f !== old);
-                }
-                staged.push(file);
+          if (acceptedDownload) publish(completed);
+          else {
+            for (const file of completed) {
+              const old = staged.find((f) => f.name === file.name);
+              if (old) {
+                old.data.fill(0);
+                staged = staged.filter((f) => f !== old);
               }
+              staged.push(file);
             }
-          } else for (const file of completed) file.data.fill(0);
-          if (fileReader.terminal && stage === 'download') owner.stop('stream_ended');
+          }
+          if (fileReader.terminal) owner.stop('stream_ended');
           continue;
         }
         if (stage === 'version') {

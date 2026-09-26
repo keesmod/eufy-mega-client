@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.25.0 - 2026-09-26
+
+### Mower cloud activity and map cancellation
+
+- `mowers.queryCloudState(id, signal?)` reads typed mission activity and work
+  parameters from one authenticated, device-bound cloud record. The source and
+  receipt time are explicit. A cloud receipt does not establish device freshness
+  or physical dock arrival. The API sends no mower command and does not feed
+  command confirmation. `queryWorkParameters` remains compatible.
+- Soft cancellation of a map stream drains and acknowledges in-flight file
+  traffic without parsing or publishing new files while awaiting the correlated
+  cancellation reply. A terminal packet from an incomplete file can no longer
+  prevent that reply from being read. Cancellation still requires its matching
+  acknowledgement. Failures expose only a bounded diagnostic category.
+- Synthetic regressions cover cloud lifecycle, binding, typed status, unchanged
+  command evidence and map cancellation with an incomplete file. A read-only
+  docked E15/T2880 observation confirmed that the existing device-get route
+  carries both fields. The moving-map acceptance in keesmod/eufy-robomow-ha#8
+  remains open. No E18 support claim is added.
+
+Upgrade: add `queryCloudState` to custom `MowerModule` test doubles. Consumers
+must keep cloud activity separate from LAN reports and command confirmation,
+apply a receipt-age bound, and stop automatic acquisition after unconfirmed
+cancellation. No persisted-session migration is needed. Rollback: retain the
+previous package and lockfile, use 0.24.0 and disable continuous map acquisition
+when cancellation is unconfirmed. These changes do not publish a product or
+establish completed hardware acceptance.
+
 ## 0.24.0 - 2026-09-25
 
 ### Private mower map provisioning
