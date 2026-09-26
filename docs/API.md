@@ -631,6 +631,44 @@ Upgrade note: `MowerLocalSession` gains `settingsEnabled`, `querySettings()`
 and `setSetting()`, and `MowerModule` gains `settingsEnabled`. A consumer that
 implements these interfaces itself, for example in a test double, adds them.
 
+## Mower cloud state
+
+`client.mowers.queryCloudState(id, signal?)` reads DP 107 activity and DP 155
+work parameters from one discovered E15's authenticated cloud device record.
+It makes one `tuya.m.device.get` request and returns `MowerCloudStateReading`:
+
+```ts
+const reading = await client.mowers.queryCloudState(mower.id);
+// source is 'cloud'. observedAt is receipt time, not device time.
+if (reading.status.state === 'reported') {
+  const activity = reading.status.value;
+}
+if (reading.workParameters.state === 'reported') {
+  const parameters = reading.workParameters.parameters;
+}
+```
+
+`status` is `{ state: 'reported', value: MowerActivity }`, `{ state: 'missing' }`
+or `{ state: 'invalid' }`. It shares the confirmed DP 107 decoder with local
+telemetry. No activity is inferred from a task flag, battery value or absent
+point. `idle` does not prove that the mower is docked. `workParameters` retains
+the `MowerWorkParametersReading` contract below and has the same `observedAt`.
+Each field keeps its own missing or invalid result.
+
+Both fields are cloud cache values. The library knows when the response arrived,
+not when the device last changed either value. Consumers own refresh policy and
+expiry. Keep this source separate from local telemetry and never use it to
+confirm a command or setting write. The reading exposes no raw data points,
+device identifiers or credentials. No control opt-in is needed.
+
+The module must be connected and the mower must have a current discovery binding.
+The read uses the existing mower session, never logs in, retries, polls or writes.
+Cancellation, shutdown, binding revocation and session expiry prevent a late
+result. Authentication, binding, request and lifecycle errors match
+`queryWorkParameters()` below. Custom adapters without the internal read
+capability report `mower_protocol_unavailable`. Existing `queryWorkParameters()`
+callers retain their return contract and still make one request per call.
+
 ## Mower work parameters, 0.23.0
 
 `client.mowers.queryWorkParameters(id, signal?)` reads DP 155, the work

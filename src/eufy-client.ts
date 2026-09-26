@@ -1,15 +1,17 @@
-import { EufyHomeAdapter, type CloudWorkParameters } from './mowers/home.js';
+import { EufyHomeAdapter, type CloudState, type CloudWorkParameters } from './mowers/home.js';
 import type { MapSessionProvisioning } from './mowers/maps/types.js';
 import { LocalMowerSession, type LocalBinding } from './mowers/local/session.js';
 import { validateCommandOptions } from './mowers/local/commands.js';
 import { validateSettingsOptions } from './mowers/local/settings.js';
 import { decodeMowerWorkParameters } from './mowers/work-parameters.js';
+import { decodeMowerCloudStatus } from './mowers/telemetry/decode.js';
 import { EufyMegaClient } from './client.js';
 import { EufyError, type AuthAnswer, type AuthState, type ClientOptions } from './types.js';
 import type {
   EufyClientOptions,
   ModuleLifecycleState,
   MowerAdapter,
+  MowerCloudStateReading,
   MowerDevice,
   MowerLocalSession,
   MowerLocalSessionOptions,
@@ -28,9 +30,26 @@ interface BindingOwner {
   ): Promise<T>;
 }
 
-/** Internal owner capability: DP 155 from one bound device's cloud record. Not public API. */
+/** Internal owner capability: selected values from one bound device's cloud record. Not public API. */
 interface CloudRecordOwner {
   readCloudWorkParameters(id: string, signal: AbortSignal): Promise<CloudWorkParameters>;
+  readCloudState(id: string, signal: AbortSignal): Promise<CloudState>;
+}
+
+function workParametersReading(read: CloudWorkParameters): MowerWorkParametersReading {
+  const observedAt = read?.observedAt;
+  if (typeof observedAt !== 'string' || Number.isNaN(Date.parse(observedAt)))
+    throw new EufyError('mower_invalid_response');
+  if (read.value === undefined) return { source: 'cloud', observedAt, state: 'missing' };
+  const decoded = decodeMowerWorkParameters(read.value);
+  if (decoded.shape === 'malformed') return { source: 'cloud', observedAt, state: 'invalid' };
+  return {
+    source: 'cloud',
+    observedAt,
+    state: 'reported',
+    parameters: decoded.parameters,
+    undecodedFields: decoded.undecodedFields,
+  };
 }
 
 /** Internal owner capability. Private map credentials never enter discovery or diagnostics. */
@@ -283,19 +302,33 @@ class Mowers implements MowerModule {
       if (typeof id !== 'string') throw new EufyError('mower_binding_unavailable');
       const read = await owner.readCloudWorkParameters(id, abort);
       if (abort.aborted) throw new EufyError('request_aborted');
+      // The cloud value keeps its source and is never merged with a local observation.
+      return workParametersReading(read);
+    } catch (error) {
+      throw mowerError(error);
+    }
+  }
+
+  async queryCloudState(id: string, signal?: AbortSignal): Promise<MowerCloudStateReading> {
+    if (this.#lifecycle !== 'open') throw new EufyError('client_closed');
+    const abort = AbortSignal.any([this.#lifetime.signal, ...(signal ? [signal] : [])]);
+    try {
+      if (abort.aborted) throw new EufyError('request_aborted');
+      if (!this.connected) throw new EufyError('authentication_required');
+      const owner = this.#adapter as Partial<CloudRecordOwner> | undefined;
+      if (typeof owner?.readCloudState !== 'function')
+        throw new EufyError('mower_protocol_unavailable');
+      if (typeof id !== 'string') throw new EufyError('mower_binding_unavailable');
+      const read = await owner.readCloudState(id, abort);
+      if (abort.aborted) throw new EufyError('request_aborted');
       const observedAt = read?.observedAt;
       if (typeof observedAt !== 'string' || Number.isNaN(Date.parse(observedAt)))
         throw new EufyError('mower_invalid_response');
-      // The cloud value keeps its source and is never merged with a local observation.
-      if (read.value === undefined) return { source: 'cloud', observedAt, state: 'missing' };
-      const decoded = decodeMowerWorkParameters(read.value);
-      if (decoded.shape === 'malformed') return { source: 'cloud', observedAt, state: 'invalid' };
       return {
         source: 'cloud',
         observedAt,
-        state: 'reported',
-        parameters: decoded.parameters,
-        undecodedFields: decoded.undecodedFields,
+        status: decodeMowerCloudStatus(read.statusValue, read.statusSchema),
+        workParameters: workParametersReading({ observedAt, value: read.workParametersValue }),
       };
     } catch (error) {
       throw mowerError(error);

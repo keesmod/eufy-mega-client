@@ -82,6 +82,14 @@ export interface CloudWorkParameters {
   readonly value: string | null | undefined;
 }
 
+/** Internal-only values and product declaration. No identifiers, keys or other DPs escape. */
+export interface CloudState {
+  readonly observedAt: string;
+  readonly statusValue: string | null | undefined;
+  readonly statusSchema?: MowerDpSchemaEntry;
+  readonly workParametersValue: string | null | undefined;
+}
+
 /** Independent Home/Tuya owner. No security imports, physical commands or map transport. */
 export class EufyHomeAdapter implements MowerAdapter {
   #credentials: Credentials;
@@ -150,13 +158,18 @@ export class EufyHomeAdapter implements MowerAdapter {
   async #json(url: string, init: RequestInit, signal: AbortSignal): Promise<ObjectValue> {
     const timeout = AbortSignal.timeout(this.#timeout);
     const abort = AbortSignal.any([signal, timeout]);
+    let authenticationFailure: EufyError | undefined;
     try {
       const response = await this.#fetch(url, { ...init, redirect: 'error', signal: abort });
+      if (abort.aborted) throw new EufyError('request_aborted');
       if (response.status === 401 || response.status === 403) {
         const wasConnected = !!this.#session;
+        authenticationFailure = new EufyError(
+          wasConnected ? 'authentication_required' : 'authentication_failed',
+        );
         this.#session = undefined;
         this.#revokeBindings();
-        throw new EufyError(wasConnected ? 'authentication_required' : 'authentication_failed');
+        throw authenticationFailure;
       }
       if (!response.ok) throw new EufyError('mower_request_failed');
       // Bound the decoded body, including chunked responses.
@@ -178,6 +191,8 @@ export class EufyHomeAdapter implements MowerAdapter {
       if (abort.aborted) throw new EufyError('request_aborted');
       return object(JSON.parse(Buffer.concat(chunks).toString('utf8')));
     } catch (error) {
+      // This response revoked its own binding lease. Preserve that authentication failure.
+      if (authenticationFailure && error === authenticationFailure) throw error;
       if (signal.aborted) throw new EufyError('request_aborted');
       if (timeout.aborted) throw new EufyError('request_timeout');
       throw error;
@@ -491,26 +506,41 @@ export class EufyHomeAdapter implements MowerAdapter {
    * discovery makes and returns DP 155 alone with the receipt time. The device ID stays inside.
    */
   readCloudWorkParameters(id: string, signal: AbortSignal): Promise<CloudWorkParameters> {
+    return this.readCloudState(id, signal).then((read) => ({
+      observedAt: read.observedAt,
+      value: read.workParametersValue,
+    }));
+  }
+  /** One bound cloud record for activity and work parameters. No local snapshot is produced. */
+  readCloudState(id: string, signal: AbortSignal): Promise<CloudState> {
     return this.#track(signal, async (abort) => {
       const session = this.#requireSession();
       const binding = this.#bindings.get(id);
       if (!binding) throw new EufyError('mower_binding_unavailable');
+      const expiry = AbortSignal.timeout(Math.max(1, session.expiresAt - Date.now()));
+      const lease = AbortSignal.any([abort, expiry, this.#bindingLifetime.signal]);
       const record = object(
-        await this.#tuya(session, 'tuya.m.device.get', '1.0', { devId: binding.deviceId }, abort),
+        await this.#tuya(session, 'tuya.m.device.get', '1.0', { devId: binding.deviceId }, lease),
       );
+      if (lease.aborted) throw new EufyError('request_aborted');
+      this.#requireSession();
       const observedAt = new Date().toISOString();
       if (record.devId !== binding.deviceId) throw new EufyError('mower_binding_unavailable');
-      // Only the one point is read. A record without an object of data points carries none.
-      const dps = record.dps;
-      if (
-        !dps ||
-        typeof dps !== 'object' ||
-        Array.isArray(dps) ||
-        !Object.hasOwn(dps, WORK_PARAMETERS_DP)
-      )
-        return { observedAt, value: undefined };
-      const value = (dps as ObjectValue)[WORK_PARAMETERS_DP];
-      return { observedAt, value: typeof value === 'string' ? value : null };
+      // Only the requested points are retained. Absent and wrong-typed values stay distinct.
+      const read = (dp: string): string | null | undefined => {
+        const dps = record.dps;
+        if (!dps || typeof dps !== 'object' || Array.isArray(dps) || !Object.hasOwn(dps, dp))
+          return undefined;
+        const value = (dps as ObjectValue)[dp];
+        return typeof value === 'string' ? value : null;
+      };
+      const statusSchema = copySchema(binding.schema)?.find((entry) => entry.id === '107');
+      return {
+        observedAt,
+        statusValue: read('107'),
+        ...(statusSchema ? { statusSchema } : {}),
+        workParametersValue: read(WORK_PARAMETERS_DP),
+      };
     });
   }
   /** Internal-only producer. No generic cloud request or raw response escapes. */

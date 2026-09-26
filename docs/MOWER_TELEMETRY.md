@@ -45,6 +45,19 @@ from -120 to 0, or `signalPercent`, an integer from 0 to 100, as independently
 defined. No conversion between these units is inferred. A definition may only
 map onto these values. Anything else is `invalid`.
 
+## Separate cloud observation
+
+`client.mowers.queryCloudState(id, signal?)` reads the cloud copy of DP 107
+together with the DP 155 work parameters. It uses the same confirmed status
+definitions but returns a separate `MowerCloudStateReading` with `source: 'cloud'`.
+The local query can omit DP 107, and a passive receiver need not get an initial
+report. The cloud read supplies the cached value available at the time of the
+request, including a confirmed idle payload, without waiting for a transition.
+Its receipt time does not establish device freshness. It is never merged into
+`MowerDpSnapshot`, `MowerTelemetry` or command read-back. Missing and invalid
+activity stays explicit. See the [API contract](API.md#mower-cloud-state) and the
+[device-record receipt](research/E15_CLOUD_STATE_2026-09-26.md).
+
 ## Definitions and confirmation levels
 
 A `MowerTelemetryDefinition` names the field, the data point id, the decode rule
