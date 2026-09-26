@@ -527,3 +527,89 @@ print(
         }
     )
 )
+
+# Execute the established carrier's timer setup, send callback and receive path.
+# Only libuv ownership/I/O is adapted. The pinned native routines choose the
+# periods and construct the wire record. No network or original bytes are saved.
+native_uv = {
+    addr: name
+    for addr, name in list(imports.items())
+    if name
+    in [
+        "uv_handle_get_data",
+        "uv_timer_start",
+        "uv_timer_stop",
+        "uv_buf_clone",
+        "uv_write",
+    ]
+}
+for addr in native_uv:
+    del imports[addr]
+carrier = alloc(0x1C00)
+send_timer, receive_timer, tcp_handle = alloc(128), alloc(128), alloc(256)
+timer_starts, timer_stops, carrier_writes = [], [], []
+p64(carrier + 0x18, tcp_handle)
+p64(carrier + 0x50, send_timer)
+p64(carrier + 0x58, receive_timer)
+for offset in [0x38, 0x3C, 0x40, 0x44]:
+    u.mem_write(carrier + offset, struct.pack("<I", 1))
+
+
+def carrier_uv_hook(uc, addr, size, _):
+    name = native_uv.get(addr)
+    if not name:
+        return
+    a = [uc.reg_read(r) for r in X[:5]]
+    result = 0
+    if name == "uv_handle_get_data":
+        assert a[0] in [send_timer, receive_timer]
+        result = carrier
+    elif name == "uv_timer_start":
+        timer_starts.append(a[:4])
+    elif name == "uv_timer_stop":
+        timer_stops.append(a[0])
+    elif name == "uv_buf_clone":
+        result = alloc(a[1])
+        uc.mem_write(result, bytes(uc.mem_read(a[0], a[1])))
+        uc.reg_write(X[1], a[1])
+    elif name == "uv_write":
+        assert a[1] == tcp_handle and a[3] == 1
+        address, length = struct.unpack("<QQ", uc.mem_read(a[2], 16))
+        carrier_writes.append(bytes(uc.mem_read(address, length)))
+    uc.reg_write(X[0], result)
+    uc.reg_write(C.UC_ARM64_REG_PC, uc.reg_read(C.UC_ARM64_REG_LR))
+
+
+u.hook_add(UC_HOOK_CODE, carrier_uv_hook)
+assert invoke(0xBE4F4, [carrier]) == 2
+assert timer_starts == [
+    [send_timer, 0xBEA08, 1000, 1000],
+    [receive_timer, 0xBEAB4, 10000, 0],
+]
+invoke(0xBEA08, [send_timer])
+assert carrier_writes == [struct.pack(">HH", 0xF500, 0)]
+timer_starts.clear()
+u.mem_write(carrier + 0x80C, struct.pack(">HH", 0xF500, 0))
+u.mem_write(carrier + 0x180C, struct.pack("<I", 4))
+assert invoke(0xBEAF4, [carrier]) == 1
+assert timer_stops == [receive_timer]
+assert timer_starts == [[receive_timer, 0xBEAB4, 10000, 0]]
+assert len(carrier_writes) == 1  # Receiving a heartbeat does not echo one.
+assert int.from_bytes(u.mem_read(carrier + 0x180C, 4), "little") == 0
+print(
+    json.dumps(
+        {
+            "native_carrier_heartbeat": {
+                "start_after_ms": 1000,
+                "repeat_ms": 1000,
+                "record_type": "0xf500",
+                "body_bytes": 0,
+                "receive_liveness_ms": 10000,
+                "receive_restarts_liveness_only": True,
+                "no_echo": True,
+            },
+            "native_execution_verified": True,
+            "no_network_io": True,
+        }
+    )
+)

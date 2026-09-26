@@ -66,7 +66,7 @@ function reply(request, main, sub, payload) {
 }
 export function fakePeer(t, config = {}) {
   const inputs = provisioning();
-  const peer = { commands: [], sessions: [], closed: 0, live: 0, inputs };
+  const peer = { commands: [], sessions: [], heartbeats: [], closed: 0, live: 0, inputs };
   const timers = new Set();
   peer.later = (fn, ms) => {
     const timer = setTimeout(() => {
@@ -168,6 +168,7 @@ export function fakePeer(t, config = {}) {
       }
     }
     peer.raw = (b) => application(5, b);
+    peer.heartbeat = () => push(Buffer.from('f5000000', 'hex'));
     peer.file = (name, data, options = {}) =>
       application(5, filePacket(name, index++, Buffer.from(data), { task, ...options }));
     peer.drop = fail;
@@ -216,6 +217,11 @@ export function fakePeer(t, config = {}) {
           push(handshake(token, 3, { method: 'complete', statuscode: 200 }, randomBytes(16)));
           return;
         }
+        if (bytes.equals(Buffer.from('f5000000', 'hex'))) {
+          peer.heartbeats.push(Date.now());
+          config.heartbeat?.(peer);
+          return;
+        }
         const inner = decodeData(key, bytes);
         if (inner[4] !== 81) return;
         una = inner.readUInt32LE(12) + 1;
@@ -252,7 +258,11 @@ export function fakePeer(t, config = {}) {
         } else if (main === 100 && sub === 13 && clear.readUInt32LE(24) === 4) {
           peer.commands.push('cancel');
           config.cancel?.(peer);
-          if (!config.noCancel) operation(config.wrongCancel ? request + 1 : request, 3);
+          if (!config.noCancel) {
+            const confirm = () => operation(config.wrongCancel ? request + 1 : request, 3);
+            if (config.cancelDelayMs) peer.later(confirm, config.cancelDelayMs);
+            else confirm();
+          }
         } else throw new Error('unexpected-synthetic-command');
       },
     };

@@ -33,6 +33,10 @@ function root(type: number, body: Buffer) {
   body.copy(out, 4);
   return out;
 }
+/** Original carrier protocol: empty transport heartbeat, separate from KCP commands. */
+export function carrierHeartbeat(): Buffer {
+  return root(0xf500, Buffer.alloc(0));
+}
 export function attributes(bytes: Buffer, expectedType: number) {
   if (
     bytes.length < 4 ||
