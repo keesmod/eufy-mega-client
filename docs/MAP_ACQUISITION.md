@@ -18,7 +18,11 @@ can produce it from its own authenticated Home/Tuya session after opting in
 with `mowers.home.mapProvisioning: true`. Call
 `await client.mowers.provisionMapSession(device.id, signal)` for each new
 acquisition after connecting and discovering the device. This is one bounded
-RTC read, without automatic login or retry. The returned object contains
+RTC read, without automatic login or retry. Since 0.25.2, a session with map
+provisioning reports `connected: false` once one RTC read could no longer leave
+the 65 seconds of validity a demand needs. The caller then renews with
+`connect()` before provisioning, instead of receiving
+`mower_map_invalid_provisioning` until the session expires. The returned object contains
 credentials and must remain private. The session store also gains derived
 MQTT credentials and needs the same protection as the existing login session.
 The producer is experimental pending fresh end-to-end hardware acceptance.

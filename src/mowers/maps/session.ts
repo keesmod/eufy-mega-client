@@ -93,6 +93,9 @@ export function mapSignalHeader(legacy?: string): Buffer {
   return header;
 }
 
+/** Validity a map session needs at the start of a demand: the longest demand plus cancellation. */
+export const MAP_SESSION_VALIDITY_MS = 65_000;
+
 export function validateInputs(inputs: MapSessionProvisioning, now = Date.now()) {
   const text = (value: unknown, max = 128) =>
     typeof value === 'string' && value.length > 0 && value.length <= max;
@@ -101,7 +104,7 @@ export function validateInputs(inputs: MapSessionProvisioning, now = Date.now())
   const token = inputs?.tcpToken;
   if (
     !Number.isSafeInteger(inputs?.expiresAt) ||
-    inputs.expiresAt <= now + 65000 ||
+    inputs.expiresAt <= now + MAP_SESSION_VALIDITY_MS ||
     !identity(inputs.accountUid) ||
     !identity(inputs.peer) ||
     !text(inputs.localKey) ||

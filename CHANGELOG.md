@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.25.2 - 2026-09-27
+
+### Renew the Home session before map provisioning is refused
+
+A map session needs 65 seconds of validity at the start of a demand, and
+provisioning caps it by the Home session's expiry. A Home session with at most
+65 seconds left still reported `connected`, so a consumer did not renew it and
+every provisioning call failed with `mower_map_invalid_provisioning` until the
+session expired. Offline boundary cases reproduce this. A live provisioning
+failure in the 2026-09-26 E15 window recovered only after renewal and the next
+idle refresh. Its session lifetime was not captured, so that link remains an
+inference.
+
+- With `mowers.home.mapProvisioning: true`, the Home session lapses once less
+  than 65 seconds plus one request timeout remain. `connected` then reports
+  `false` and `authState` `disconnected`, so the consumer renews through
+  `connect()` before provisioning. An explicit connect no longer restores a
+  persisted session inside that reserve. It logs in afresh and keeps the
+  existing opaque device identity.
+- With the default 15-second request timeout the reserve is 80 seconds of the
+  one-hour reuse window. Without map provisioning the reuse window is unchanged.
+- Provisioning still never logs in or retries by itself. Pending work, open
+  local leases and RTC expiry keep their existing bounds.
+- Synthetic regressions pin both sides of the boundary, the refused
+  provisioning without an RTC request, the fresh login and the unchanged
+  window without map provisioning. No hardware run has confirmed the renewal
+  yet. That remains part of keesmod/eufy-robomow-ha#8.
+
+Upgrade: no API, persisted-session or option change. A consumer that renews on
+`connected: false`, such as mower bridge 0.13.0, renews about 80 seconds
+earlier with map provisioning. Rollback: retain the previous package and
+lockfile and use 0.25.1, which reintroduces the near-expiry refusal. No E18
+support claim is added.
+
 ## 0.25.1 - 2026-09-26
 
 ### Keep the native map carrier alive through cancellation

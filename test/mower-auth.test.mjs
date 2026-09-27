@@ -189,6 +189,48 @@ test('map credentials survive restart, and enabling maps on an old session refre
   assert.equal(f.calls.filter((c) => c.action === 'tuya.m.location.list').length, 1);
 });
 
+test('a map session lapses while an RTC read could leave less than the map validity, then renews', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const f = mapFixture();
+  const client = new EufyClient({ mowers: f.options });
+  await client.mowers.connect();
+  const [device] = await client.mowers.discover();
+  const { expiresAt } = JSON.parse(f.stored.data);
+  const count = (action) => f.calls.filter((c) => c.action === action).length;
+  // The map validity is 65 seconds and the fixture's request timeout 50 ms.
+  t.mock.timers.setTime(expiresAt - 65_051);
+  assert.equal(client.mowers.connected, true);
+  assert.equal((await client.mowers.provisionMapSession(device.id)).expiresAt, expiresAt);
+  t.mock.timers.setTime(expiresAt - 65_050);
+  assert.equal(client.mowers.connected, false);
+  assert.deepEqual(client.mowers.authState, { state: 'disconnected' });
+  await assert.rejects(client.mowers.provisionMapSession(device.id), {
+    code: 'authentication_required',
+  });
+  assert.equal(count('tuya.m.rtc.config.get'), 1);
+  // The persisted session is inside the same reserve, so connect logs in afresh.
+  await client.mowers.connect();
+  assert.equal(count('/v1/user/email/login'), 2);
+  assert.equal(count('tuya.m.location.list'), 0);
+  assert.deepEqual(await client.mowers.discover(), [device]);
+  const renewed = await client.mowers.provisionMapSession(device.id);
+  assert.ok(renewed.expiresAt >= Date.now() + 3_600_000 - 1000);
+  await client.close();
+});
+
+test('a session without map provisioning keeps its full reuse window', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const f = fixture();
+  const client = new EufyClient({ mowers: f.options });
+  await client.mowers.connect();
+  const { expiresAt } = JSON.parse(f.stored.data);
+  t.mock.timers.setTime(expiresAt - 1);
+  assert.equal(client.mowers.connected, true);
+  t.mock.timers.setTime(expiresAt);
+  assert.equal(client.mowers.connected, false);
+  await client.close();
+});
+
 for (const mode of ['cancel', 'shutdown', 'timeout', 'revoked']) {
   test(`map provisioning ${mode} stops without replay, relogin or private errors`, async () => {
     let entered;
