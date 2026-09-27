@@ -13,26 +13,32 @@ failure in the 2026-09-26 E15 window recovered only after renewal and the next
 idle refresh. Its session lifetime was not captured, so that link remains an
 inference.
 
-- With `mowers.home.mapProvisioning: true`, the Home session lapses once less
-  than 65 seconds plus one request timeout remain. `connected` then reports
-  `false` and `authState` `disconnected`, so the consumer renews through
-  `connect()` before provisioning. An explicit connect no longer restores a
-  persisted session inside that reserve. It logs in afresh and keeps the
-  existing opaque device identity.
-- With the default 15-second request timeout the reserve is 80 seconds of the
-  one-hour reuse window. Without map provisioning the reuse window is unchanged.
-- Provisioning still never logs in or retries by itself. Pending work, open
-  local leases and RTC expiry keep their existing bounds.
-- Synthetic regressions pin both sides of the boundary, the refused
-  provisioning without an RTC request, the fresh login and the unchanged
-  window without map provisioning. No hardware run has confirmed the renewal
-  yet. That remains part of keesmod/eufy-robomow-ha#8.
+- With `mowers.home.mapProvisioning: true`, the Home session lapses once at
+  most 65 seconds plus one request timeout and a five-second margin remain.
+  The timeout covers the RTC read and the margin the acquisition's own
+  revalidation. `connected` then reports `false` and `authState`
+  `disconnected`, so the consumer renews through `connect()` before
+  provisioning. An explicit connect no longer restores a persisted session
+  inside that reserve, also when its restore check carries it there. It logs
+  in afresh and keeps the existing opaque device identity.
+- With the default 15-second request timeout the reserve is 85 seconds of the
+  one-hour reuse window, and at most 130 seconds with the 60-second maximum.
+  Without map provisioning the reuse window is unchanged.
+- Inside the reserve, a refused request no longer revokes the device bindings.
+  Open leases keep running until the session expires or is renewed.
+  Provisioning still never logs in or retries by itself, and RTC expiry keeps
+  its existing bound.
+- Synthetic regressions pin both sides of the boundary while connected and on
+  restore, a restore check that crosses it, a cloud read that ends inside it
+  while provisioning runs, the refused provisioning without an RTC request and
+  the unchanged window without map provisioning. No hardware run has confirmed
+  the renewal yet. That remains part of keesmod/eufy-robomow-ha#8.
 
 Upgrade: no API, persisted-session or option change. A consumer that renews on
-`connected: false`, such as mower bridge 0.13.0, renews about 80 seconds
-earlier with map provisioning. Rollback: retain the previous package and
-lockfile and use 0.25.1, which reintroduces the near-expiry refusal. No E18
-support claim is added.
+`connected: false`, such as mower bridge 0.13.0, renews from 85 seconds before
+the local expiry with map provisioning and the default request timeout.
+Rollback: retain the previous package and lockfile and use 0.25.1, which
+reintroduces the near-expiry refusal. No E18 support claim is added.
 
 ## 0.25.1 - 2026-09-26
 

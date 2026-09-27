@@ -35,6 +35,7 @@ import {
   carrierHeartbeat,
 } from './wire.js';
 import type { MapSessionProvisioning, RelayToken, MapStreamName } from './types.js';
+import { MAP_SESSION_VALIDITY_MS } from './types.js';
 interface SignalMessage {
   header: Record<string, string | number>;
   msg?: { tcp_token?: RelayToken; sdp?: string };
@@ -92,9 +93,6 @@ export function mapSignalHeader(legacy?: string): Buffer {
   header.writeUInt32BE(randomInt(1000, 1_001_000), 7);
   return header;
 }
-
-/** Validity a map session needs at the start of a demand: the longest demand plus cancellation. */
-export const MAP_SESSION_VALIDITY_MS = 65_000;
 
 export function validateInputs(inputs: MapSessionProvisioning, now = Date.now()) {
   const text = (value: unknown, max = 128) =>
