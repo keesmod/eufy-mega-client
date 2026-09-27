@@ -15,6 +15,7 @@ import type {
 import { copySchema, parseSchema } from './telemetry/schema.js';
 import { mapMqttFromLogin, mapProvisioningFromRtc, readMapMqtt } from './maps/provisioning.js';
 import type { MapSessionProvisioning, MqttCredentials } from './maps/types.js';
+import { MAP_SESSION_VALIDITY_MS } from './maps/types.js';
 import { WORK_PARAMETERS_DP } from './work-parameters.js';
 import {
   APP_QUERY,
@@ -26,6 +27,9 @@ import {
   sign,
   type Region,
 } from './protocol.js';
+
+/** Slack after the RTC read for the acquisition's revalidation of fresh map provisioning. */
+const MAP_RENEWAL_MARGIN_MS = 5_000;
 
 type ObjectValue = Record<string, unknown>;
 function object(value: unknown): ObjectValue {
@@ -116,9 +120,18 @@ export class EufyHomeAdapter implements MowerAdapter {
       throw new EufyError('mower_invalid_options');
   }
   get connected(): boolean {
-    return (
-      !this.#lifetime.signal.aborted && !!this.#session && this.#session.expiresAt > Date.now()
-    );
+    return !this.#lifetime.signal.aborted && !!this.#session && this.#live(this.#session);
+  }
+  /**
+   * With map provisioning, a session lapses once one bounded RTC read and the acquisition's own
+   * revalidation could no longer leave a new map session its required validity, so the owner
+   * renews it before provisioning is refused.
+   */
+  #live(session: Session): boolean {
+    const reserve = this.#mapProvisioning
+      ? MAP_SESSION_VALIDITY_MS + this.#timeout + MAP_RENEWAL_MARGIN_MS
+      : 0;
+    return session.expiresAt - reserve > Date.now();
   }
   #revokeBindings(): void {
     this.#bindingLifetime.abort();
@@ -277,12 +290,15 @@ export class EufyHomeAdapter implements MowerAdapter {
           const raw = object(JSON.parse(string(envelope.data)));
           if (raw.account === this.#account()) {
             previous = this.#readSession(raw);
-            if (previous.expiresAt > Date.now() && (!this.#mapProvisioning || previous.mapMqtt)) {
+            if (this.#live(previous) && (!this.#mapProvisioning || previous.mapMqtt)) {
               // A persisted SID is only connected after server-side validation.
               try {
                 list(await this.#tuya(previous, 'tuya.m.location.list', '2.1', undefined, abort));
-                this.#session = previous;
-                return { state: 'connected' };
+                // The check itself can carry the session into its reserve. It then logs in afresh.
+                if (this.#live(previous)) {
+                  this.#session = previous;
+                  return { state: 'connected' };
+                }
               } catch (error) {
                 if (!(error instanceof EufyError) || error.code !== 'authentication_required')
                   throw error;
@@ -431,7 +447,9 @@ export class EufyHomeAdapter implements MowerAdapter {
   }
   #requireSession(): Session {
     if (!this.connected || !this.#session) {
-      this.#revokeBindings();
+      // Inside the map reserve the session still backs open leases until it expires or is renewed.
+      if (!this.#session || this.#lifetime.signal.aborted || this.#session.expiresAt <= Date.now())
+        this.#revokeBindings();
       throw new EufyError('authentication_required');
     }
     return this.#session;

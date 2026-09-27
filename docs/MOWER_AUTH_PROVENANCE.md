@@ -61,7 +61,10 @@ within that explicit connect. Other transport errors do not trigger a login
 fallback. There is no automatic retry and no fallback to a default password.
 
 Reuse is conservatively limited to one hour locally. This is a client policy,
-not a measured server token lifetime. Discovery reporting an expired session
+not a measured server token lifetime. Since 0.25.2, map provisioning ends that
+window earlier by the reserve a new map session needs, and a retained SID
+inside that reserve counts as expired. See
+[map provisioning](research/E15_MAP_PROVISIONING.md#boundaries-and-validation). Discovery reporting an expired session
 invalidates the owner and requires another explicit connect. Credentials are
 never sent to a cloud-supplied arbitrary URL. HTTP redirects are rejected. The
 Tuya origin allowlist is EU, AZ, AY and IN from the pinned source. Unknown Home
