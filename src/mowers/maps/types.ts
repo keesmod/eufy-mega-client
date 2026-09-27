@@ -13,6 +13,8 @@ export interface MqttCredentials {
   username: string;
   password: string;
 }
+/** Validity a map session needs at the start of a demand: the longest demand plus cancellation. */
+export const MAP_SESSION_VALIDITY_MS = 65_000;
 /** Provision from the verified mower account and current RTC route before acquisition. */
 export interface MapSessionProvisioning {
   expiresAt: number;

@@ -189,6 +189,128 @@ test('map credentials survive restart, and enabling maps on an old session refre
   assert.equal(f.calls.filter((c) => c.action === 'tuya.m.location.list').length, 1);
 });
 
+// The fixture's reserve: 65 seconds of map validity, its 50 ms request timeout and the 5 s margin.
+const reserve = 70_050;
+
+test('a map-enabled Home session lapses inside its reserve and an explicit connect renews it', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const f = mapFixture();
+  const client = new EufyClient({ mowers: f.options });
+  await client.mowers.connect();
+  const [device] = await client.mowers.discover();
+  const { expiresAt } = JSON.parse(f.stored.data);
+  const count = (action) => f.calls.filter((c) => c.action === action).length;
+  t.mock.timers.setTime(expiresAt - reserve - 1);
+  assert.equal(client.mowers.connected, true);
+  assert.equal((await client.mowers.provisionMapSession(device.id)).expiresAt, expiresAt);
+  t.mock.timers.setTime(expiresAt - reserve);
+  assert.equal(client.mowers.connected, false);
+  assert.deepEqual(client.mowers.authState, { state: 'disconnected' });
+  await assert.rejects(client.mowers.provisionMapSession(device.id), {
+    code: 'authentication_required',
+  });
+  assert.equal(count('tuya.m.rtc.config.get'), 1);
+  // The persisted session is inside the same reserve, so connect logs in afresh.
+  await client.mowers.connect();
+  assert.equal(count('/v1/user/email/login'), 2);
+  assert.equal(count('tuya.m.location.list'), 0);
+  assert.deepEqual(await client.mowers.discover(), [device]);
+  const renewed = await client.mowers.provisionMapSession(device.id);
+  assert.ok(renewed.expiresAt >= Date.now() + 3_600_000 - 1000);
+  await client.close();
+});
+
+test('a persisted map-enabled Home session is restored outside its reserve and replaced inside it', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const f = mapFixture();
+  const first = new EufyClient({ mowers: f.options });
+  await first.mowers.connect();
+  const initial = await first.mowers.discover();
+  await first.close();
+  const { expiresAt } = JSON.parse(f.stored.data);
+  const count = (action) => f.calls.filter((c) => c.action === action).length;
+  t.mock.timers.setTime(expiresAt - reserve - 1);
+  const restored = new EufyClient({ mowers: f.options });
+  await restored.mowers.connect();
+  assert.equal(count('tuya.m.location.list'), 1);
+  assert.equal(count('/v1/user/email/login'), 1);
+  await restored.close();
+  t.mock.timers.setTime(expiresAt - reserve);
+  const renewed = new EufyClient({ mowers: f.options });
+  await renewed.mowers.connect();
+  assert.equal(count('tuya.m.location.list'), 1);
+  assert.equal(count('/v1/user/email/login'), 2);
+  assert.deepEqual(await renewed.mowers.discover(), initial);
+  await renewed.close();
+});
+
+test('a restore check that carries the Home session into its map reserve logs in afresh', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  let expiresAt;
+  const f = mapFixture(({ action }) => {
+    if (action === 'tuya.m.location.list') t.mock.timers.setTime(expiresAt - reserve);
+  });
+  const first = new EufyClient({ mowers: f.options });
+  await first.mowers.connect();
+  const initial = await first.mowers.discover();
+  await first.close();
+  ({ expiresAt } = JSON.parse(f.stored.data));
+  t.mock.timers.setTime(expiresAt - reserve - 1);
+  const next = new EufyClient({ mowers: f.options });
+  assert.deepEqual(await next.mowers.connect(), { state: 'connected' });
+  assert.equal(next.mowers.connected, true);
+  assert.equal(f.calls.filter((c) => c.action === 'tuya.m.location.list').length, 1);
+  assert.equal(f.calls.filter((c) => c.action === '/v1/user/email/login').length, 2);
+  // The fresh login keeps the persisted opaque identity.
+  assert.deepEqual(await next.mowers.discover(), initial);
+  await next.close();
+});
+
+test('a cloud read that ends inside the map reserve leaves a running provisioning its lease', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const held = new Map();
+  let hold = false;
+  const f = mapFixture(({ action }) => {
+    if (!hold || (action !== 'tuya.m.rtc.config.get' && action !== 'tuya.m.device.get')) return;
+    return new Promise((resolve) => held.set(action, resolve));
+  });
+  // Long enough that neither held request times out. The reserve becomes 75 seconds.
+  f.options.home.requestTimeoutMs = 5000;
+  const client = new EufyClient({ mowers: f.options });
+  await client.mowers.connect();
+  const [device] = await client.mowers.discover();
+  const { expiresAt } = JSON.parse(f.stored.data);
+  t.mock.timers.setTime(expiresAt - 75_001);
+  hold = true;
+  const provisioning = client.mowers.provisionMapSession(device.id);
+  const cloud = client.mowers.queryCloudState(device.id);
+  while (held.size < 2) await new Promise((resolve) => setImmediate(resolve));
+  t.mock.timers.setTime(expiresAt - 75_000);
+  held.get('tuya.m.device.get')(response({ result: { devId: privateId, dps: {} } }));
+  await assert.rejects(cloud, { code: 'authentication_required' });
+  held.get('tuya.m.rtc.config.get')(response({ result: mapRtc() }));
+  assert.equal((await provisioning).expiresAt, expiresAt);
+  await client.close();
+});
+
+test('a session without map provisioning keeps its full reuse window', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const f = fixture();
+  const first = new EufyClient({ mowers: f.options });
+  await first.mowers.connect();
+  await first.close();
+  const { expiresAt } = JSON.parse(f.stored.data);
+  t.mock.timers.setTime(expiresAt - 1);
+  const restored = new EufyClient({ mowers: f.options });
+  await restored.mowers.connect();
+  assert.equal(restored.mowers.connected, true);
+  assert.equal(f.calls.filter((c) => c.action === 'tuya.m.location.list').length, 1);
+  assert.equal(f.calls.filter((c) => c.action === '/v1/user/email/login').length, 1);
+  t.mock.timers.setTime(expiresAt);
+  assert.equal(restored.mowers.connected, false);
+  await restored.close();
+});
+
 for (const mode of ['cancel', 'shutdown', 'timeout', 'revoked']) {
   test(`map provisioning ${mode} stops without replay, relogin or private errors`, async () => {
     let entered;

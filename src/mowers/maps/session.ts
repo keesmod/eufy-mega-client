@@ -35,6 +35,7 @@ import {
   carrierHeartbeat,
 } from './wire.js';
 import type { MapSessionProvisioning, RelayToken, MapStreamName } from './types.js';
+import { MAP_SESSION_VALIDITY_MS } from './types.js';
 interface SignalMessage {
   header: Record<string, string | number>;
   msg?: { tcp_token?: RelayToken; sdp?: string };
@@ -101,7 +102,7 @@ export function validateInputs(inputs: MapSessionProvisioning, now = Date.now())
   const token = inputs?.tcpToken;
   if (
     !Number.isSafeInteger(inputs?.expiresAt) ||
-    inputs.expiresAt <= now + 65000 ||
+    inputs.expiresAt <= now + MAP_SESSION_VALIDITY_MS ||
     !identity(inputs.accountUid) ||
     !identity(inputs.peer) ||
     !text(inputs.localKey) ||
