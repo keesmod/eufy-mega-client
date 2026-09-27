@@ -19,11 +19,13 @@ with `mowers.home.mapProvisioning: true`. Call
 `await client.mowers.provisionMapSession(device.id, signal)` for each new
 acquisition after connecting and discovering the device. This is one bounded
 RTC read, without automatic login or retry. Since 0.25.2, a session with map
-provisioning reports `connected: false` once one RTC read and a five-second
-margin could no longer leave the 65 seconds of validity a demand needs. The caller then renews with
-`connect()` before provisioning, instead of receiving
-`mower_map_invalid_provisioning` until the session expires. The returned object contains
-credentials and must remain private. The session store also gains derived
+provisioning reports `connected: false` once at most the 65 seconds a demand
+needs, plus one request timeout for the RTC read and a five-second margin,
+remain. The caller then renews with `connect()` before provisioning, instead of
+receiving `mower_map_invalid_provisioning` until the session expires. A renewal
+ends a provisioning call that still runs on the old session. That call fails
+without a retry, and the next demand provisions afresh. The returned object
+contains credentials and must remain private. The session store also gains derived
 MQTT credentials and needs the same protection as the existing login session.
 The producer is experimental pending fresh end-to-end hardware acceptance.
 See [provisioning provenance and validation](research/E15_MAP_PROVISIONING.md).
@@ -99,7 +101,7 @@ There is no automatic replay.
 Concurrent demands reject with `mower_map_busy`. Invalid duration rejects with
 `mower_map_invalid_demand`. Expired, malformed or structurally mismatched private
 provisioning rejects with `mower_map_invalid_provisioning`, before network I/O.
-Provisioning is copied and revalidated for every demand. At least 65 seconds of
+Provisioning is copied and revalidated for every demand. More than 65 seconds of
 validity must remain, covering the maximum demand and cancellation window.
 Protocol exceptions never expose upstream payloads, credentials or endpoints.
 

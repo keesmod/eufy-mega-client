@@ -252,6 +252,7 @@ test('a restore check that carries the Home session into its map reserve logs in
   });
   const first = new EufyClient({ mowers: f.options });
   await first.mowers.connect();
+  const initial = await first.mowers.discover();
   await first.close();
   ({ expiresAt } = JSON.parse(f.stored.data));
   t.mock.timers.setTime(expiresAt - reserve - 1);
@@ -260,6 +261,8 @@ test('a restore check that carries the Home session into its map reserve logs in
   assert.equal(next.mowers.connected, true);
   assert.equal(f.calls.filter((c) => c.action === 'tuya.m.location.list').length, 1);
   assert.equal(f.calls.filter((c) => c.action === '/v1/user/email/login').length, 2);
+  // The fresh login keeps the persisted opaque identity.
+  assert.deepEqual(await next.mowers.discover(), initial);
   await next.close();
 });
 

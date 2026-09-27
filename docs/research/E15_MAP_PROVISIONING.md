@@ -75,14 +75,14 @@ retries, opens MQTT, or starts an acquisition.
 
 Each call uses a discovered binding, makes one bounded RTC request, verifies
 the returned device and any cached session's account/device identities, and
-caps validity by both RTC and Home session expiry. At least 65 seconds must
+caps validity by both RTC and Home session expiry. More than 65 seconds must
 remain. Since 0.25.2, a map-enabled Home session lapses once at most those 65
 seconds plus one request timeout and a five-second margin remain, both while
 connected and when a persisted session is restored. An explicit connect then
 logs in afresh before provisioning is refused. Without map provisioning the
-reuse window is unchanged. Abort, shutdown, re-discovery and revoked authentication invalidate
-pending work. Only the required private fields are returned. They must never
-enter a public bridge route, diagnostics or logs.
+reuse window is unchanged. Abort, shutdown, re-discovery, renewal and revoked
+authentication invalidate pending work. Only the required private fields are
+returned. They must never enter a public bridge route, diagnostics or logs.
 
 Synthetic tests cover the default-off gate, one request per explicit call,
 restart reuse, migration from an older session, abort, timeout, shutdown,
