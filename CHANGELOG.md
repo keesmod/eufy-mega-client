@@ -24,8 +24,9 @@ inference.
 - With the default 15-second request timeout the reserve is 85 seconds of the
   one-hour reuse window, and at most 130 seconds with the 60-second maximum.
   Without map provisioning the reuse window is unchanged.
-- A request refused inside the reserve leaves the device bindings in place.
-  Open leases keep running until the session expires or is renewed.
+- A request the library refuses because of the reserve leaves the device
+  bindings in place. Open leases keep running until the session expires or is
+  renewed.
   Provisioning still never logs in or retries by itself, and RTC expiry keeps
   its existing bound.
 - Synthetic regressions pin both sides of the boundary while connected and on

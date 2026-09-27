@@ -21,12 +21,13 @@ acquisition after connecting and discovering the device. This is one bounded
 RTC read, without automatic login or retry. Since 0.25.2, a session with map
 provisioning reports `connected: false` once at most the 65 seconds a demand
 needs, plus one request timeout for the RTC read and a five-second margin,
-remain. The caller then renews with `connect()` before provisioning, instead of
-receiving `mower_map_invalid_provisioning` until the session expires. A renewal
-ends a provisioning call that still runs on the old session. That call fails
-without a retry, and the next demand provisions afresh. The returned object
-contains credentials and must remain private. The session store also gains derived
-MQTT credentials and needs the same protection as the existing login session.
+remain. The caller then renews with `connect()` and discovers again before
+provisioning, instead of receiving `mower_map_invalid_provisioning` until the
+session expires. A renewal ends a provisioning call that still runs on the old
+session. That call rejects with `request_aborted` without a retry, and the next
+demand provisions afresh. The returned object contains credentials and must
+remain private. The session store also gains derived MQTT credentials and
+needs the same protection as the existing login session.
 The producer is experimental pending fresh end-to-end hardware acceptance.
 See [provisioning provenance and validation](research/E15_MAP_PROVISIONING.md).
 
