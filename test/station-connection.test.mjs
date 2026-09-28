@@ -6,6 +6,8 @@ import { P2PClientProtocol } from '../dist/vendor/p2p/session.js';
 import { getLocalBroadcastAddresses } from '../dist/vendor/p2p/utils.js';
 import { P2PConnectionType } from '../dist/vendor/p2p/types.js';
 import { DeviceTransport } from '../dist/device-transport.js';
+import { discover } from '../dist/discovery.js';
+import { Station } from '../dist/vendor/http/index.js';
 import { EufyMegaClient } from '../dist/index.js';
 
 const v4 = (address, netmask, internal = false) => ({
@@ -299,6 +301,87 @@ test('a platform that refuses the interface list gives no broadcast targets', (t
     throw new Error('refused');
   });
   assert.deepEqual(getLocalBroadcastAddresses(), []);
+});
+
+test('without any address and without an interface list no lookup is sent and nothing throws', (t) => {
+  const { protocol, sent } = lookupProtocol(t);
+  t.mock.method(os, 'networkInterfaces', () => {
+    throw new Error('refused');
+  });
+  try {
+    protocol.localLookup(undefined);
+    t.mock.timers.tick(1000);
+    assert.deepEqual(sent, []);
+    protocol.localLookup('192.168.1.50');
+    assert.deepEqual(sent, ['192.168.1.50']);
+  } finally {
+    protocol._clearLocalLookupRetryTimeout();
+  }
+});
+
+test('inventoryAddress follows the address a station session was created with', async (t) => {
+  const addresses = [];
+  t.mock.method(Station, 'getInstance', async (_provider, wire, address) => {
+    addresses.push(address);
+    const station = Object.assign(new EventEmitter(), {
+      getSerial: () => wire.station_sn,
+      setConnectionType() {},
+      initialize() {},
+      update() {},
+      dispose: async () => {},
+      hasProperty: () => false,
+      hasCommand: () => false,
+      isConnected: () => false,
+      getCameraInfo() {},
+      connect: async () => {},
+      close: async () => {},
+    });
+    return station;
+  });
+  const row = (params) => ({
+    category: 'eufy_security',
+    device_sn: 'T8030_OWNER',
+    parent_sn: '',
+    device_model: 'T8030',
+    device_type: 18,
+    main_sw_version: '3.8.7.4',
+    p2p_did: 'synthetic',
+    member: { admin_user_id: 'synthetic' },
+    params,
+  });
+  const lookup = async (transport) => {
+    const controller = new AbortController();
+    let seen;
+    await assert.rejects(
+      transport.connect('T8030_OWNER', controller.signal, (progress) => {
+        seen = progress.inventoryAddress;
+        controller.abort();
+      }),
+      { code: 'cancelled' },
+    );
+    return seen;
+  };
+  const transport = new DeviceTransport();
+  try {
+    let inventory = discover([row([{ param_type: 1176, param_value: '192.168.1.20' }])]);
+    await transport.load(inventory.raw, inventory);
+    assert.equal(await lookup(transport), true);
+    // The address leaves the inventory, the existing session keeps the one it was created with.
+    inventory = discover([row([])]);
+    await transport.load(inventory.raw, inventory);
+    assert.equal(await lookup(transport), true);
+    assert.deepEqual(addresses, ['192.168.1.20']);
+  } finally {
+    await transport.close();
+  }
+  const fresh = new DeviceTransport();
+  try {
+    const inventory = discover([row([])]);
+    await fresh.load(inventory.raw, inventory);
+    assert.equal(await lookup(fresh), false);
+  } finally {
+    await fresh.close();
+  }
 });
 
 test('a failing progress consumer never alters the connection', async () => {

@@ -131,7 +131,8 @@ h3Media)`. Use the actual proven model and numeric type. No wildcard, guessed
 ## Unknown-device evidence
 
 An `unsupported_device` report already carries a received model code bounded to
-`T[A-Z0-9]{4}` with an optional one or two character suffix, an integer type from 0 through 65535 and bounded firmware/topology
+`T[A-Z0-9]{4}`, optionally followed by `-` and one or two characters from
+`[A-Z0-9]`, an integer type from 0 through 65535 and bounded firmware/topology
 context when available. Use the received pair, parent status/model and owner
 firmware to identify a candidate family and the missing evidence. A product
 name or serial prefix cannot substitute for the received model field.

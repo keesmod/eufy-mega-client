@@ -574,8 +574,13 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     const targets = new Set<string>(host === undefined ? [] : [host]);
     if (host === undefined || attempt > 0) for (const address of getLocalBroadcastAddresses()) targets.add(address);
     if (targets.size === 0) {
-      const localIP = getLocalIpAddress();
-      targets.add(localIP.substring(0, localIP.lastIndexOf(".") + 1).concat("255"));
+      try {
+        const localIP = getLocalIpAddress();
+        if (localIP) targets.add(localIP.substring(0, localIP.lastIndexOf(".") + 1).concat("255"));
+      } catch {
+        // No interface list and no known address: nothing to ask. The lookup
+        // timeout ends the attempt.
+      }
     }
     rootP2PLogger.debug(`Trying to local lookup address for station ${this.rawStation.station_sn}`, {
       hosts: [...targets],

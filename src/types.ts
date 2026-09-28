@@ -206,7 +206,7 @@ export interface LiveStartProgress {
   returnCode?: number;
 }
 /**
- * `lookup`: the station connection started and its local lookup began.
+ * `lookup`: the station connection started and its local lookup is about to begin.
  * `station_found`: the station answered the lookup with its own DID.
  * `session_open`: the station answered the session handshake.
  * `encryption_ready`: the command key is in place and the connection resolves.

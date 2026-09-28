@@ -25,8 +25,9 @@
 - The local lookup for a station still asks the inventory's LAN address first.
   When that address stays silent for a second, every retry also goes to the
   directed broadcast address of each external IPv4 interface, at most 16 and
-  skipping /31 and /32 interfaces. Without an inventory address, or one learned
-  from an earlier connection, the first lookup already goes to those broadcasts.
+  skipping /31 and /32 interfaces. Without an inventory address, or an address
+  the station answered from earlier, the first lookup already goes to those
+  broadcasts.
   Earlier versions retried only the inventory address, or broadcast only on the
   first interface Node listed, which on a Docker host can be a container bridge
   rather than the HomeBase's LAN. A stale inventory address or the wrong

@@ -95,7 +95,7 @@ export const getLocalBroadcastAddresses = (
     try {
       interfaces = os.networkInterfaces();
     } catch {
-      // Some platforms refuse the interface list. The known address still applies.
+      // Some platforms refuse the interface list. Only a known address is asked then.
       return [];
     }
   }

@@ -31,9 +31,9 @@ changing an allowlist or claiming independence.
 `discoverDevices().issues` preserves its existing `index`, `deviceId` and `code`.
 Never log the whole issue: `deviceId` is private. For `unsupported_device`,
 optional `deviceModel` and `deviceType` fields describe the received pair.
-Only a model matching `T[A-Z0-9]{4}`, optionally with a one or two character
-suffix such as `-Z` (since 0.26.0), and an integer type from 0 through 65535
-are included. These are conservative diagnostic bounds, not protocol limits or
+Only a model matching `T[A-Z0-9]{4}`, optionally followed by `-` and one or two
+characters from `[A-Z0-9]` such as `-Z` (since 0.26.0), and an integer type
+from 0 through 65535 are included. These are conservative diagnostic bounds, not protocol limits or
 recognition rules. Values are never trimmed, truncated, coerced or derived from
 serial numbers. Missing or invalid values are omitted.
 
