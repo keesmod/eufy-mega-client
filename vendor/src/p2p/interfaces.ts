@@ -24,6 +24,7 @@ import {
 export interface P2PClientProtocolEvents {
   'encryption ready': (mode: 'lan-derived' | 'cipher') => void;
   'credential error': () => void;
+  "station found": () => void;
   "alarm mode": (mode: AlarmMode) => void;
   "camera info": (cameraInfo: CmdCameraInfoResponse) => void;
   connect: (address: Address) => void;

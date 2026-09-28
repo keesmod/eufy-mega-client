@@ -207,6 +207,22 @@ received pair with the T8224/95 policy, as described in
 [BATTERY_DOORBELLS.md](BATTERY_DOORBELLS.md#reported-c30-type-96-0181). This is a
 reported inventory tuple, not a hardware observation. No H or P cell changes.
 
+## Reported T8113-Z and T8424, 0.26.0
+
+A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
+on 2026-09-25 and 2026-09-27 with bridge 0.8.28 and client 0.21.0, received three
+eufyCam 2C cameras as `T8113-Z` with type 8, firmware 3.3.8, under a T8030 owner on
+firmware 3.8.7.4, and a Floodlight Cam 2K as `T8424` with type 39, firmware
+2.1.1.5, as its own station. With `T8113-Z` added locally as a copy of the T8113
+profile, discovery accepted the three cameras and the reporter saw snapshots, live
+view and HomeBase recordings working. With `T8424` added locally, discovery
+reported the floodlight as `standalone_transport_unverified`, also after it was
+assigned to the HomeBase 3 in the Eufy app. 0.26.0 admits exactly `T8113-Z`/8 with
+the T8113 policy and recognizes `T8424`/39 as a standalone floodlight descriptor
+without media, as in [FLOODLIGHT.md](FLOODLIGHT.md). These are reported inventory
+tuples and a reported result, not independently reproduced. The catalogue rows
+below and their H and P cells are unchanged.
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)

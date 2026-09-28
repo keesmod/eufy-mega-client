@@ -47,59 +47,61 @@ H3 media requires the actual T8030/type 18 owner,
 a matching parent and T8030 serial prefix, and four-part numeric
 owner firmware at or above 2.0.9.7.
 
-| Model | Type  | Kind    | Family           | Discovery topology | Snapshot    | Live        | Recordings  | Software evidence                 |
-| ----- | ----- | ------- | ---------------- | ------------------ | ----------- | ----------- | ----------- | --------------------------------- |
-| T8400 | 30    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8410 | 31    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8401 | 34    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8411 | 35    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8441 | 45    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8442 | 46    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8414 | 100   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8416 | 104   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8417 | 105   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
-| T8030 | 18    | station | homebase         | owner              | blocked     | blocked     | blocked     | [Evidence](DISCOVERY.md)          |
-| T86P2 | 111   | camera  | lte              | h3-or-standalone   | h3          | h3          | h3          | [Evidence](LTE.md)                |
-| T8111 | 1     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8110 | 10035 | camera  | eufycam          | h3-or-standalone   | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8112 | 4     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8113 | 8     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8114 | 9     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8140 | 14    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8161 | 23    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8600 | 24    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8162 | 26    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8144 | 49    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8172 | 89    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
-| T8160 | 19    | camera  | eufycam          | h3                 | established | established | established | [Evidence](EUFYCAM.md)            |
-| T8200 | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
-| T8201 | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
-| T8202 | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
-| T8203 | 93    | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
-| T8213 | 91    | camera  | battery-doorbell | h3                 | established | established | established | [Evidence](BATTERY_DOORBELLS.md)  |
-| T8214 | 94    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
-| T8224 | 95    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
-| T8223 | 96    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
-| T8142 | 15    | camera  | eufycam          | h3                 | established | established | established | [Evidence](EUFYCAM.md)            |
-| T8130 | 32    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8131 | 33    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8170 | 48    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8122 | 60    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8123 | 61    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8124 | 62    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8134 | 63    | camera  | solo             | h3-or-standalone   | established | established | established | [Evidence](SOLOCAM.md)            |
-| T8B00 | 64    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8171 | 88    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8173 | 98    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
-| T8452 | 132   | camera  | garage           | standalone         | blocked     | blocked     | blocked     | [Evidence](GARAGE.md)             |
-| T8453 | 133   | camera  | garage           | standalone         | blocked     | blocked     | blocked     | [Evidence](GARAGE.md)             |
-| T84A1 | 151   | camera  | walllight        | h3-or-standalone   | blocked     | blocked     | blocked     | [Evidence](WALLLIGHT.md)          |
-| T81A0 | 10005 | camera  | walllight        | h3-or-standalone   | h3          | h3          | h3          | [Evidence](WALLLIGHT.md)          |
-| T8425 | 47    | camera  | floodlight       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](FLOODLIGHT.md)         |
-| T8426 | 87    | camera  | floodlight       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](FLOODLIGHT.md)         |
-| T8530 | 55    | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
-| T8790 | 90    | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
-| T85V0 | 203   | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
+| Model   | Type  | Kind    | Family           | Discovery topology | Snapshot    | Live        | Recordings  | Software evidence                 |
+| ------- | ----- | ------- | ---------------- | ------------------ | ----------- | ----------- | ----------- | --------------------------------- |
+| T8400   | 30    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8410   | 31    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8401   | 34    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8411   | 35    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8441   | 45    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8442   | 46    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8414   | 100   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8416   | 104   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8417   | 105   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8030   | 18    | station | homebase         | owner              | blocked     | blocked     | blocked     | [Evidence](DISCOVERY.md)          |
+| T86P2   | 111   | camera  | lte              | h3-or-standalone   | h3          | h3          | h3          | [Evidence](LTE.md)                |
+| T8111   | 1     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8110   | 10035 | camera  | eufycam          | h3-or-standalone   | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8112   | 4     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8113   | 8     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8113-Z | 8     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8114   | 9     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8140   | 14    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8161   | 23    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8600   | 24    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8162   | 26    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8144   | 49    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8172   | 89    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8160   | 19    | camera  | eufycam          | h3                 | established | established | established | [Evidence](EUFYCAM.md)            |
+| T8200   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
+| T8201   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
+| T8202   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
+| T8203   | 93    | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
+| T8213   | 91    | camera  | battery-doorbell | h3                 | established | established | established | [Evidence](BATTERY_DOORBELLS.md)  |
+| T8214   | 94    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
+| T8224   | 95    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
+| T8223   | 96    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
+| T8142   | 15    | camera  | eufycam          | h3                 | established | established | established | [Evidence](EUFYCAM.md)            |
+| T8130   | 32    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8131   | 33    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8170   | 48    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8122   | 60    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8123   | 61    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8124   | 62    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8134   | 63    | camera  | solo             | h3-or-standalone   | established | established | established | [Evidence](SOLOCAM.md)            |
+| T8B00   | 64    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8171   | 88    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8173   | 98    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
+| T8452   | 132   | camera  | garage           | standalone         | blocked     | blocked     | blocked     | [Evidence](GARAGE.md)             |
+| T8453   | 133   | camera  | garage           | standalone         | blocked     | blocked     | blocked     | [Evidence](GARAGE.md)             |
+| T84A1   | 151   | camera  | walllight        | h3-or-standalone   | blocked     | blocked     | blocked     | [Evidence](WALLLIGHT.md)          |
+| T81A0   | 10005 | camera  | walllight        | h3-or-standalone   | h3          | h3          | h3          | [Evidence](WALLLIGHT.md)          |
+| T8425   | 47    | camera  | floodlight       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](FLOODLIGHT.md)         |
+| T8426   | 87    | camera  | floodlight       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](FLOODLIGHT.md)         |
+| T8424   | 39    | camera  | floodlight       | standalone         | blocked     | blocked     | blocked     | [Evidence](FLOODLIGHT.md)         |
+| T8530   | 55    | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
+| T8790   | 90    | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
+| T85V0   | 203   | camera  | integrated       | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INTEGRATED_CAMERAS.md) |
 
 T8224 also admits the reported type 96 with the same policy.
 See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
@@ -129,7 +131,8 @@ h3Media)`. Use the actual proven model and numeric type. No wildcard, guessed
 ## Unknown-device evidence
 
 An `unsupported_device` report already carries a received model code bounded to
-`T[A-Z0-9]{4}`, an integer type from 0 through 65535 and bounded firmware/topology
+`T[A-Z0-9]{4}`, optionally followed by `-` and one or two characters from
+`[A-Z0-9]`, an integer type from 0 through 65535 and bounded firmware/topology
 context when available. Use the received pair, parent status/model and owner
 firmware to identify a candidate family and the missing evidence. A product
 name or serial prefix cannot substitute for the received model field.

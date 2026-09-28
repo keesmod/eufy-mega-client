@@ -16,6 +16,7 @@ import {
   type Snapshot,
   type LiveStream,
   type LiveStartOptions,
+  type StationConnectOptions,
   type StreamStop,
 } from './types.js';
 
@@ -153,9 +154,14 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     events.on('connection', (connected) => this.emit('events-connection', connected));
     await events.open(signal);
   }
-  async connectStation(id: string, signal?: AbortSignal): Promise<StationState> {
+  async connectStation(
+    id: string,
+    options?: AbortSignal | StationConnectOptions,
+  ): Promise<StationState> {
+    const { signal, onProgress } =
+      options instanceof AbortSignal ? { signal: options } : (options ?? {});
     const t = await this.deviceTransport();
-    await t.connect(id, signal);
+    await t.connect(id, signal, onProgress);
     return t.state(id);
   }
   async getDeviceState(id: string): Promise<Device> {

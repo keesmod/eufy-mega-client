@@ -53,4 +53,7 @@ export const profileBaseline = [
   ['T8530', 55, 'camera', 'integrated', true, true, 'h3'],
   ['T8790', 90, 'camera', 'integrated', true, true, 'h3'],
   ['T85V0', 203, 'camera', 'integrated', true, true, 'h3'],
+  // Added after the characterization for ha-eufy-cam#129.
+  ['T8113-Z', 8, 'camera', '', false, true, 'h3'],
+  ['T8424', 39, 'camera', 'floodlight', true, false, 'blocked'],
 ];

@@ -205,6 +205,35 @@ export interface LiveStartProgress {
   /** Only with `start_result`: the station's numeric return code, 0 for success. */
   returnCode?: number;
 }
+/**
+ * `lookup`: the station connection started and its local lookup is about to begin.
+ * `station_found`: the station answered the lookup with its own DID.
+ * `session_open`: the station answered the session handshake.
+ * `encryption_ready`: the command key is in place and the connection resolves.
+ */
+export type StationConnectionStage =
+  'lookup' | 'station_found' | 'session_open' | 'encryption_ready';
+/** One stage of a station connection. No identifiers or addresses. */
+export interface StationConnectionProgress {
+  stage: StationConnectionStage;
+  /** Milliseconds since this connection attempt started, 0 to 3600000. */
+  elapsedMs: number;
+  /**
+   * Only with `lookup`: whether the station's session was created with a private
+   * LAN address from the inventory.
+   */
+  inventoryAddress?: boolean;
+}
+export interface StationConnectOptions {
+  signal?: AbortSignal;
+  /**
+   * Called synchronously once per stage of this connection attempt, until it
+   * resolves, fails or is cancelled, so a consumer can record how far a failed
+   * connection got. Errors it throws are ignored. See docs/API.md, station
+   * connection stages.
+   */
+  onProgress?: (progress: StationConnectionProgress) => void;
+}
 export interface Recording {
   id: string;
   deviceId: string;

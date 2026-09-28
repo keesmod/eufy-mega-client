@@ -58,6 +58,7 @@ import {
   buildTalkbackAudioFrameHeader,
   resetTalkbackCounters,
   getLocalIpAddress,
+  getLocalBroadcastAddresses,
   decodeP2PCloudIPs,
   decodeSmartSafeData,
   decryptPayloadData,
@@ -562,12 +563,32 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     }
   }
 
-  private localLookup(host: string): void {
-    rootP2PLogger.debug(`Trying to local lookup address for station ${this.rawStation.station_sn} with host ${host}`);
-    this.localLookupByAddress({ host: host, port: 32108 });
+  /**
+   * Client change: the first lookup goes to the known address alone. When it
+   * stays silent, or no address is known, every retry also goes to the directed
+   * broadcast of each interface, so a stale inventory address or a host whose
+   * first interface is a container bridge still finds the station on its LAN.
+   * Only a response carrying this station's DID is connected.
+   */
+  private localLookup(host: string | undefined, attempt = 0): void {
+    const targets = new Set<string>(host === undefined ? [] : [host]);
+    if (host === undefined || attempt > 0) for (const address of getLocalBroadcastAddresses()) targets.add(address);
+    if (targets.size === 0) {
+      try {
+        const localIP = getLocalIpAddress();
+        if (localIP) targets.add(localIP.substring(0, localIP.lastIndexOf(".") + 1).concat("255"));
+      } catch {
+        // No interface list and no known address: nothing to ask. The lookup
+        // timeout ends the attempt.
+      }
+    }
+    rootP2PLogger.debug(`Trying to local lookup address for station ${this.rawStation.station_sn}`, {
+      hosts: [...targets],
+    });
+    for (const target of targets) this.localLookupByAddress({ host: target, port: 32108 });
     this._clearLocalLookupRetryTimeout();
     this.localLookupRetryTimeout = setTimeout(() => {
-      this.localLookup(host);
+      this.localLookup(host, attempt + 1);
     }, this.LOCAL_LOOKUP_RETRY_TIMEOUT);
   }
 
@@ -653,17 +674,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   }
 
   private lookup(host?: string): void {
-    if (host === undefined) {
-      if (this.preferredIPAddress !== undefined) {
-        host = this.preferredIPAddress;
-      } else if (this.localIPAddress !== undefined) {
-        host = this.localIPAddress;
-      } else {
-        const localIP = getLocalIpAddress();
-        host = localIP.substring(0, localIP.lastIndexOf(".") + 1).concat("255");
-      }
-    }
-    this.localLookup(host);
+    this.localLookup(host ?? this.preferredIPAddress ?? this.localIPAddress);
     if (this.connectionType !== P2PConnectionType.ONLY_LOCAL) {
       this.cloudLookup();
       this._clearLookup2Timeout();
@@ -700,6 +711,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               recBufferRequestedSize: this.UDP_RECVBUFFERSIZE_BYTES,
             });
           }
+          // Client change: a close during the bind ends this attempt, so no
+          // lookup may start for it afterwards.
+          if (!this.connecting || this.terminating) return;
           this.lookup(host);
         });
       else {
@@ -1170,9 +1184,6 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private handleMsg(msg: Buffer, rinfo: RemoteInfo): void {
     if (hasHeader(msg, ResponseMessageType.LOCAL_LOOKUP_RESP)) {
       if (!this.connected) {
-        this._clearLookupTimeout();
-        this._clearLocalLookupRetryTimeout();
-
         const p2pDid = `${msg
           .subarray(4, 12)
           .toString("utf8")
@@ -1188,12 +1199,17 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         });
 
         if (p2pDid === this.rawStation.p2p_did) {
+          // Client change: another device answering a broadcast lookup must not
+          // end the lookup for this station, so only its own answer clears it.
+          this._clearLookupTimeout();
+          this._clearLocalLookupRetryTimeout();
           rootP2PLogger.debug(`Received message - LOCAL_LOOKUP_RESP - Wanted device was found, connect to it`, {
             stationSN: this.rawStation.station_sn,
             ip: rinfo.address,
             port: rinfo.port,
             p2pDid: p2pDid,
           });
+          this.emit("station found");
           this._connect({ host: rinfo.address, port: rinfo.port }, p2pDid);
         } else {
           rootP2PLogger.debug(`Received message - LOCAL_LOOKUP_RESP - Unwanted device was found, don't connect to it`, {
