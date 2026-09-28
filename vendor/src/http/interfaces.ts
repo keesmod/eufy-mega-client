@@ -205,6 +205,7 @@ export interface HTTPApiEvents {
 
 export interface StationEvents {
   'encryption ready': (station: Station, mode: 'lan-derived' | 'cipher') => void;
+  "station found": (station: Station) => void;
   connect: (station: Station) => void;
   close: (station: Station) => void;
   "connection error": (station: Station, error: Error) => void;

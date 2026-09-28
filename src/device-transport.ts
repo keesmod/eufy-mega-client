@@ -44,6 +44,8 @@ import {
   type Snapshot,
   type LiveStream,
   type LiveStartProgress,
+  type StationConnectionProgress,
+  type StationConnectionStage,
   type StreamStop,
   type MediaMetadata,
 } from './types.js';
@@ -525,14 +527,44 @@ export class DeviceTransport extends EventEmitter {
       this.station(stationId).downloadImage(path);
     }
   }
-  async connect(id: string, signal?: AbortSignal): Promise<void> {
+  async connect(
+    id: string,
+    signal?: AbortSignal,
+    onProgress?: (progress: StationConnectionProgress) => void,
+  ): Promise<void> {
     if (this.state(id).connected) return;
     if (this.connecting.has(id)) throw new EufyError('connection_busy');
     const station = this.station(id);
+    // Each stage is reported once, in the order observed. A consumer's failure
+    // never alters the connection.
+    const started = performance.now();
+    const seen = new Set<StationConnectionStage>();
+    const mark = (stage: StationConnectionStage) => {
+      if (!onProgress || seen.has(stage)) return;
+      seen.add(stage);
+      try {
+        const progress: StationConnectionProgress = {
+          stage,
+          elapsedMs: Math.min(3_600_000, Math.max(0, Math.round(performance.now() - started))),
+        };
+        if (stage === 'lookup') {
+          const raw = this.raw.get(id);
+          progress.inventoryAddress = raw !== undefined && lanAddress(raw) !== undefined;
+        }
+        onProgress(progress);
+      } catch {
+        // Ignored by contract. Progress never alters the connection.
+      }
+    };
+    const found = () => mark('station_found');
+    const opened = () => mark('session_open');
+    station.on('station found', found);
+    station.on('connect', opened);
     const operation = this.wait(
       station,
       'encryption ready',
       () => {
+        mark('lookup');
         void station
           .connect()
           .catch(() => station.emit('connection error', station, new Error('Connection failed')));
@@ -540,7 +572,7 @@ export class DeviceTransport extends EventEmitter {
       (_s, mode) => mode,
       signal,
       20000,
-    ).then(() => {});
+    ).then(() => mark('encryption_ready'));
     this.connecting.set(id, operation);
     try {
       await operation;
@@ -548,6 +580,8 @@ export class DeviceTransport extends EventEmitter {
       await station.close();
       throw error;
     } finally {
+      station.off('station found', found);
+      station.off('connect', opened);
       this.connecting.delete(id);
     }
   }

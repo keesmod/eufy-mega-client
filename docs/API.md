@@ -162,11 +162,38 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
   Unknown hardware is excluded; a supported camera with an unsupported parent
   causes an error. Inventory at the server's 100-device boundary is unconfirmed.
 - `connectStation(id, signal?)` establishes the explicit LAN connection.
+  `connectStation(id, { signal?, onProgress? })` also reports its
+  [stages](#station-connection-stages-0260).
 - `getStationState(id)` returns the last observed state. Mode values can be
   `null` before device telemetry arrives.
 - `refreshStationState(id, signal?)` requests a fresh device observation.
 - `snapshot(cameraId, signal?)` returns the latest HomeBase cover JPEG with its
   receipt time. It does not wake a camera for a new live capture.
+
+### Station connection stages, 0.26.0
+
+The library looks for the station on the LAN before it opens a session. The
+first lookup goes to the inventory's private LAN address, when it has one. When
+that stays silent for a second, or there is no such address, every retry also
+goes to the directed broadcast address of each external IPv4 interface, at most 16. Only the station's answer with its own DID ends the lookup, and the
+connection fails with `device_request_timeout` after 20 seconds.
+
+`connectStation(id, { onProgress })` reports each stage of that attempt once,
+in the order observed, with `elapsedMs` since the call:
+
+| Stage              | Meaning                                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `lookup`           | The attempt started and lookups were sent. `inventoryAddress` says whether the inventory had a LAN address |
+| `station_found`    | The station answered the lookup with its own DID                                                           |
+| `session_open`     | The station answered the session handshake                                                                 |
+| `encryption_ready` | The command key is in place and the connection resolves                                                    |
+
+An already connected station resolves without stages. The callback runs
+synchronously until the attempt resolves, fails or is cancelled. Errors it
+throws are ignored, and it cannot change or retry the connection. A stage
+carries no identifiers or addresses. A failure after `lookup` alone means no
+station answered, after `station_found` the station did not complete the
+handshake, and after `session_open` the command key was not established.
 
 ## Live media
 

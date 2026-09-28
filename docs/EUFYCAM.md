@@ -13,6 +13,16 @@ coverage in unreleased 0.6.0. The independently authored
 [regressions](../test/eufycam.test.mjs) exercise the actual private `Camera` factory,
 state adapter and event route. They do not establish physical support.
 
+## Reported T8113-Z, 0.26.0
+
+The report on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129)
+shows eufyCam 2C cameras received as `T8113-Z` with type 8 under a HomeBase 3.
+0.26.0 admits exactly that model code with the T8113 row below: the same generic
+Camera class, H3 topology and media policy. The reporter saw snapshots, live view
+and HomeBase recordings working with that entry added locally. This is reported,
+not independently reproduced. Other suffixes remain `unsupported_device`. See
+[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-t8113-z-and-t8424-0260).
+
 ## Exact hardware validation
 
 [Story #55 hardware evidence](hardware/T8160_2026_09_11.md) records one T8160
