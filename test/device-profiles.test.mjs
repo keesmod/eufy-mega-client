@@ -62,6 +62,73 @@ test('only T8224 admits a reported type, and only for that exact pair', () => {
   }
 });
 
+test('T8113-Z carries exactly the T8113 policy, and no other suffix is admitted', () => {
+  const { T8113, 'T8113-Z': suffixed } = deviceProfiles;
+  assert.deepEqual({ ...suffixed }, { ...T8113 });
+  assert.equal(exactDeviceProfile({ device_model: 'T8113-Z', device_type: 8 }), suffixed);
+  for (const [device_model, device_type] of [
+    ['T8113-Z', 9],
+    ['T8113-X', 8],
+    ['T8113Z', 8],
+    ['t8113-z', 8],
+    ['T8113-Z ', 8],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  const owner = {
+    category: 'eufy_security',
+    device_model: 'T8030',
+    device_type: 18,
+    device_sn: 'T8030_SYNTHETIC',
+    parent_sn: '',
+    main_sw_version: '3.8.7.4',
+  };
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8113-Z',
+    device_type: 8,
+    parent_sn: owner.device_sn,
+  };
+  const result = discover([owner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), { kind: 'station', ownerId: owner.device_sn });
+  assert.equal(result.result.devices[1].model, 'T8113-Z');
+  for (const feature of ['snapshot', 'live', 'recordings'])
+    assert.equal(hasCameraMedia(camera, owner, feature), true);
+});
+
+test('T8424 is recognized as its own station and never as an H3 camera', () => {
+  const owner = {
+    category: 'eufy_security',
+    device_model: 'T8030',
+    device_type: 18,
+    device_sn: 'T8030_SYNTHETIC',
+    parent_sn: '',
+    main_sw_version: '3.8.7.4',
+  };
+  const floodlight = (parent_sn) => ({
+    category: 'eufy_security',
+    device_sn: 'FLOOD',
+    device_model: 'T8424',
+    device_type: 39,
+    parent_sn,
+    main_sw_version: '2.1.1.5',
+  });
+  for (const parent of ['', 'FLOOD'])
+    assert.deepEqual(discover([owner, floodlight(parent)]).relationships.get('FLOOD'), {
+      kind: 'standalone',
+      ownerId: 'FLOOD',
+      reason: 'standalone_transport_unverified',
+    });
+  const underHomeBase = discover([owner, floodlight(owner.device_sn)]);
+  assert.deepEqual(underHomeBase.relationships.get('FLOOD'), {
+    kind: 'unsupported',
+    reason: 'unsupported_station',
+  });
+  for (const feature of ['snapshot', 'live', 'recordings'])
+    assert.equal(hasCameraMedia(floodlight(owner.device_sn), owner, feature), false);
+  assert.equal(exactDeviceProfile({ device_model: 'T8424', device_type: 37 }), undefined);
+});
+
 test('object keys, coercible objects and malformed identities never become profiles', () => {
   for (const device_model of [
     undefined,

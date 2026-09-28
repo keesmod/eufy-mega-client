@@ -34,6 +34,10 @@ export interface Inventory {
 }
 const identity = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
+// A received model code in the catalogue shape, optionally with a short suffix such as
+// T8113-Z (ha-eufy-cam#129). Serials and free text never match, so diagnostics stay bounded.
+const diagnosticModel = (value: unknown): value is string =>
+  typeof value === 'string' && value.length <= 8 && /^T[A-Z0-9]{4}(?:-[A-Z0-9]{1,2})?$/.test(value);
 export function discover(items: unknown): Inventory {
   if (!Array.isArray(items)) throw new EufyError('invalid_inventory');
   if (items.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');
@@ -88,11 +92,7 @@ export function discover(items: unknown): Inventory {
         : {}),
       parentStatus,
       ...(owner ? { parentId: parent as string } : {}),
-      ...(typeof parentModel === 'string' &&
-      parentModel.length === 5 &&
-      /^T[A-Z0-9]{4}$/.test(parentModel)
-        ? { parentModel }
-        : {}),
+      ...(diagnosticModel(parentModel) ? { parentModel } : {}),
       ...(diagnosticVersion(owner?.main_sw_version)
         ? { parentFirmware: diagnosticVersion(owner.main_sw_version) }
         : {}),
@@ -136,11 +136,7 @@ export function discover(items: unknown): Inventory {
         deviceId: item.device_sn,
         code: 'unsupported_device',
         context: context(item),
-        ...(typeof item.device_model === 'string' &&
-        item.device_model.length === 5 &&
-        /^T[A-Z0-9]{4}$/.test(item.device_model)
-          ? { deviceModel: item.device_model }
-          : {}),
+        ...(diagnosticModel(item.device_model) ? { deviceModel: item.device_model } : {}),
         ...(Number.isInteger(item.device_type) && item.device_type >= 0 && item.device_type <= 65535
           ? { deviceType: item.device_type }
           : {}),

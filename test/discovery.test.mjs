@@ -281,6 +281,16 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
   // A valid C30 pair, including the reported type 96, still passes with its real parent.
   assert.equal(issue('T8224').devices.length, 3);
   assert.equal(issue('T8224', 96).devices.length, 3);
+  // A model code with a short suffix is reported as received (ha-eufy-cam#129).
+  for (const model of ['T8113-X', 'T9999-ZZ'])
+    assert.deepEqual(issue(model).issues[0], {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'unsupported_device',
+      deviceModel: model,
+      deviceType: 95,
+    });
+  assert.equal(issue('T8113-Z', 8).devices.length, 3);
   for (const model of [
     undefined,
     null,
@@ -288,6 +298,10 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
     {},
     [],
     'T8224PRIVATE_SERIAL',
+    'T8224-PRIVATE_SERIAL',
+    'T8224-ABC',
+    'T8224-',
+    'T8224-z',
     'T8224\nPRIVATE_TOKEN',
     'T8224\r',
     'T8224\u001b[31m',

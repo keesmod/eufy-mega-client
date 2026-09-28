@@ -162,11 +162,47 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
   Unknown hardware is excluded; a supported camera with an unsupported parent
   causes an error. Inventory at the server's 100-device boundary is unconfirmed.
 - `connectStation(id, signal?)` establishes the explicit LAN connection.
+  `connectStation(id, { signal?, onProgress? })` also reports its
+  [stages](#station-connection-stages-0260).
 - `getStationState(id)` returns the last observed state. Mode values can be
   `null` before device telemetry arrives.
 - `refreshStationState(id, signal?)` requests a fresh device observation.
 - `snapshot(cameraId, signal?)` returns the latest HomeBase cover JPEG with its
   receipt time. It does not wake a camera for a new live capture.
+
+### Station connection stages, 0.26.0
+
+The library looks for the station on the LAN before it opens a session. The
+first lookup goes to the private LAN address the inventory had when the
+station's session was created. Without one, it goes to the private address the
+station last completed a session handshake from, if any. When the first lookup
+stays silent for a second, every retry also goes to the directed broadcast
+address of each external IPv4 interface, at most 16 and skipping /31 and /32
+interfaces. Without any address the first lookup already goes to those
+broadcasts. Without any address and without a broadcast address, the earlier
+guess applies, the /24 broadcast of the first external IPv4 address if there is
+one. Without an interface list at all, only a known address is asked. Only the
+station's answer with its own DID ends the lookup. A connection attempt fails
+with `device_request_timeout` after 20 seconds, or earlier with
+`device_disconnected` when it joins a reconnect the library started itself and
+that reconnect gives up first.
+
+`connectStation(id, { onProgress })` reports each stage of that attempt once,
+in the order observed, with `elapsedMs` since the attempt started:
+
+| Stage              | Meaning                                                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lookup`           | The attempt started and its local lookup is about to begin. `inventoryAddress` says whether the station's session was created with a LAN address from the inventory |
+| `station_found`    | The station answered the lookup with its own DID                                                                                                                    |
+| `session_open`     | The station answered the session handshake                                                                                                                          |
+| `encryption_ready` | The command key is in place and the connection resolves                                                                                                             |
+
+An already connected station resolves without stages. The callback runs
+synchronously until the attempt resolves, fails or is cancelled. Errors it
+throws are ignored, and it cannot change or retry the connection. A stage
+carries no identifiers or addresses. A failure after `lookup` alone means no
+station answered, after `station_found` the station did not complete the
+handshake, and after `session_open` the command key was not established.
 
 ## Live media
 

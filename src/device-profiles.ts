@@ -84,6 +84,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8110: camera(10035, 'eufycam', 'h3-or-standalone', h3Media),
   T8112: camera(4, 'eufycam', 'h3', h3Media),
   T8113: camera(8, 'eufycam', 'h3', h3Media),
+  // ha-eufy-cam#129: an inventory reports eufyCam 2C cameras as T8113-Z. Only this exact model.
+  'T8113-Z': camera(8, 'eufycam', 'h3', h3Media),
   T8114: camera(9, 'eufycam', 'h3', h3Media),
   T8140: camera(14, 'eufycam', 'h3', h3Media),
   T8161: camera(23, 'eufycam', 'h3', h3Media),
@@ -118,6 +120,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T81A0: camera(10005, 'walllight', 'h3-or-standalone', h3Media),
   T8425: camera(47, 'floodlight', 'h3-or-standalone', h3Media),
   T8426: camera(87, 'floodlight', 'h3-or-standalone', h3Media),
+  // ha-eufy-cam#129: a T8424 stays its own station when HomeBase 3 stores its video.
+  T8424: camera(39, 'floodlight', 'standalone', blockedMedia),
   T8530: camera(55, 'integrated', 'h3-or-standalone', h3Media),
   T8790: camera(90, 'integrated', 'h3-or-standalone', h3Media),
   T85V0: camera(203, 'integrated', 'h3-or-standalone', h3Media),

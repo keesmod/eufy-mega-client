@@ -231,9 +231,16 @@ test('unsupported Floodlight models, owners and initialization failures preserve
       camera('T8213', 91),
     ],
     async (t, inventory) => {
+      // T8424/39 is a standalone profile since 0.26.0 (ha-eufy-cam#129), so an H3
+      // parent gives unsupported_station instead of unsupported_device.
       assert.deepEqual(
         inventory.result.issues.map((i) => i.code),
-        [...Array(6).fill('unsupported_device'), 'unsupported_station'],
+        [
+          ...Array(4).fill('unsupported_device'),
+          'unsupported_station',
+          'unsupported_device',
+          'unsupported_station',
+        ],
       );
       assert.throws(() => t.device('T8426_FIXTURE'), { code: 'device_initialization_failed' });
       assert.throws(() => t.device('T8425_FIXTURE'), { code: 'unsupported_station' });

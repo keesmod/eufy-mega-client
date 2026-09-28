@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.26.0 - 2026-09-28
+
+### Reported eufyCam 2C and Floodlight Cam 2K models
+
+- Discovery admits `T8113-Z` with device type `8` under a HomeBase 3 with the
+  same eufyCam adapter, H3 topology and snapshot, live and recording policy as
+  `T8113`. The reporter on
+  [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129) receives
+  three eufyCam 2C cameras as `T8113-Z` and reports snapshots, live view and
+  HomeBase recordings working with this exact entry added locally. Only this
+  exact model code is added. Other suffixes stay unsupported.
+- `T8424` with device type `39`, the Floodlight Cam 2K, is recognized as a
+  standalone floodlight. The same report shows it as its own station, also after
+  it was assigned to a HomeBase 3, which stores its video only. It therefore
+  reports `standalone_transport_unverified` instead of `unsupported_device` and
+  gets no media. Under a HomeBase 3 parent it reports `unsupported_station`.
+  Standalone transport remains blocked in #142.
+- Discovery diagnostics report a received model code with a short suffix, such
+  as `T8113-Z`, instead of omitting it. Serials and free text still never match.
+
+### Station lookup across every LAN interface
+
+- The local lookup for a station still asks the inventory's LAN address first,
+  as it was when the station's session was created. When that address stays
+  silent for a second, every retry also goes to the directed broadcast address
+  of each external IPv4 interface, at most 16 and skipping /31 and /32
+  interfaces. Without an inventory address, or an address the station completed
+  a session handshake from earlier, the first lookup already goes to those
+  broadcasts. The API
+  documentation covers hosts without any broadcast address. Earlier versions
+  retried only the inventory address, or broadcast only on the first interface
+  Node listed, which on a Docker host can be a container bridge rather than the
+  HomeBase's LAN. A stale inventory address or the wrong interface could
+  therefore end every connection in `device_request_timeout`.
+- Only an answer carrying the station's own DID ends the lookup. Earlier, any
+  device answering a lookup, such as a standalone camera on the same LAN, ended
+  it without a connection.
+- `connectStation(id, { signal?, onProgress? })` reports how far a connection
+  got: `lookup` with `inventoryAddress`, `station_found`, `session_open` and
+  `encryption_ready`, each once with `elapsedMs`. The form
+  `connectStation(id, signal?)` is unchanged. See the
+  [station connection stages](docs/API.md#station-connection-stages-0260).
+- This targets the HomeBase 3 connection failure reported on
+  [ha-eufy-cam#130](https://github.com/keesmod/ha-eufy-cam/issues/130), which
+  ends in `device_request_timeout` on a Docker host with firmware 3.8.7.4. The
+  maintainer's HomeBase 3 on the same firmware connects with 0.21.0, so the
+  firmware alone does not explain it. The cause on that installation is not
+  confirmed. The stages show where a remaining failure stops.
+
+Upgrade: no identifier, session or option change. Consumers that pass an
+`AbortSignal` to `connectStation` keep working. Rollback: retain the previous
+package and lockfile and use 0.25.2, which rejects both models again and
+restores the earlier lookup. No mower behavior changes.
+
 ## 0.25.2 - 2026-09-27
 
 ### Renew the Home session before map provisioning is refused

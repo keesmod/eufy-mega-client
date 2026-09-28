@@ -74,6 +74,43 @@ export const getLocalIpAddress = (init = ""): string => {
   return localAddress;
 };
 
+const ipv4Number = (address: string): number | undefined => {
+  const parts = address.split(".");
+  if (parts.length !== 4 || parts.some((part) => !/^[0-9]{1,3}$/.test(part) || Number(part) > 255)) return undefined;
+  return parts.reduce((value, part) => value * 256 + Number(part), 0);
+};
+
+/**
+ * Client addition: the directed broadcast address of every external IPv4
+ * interface, at most `limit`, so a local lookup reaches the station's LAN even
+ * when the first interface is a container bridge. Interfaces with a /31 or /32
+ * mask have no broadcast address and are skipped.
+ */
+export const getLocalBroadcastAddresses = (
+  interfaces?: ReturnType<typeof os.networkInterfaces>,
+  limit = 16
+): string[] => {
+  const result = new Set<string>();
+  if (interfaces === undefined) {
+    try {
+      interfaces = os.networkInterfaces();
+    } catch {
+      // Some platforms refuse the interface list. Only a known address is asked then.
+      return [];
+    }
+  }
+  for (const details of Object.values(interfaces).flat()) {
+    if (!details || details.family !== "IPv4" || details.internal) continue;
+    const address = ipv4Number(details.address);
+    const mask = ipv4Number(details.netmask);
+    if (address === undefined || mask === undefined || mask >= 0xfffffffe) continue;
+    const broadcast = (address | (~mask >>> 0)) >>> 0;
+    result.add([24, 16, 8, 0].map((shift) => (broadcast >>> shift) & 255).join("."));
+    if (result.size >= limit) break;
+  }
+  return [...result];
+};
+
 const p2pDidToBuffer = (p2pDid: string): Buffer => {
   const p2pArray = p2pDid.split("-");
   const buf1 = stringWithLength(p2pArray[0], 8);
