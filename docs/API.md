@@ -175,14 +175,16 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
 The library looks for the station on the LAN before it opens a session. The
 first lookup goes to the private LAN address the inventory had when the
 station's session was created, otherwise to an address the station answered
-from earlier, which is forgotten when a lookup times out. When that stays
+from earlier in the session's life. A failed `connectStation` keeps that
+address, and its retries still add the broadcasts. When the first lookup stays
 silent for a second, every retry also goes to the directed broadcast address of
 each external IPv4 interface, at most 16 and skipping /31 and /32 interfaces.
-Without any address the first lookup already goes to those broadcasts. When no
-interface has a broadcast address, the earlier guess applies, the /24 broadcast
-of the first external IPv4 address, and without an interface list at all
-nothing is sent. Only the station's answer with its own DID ends the lookup,
-and the connection fails with `device_request_timeout` after 20 seconds.
+Without any address the first lookup already goes to those broadcasts. Without
+any address and without a broadcast address, the earlier guess applies, the /24
+broadcast of the first external IPv4 address if there is one. Without an
+interface list at all, only a known address is asked. Only the station's answer
+with its own DID ends the lookup, and the connection fails with
+`device_request_timeout` after 20 seconds.
 
 `connectStation(id, { onProgress })` reports each stage of that attempt once,
 in the order observed, with `elapsedMs` since the attempt started:
