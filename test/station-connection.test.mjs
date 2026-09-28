@@ -143,17 +143,19 @@ test('only the station answering with its own DID ends the lookup and is connect
 });
 
 function connectionFixture({
-  params = [],
+  address = false,
   answer = ['station found', 'connect', 'encryption ready'],
 } = {}) {
   const t = new DeviceTransport();
   let connected = false;
+  const calls = { connect: 0, close: 0 };
   const station = Object.assign(new EventEmitter(), {
     getSerial: () => 'HB',
     hasProperty: () => false,
     isConnected: () => connected,
     getCameraInfo: () => {},
     connect: async () => {
+      calls.connect++;
       for (const event of answer) {
         if (event === 'connect') connected = true;
         if (event === 'encryption ready') station.emit(event, station, 'lan-derived');
@@ -161,26 +163,20 @@ function connectionFixture({
       }
     },
     close: async () => {
+      calls.close++;
       connected = false;
     },
     dispose: async () => {},
   });
   t.stations.set('HB', station);
-  t.raw.set('HB', {
-    device_sn: 'HB',
-    device_model: 'T8030',
-    device_type: 18,
-    parent_sn: '',
-    params,
-  });
+  t.stationAddresses.set('HB', address);
+  t.raw.set('HB', { device_sn: 'HB', device_model: 'T8030', device_type: 18, parent_sn: '' });
   t.bind(station);
-  return { t, station };
+  return { t, station, calls };
 }
 
 test('a station connection reports each stage once, in order, without identifiers', async () => {
-  const { t, station } = connectionFixture({
-    params: [{ param_type: 1176, param_value: '192.168.1.20' }],
-  });
+  const { t, station } = connectionFixture({ address: true });
   const stages = [];
   try {
     await t.connect('HB', undefined, (progress) => stages.push(progress));
@@ -239,6 +235,70 @@ test('a station found without a handshake ends at station_found', async (t) => {
     t.mock.timers.reset();
     await transport.close();
   }
+});
+
+test('a consumer cancelling at the lookup stage starts no session behind the close', async () => {
+  const { t, station, calls } = connectionFixture();
+  const controller = new AbortController();
+  try {
+    await assert.rejects(
+      t.connect('HB', controller.signal, (progress) => {
+        if (progress.stage === 'lookup') controller.abort();
+      }),
+      { code: 'cancelled' },
+    );
+    assert.deepEqual(calls, { connect: 0, close: 1 });
+    assert.equal(station.listenerCount('station found'), 0);
+  } finally {
+    await t.close();
+  }
+});
+
+test('a signal the runtime refuses leaves no stage listeners behind', async () => {
+  const { t, station } = connectionFixture();
+  try {
+    for (let i = 0; i < 3; i++) await assert.rejects(t.connect('HB', { aborted: false }, () => {}));
+    assert.equal(station.listenerCount('station found'), 0);
+    assert.equal(station.listenerCount('connect'), 0);
+    assert.equal(t.connecting.size, 0);
+  } finally {
+    await t.close();
+  }
+});
+
+test('a close during the socket bind starts no lookup for the ended attempt', async () => {
+  const protocol = Object.create(P2PClientProtocol.prototype);
+  let bound;
+  let lookups = 0;
+  protocol.rawStation = { station_sn: 'HB', p2p_did: 'ABCDEFG-012345-HIJKL' };
+  protocol.connectionType = P2PConnectionType.ONLY_LOCAL;
+  protocol.connected = false;
+  protocol.connecting = false;
+  protocol.binded = false;
+  protocol.listeningPort = 0;
+  protocol.socket = {
+    bind: (_port, callback) => (bound = callback),
+    setRecvBufferSize() {},
+    setBroadcast() {},
+    getRecvBufferSize: () => 0,
+  };
+  protocol.lookup = () => lookups++;
+  await protocol.connect();
+  // close() resets the attempt before the bind completes.
+  protocol.connecting = false;
+  protocol.terminating = true;
+  bound();
+  assert.equal(lookups, 0);
+  assert.equal(protocol.binded, true);
+  await protocol.connect();
+  assert.equal(lookups, 1);
+});
+
+test('a platform that refuses the interface list gives no broadcast targets', (t) => {
+  t.mock.method(os, 'networkInterfaces', () => {
+    throw new Error('refused');
+  });
+  assert.deepEqual(getLocalBroadcastAddresses(), []);
 });
 
 test('a failing progress consumer never alters the connection', async () => {

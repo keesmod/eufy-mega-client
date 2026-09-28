@@ -15,19 +15,22 @@
   standalone floodlight. The same report shows it as its own station, also after
   it was assigned to a HomeBase 3, which stores its video only. It therefore
   reports `standalone_transport_unverified` instead of `unsupported_device` and
-  gets no media. Standalone transport remains blocked in #142.
+  gets no media. Under a HomeBase 3 parent it reports `unsupported_station`.
+  Standalone transport remains blocked in #142.
 - Discovery diagnostics report a received model code with a short suffix, such
   as `T8113-Z`, instead of omitting it. Serials and free text still never match.
 
 ### Station lookup across every LAN interface
 
-- The local lookup for a station still goes to the inventory's LAN address
-  first. When that address stays silent for a second, or the inventory supplied
-  none, every retry also goes to the directed broadcast address of each external
-  IPv4 interface, at most 16. Earlier versions asked only the inventory address,
-  or broadcast only on the first interface Node listed, which on a Docker host
-  can be a container bridge rather than the HomeBase's LAN. A stale inventory
-  address could therefore end every connection in `device_request_timeout`.
+- The local lookup for a station still asks the inventory's LAN address first.
+  When that address stays silent for a second, every retry also goes to the
+  directed broadcast address of each external IPv4 interface, at most 16 and
+  skipping /31 and /32 interfaces. Without an inventory address, or one learned
+  from an earlier connection, the first lookup already goes to those broadcasts.
+  Earlier versions retried only the inventory address, or broadcast only on the
+  first interface Node listed, which on a Docker host can be a container bridge
+  rather than the HomeBase's LAN. A stale inventory address or the wrong
+  interface could therefore end every connection in `device_request_timeout`.
 - Only an answer carrying the station's own DID ends the lookup. Earlier, any
   device answering a lookup, such as a standalone camera on the same LAN, ended
   it without a connection.
@@ -45,8 +48,8 @@
 
 Upgrade: no identifier, session or option change. Consumers that pass an
 `AbortSignal` to `connectStation` keep working. Rollback: retain the previous
-package and lockfile and use 0.25.2, which rejects both models again and asks
-only the inventory address. No mower behavior changes.
+package and lockfile and use 0.25.2, which rejects both models again and
+restores the earlier lookup. No mower behavior changes.
 
 ## 0.25.2 - 2026-09-27
 

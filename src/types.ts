@@ -206,7 +206,7 @@ export interface LiveStartProgress {
   returnCode?: number;
 }
 /**
- * `lookup`: the station connection started and local lookups were sent.
+ * `lookup`: the station connection started and its local lookup began.
  * `station_found`: the station answered the lookup with its own DID.
  * `session_open`: the station answered the session handshake.
  * `encryption_ready`: the command key is in place and the connection resolves.
@@ -216,9 +216,12 @@ export type StationConnectionStage =
 /** One stage of a station connection. No identifiers or addresses. */
 export interface StationConnectionProgress {
   stage: StationConnectionStage;
-  /** Milliseconds since the `connectStation` call, 0 to 3600000. */
+  /** Milliseconds since this connection attempt started, 0 to 3600000. */
   elapsedMs: number;
-  /** Only with `lookup`: whether the inventory supplied a private LAN address for the station. */
+  /**
+   * Only with `lookup`: whether the station's session was created with a private
+   * LAN address from the inventory.
+   */
   inventoryAddress?: boolean;
 }
 export interface StationConnectOptions {

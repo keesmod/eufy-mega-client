@@ -706,6 +706,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               recBufferRequestedSize: this.UDP_RECVBUFFERSIZE_BYTES,
             });
           }
+          // Client change: a close during the bind ends this attempt, so no
+          // lookup may start for it afterwards.
+          if (!this.connecting || this.terminating) return;
           this.lookup(host);
         });
       else {

@@ -83,14 +83,22 @@ const ipv4Number = (address: string): number | undefined => {
 /**
  * Client addition: the directed broadcast address of every external IPv4
  * interface, at most `limit`, so a local lookup reaches the station's LAN even
- * when the first interface is a container bridge. Point-to-point interfaces
- * (/31, /32) have no broadcast address and are skipped.
+ * when the first interface is a container bridge. Interfaces with a /31 or /32
+ * mask have no broadcast address and are skipped.
  */
 export const getLocalBroadcastAddresses = (
-  interfaces: ReturnType<typeof os.networkInterfaces> = os.networkInterfaces(),
+  interfaces?: ReturnType<typeof os.networkInterfaces>,
   limit = 16
 ): string[] => {
   const result = new Set<string>();
+  if (interfaces === undefined) {
+    try {
+      interfaces = os.networkInterfaces();
+    } catch {
+      // Some platforms refuse the interface list. The known address still applies.
+      return [];
+    }
+  }
   for (const details of Object.values(interfaces).flat()) {
     if (!details || details.family !== "IPv4" || details.internal) continue;
     const address = ipv4Number(details.address);

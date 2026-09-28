@@ -173,20 +173,23 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
 ### Station connection stages, 0.26.0
 
 The library looks for the station on the LAN before it opens a session. The
-first lookup goes to the inventory's private LAN address, when it has one. When
-that stays silent for a second, or there is no such address, every retry also
-goes to the directed broadcast address of each external IPv4 interface, at most 16. Only the station's answer with its own DID ends the lookup, and the
-connection fails with `device_request_timeout` after 20 seconds.
+first lookup goes to the station's private LAN address from the inventory, or to
+the address it answered from on an earlier connection. When that stays silent
+for a second, every retry also goes to the directed broadcast address of each
+external IPv4 interface, at most 16 and skipping /31 and /32 interfaces. Without
+any address the first lookup already goes to those broadcasts. Only the
+station's answer with its own DID ends the lookup, and the connection fails
+with `device_request_timeout` after 20 seconds.
 
 `connectStation(id, { onProgress })` reports each stage of that attempt once,
-in the order observed, with `elapsedMs` since the call:
+in the order observed, with `elapsedMs` since the attempt started:
 
-| Stage              | Meaning                                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `lookup`           | The attempt started and lookups were sent. `inventoryAddress` says whether the inventory had a LAN address |
-| `station_found`    | The station answered the lookup with its own DID                                                           |
-| `session_open`     | The station answered the session handshake                                                                 |
-| `encryption_ready` | The command key is in place and the connection resolves                                                    |
+| Stage              | Meaning                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lookup`           | The attempt started and its local lookup began. `inventoryAddress` says whether the station's session was created with a LAN address from the inventory |
+| `station_found`    | The station answered the lookup with its own DID                                                                                                        |
+| `session_open`     | The station answered the session handshake                                                                                                              |
+| `encryption_ready` | The command key is in place and the connection resolves                                                                                                 |
 
 An already connected station resolves without stages. The callback runs
 synchronously until the attempt resolves, fails or is cancelled. Errors it
