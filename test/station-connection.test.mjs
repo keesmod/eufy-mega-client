@@ -310,10 +310,30 @@ test('without any address and without an interface list no lookup is sent and no
   });
   try {
     protocol.localLookup(undefined);
+    // The retry stays armed, so an interface list refused only briefly is asked again.
+    assert.notEqual(protocol.localLookupRetryTimeout, undefined);
     t.mock.timers.tick(1000);
     assert.deepEqual(sent, []);
+    assert.notEqual(protocol.localLookupRetryTimeout, undefined);
     protocol.localLookup('192.168.1.50');
     assert.deepEqual(sent, ['192.168.1.50']);
+  } finally {
+    protocol._clearLocalLookupRetryTimeout();
+  }
+});
+
+test('without broadcast targets the earlier first-interface guess still applies, never a bare 255', (t) => {
+  const { protocol, sent } = lookupProtocol(t);
+  const point = { tailscale0: [v4('100.64.0.5', '255.255.255.255')] };
+  try {
+    t.mock.method(os, 'networkInterfaces', () => point);
+    protocol.localLookup(undefined);
+    assert.deepEqual(sent, ['100.64.0.255']);
+    protocol._clearLocalLookupRetryTimeout();
+    t.mock.method(os, 'networkInterfaces', () => ({}));
+    protocol.localLookup(undefined);
+    t.mock.timers.tick(1000);
+    assert.deepEqual(sent, ['100.64.0.255']);
   } finally {
     protocol._clearLocalLookupRetryTimeout();
   }

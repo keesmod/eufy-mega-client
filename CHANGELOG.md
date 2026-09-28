@@ -22,16 +22,17 @@
 
 ### Station lookup across every LAN interface
 
-- The local lookup for a station still asks the inventory's LAN address first.
-  When that address stays silent for a second, every retry also goes to the
-  directed broadcast address of each external IPv4 interface, at most 16 and
-  skipping /31 and /32 interfaces. Without an inventory address, or an address
-  the station answered from earlier, the first lookup already goes to those
-  broadcasts.
-  Earlier versions retried only the inventory address, or broadcast only on the
-  first interface Node listed, which on a Docker host can be a container bridge
-  rather than the HomeBase's LAN. A stale inventory address or the wrong
-  interface could therefore end every connection in `device_request_timeout`.
+- The local lookup for a station still asks the inventory's LAN address first,
+  as it was when the station's session was created. When that address stays
+  silent for a second, every retry also goes to the directed broadcast address
+  of each external IPv4 interface, at most 16 and skipping /31 and /32
+  interfaces. Without an inventory address, or an address the station answered
+  from earlier, the first lookup already goes to those broadcasts. The API
+  documentation covers hosts without any broadcast address. Earlier versions
+  retried only the inventory address, or broadcast only on the first interface
+  Node listed, which on a Docker host can be a container bridge rather than the
+  HomeBase's LAN. A stale inventory address or the wrong interface could
+  therefore end every connection in `device_request_timeout`.
 - Only an answer carrying the station's own DID ends the lookup. Earlier, any
   device answering a lookup, such as a standalone camera on the same LAN, ended
   it without a connection.
