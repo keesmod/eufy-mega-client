@@ -23,6 +23,18 @@ connected }`, `missing` or `invalid`. `connected` is field 2 of the battery
   app's display as correlation. See
   docs/research/E15_CHARGER_CONTACT_2026-09-29.md.
 
+### Dependency update
+
+- The runtime dependency `date-and-time` moves from `^4.3.0` to `^4.6.0`,
+  locked at 4.6.0 instead of 4.5.2. The client only calls its `parse` and
+  `format` through CommonJS `require`, for the dates in station database
+  queries such as recording lists. 4.6.0 rewrites the built-in formatter and
+  parser as object literals and adds a CommonJS default export to its locale,
+  numeral and time zone modules, which the client does not load. For the two
+  patterns the client uses, `YYYYMMDD` and `YYYY-MM-DD HH:mm:ss`, both versions
+  return the same dates, invalid dates and errors. The development dependencies
+  `@types/node` 24.13.6 and `prettier` 3.9.8 are not part of the package.
+
 Upgrade: consumers that compare a whole `MowerCloudStateReading` receive the
 new `charger` field. A custom `MowerModule` test double that returns cloud
 readings adds it. Keep the reading a cloud cache: apply the same receipt-age
