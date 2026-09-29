@@ -8,6 +8,7 @@ import {
   type Device,
   type DiscoveryResult,
   type MowerAdapter,
+  type MowerCloudCharger,
   type MowerCloudStateReading,
   type MowerCloudStatus,
   type MowerDpSnapshot,
@@ -39,6 +40,9 @@ const state: AuthState | undefined = module?.authState;
 const cloudState: Promise<MowerCloudStateReading> | undefined = module?.queryCloudState('fixture');
 declare const cloudReading: MowerCloudStateReading;
 const cloudStatus: MowerCloudStatus = cloudReading.status;
+const cloudCharger: MowerCloudCharger = cloudReading.charger;
+const atStation: boolean | undefined =
+  cloudCharger.state === 'reported' ? cloudCharger.connected : undefined;
 // @ts-expect-error Cloud receipt evidence cannot masquerade as a local device observation.
 const localSource: MowerDpSnapshot['source'] = cloudReading.source;
 const opaque: MowerSession = { version: 1, data: 'opaque-fixture' };
@@ -55,4 +59,4 @@ new EufyClient({ security: { credentials, sessionStore: store } });
 void [devices, state, securitySession, new EufyError('fixture')];
 
 void discovery;
-void [cloudState, cloudStatus, localSource];
+void [cloudState, cloudStatus, cloudCharger, atStation, localSource];

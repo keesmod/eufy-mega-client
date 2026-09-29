@@ -91,6 +91,8 @@ export interface CloudState {
   readonly observedAt: string;
   readonly statusValue: string | null | undefined;
   readonly statusSchema?: MowerDpSchemaEntry;
+  readonly chargerValue: string | null | undefined;
+  readonly chargerSchema?: MowerDpSchemaEntry;
   readonly workParametersValue: string | null | undefined;
 }
 
@@ -529,7 +531,10 @@ export class EufyHomeAdapter implements MowerAdapter {
       value: read.workParametersValue,
     }));
   }
-  /** One bound cloud record for activity and work parameters. No local snapshot is produced. */
+  /**
+   * One bound cloud record for activity, charger contact and work parameters. No local snapshot
+   * is produced.
+   */
   readCloudState(id: string, signal: AbortSignal): Promise<CloudState> {
     return this.#track(signal, async (abort) => {
       const session = this.#requireSession();
@@ -552,11 +557,15 @@ export class EufyHomeAdapter implements MowerAdapter {
         const value = (dps as ObjectValue)[dp];
         return typeof value === 'string' ? value : null;
       };
-      const statusSchema = copySchema(binding.schema)?.find((entry) => entry.id === '107');
+      const schema = copySchema(binding.schema);
+      const statusSchema = schema?.find((entry) => entry.id === '107');
+      const chargerSchema = schema?.find((entry) => entry.id === '108');
       return {
         observedAt,
         statusValue: read('107'),
         ...(statusSchema ? { statusSchema } : {}),
+        chargerValue: read('108'),
+        ...(chargerSchema ? { chargerSchema } : {}),
         workParametersValue: read(WORK_PARAMETERS_DP),
       };
     });

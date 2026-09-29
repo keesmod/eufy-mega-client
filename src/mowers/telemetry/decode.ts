@@ -1,6 +1,7 @@
 // Pure decoder from one raw snapshot to typed telemetry. No I/O, no inference from age.
 import type {
   MowerActivity,
+  MowerCloudCharger,
   MowerCloudStatus,
   MowerDpSchemaEntry,
   MowerDpSnapshot,
@@ -13,7 +14,7 @@ import type {
   MowerTelemetryOptions,
   MowerTelemetryValue,
 } from '../../modular-types.js';
-import { E15_TELEMETRY_DEFINITIONS } from './definitions.js';
+import { E15_CLOUD_CHARGER_CONTACT, E15_TELEMETRY_DEFINITIONS } from './definitions.js';
 import { parseMowerWirePayload, wireVarints } from './wire.js';
 
 const LEVELS: Record<MowerTelemetryLevel, number> = { hypothesis: 0, observed: 1, confirmed: 2 };
@@ -230,6 +231,29 @@ export function decodeMowerCloudStatus(
   if (decoded.state === 'reported') return { state: 'reported', value: decoded.value };
   // With the shipped confirmed registry a present but unclaimed payload stays invalid.
   return { state: 'invalid' };
+}
+
+/**
+ * Internal cloud consumer of the confirmed E15 charger contact. Only its field is read, a single
+ * varint of 0 or 1. An absent field, the empty and the single-zero-byte payload included, is the
+ * zero default of the encoding. A declaration other than `raw` withholds the value.
+ */
+export function decodeMowerCloudCharger(
+  value: unknown,
+  declaration?: MowerDpSchemaEntry,
+): MowerCloudCharger {
+  if (value === undefined) return { state: 'missing' };
+  if (typeof value !== 'string' || (declaration && declaration.type !== 'raw'))
+    return { state: 'invalid' };
+  const payload = parseMowerWirePayload(value);
+  if (payload.shape === 'malformed') return { state: 'invalid' };
+  const contact = payload.fields.filter(
+    (field) => field.number === E15_CLOUD_CHARGER_CONTACT.field,
+  );
+  if (!contact.length) return { state: 'reported', connected: false };
+  const [only] = contact;
+  if (contact.length > 1 || only!.wire !== 'varint' || only!.value > 1) return { state: 'invalid' };
+  return { state: 'reported', connected: only!.value === 1 };
 }
 
 /**

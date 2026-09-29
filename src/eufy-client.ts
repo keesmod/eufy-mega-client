@@ -4,7 +4,7 @@ import { LocalMowerSession, type LocalBinding } from './mowers/local/session.js'
 import { validateCommandOptions } from './mowers/local/commands.js';
 import { validateSettingsOptions } from './mowers/local/settings.js';
 import { decodeMowerWorkParameters } from './mowers/work-parameters.js';
-import { decodeMowerCloudStatus } from './mowers/telemetry/decode.js';
+import { decodeMowerCloudCharger, decodeMowerCloudStatus } from './mowers/telemetry/decode.js';
 import { EufyMegaClient } from './client.js';
 import { EufyError, type AuthAnswer, type AuthState, type ClientOptions } from './types.js';
 import type {
@@ -328,6 +328,7 @@ class Mowers implements MowerModule {
         source: 'cloud',
         observedAt,
         status: decodeMowerCloudStatus(read.statusValue, read.statusSchema),
+        charger: decodeMowerCloudCharger(read.chargerValue, read.chargerSchema),
         workParameters: workParametersReading({ observedAt, value: read.workParametersValue }),
       };
     } catch (error) {

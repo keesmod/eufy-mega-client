@@ -337,15 +337,25 @@ export type MowerCloudStatus =
   { state: 'reported'; value: MowerActivity } | { state: 'missing' } | { state: 'invalid' };
 
 /**
- * DP 107 activity and DP 155 work parameters from one bound mower's cloud record. These are
- * cached cloud values, not device reports. `observedAt` is the library's receipt time, shared
- * by `workParameters`, not the time the device last changed either value. Never use this
- * reading as confirmation of a command or setting write.
+ * Confirmed DP 108 charger contact from a cloud record. `connected` is true while the mower
+ * stands on its charging station's contacts and false once it has left them. The cloud keeps
+ * the last contact the device reported. Missing or undecodable values stay explicit. Observed
+ * durations and limits: docs/research/E15_CHARGER_CONTACT_2026-09-29.md.
+ */
+export type MowerCloudCharger =
+  { state: 'reported'; connected: boolean } | { state: 'missing' } | { state: 'invalid' };
+
+/**
+ * DP 107 activity, DP 108 charger contact and DP 155 work parameters from one bound mower's
+ * cloud record. These are cached cloud values, not device reports. `observedAt` is the
+ * library's receipt time, shared by `workParameters`, not the time the device last changed any
+ * value. Never use this reading as confirmation of a command or setting write.
  */
 export interface MowerCloudStateReading {
   source: 'cloud';
   observedAt: string;
   status: MowerCloudStatus;
+  charger: MowerCloudCharger;
   workParameters: MowerWorkParametersReading;
 }
 
