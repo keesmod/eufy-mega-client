@@ -3,6 +3,7 @@ import type { MowerTelemetryDefinition } from '../../modular-types.js';
 const source = 'docs/research/E15_TELEMETRY_OBSERVATION_2026-09-16.md';
 const activity = 'docs/research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md';
 const missionStatus = 'docs/research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md';
+const chargerContact = 'docs/research/E15_CHARGER_CONTACT_2026-09-29.md';
 
 /**
  * Independently observed E15/T2880 definitions, firmware 6.9.28. Schema declarations and
@@ -13,6 +14,8 @@ const missionStatus = 'docs/research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md';
  * fields, as the official app's own decoder does, so the app's other mowing missions, such as
  * the Box, zone and scheduled tasks, and the idle message, hibernation included, report too.
  * The map-saving phase and the transitional first frame stay withheld. See its receipt.
+ * The charger contact reads DP 108 by the app's own battery status decoder and was reproduced
+ * against owner-observed rests at the station and stops on the lawn. See its receipt.
  */
 export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Object.freeze([
   Object.freeze({
@@ -83,5 +86,12 @@ export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Ob
       // The recharge mission.
       returning: Object.freeze([1]),
     }),
+  }),
+  Object.freeze({
+    field: 'charger',
+    dp: '108',
+    level: 'confirmed',
+    source: chargerContact,
+    decode: Object.freeze({ kind: 'battery_status' }),
   }),
 ]);

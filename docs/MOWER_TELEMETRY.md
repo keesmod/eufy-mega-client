@@ -58,12 +58,20 @@ Its receipt time does not establish device freshness. It is never merged into
 activity stays explicit. See the [API contract](API.md#mower-cloud-state) and the
 [device-record receipt](research/E15_CLOUD_STATE_2026-09-26.md).
 
+The same reading carries the DP 108 charger contact since 0.27.0 as `charger`,
+decoded by the confirmed `charger` definition below. It is a cloud-only field:
+`MowerTelemetry` has no charger field, because the E15's local status replies
+do not carry DP 108. The cloud keeps the last contact the device reported, so a
+rest at the station reads connected and a stop on the lawn reads not connected
+for as long as either lasts. See the
+[charger contact receipt](research/E15_CHARGER_CONTACT_2026-09-29.md).
+
 ## Definitions and confirmation levels
 
 A `MowerTelemetryDefinition` names the field, the data point id, the decode rule
 (`enum` with an explicit value map, `boolean`, `percent`, `signal_dbm`,
-`signal_percent` or `wire` for one candidate reading of a raw payload), the
-evidence `source` and a level:
+`signal_percent`, `wire` for one candidate reading of a raw payload,
+`mission_status` or `battery_status`), the evidence `source` and a level:
 
 | Level        | Meaning                                                                                    | Typed value |
 | ------------ | ------------------------------------------------------------------------------------------ | ----------- |
@@ -90,6 +98,7 @@ read-only responses, independently of the unlicensed mower fork.
 | `progress`              | none       | none                 | No current mowing-progress definition observed                                                                                                                                                                                                                 |
 | `network.kind`          | 134        | confirmed for `Wifi` | `net_media_type`, maps `Wifi` to `wifi`                                                                                                                                                                                                                        |
 | `network.signalPercent` | 109        | confirmed            | `wifi_signal_strength`, integer 0 to 100, `%`                                                                                                                                                                                                                  |
+| `charger`               | 108        | confirmed            | `battery_status` field 2, the app's charger connection: 1 connected, 0 or absent not connected. Cloud reading only, since 0.27.0                                                                                                                               |
 
 Every confirmed row cites the same receipt above. `None` and `Cellular` are
 declared but not observed, so they remain unmapped. DP 109 is a percentage,
@@ -106,6 +115,15 @@ DP 107 makes it `missing`. Progress remains `unconfirmed` without a candidate. P
 `definitions: []` explicitly opts out of the built-in registry. Built-in
 definitions and their decode rules are frozen so consumers cannot alter the
 defaults shared by other sessions.
+
+The `charger` definition cites the
+[charger contact receipt](research/E15_CHARGER_CONTACT_2026-09-29.md). The
+official app's own decoder names DP 108 field 2 its charger connection, and one
+owner-requested window on 2026-09-29 reproduced it: connected in every sample of
+four rests at the station, not connected in every sample of three stops of at
+least twenty minutes on the lawn, cleared on each of three departures and set on
+each of three arrivals. The empty or single-zero-byte payload reads as not
+connected, and a field 2 other than a single varint of 0 or 1 is `invalid`.
 
 A consumer that holds its own confirmed evidence can pass definitions to
 `decodeMowerTelemetry`. The consumer then owns that provenance. Definitions

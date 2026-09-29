@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.27.0 - Unreleased
+
+### Mower charger contact
+
+- `mowers.queryCloudState(id, signal?)` also returns `charger`, the E15's
+  charger contact from DP 108 in the same cloud record: `{ state: 'reported',
+connected }`, `missing` or `invalid`. `connected` is field 2 of the battery
+  status message, which the official app's own decoder reads as its charger
+  connection. It is true while the mower stands on its station's contacts and
+  false once it has left them, through rests, hibernation and stops on the
+  lawn. It is the first confirmed reading that separates a rest at the station
+  from a stop on the lawn, where the idle mission status, DP 5 and hibernation
+  are the same.
+- The new `battery_status` decode kind and the confirmed `charger` definition
+  in `E15_TELEMETRY_DEFINITIONS` carry the provenance. `MowerTelemetry` is
+  unchanged: the E15's local status replies do not carry DP 108.
+- One owner-requested window on 2026-09-29 read the contact connected in every
+  sample of four rests at the station and not connected in every sample of three
+  stops of at least twenty minutes on the lawn, cleared on three departures and
+  set on three arrivals, with the app's display correlated. See
+  docs/research/E15_CHARGER_CONTACT_2026-09-29.md.
+
+Upgrade: consumers that compare a whole `MowerCloudStateReading` receive the
+new `charger` field. A custom `MowerModule` test double that returns cloud
+readings adds it. Keep the reading a cloud cache: apply the same receipt-age
+bound as for cloud activity and never use it to confirm a command. Rollback:
+retain the previous package and lockfile and use 0.26.0, which ignores DP 108.
+No E18 support claim is added.
+
 ## 0.26.0 - 2026-09-28
 
 ### Reported eufyCam 2C and Floodlight Cam 2K models

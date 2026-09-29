@@ -337,15 +337,25 @@ export type MowerCloudStatus =
   { state: 'reported'; value: MowerActivity } | { state: 'missing' } | { state: 'invalid' };
 
 /**
- * DP 107 activity and DP 155 work parameters from one bound mower's cloud record. These are
- * cached cloud values, not device reports. `observedAt` is the library's receipt time, shared
- * by `workParameters`, not the time the device last changed either value. Never use this
- * reading as confirmation of a command or setting write.
+ * Confirmed DP 108 charger contact from a cloud record. `connected` is true while the mower
+ * stands on its charging station's contacts and false once it has left them. The cloud keeps
+ * the last contact the device reported, so the value persists through rests, hibernation and
+ * stops on the lawn. Missing or undecodable values stay explicit.
+ */
+export type MowerCloudCharger =
+  { state: 'reported'; connected: boolean } | { state: 'missing' } | { state: 'invalid' };
+
+/**
+ * DP 107 activity, DP 108 charger contact and DP 155 work parameters from one bound mower's
+ * cloud record. These are cached cloud values, not device reports. `observedAt` is the
+ * library's receipt time, shared by `workParameters`, not the time the device last changed any
+ * value. Never use this reading as confirmation of a command or setting write.
  */
 export interface MowerCloudStateReading {
   source: 'cloud';
   observedAt: string;
   status: MowerCloudStatus;
+  charger: MowerCloudCharger;
   workParameters: MowerWorkParametersReading;
 }
 
@@ -514,6 +524,15 @@ export type MowerTelemetryDefinition = {
           };
     }
   | { field: 'battery' | 'progress'; decode: { kind: 'percent' } }
+  | {
+      field: 'charger';
+      /**
+       * The charger contact of a battery status message: field 2 a single varint, 1 connected
+       * and 0 or absent not connected. The empty or single-zero-byte payload reads as not
+       * connected. Other fields are ignored. Any other field 2 is invalid.
+       */
+      decode: { kind: 'battery_status' };
+    }
   | {
       field: 'network';
       decode:

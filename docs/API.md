@@ -669,15 +669,19 @@ implements these interfaces itself, for example in a test double, adds them.
 
 ## Mower cloud state
 
-`client.mowers.queryCloudState(id, signal?)` reads DP 107 activity and DP 155
-work parameters from one discovered E15's authenticated cloud device record.
-It makes one `tuya.m.device.get` request and returns `MowerCloudStateReading`:
+`client.mowers.queryCloudState(id, signal?)` reads DP 107 activity, the DP 108
+charger contact and DP 155 work parameters from one discovered E15's
+authenticated cloud device record. It makes one `tuya.m.device.get` request and
+returns `MowerCloudStateReading`:
 
 ```ts
 const reading = await client.mowers.queryCloudState(mower.id);
 // source is 'cloud'. observedAt is receipt time, not device time.
 if (reading.status.state === 'reported') {
   const activity = reading.status.value;
+}
+if (reading.charger.state === 'reported') {
+  const atStation = reading.charger.connected;
 }
 if (reading.workParameters.state === 'reported') {
   const parameters = reading.workParameters.parameters;
@@ -687,11 +691,24 @@ if (reading.workParameters.state === 'reported') {
 `status` is `{ state: 'reported', value: MowerActivity }`, `{ state: 'missing' }`
 or `{ state: 'invalid' }`. It shares the confirmed DP 107 decoder with local
 telemetry. No activity is inferred from a task flag, battery value or absent
-point. `idle` does not prove that the mower is docked. `workParameters` retains
-the `MowerWorkParametersReading` contract below and has the same `observedAt`.
-Each field keeps its own missing or invalid result.
+point. `idle` does not prove that the mower is docked.
 
-Both fields are cloud cache values. The library knows when the response arrived,
+`charger` is `{ state: 'reported', connected: boolean }`, `{ state: 'missing' }`
+or `{ state: 'invalid' }`, since 0.27.0. It reads field 2 of DP 108, the
+battery status message, which the official app decodes as its charger
+connection. `connected` is true while the mower stands on its charging
+station's contacts and false once it has left them, also through rests,
+hibernation and stops on the lawn. It is the confirmed reading that separates
+a rest at the station from a stop on the lawn. It does not replace `status`:
+while the mower defogs in the station after a start, `status` is already
+`mowing` and `charger` still connected, and on arrival `charger` connects
+before `status` leaves `returning`. See the
+[charger contact receipt](research/E15_CHARGER_CONTACT_2026-09-29.md).
+
+`workParameters` retains the `MowerWorkParametersReading` contract below and has
+the same `observedAt`. Each field keeps its own missing or invalid result.
+
+All three fields are cloud cache values. The library knows when the response arrived,
 not when the device last changed either value. Consumers own refresh policy and
 expiry. Keep this source separate from local telemetry and never use it to
 confirm a command or setting write. The reading exposes no raw data points,

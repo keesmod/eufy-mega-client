@@ -1,6 +1,7 @@
 // Pure decoder from one raw snapshot to typed telemetry. No I/O, no inference from age.
 import type {
   MowerActivity,
+  MowerCloudCharger,
   MowerCloudStatus,
   MowerDpSchemaEntry,
   MowerDpSnapshot,
@@ -101,7 +102,7 @@ function decodeOne(
   definition: MowerTelemetryDefinition,
   dps: Record<string, MowerDpValue>,
   schema: Map<string, MowerDpSchemaEntry>,
-): Decoded<MowerActivity | number | MowerNetworkKind> {
+): Decoded<MowerActivity | number | MowerNetworkKind | boolean> {
   const value = dps[definition.dp];
   if (value === undefined) return { state: 'missing' };
   const entry = schema.get(definition.dp);
@@ -172,6 +173,18 @@ function decodeOne(
         return { state: 'reported', value: 'returning' };
       return { state: 'unmatched' };
     }
+    case 'battery_status': {
+      if (typeof value !== 'string' || (entry && entry.type !== 'raw')) return { state: 'invalid' };
+      const payload = parseMowerWirePayload(value);
+      if (payload.shape === 'malformed') return { state: 'invalid' };
+      // Only field 2 is read. An absent field is the zero default of the encoding.
+      const contact = payload.fields.filter((field) => field.number === 2);
+      if (!contact.length) return { state: 'reported', value: false };
+      const [only] = contact;
+      if (contact.length > 1 || only!.wire !== 'varint' || only!.value > 1)
+        return { state: 'invalid' };
+      return { state: 'reported', value: only!.value === 1 };
+    }
   }
 }
 
@@ -229,6 +242,24 @@ export function decodeMowerCloudStatus(
   );
   if (decoded.state === 'reported') return { state: 'reported', value: decoded.value };
   // With the shipped confirmed registry a present but unclaimed payload stays invalid.
+  return { state: 'invalid' };
+}
+
+/** Internal cloud consumer of the confirmed E15 charger contact definition. */
+export function decodeMowerCloudCharger(
+  value: unknown,
+  declaration?: MowerDpSchemaEntry,
+): MowerCloudCharger {
+  if (value === undefined) return { state: 'missing' };
+  if (typeof value !== 'string') return { state: 'invalid' };
+  const decoded = decodedField<boolean>(
+    'charger',
+    [...E15_TELEMETRY_DEFINITIONS],
+    { 108: value },
+    new Map(declaration ? [[declaration.id, declaration]] : []),
+    (values) => values.find((item) => item.state === 'reported')?.value,
+  );
+  if (decoded.state === 'reported') return { state: 'reported', connected: decoded.value };
   return { state: 'invalid' };
 }
 
