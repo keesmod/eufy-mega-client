@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.27.0 - Unreleased
+## 0.27.0 - 2026-09-29
 
 ### Mower charger contact
 
@@ -20,8 +20,8 @@ connected }`, `missing` or `invalid`. `connected` is field 2 of the battery
   sample of four rests at the station, the longest 29 minutes in hibernation,
   and not connected in every sample of three stops of about twenty minutes on
   the lawn, cleared on three departures and set on three arrivals, with the
-  app's display as correlation. See
-  docs/research/E15_CHARGER_CONTACT_2026-09-29.md.
+  app's display as correlation. See the
+  [charger contact receipt](docs/research/E15_CHARGER_CONTACT_2026-09-29.md).
 
 ### Dependency update
 
@@ -39,8 +39,25 @@ Upgrade: consumers that compare a whole `MowerCloudStateReading` receive the
 new `charger` field. A custom `MowerModule` test double that returns cloud
 readings adds it. Keep the reading a cloud cache: apply the same receipt-age
 bound as for cloud activity and never use it to confirm a command. Rollback:
-retain the previous package and lockfile and use 0.26.0, which ignores DP 108.
-No E18 support claim is added.
+retain the previous package and lockfile and use 0.26.0, which ignores DP 108
+and locks `date-and-time` 4.5.2. No E18 support claim is added.
+
+Use the compiled versioned 0.27.0 tarball and its verified integrity from the
+GitHub release. The change is verified in two ways:
+
+- In software, by CI and synthetic tests of the charger decoder, the cloud
+  reading, every missing and invalid form, the unchanged local telemetry and
+  registry, and the consumer types, and by the unchanged date results of
+  `date-and-time` 4.6.0 for the client's two patterns.
+- On hardware, outside the library: the cloud's data point request, sampled
+  every two seconds in the window of 2026-09-29, carried the contact as the
+  receipt describes. The same day one read-only comparison found the same DP
+  108 value, connected, in the record of the request this release makes,
+  `tuya.m.device.get`, while the mower rested at the station.
+
+The charger contact has not yet been read through the library itself on
+hardware. The mower bridge that pins this release is the next check, in
+keesmod/eufy-robomow-ha#86.
 
 ## 0.26.0 - 2026-09-28
 
