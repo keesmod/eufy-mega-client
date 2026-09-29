@@ -145,8 +145,10 @@ in this repository. The replay reported outcomes only.
 Levels: **parser** means read from the original parser's own serializers and
 deserializers, **capture** means additionally validated against the retained
 private captures of 2026-09-10, **app** means traced in the original app's
-readable conversion or file dispatch, and **display only** means the association or
-unit is not confirmed by a source and the value must not drive control.
+readable conversion or file dispatch, **assumed** means an interpretation
+explicitly accepted by the owner without source or physical confirmation, and
+**display only** means the value must not drive control. A sourced heading does
+not remove that display-only restriction.
 
 | File and message                  | Fields                                                                                                                                                                                                          | Meaning                                                              | Level                            |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------- |
@@ -173,11 +175,25 @@ coordinate frame. Other angle fields keep their existing confirmation level.
 The library exposes every wire integer unchanged. All geometry remains display
 only and must not drive control.
 
+After the [#215 availability check](research/E15_COORDINATE_ASSUMPTION_2026-09-29.md)
+found no usable primary unit source, the owner accepted millimetres as the
+working assumption on 2026-09-29. One unit of `Point.x` or `Point.y` is assumed
+to be one millimetre, including map origin, polygon vertices and path positions.
+The same assumption applies to `Pose.x` and `Pose.y` in the station pose,
+cleaning-path `endPose` and navigation pose. `Map.resolution` is consequently
+assumed millimetres per grid cell, while `width` and `height` remain cell counts.
+This adds no conversion or unit field to the API and does not promote the
+assumption to source-confirmed or hardware-confirmed status. Metric display
+labels must identify the scale as assumed. The coordinate frame, heading
+reference, physical accuracy and `totalArea` unit remain unconfirmed.
+
 The retained captures are consistent with millimetre coordinates, but the
 boundary-area to `totalArea` ratio is approximately 100,000, not an exact unit
-specification. The source check records the negative coordinate-unit result and
-the next candidate primary source. The app can use a cleaning-path endpoint for
-the displayed position while taking the heading from the navigation pose.
+specification. That interpretation also requires the unconfirmed assumption
+that `totalArea` uses tenths of a square metre. The source check records the
+negative coordinate-unit result and the next candidate primary source. The app
+can use a cleaning-path endpoint for the displayed position while taking the
+heading from the navigation pose.
 
 ## Provenance
 
@@ -195,9 +211,12 @@ What was read, where and how it was verified:
    with `nm`, `otool`, `llvm-objdump` and byte scans on the owner's Mac.
 3. The product script that the app downloads per product code and evaluates
    in JavaScriptCore, `T2880Handle.mix.js` for the E15, cached by the app as
-   `Documents/megaeupr/JavaScript/T2880.js` and `T2880.zip` with SHA-256
+   `Documents/megaeupr/JavaScript/T2880.js` with SHA-256
    `0be33785e7c70d2c2e890d0f3b9d4ee512dca527b447ca95651ba683d5ef048d`, file
-   date 2026-06-18, delivered to the app on 2026-09-16. It contains
+   date 2026-06-18, delivered to the app on 2026-09-16. The containing
+   `T2880.zip` has SHA-256
+   `45337b828a1012906c3a96da6d51483f8c40b78d9389d7a5eefc0fde95285a84`.
+   The script contains
    google-protobuf JavaScript classes `proto.proto.mower.*` and
    `proto.proto.mower.p2p.*`. Every field number, wire type, nested type and
    enumeration in the table above was read from their `serializeBinaryToWriter`
@@ -260,11 +279,12 @@ bound and option validation. No live session or hardware trial was part of
   compares the merged history with the app's displayed path and observes
   whether non-empty `realtime` paths reach this transport remains open.
 - The [#213 source check](research/E15_MAP_SEMANTICS_2026-09-29.md) establishes
-  the pose heading unit and the app's navigation-file meaning. Physical
-  coordinate units and the coordinate frame still need an original T2880
-  map-format specification or firmware serializer with explicit units.
-  [#215](https://github.com/keesmod/eufy-mega-client/issues/215) records that
-  source blocker and its unblock condition. All geometry stays display only.
+  the pose heading unit and the app's navigation-file meaning. The
+  [#215 source search and owner decision](research/E15_COORDINATE_ASSUMPTION_2026-09-29.md)
+  record the accepted millimetre assumption and the remaining evidence gap.
+  Primary-source or physical confirmation of the unit, coordinate frame and
+  accuracy remains absent, without blocking #215 under its revised acceptance.
+  All geometry stays display only.
 - The last two items of the 2026-09-16 list recorded on #51 belong to the
   mower bridge, which owns its HTTP route and packaging. Mower bridge 0.7.0
   ([keesmod/eufy-robomow-ha#25](https://github.com/keesmod/eufy-robomow-ha/issues/25))
