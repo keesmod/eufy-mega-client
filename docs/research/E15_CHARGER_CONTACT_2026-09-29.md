@@ -52,9 +52,9 @@ The same desk check covered the other candidates named in #209:
 - **Probe.** A private, read-only sampler read the cloud's data point request,
   `tuya.m.device.dp.get`, every two seconds from 06:56:05 to 08:54:12, 3,543
   samples, through the Home Assistant integration's existing cloud client, and
-  logged DP 1, 2, 5, 8, 107, 108 and 118. The log stays on the owner's host. No LAN report listener ran,
-  so that no second local session competed with the owner's running mower
-  bridge.
+  logged DP 1, 2, 5, 8, 107, 108 and 118. The log stays on the owner's host. No
+  LAN report listener ran, so that no second local session competed with the
+  owner's running mower bridge.
 - **Actions.** The owner asked the agent to operate the official app on the
   owner's Mac. The agent pressed every control there: a default Box with Start,
   Stop after about a minute of mowing, and Charge after at least twenty minutes
