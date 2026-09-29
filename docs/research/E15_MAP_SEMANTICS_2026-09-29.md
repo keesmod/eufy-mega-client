@@ -7,6 +7,11 @@ The physical coordinate unit remains unconfirmed. The library continues to
 return the wire integers unchanged and consumers must keep the geometry display
 only. There is no typed-output change, release or deployment in this research.
 
+Later on 2026-09-29, [#215 checked source availability and recorded the owner's
+millimetre assumption](E15_COORDINATE_ASSUMPTION_2026-09-29.md). That accepted
+interpretation does not change the source findings below or establish a
+physical unit.
+
 ## Sources and method
 
 The source is the owner's installed App Store "Anker eufy" 6.1.00, build
@@ -115,9 +120,12 @@ that all coordinate integers are millimetres.
 source is Eufy's original T2880 map-format specification or firmware serializer
 for `Point.x`, `Point.y` and `Map.resolution`, with an explicit length unit and
 coordinate-frame definition. That source is not in the retained research
-material. [#215](https://github.com/keesmod/eufy-mega-client/issues/215) is
-blocked until that permitted source is available. Re-reading the same drawing
-divisions or assuming the unit from the polygon area does not close this gap.
+material. [#215](https://github.com/keesmod/eufy-mega-client/issues/215)
+originally blocked on that source. The later
+[availability check and owner decision](E15_COORDINATE_ASSUMPTION_2026-09-29.md)
+replaced that acceptance condition with an explicit millimetre assumption.
+Re-reading the same drawing divisions or assuming the unit from the polygon
+area does not close the source evidence gap.
 
 ## Capture check and acceptance boundary
 
