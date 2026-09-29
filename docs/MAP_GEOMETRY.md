@@ -218,14 +218,14 @@ were not repeated.
 
 ## Software evidence
 
-| Device and route                     | Feature                                                               | Evidence                                                                                                                               | Claim                                                                                                        |
-| ------------------------------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| E15 T2880, app 6.1.00 product script | Map, path and pose decoding from the original parser's numbering      | [Decoder](../src/mowers/maps/geometry.ts), [wire reader](../src/mowers/maps/protobuf.ts), [tests](../test/map-geometry.test.mjs)       | Experimental software coverage from #51                                                                      |
-| Same profile, retained captures      | Structural validation of the numbering                                | Private captures of 2026-09-10, method above                                                                                           | Capture-validated, no fresh hardware trial                                                                   |
-| E15                                  | Fresh acquisition decoded end to end on the owned device              | Not run in #51                                                                                                                         | Open hardware acceptance                                                                                     |
-| E15 T2880, same profile              | Cleaning-path history across acquisitions                             | [Accumulator](../src/mowers/maps/history.ts), [tests](../test/map-path-history.test.mjs), retained captures replayed as recorded above | Experimental software coverage from #178, capture-validated for the placeholder, repeat and generation cases |
-| E15                                  | Live path growth merged and compared with the app on the owned device | Not run in #178                                                                                                                        | Open hardware acceptance                                                                                     |
-| E18 or other firmware                | Any decoding                                                          | No evidence                                                                                                                            | Unclaimed                                                                                                    |
+| Device and route                     | Feature                                                               | Evidence                                                                                                                                                                                                                                                                                                                                                                            | Claim                                                                                                                                                                         |
+| ------------------------------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E15 T2880, app 6.1.00 product script | Map, path and pose decoding from the original parser's numbering      | [Decoder](../src/mowers/maps/geometry.ts), [wire reader](../src/mowers/maps/protobuf.ts), [tests](../test/map-geometry.test.mjs)                                                                                                                                                                                                                                                    | Experimental software coverage from #51                                                                                                                                       |
+| Same profile, retained captures      | Structural validation of the numbering                                | Private captures of 2026-09-10, method above                                                                                                                                                                                                                                                                                                                                        | Capture-validated, no fresh hardware trial                                                                                                                                    |
+| E15 T2880, firmware 6.9.28           | Fresh acquisition decoded end to end on the owned device              | Two docked downloads with library 0.24.0 in mower bridge 0.12.1 on 2026-09-25, [receipt](research/E15_MAP_PROVISIONING.md#fresh-hardware-acquisition). 57 bridge publications while mowing with library 0.25.1 on 2026-09-26, [receipt](research/E15_NATIVE_MAP_WINDOW_2026-09-26.md). The bridge publishes a snapshot only after this decoder read all three files without a fault | Hardware-observed on the owned device. The docked static geometry matched that of the Android map source, then the production source. Units and path growth are not validated |
+| E15 T2880, same profile              | Cleaning-path history across acquisitions                             | [Accumulator](../src/mowers/maps/history.ts), [tests](../test/map-path-history.test.mjs), retained captures replayed as recorded above                                                                                                                                                                                                                                              | Experimental software coverage from #178, capture-validated for the placeholder, repeat and generation cases                                                                  |
+| E15                                  | Live path growth merged and compared with the app on the owned device | Not run in #178                                                                                                                                                                                                                                                                                                                                                                     | Open hardware acceptance                                                                                                                                                      |
+| E18 or other firmware                | Any decoding                                                          | No evidence                                                                                                                                                                                                                                                                                                                                                                         | Unclaimed                                                                                                                                                                     |
 
 The tests use synthetic geometry only. They cover identity, grid, bounds and
 station pose, boundary, exclusion and pathway fields with nested polygons,
@@ -236,7 +236,7 @@ overflow, wire-type mismatches at several depths, the nesting and record
 budgets), omitted axes and empty records, degenerate geometry and grid issues,
 unknown enumeration values, packed and unpacked integer lists, undecoded fields
 and the multi-map branch. No live session, helper change or hardware trial was
-part of #51. The existing Android map source is unchanged.
+part of #51, and #51 did not change the Android map source.
 
 The #178 tests use the same synthetic fixtures. They cover growth of one
 history across acquisitions with per-segment provenance, a restarted revision
@@ -257,12 +257,18 @@ bound and option validation. No live session or hardware trial was part of
   independent recovery and a verified normal acquisition afterwards) that
   compares the merged history with the app's displayed path and observes
   whether non-empty `realtime` paths reach this transport remains open.
-- The compatibility adapter for the existing map-bundle contract and the
-  packaged acquisition on Linux amd64 and arm64 remain on the 2026-09-16 list
-  recorded on #51 and are not scheduled.
-- A source for the coordinate and heading units, the meaning of
-  `navPath.bin.stream` and a fresh acquisition decoded end to end on the owned
-  E15 remain open. Until then the pose values stay display only.
+- A source for the coordinate and heading units and the meaning of
+  `navPath.bin.stream` remain open in
+  [#213](https://github.com/keesmod/eufy-mega-client/issues/213). Until then
+  the pose values stay display only.
+- The last two items of the 2026-09-16 list recorded on #51 belong to the
+  mower bridge, which owns its HTTP route and packaging. Mower bridge 0.7.0
+  ([keesmod/eufy-robomow-ha#25](https://github.com/keesmod/eufy-robomow-ha/issues/25))
+  serves the existing map-bundle contract with `ETag` and idle and stream
+  demand on top of this decoder. The bridge app declares amd64 and aarch64 and
+  acquires and cleans up on Home Assistant OS amd64 in the owned installation.
+  Acquisition on aarch64 has not run, which the mower bridge records in its
+  [release candidates](https://github.com/keesmod/eufy-robomow-ha/blob/main/docs/release-candidates.md#experimental).
 
 ## Privacy
 
