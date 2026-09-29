@@ -3,7 +3,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inspect } from 'node:util';
-import { EufyClient, EufyError, decodeMowerTelemetry } from '../dist/index.js';
+import {
+  E15_TELEMETRY_DEFINITIONS,
+  EufyClient,
+  EufyError,
+  decodeMowerTelemetry,
+} from '../dist/index.js';
 import { cloud, credentials, memory } from './fixtures/mower-cloud.mjs';
 import { deviceId, localKey } from './fixtures/local-mower.mjs';
 import { e15Schema } from './fixtures/e15-telemetry.mjs';
@@ -214,6 +219,21 @@ test('the cloud charger contact reads DP 108 field 2 as the app decodes it', asy
   });
 });
 
+test('the charger contact stays out of local telemetry and the local registry', () => {
+  assert.ok(!E15_TELEMETRY_DEFINITIONS.some((definition) => definition.dp === '108'));
+  const local = decodeMowerTelemetry(
+    {
+      source: 'local-tuya-3.5',
+      observedAt: new Date().toISOString(),
+      dps: { 108: status({ 2: 1 }) },
+    },
+    { schema: [{ id: '108', code: 'battery_status', mode: 'ro', type: 'raw' }] },
+  );
+  assert.ok(!Object.hasOwn(local, 'charger'));
+  assert.equal(local.fields['108'].wire, undefined);
+  assert.equal(local.fields['108'].valid, true);
+});
+
 test('missing and malformed charger contacts stay distinct and independent of DP 107', async (t) => {
   for (const [dps, expected] of [
     [undefined, 'missing'],
@@ -229,6 +249,9 @@ test('missing and malformed charger contacts stay distinct and independent of DP
     [{ 108: b64([2 * 8, 1, 2 * 8, 1]) }, 'invalid'],
     [{ 108: b64([2 * 8 + 2, 1, 1]) }, 'invalid'],
     [{ 108: b64([2 * 8 + 5, 1, 0, 0, 0]) }, 'invalid'],
+    // A valid contact followed by a malformed record is not read.
+    [{ 108: b64([2 * 8, 1, 0xff]) }, 'invalid'],
+    [{ 108: b64([2 * 8, 1, 3 * 8]) }, 'invalid'],
   ]) {
     const { mowers, id } = await connected(t, { dps: { ...dps, 107: status({ 1: 1, 3: 1 }) } });
     const reading = await mowers.queryCloudState(id);

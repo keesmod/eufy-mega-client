@@ -339,8 +339,8 @@ export type MowerCloudStatus =
 /**
  * Confirmed DP 108 charger contact from a cloud record. `connected` is true while the mower
  * stands on its charging station's contacts and false once it has left them. The cloud keeps
- * the last contact the device reported, so the value persists through rests, hibernation and
- * stops on the lawn. Missing or undecodable values stay explicit.
+ * the last contact the device reported. Missing or undecodable values stay explicit. Observed
+ * durations and limits: docs/research/E15_CHARGER_CONTACT_2026-09-29.md.
  */
 export type MowerCloudCharger =
   { state: 'reported'; connected: boolean } | { state: 'missing' } | { state: 'invalid' };
@@ -524,15 +524,6 @@ export type MowerTelemetryDefinition = {
           };
     }
   | { field: 'battery' | 'progress'; decode: { kind: 'percent' } }
-  | {
-      field: 'charger';
-      /**
-       * The charger contact of a battery status message: field 2 a single varint, 1 connected
-       * and 0 or absent not connected. The empty or single-zero-byte payload reads as not
-       * connected. Other fields are ignored. Any other field 2 is invalid.
-       */
-      decode: { kind: 'battery_status' };
-    }
   | {
       field: 'network';
       decode:

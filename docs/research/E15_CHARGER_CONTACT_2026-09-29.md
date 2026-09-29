@@ -28,6 +28,12 @@ only, and no code was copied:
 | 4     | Temperature               | 0 normal, 1 overheated, 2 under-heated |
 | 5     | Night charging protection | Boolean                                |
 
+The device's own schema, read through discovery on 2026-09-29, declares DP 108
+`battery_status` read-only `raw` with a maximum length of 128 and no internal
+layout, as the [contract receipt](E15_ROBOT_STATUS_CONTRACT_2026-09-16.md)
+recorded. It declares DP 5 `status` a read-only enumeration of 17 values, among
+them `standby`, `charging`, `charge_done` and `sleep`.
+
 The same desk check covered the other candidates named in #209:
 
 - DP 107 fields 7 to 12 are the back-to-station reason, an enumeration, and five
@@ -35,7 +41,7 @@ The same desk check covered the other candidates named in #209:
   flags for an abnormal state during remote control. None of them names the
   station.
 - The app's data-point dispatch has no branch for DP 5, so the app does not
-  read it.
+  read it, although the device declares it.
 
 ## Window
 
@@ -59,20 +65,21 @@ The same desk check covered the other candidates named in #209:
 ## Observed values
 
 DP 108 field 2 is written as "connected" when it is 1 and "not connected" when
-it is absent. Field 3 was 1 in every sample.
+it is absent. Field 3 was 1 in every sample. The table cuts times to the whole
+second. The transition figures below use the sample times.
 
-| Phase                  | Interval (UTC)       | Samples | DP 108                            | App                                                     |
-| ---------------------- | -------------------- | ------- | --------------------------------- | ------------------------------------------------------- |
-| Rest 1 at the station  | 06:56:05 to 07:25:00 | 868     | connected, charged (field 1 = 2)  | Fully Charged, Charge not offered, mower at the station |
-| Start 1 in the station | 07:25:00 to 07:25:41 | 20      | connected                         | Defogging…                                              |
-| Stop 1 on the lawn     | 07:27:05 to 07:47:48 | 622     | not connected, discharging        | Mower on the lawn, Charge offered                       |
-| Rest 2 at the station  | 07:48:45 to 07:55:29 | 202     | connected, charging (field 1 = 1) | Charging mark, Charge not offered, mower at the station |
-| Start 2 in the station | 07:55:29 to 07:56:13 | 22      | connected                         | Mowing…                                                 |
-| Stop 2 on the lawn     | 07:57:21 to 08:17:39 | 609     | not connected, discharging        | Mower on the lawn, Charge offered                       |
-| Rest 3 at the station  | 08:18:54 to 08:25:25 | 196     | connected, charging               | Charging mark, Charge not offered, mower at the station |
-| Start 3 in the station | 08:25:25 to 08:26:08 | 21      | connected                         | Mowing…                                                 |
-| Stop 3 on the lawn     | 08:27:16 to 08:47:41 | 612     | not connected, discharging        | Mower on the lawn, Charge offered                       |
-| Rest 4 at the station  | 08:48:32 to 08:54:12 | 170     | connected, charging               | Charging mark, Charge not offered, mower at the station |
+| Phase                  | Interval (UTC)       | Samples | DP 108                                                      | App                                                     |
+| ---------------------- | -------------------- | ------- | ----------------------------------------------------------- | ------------------------------------------------------- |
+| Rest 1 at the station  | 06:56:05 to 07:25:00 | 868     | connected, charged (field 1 = 2), in hibernation throughout | Fully Charged, Charge not offered, mower at the station |
+| Start 1 in the station | 07:25:00 to 07:25:41 | 20      | connected                                                   | Defogging…                                              |
+| Stop 1 on the lawn     | 07:27:05 to 07:47:48 | 622     | not connected, discharging                                  | Mower on the lawn, Charge offered                       |
+| Rest 2 at the station  | 07:48:45 to 07:55:29 | 202     | connected, charging (field 1 = 1)                           | Charging mark, Charge not offered, mower at the station |
+| Start 2 in the station | 07:55:29 to 07:56:13 | 22      | connected                                                   | Mowing…                                                 |
+| Stop 2 on the lawn     | 07:57:21 to 08:17:39 | 609     | not connected, discharging                                  | Mower on the lawn, Charge offered                       |
+| Rest 3 at the station  | 08:18:54 to 08:25:25 | 196     | connected, charging                                         | Charging mark, Charge not offered, mower at the station |
+| Start 3 in the station | 08:25:25 to 08:26:08 | 21      | connected                                                   | Mowing…                                                 |
+| Stop 3 on the lawn     | 08:27:16 to 08:47:41 | 612     | not connected, discharging                                  | Mower on the lawn, Charge offered                       |
+| Rest 4 at the station  | 08:48:32 to 08:54:12 | 170     | connected, charging                                         | Charging mark, Charge not offered, mower at the station |
 
 Transitions, each resolved to one two-second sample:
 
@@ -87,16 +94,27 @@ Transitions, each resolved to one two-second sample:
   of the arrival.
 
 The mowing between departure and Stop and the drive home between Charge and
-arrival read not connected in every sample. Of all 3,543 samples, the 1,499
-taken at the station read connected and the 2,044 taken away from it read not
-connected, without exception. No request failed.
+arrival read not connected in every sample. No request failed.
+
+The phase boundaries are not all independent of DP 108. Each stop on the lawn
+runs from the app's Stop to its Charge, and each departure coincided with DP
+107's sub-mission leaving the station, so those boundaries come from other
+sources. Each rest starts at the arrival sample, the first with field 2 set, so
+that boundary comes from field 2 itself. The map save that followed within six
+seconds and the app's mower at the station confirm those arrivals. With these
+boundaries, all 1,499 samples at the station read connected and all 2,044
+samples away from it read not connected, 1,843 of them during the three stops
+on the lawn.
 
 ## Candidates that do not separate
 
 - **Hibernation.** DP 107 field 4 = 2 appeared on the lawn 10 minutes 18
-  seconds, 10 minutes 21 seconds and 10 minutes 20 seconds after each Stop, as
-  it does at the station. It is not station-only, contrary to the earlier note
-  in #209.
+  seconds, 10 minutes 21 seconds and 10 minutes 20 seconds after each Stop. At
+  the station it held in all 868 samples of rest 1, with field 2 connected. It
+  is not station-only, contrary to the earlier note in #209.
+- **DP 107 fields 7 to 12.** None of them, and not field 5, appeared in any
+  sample, also not during the three returns after Charge. Only fields 1, 2, 3,
+  4 and 6 did.
 - **DP 5** read `standby` in every sample, at the station, while mowing and on
   the lawn.
 - **DP 107 default payload and DP 1.** The idle payload followed every map
@@ -105,7 +123,7 @@ connected, without exception. No request failed.
 
 ## Classification
 
-The shipped `charger` definition is `confirmed`. The basis is the app's own
+The cloud reading's charger definition is `confirmed`. The basis is the app's own
 decoder of DP 108 together with the window above: field 2 was connected in
 every sample of four rests and three starts at the station and not connected in
 every sample of three stops of at least twenty minutes on the lawn, with three
@@ -119,7 +137,8 @@ arrived during six app Stops on the lawn
 ([contract](E15_ROBOT_STATUS_CONTRACT_2026-09-16.md),
 [reproduction](E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md)).
 
-The library exposes only field 2, as `charger.connected` of the cloud reading.
+The library exposes only field 2, as `charger.connected` of the cloud reading,
+through an internal definition that is not part of the local registry.
 Field 1 follows it but is not needed to separate the two cases. The empty or
 single-zero-byte payload reads as not connected, the encoding's default. A
 field 2 that is not a single varint of 0 or 1 is `invalid`.

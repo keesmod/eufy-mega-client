@@ -9,17 +9,18 @@
 connected }`, `missing` or `invalid`. `connected` is field 2 of the battery
   status message, which the official app's own decoder reads as its charger
   connection. It is true while the mower stands on its station's contacts and
-  false once it has left them, through rests, hibernation and stops on the
-  lawn. It is the first confirmed reading that separates a rest at the station
-  from a stop on the lawn, where the idle mission status, DP 5 and hibernation
-  are the same.
-- The new `battery_status` decode kind and the confirmed `charger` definition
-  in `E15_TELEMETRY_DEFINITIONS` carry the provenance. `MowerTelemetry` is
-  unchanged: the E15's local status replies do not carry DP 108.
+  false once it has left them. It is the first confirmed reading that
+  separates a rest at the station from a stop on the lawn, where the idle
+  mission status, DP 5 and hibernation are the same.
+- The definition is internal to the cloud reading. `E15_TELEMETRY_DEFINITIONS`,
+  `MowerTelemetryDefinition` and `MowerTelemetry` are unchanged: the E15's
+  local status replies do not carry DP 108, and no DP 108 LAN report was part
+  of the evidence.
 - One owner-requested window on 2026-09-29 read the contact connected in every
-  sample of four rests at the station and not connected in every sample of three
-  stops of at least twenty minutes on the lawn, cleared on three departures and
-  set on three arrivals, with the app's display correlated. See
+  sample of four rests at the station, the longest 29 minutes in hibernation,
+  and not connected in every sample of three stops of about twenty minutes on
+  the lawn, cleared on three departures and set on three arrivals, with the
+  app's display as correlation. See
   docs/research/E15_CHARGER_CONTACT_2026-09-29.md.
 
 Upgrade: consumers that compare a whole `MowerCloudStateReading` receive the

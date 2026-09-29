@@ -697,9 +697,10 @@ point. `idle` does not prove that the mower is docked.
 or `{ state: 'invalid' }`, since 0.27.0. It reads field 2 of DP 108, the
 battery status message, which the official app decodes as its charger
 connection. `connected` is true while the mower stands on its charging
-station's contacts and false once it has left them, also through rests,
-hibernation and stops on the lawn. It is the confirmed reading that separates
-a rest at the station from a stop on the lawn. It does not replace `status`:
+station's contacts and false once it has left them. On the owned E15 it held
+through a 29-minute rest in hibernation and through 20-minute stops on the
+lawn, so it is the confirmed reading that separates a rest at the station from
+a stop on the lawn. It does not replace `status`:
 while the mower defogs in the station after a start, `status` is already
 `mowing` and `charger` still connected, and on arrival `charger` connects
 before `status` leaves `returning`. See the
@@ -709,7 +710,7 @@ before `status` leaves `returning`. See the
 the same `observedAt`. Each field keeps its own missing or invalid result.
 
 All three fields are cloud cache values. The library knows when the response arrived,
-not when the device last changed either value. Consumers own refresh policy and
+not when the device last changed any value. Consumers own refresh policy and
 expiry. Keep this source separate from local telemetry and never use it to
 confirm a command or setting write. The reading exposes no raw data points,
 device identifiers or credentials. No control opt-in is needed.
