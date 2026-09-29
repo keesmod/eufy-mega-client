@@ -111,7 +111,8 @@ on the lawn.
 
 The library reads the device record, `tuya.m.device.get`, not the data point
 request the probe sampled. On 2026-09-25 a read-only comparison found that the
-two carry the same data points with the same values on the owned E15, see
+two carry the same 86 data points on the owned E15, DP 155 with the same
+value, see
 [Mower work parameters](../MOWER_WORK_PARAMETERS.md#hardware-evidence). At
 11:52 UTC on 2026-09-29 one further read-only comparison through the same
 cloud client, with the mower resting at the station, found the same DP 108
