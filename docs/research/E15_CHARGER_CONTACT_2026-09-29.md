@@ -49,10 +49,10 @@ The same desk check covered the other candidates named in #209:
 - **Device and versions.** The owned E15, product code T2880, firmware 6.9.28
   as read from its cloud record on 2026-09-29, with the Anker eufy app 6.1.00
   on the owner's Mac. Times are UTC, in daylight.
-- **Probe.** A private, read-only sampler read the device's cloud record every
-  two seconds from 06:56:05 to 08:54:12, 3,543 samples, through the Home
-  Assistant integration's existing cloud client, and logged DP 1, 2, 5, 8, 107,
-  108 and 118. The log stays on the owner's host. No LAN report listener ran,
+- **Probe.** A private, read-only sampler read the cloud's data point request,
+  `tuya.m.device.dp.get`, every two seconds from 06:56:05 to 08:54:12, 3,543
+  samples, through the Home Assistant integration's existing cloud client, and
+  logged DP 1, 2, 5, 8, 107, 108 and 118. The log stays on the owner's host. No LAN report listener ran,
   so that no second local session competed with the owner's running mower
   bridge.
 - **Actions.** The owner asked the agent to operate the official app on the
@@ -106,6 +106,18 @@ seconds and the app's mower at the station confirm those arrivals. With these
 boundaries, all 1,499 samples at the station read connected and all 2,044
 samples away from it read not connected, 1,843 of them during the three stops
 on the lawn.
+
+## The library's request
+
+The library reads the device record, `tuya.m.device.get`, not the data point
+request the probe sampled. On 2026-09-25 a read-only comparison found that the
+two carry the same data points with the same values on the owned E15, see
+[Mower work parameters](../MOWER_WORK_PARAMETERS.md#hardware-evidence). At
+11:52 UTC on 2026-09-29 one further read-only comparison through the same
+cloud client, with the mower resting at the station, found the same DP 108
+value in both, connected and charged. The not-connected value was not compared
+through the device record, and the library itself did not read the contact on
+hardware for this receipt.
 
 ## Candidates that do not separate
 
