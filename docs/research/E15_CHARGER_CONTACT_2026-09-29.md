@@ -28,10 +28,11 @@ only, and no code was copied:
 | 4     | Temperature               | 0 normal, 1 overheated, 2 under-heated |
 | 5     | Night charging protection | Boolean                                |
 
-The device's own schema, read through discovery on 2026-09-29, declares DP 108
-`battery_status` read-only `raw` with a maximum length of 128 and no internal
-layout, as the [contract receipt](E15_ROBOT_STATUS_CONTRACT_2026-09-16.md)
-recorded. It declares DP 5 `status` a read-only enumeration of 17 values, among
+The device's own schema declares DP 108 `battery_status` read-only `raw`
+without an internal layout, as the
+[contract receipt](E15_ROBOT_STATUS_CONTRACT_2026-09-16.md) recorded. Read
+through discovery on 2026-09-29, it also gives a maximum length of 128. It
+declares DP 5 `status` a read-only enumeration of 17 values, among
 them `standby`, `charging`, `charge_done` and `sleep`.
 
 The same desk check covered the other candidates named in #209:
