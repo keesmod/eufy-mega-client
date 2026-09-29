@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.27.0 - Unreleased
+## 0.27.0 - 2026-09-29
 
 ### Mower charger contact
 
@@ -39,8 +39,26 @@ Upgrade: consumers that compare a whole `MowerCloudStateReading` receive the
 new `charger` field. A custom `MowerModule` test double that returns cloud
 readings adds it. Keep the reading a cloud cache: apply the same receipt-age
 bound as for cloud activity and never use it to confirm a command. Rollback:
-retain the previous package and lockfile and use 0.26.0, which ignores DP 108.
-No E18 support claim is added.
+retain the previous package and lockfile and use 0.26.0, which ignores DP 108
+and locks `date-and-time` 4.5.2. No E18 support claim is added.
+
+Use the compiled versioned 0.27.0 tarball and its verified integrity from the
+GitHub release. The change is verified in two ways:
+
+- In software, by CI and synthetic tests of the charger decoder, the cloud
+  reading, every missing and invalid form, the unchanged local telemetry and
+  registry, and the consumer types, and by the unchanged date results of
+  `date-and-time` 4.6.0 for the client's two patterns.
+- On hardware, outside the library: the owned E15's cloud record carried the
+  contact as described in the window of 2026-09-29, and on the same day the
+  record of the request this release makes, `tuya.m.device.get`, carried the
+  same DP 108 value as the sampled data point request while the mower rested at
+  the station.
+
+The charger contact has not yet been read through the library itself on
+hardware. The mower bridge that pins this release is the next check, in
+keesmod/eufy-robomow-ha#82. This release publishes the unpublished 0.27.0 batch
+tracked in #209, so its candidate record is removed.
 
 ## 0.26.0 - 2026-09-28
 
