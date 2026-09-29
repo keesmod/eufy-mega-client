@@ -1,9 +1,14 @@
-// Synthetic cloud records exercise the authenticated read boundary. Status payloads are built
-// from the independently documented DP 107 field numbers, never copied from device captures.
+// Synthetic cloud records exercise the authenticated read boundary. Status and charger payloads
+// are built from the documented DP 107 and DP 108 field numbers, never copied from captures.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inspect } from 'node:util';
-import { EufyClient, EufyError, decodeMowerTelemetry } from '../dist/index.js';
+import {
+  E15_TELEMETRY_DEFINITIONS,
+  EufyClient,
+  EufyError,
+  decodeMowerTelemetry,
+} from '../dist/index.js';
 import { cloud, credentials, memory } from './fixtures/mower-cloud.mjs';
 import { deviceId, localKey } from './fixtures/local-mower.mjs';
 import { e15Schema } from './fixtures/e15-telemetry.mjs';
@@ -53,6 +58,7 @@ function noSecrets(value) {
 
 test('one authenticated record supplies activity and work parameters with a shared receipt time', async (t) => {
   let activity = status({ 1: 17, 3: 1 });
+  let charger = status({ 1: 1, 2: 1, 3: 1 });
   const { mowers, id, calls } = await connected(t, {
     // Discovery's older cache is not substituted for a later read.
     dps: { 107: 'AA==' },
@@ -65,6 +71,7 @@ test('one authenticated record supplies activity and work parameters with a shar
             1: true,
             8: 87,
             107: activity,
+            108: charger,
             155: parameters,
             156: 'PRIVATE-OTHER-POINT',
           },
@@ -78,6 +85,7 @@ test('one authenticated record supplies activity and work parameters with a shar
     source: 'cloud',
     observedAt: reading.observedAt,
     status: { state: 'reported', value: 'mowing' },
+    charger: { state: 'reported', connected: true },
     workParameters: {
       source: 'cloud',
       observedAt: reading.observedAt,
@@ -99,8 +107,10 @@ test('one authenticated record supplies activity and work parameters with a shar
   noSecrets(reading);
 
   activity = status({ 4: 2 });
+  charger = status({ 3: 1 });
   const next = await mowers.queryCloudState(id);
   assert.deepEqual(next.status, { state: 'reported', value: 'idle' });
+  assert.deepEqual(next.charger, { state: 'reported', connected: false });
   assert.equal(calls.filter(({ action }) => action === 'tuya.m.device.get').length, 3);
   reading.workParameters.parameters.bladeSpeed = 'low';
   assert.equal(next.workParameters.parameters.bladeSpeed, 'high');
@@ -177,6 +187,95 @@ test('missing, malformed and unclaimed activity stays distinct and independent o
   assert.deepEqual((await declared.mowers.queryCloudState(declared.id)).status, {
     state: 'invalid',
   });
+});
+
+test('the cloud charger contact reads DP 108 field 2 as the app decodes it', async (t) => {
+  for (const [value, contact] of [
+    // At the station: charged, charging and the first frame of an arrival.
+    [status({ 1: 2, 2: 1, 3: 1 }), true],
+    [status({ 1: 1, 2: 1, 3: 1 }), true],
+    [status({ 2: 1, 3: 1 }), true],
+    // Off the contacts: after leaving the station, and the all-default message.
+    [status({ 3: 1 }), false],
+    [status({ 2: 0 }), false],
+    ['', false],
+    ['AA==', false],
+    // Other fields, a length-delimited one included, do not change the contact.
+    [b64([2 * 8, 1, 6 * 8 + 2, 1, 0]), true],
+    [b64([1 * 8, 2, 6 * 8 + 2, 1, 0]), false],
+  ]) {
+    const { mowers, id } = await connected(t, { dps: { 107: 'AA==', 108: value } });
+    const reading = await mowers.queryCloudState(id);
+    assert.deepEqual(reading.charger, { state: 'reported', connected: contact }, inspect(value));
+    assert.deepEqual(reading.status, { state: 'reported', value: 'idle' });
+  }
+  const declared = await connected(t, {
+    schema: [{ id: 108, code: 'battery_status', mode: 'ro', type: 'raw' }],
+    dps: { 108: status({ 1: 2, 2: 1, 3: 1 }) },
+  });
+  assert.deepEqual((await declared.mowers.queryCloudState(declared.id)).charger, {
+    state: 'reported',
+    connected: true,
+  });
+});
+
+test('the charger contact stays out of local telemetry and the local registry', () => {
+  assert.ok(!E15_TELEMETRY_DEFINITIONS.some((definition) => definition.dp === '108'));
+  const local = decodeMowerTelemetry(
+    {
+      source: 'local-tuya-3.5',
+      observedAt: new Date().toISOString(),
+      dps: { 108: status({ 2: 1 }) },
+    },
+    { schema: [{ id: '108', code: 'battery_status', mode: 'ro', type: 'raw' }] },
+  );
+  assert.ok(!Object.hasOwn(local, 'charger'));
+  assert.equal(local.fields['108'].wire, undefined);
+  assert.equal(local.fields['108'].valid, true);
+});
+
+test('missing and malformed charger contacts stay distinct and independent of DP 107', async (t) => {
+  for (const [dps, expected] of [
+    [undefined, 'missing'],
+    [{}, 'missing'],
+    [{ 1: true, 8: 100, 118: 100 }, 'missing'],
+    [{ 108: null }, 'invalid'],
+    [{ 108: 1 }, 'invalid'],
+    [{ 108: true }, 'invalid'],
+    [{ 108: {} }, 'invalid'],
+    [{ 108: 'not-base64' }, 'invalid'],
+    [{ 108: b64([2 * 8]) }, 'invalid'],
+    [{ 108: status({ 2: 2 }) }, 'invalid'],
+    [{ 108: b64([2 * 8, 1, 2 * 8, 1]) }, 'invalid'],
+    [{ 108: b64([2 * 8 + 2, 1, 1]) }, 'invalid'],
+    [{ 108: b64([2 * 8 + 5, 1, 0, 0, 0]) }, 'invalid'],
+    // A valid contact followed by a malformed record is not read.
+    [{ 108: b64([2 * 8, 1, 0xff]) }, 'invalid'],
+    [{ 108: b64([2 * 8, 1, 3 * 8]) }, 'invalid'],
+  ]) {
+    const { mowers, id } = await connected(t, { dps: { ...dps, 107: status({ 1: 1, 3: 1 }) } });
+    const reading = await mowers.queryCloudState(id);
+    assert.deepEqual(reading.charger, { state: expected }, inspect(dps));
+    assert.deepEqual(reading.status, { state: 'reported', value: 'returning' });
+  }
+  const { mowers, id } = await connected(t, {
+    dps: { 107: 'not-base64', 108: status({ 2: 1, 3: 1 }) },
+  });
+  const reading = await mowers.queryCloudState(id);
+  assert.deepEqual(reading.status, { state: 'invalid' });
+  assert.deepEqual(reading.charger, { state: 'reported', connected: true });
+  // A declaration other than raw withholds the contact, also when the text would conform to it.
+  for (const property of [{ type: 'bool' }, { type: 'string', maxlen: 255 }]) {
+    const declared = await connected(t, {
+      schema: [{ id: 108, code: 'synthetic_wrong_type', mode: 'ro', type: 'obj', property }],
+      dps: { 108: status({ 2: 1 }) },
+    });
+    assert.deepEqual(
+      (await declared.mowers.queryCloudState(declared.id)).charger,
+      { state: 'invalid' },
+      property.type,
+    );
+  }
 });
 
 test('cloud reads require authentication, the current device binding and a capable adapter', async (t) => {

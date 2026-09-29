@@ -58,6 +58,21 @@ Its receipt time does not establish device freshness. It is never merged into
 activity stays explicit. See the [API contract](API.md#mower-cloud-state) and the
 [device-record receipt](research/E15_CLOUD_STATE_2026-09-26.md).
 
+The same reading carries the DP 108 charger contact since 0.27.0 as `charger`.
+It reads field 2 of the device's raw `battery_status` point, which the official
+app's own decoder names its charger connection: 1 connected, 0 or absent not
+connected, the empty or single-zero-byte payload included. A field 2 other than
+a single varint of 0 or 1, a malformed payload or a declaration other than `raw`
+is `invalid`. The definition is internal to the cloud reading and not part of
+`E15_TELEMETRY_DEFINITIONS`: `MowerTelemetry` has no charger field, the E15's
+local status replies do not carry DP 108, and the LAN reports that do carry it
+were not part of the evidence. One owner-requested window on 2026-09-29
+reproduced it with the app's display as correlation: connected in every sample
+of four rests at the station, the longest 29 minutes in hibernation, and not
+connected in every sample of three stops of about twenty minutes on the lawn,
+cleared on each of three departures and set on each of three arrivals. See the
+[charger contact receipt](research/E15_CHARGER_CONTACT_2026-09-29.md).
+
 ## Definitions and confirmation levels
 
 A `MowerTelemetryDefinition` names the field, the data point id, the decode rule

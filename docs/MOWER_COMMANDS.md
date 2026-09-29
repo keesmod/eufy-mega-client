@@ -84,9 +84,11 @@ its errors are ignored and it cannot influence the command.
 | `mower_command_task_active`      | Only `return`: DP 1 `switch_go` is not `false` on the fresh query. The app offers Charge only after Stop and the map save, and a return sent from `paused` was ignored on the owned device, so `return` is written only from the stopped task |
 | `mower_command_already_set`      | The fresh query already shows the written point at the written value, so the write cannot produce a fresh change and a repeated activity report could mislead                                                                                 |
 
-The stopped task is DP 1 `false` with DP 118 at 100. The library cannot tell a
-mower stopped on the lawn from a docked one, both read the same two values,
-so a `return` sent while docked is not refused. It also cannot tell the app's
+The stopped task is DP 1 `false` with DP 118 at 100. The command gate cannot
+tell a mower stopped on the lawn from a docked one, both read the same two
+values on the fresh query, so a `return` sent while docked is not refused. The
+cloud reading's `charger` contact separates the two since 0.27.0, but it is a
+cloud cache and the gate does not use it. It also cannot tell the app's
 Loading phase, between DP 1 turning false and the default DP 107 payload about
 15 seconds later, from the state in which the app enables Charge. A consumer
 that follows the app waits for the default payload after a `stop` before it

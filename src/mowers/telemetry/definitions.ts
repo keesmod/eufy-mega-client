@@ -85,3 +85,17 @@ export const E15_TELEMETRY_DEFINITIONS: readonly MowerTelemetryDefinition[] = Ob
     }),
   }),
 ]);
+
+/**
+ * The E15 charger contact, read from the cloud record only: field 2 of DP 108 `battery_status`,
+ * which the official app's own battery status decoder names its charger connection. It is not in
+ * the local registry, because `MowerTelemetry` has no charger field and no DP 108 LAN report was
+ * part of its evidence. One owner-requested window reproduced it against app-correlated rests at
+ * the station and stops on the lawn. Internal, not exported from the package. See its receipt.
+ */
+export const E15_CLOUD_CHARGER_CONTACT = Object.freeze({
+  dp: '108',
+  field: 2,
+  level: 'confirmed',
+  source: 'docs/research/E15_CHARGER_CONTACT_2026-09-29.md',
+} as const);
