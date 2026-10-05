@@ -36,7 +36,8 @@ or relevant topology is unresolved. C210/C220 subtypes are not inferred.
 
 The existing MIT-attributed `IndoorCamera` class processes native Indoor push
 messages in addition to the base camera's H3 messages. Selecting it preserves
-that concrete behavior. No new adapter or vendor code is introduced. Source is
+that concrete behavior. No new adapter or vendor code was introduced for the nine
+original models. Source is
 `vendor/src/http/device.ts` and `vendor/src/http/types.ts` at client commit
 `34863d81eb3bc50dbc095ff537fe156640f7042e`, with [attribution](../NOTICE.md).
 
@@ -78,8 +79,8 @@ shows the same pair as its own station. The profile is therefore
 `h3-or-standalone`. As an outdoor wired camera it follows the indoor family.
 
 0.28.0 is the first change that adds a type to the vendored catalogue. Each
-addition carries a 0.28.0 marker in the source and is listed in
-[NOTICE](../NOTICE.md):
+addition except the one-line type label carries a 0.28.0 marker in the source.
+All are listed in [NOTICE](../NOTICE.md):
 
 - `DeviceType.WIRED_CAM_C31 = 10031` and its type label.
 - A property map with `GenericDeviceProperties` and the motion, person, person
@@ -90,8 +91,8 @@ addition carries a 0.28.0 marker in the source and is listed in
   `DeviceCancelDownload` only. PTZ, presets, talkback, alarm and snooze are not
   registered.
 - Type 10031 in `Device.isCamera()`. Its effective use here is push
-  normalization: a push relayed by a T8030 is read as a HomeBase camera push,
-  with `a`, `msg_type` and `nick_name`, as for the other Indoor cameras. The
+  normalization: a push relayed by a T8030 is read by the same HomeBase camera
+  branch as the other Indoor cameras, instead of the generic branch. The
   owner-aware H3 metadata does not change, because the property map has no
   detection-type setting.
 - `Device.isWiredCamC31()` and its use in the existing HomeBase-controlled
