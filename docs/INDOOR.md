@@ -112,17 +112,28 @@ Stop, stored snapshots, recording lists, downloads and cancellation use the
 unchanged H3 paths above. The cited gateway stops a HomeBase child with
 `CMD_STOP_REALTIME_MEDIA` inside the same payload envelope as its start. This
 client sends the plain `CMD_STOP_REALTIME_MEDIA` it uses for every H3 camera and
-needs the matching acknowledgement. Whether the C31 acknowledges it is
-unverified. Without it a stop ends unconfirmed after the existing bound and
-closes the station session. Motion and person pushes from a HomeBase arrive as the
-base camera's H3 messages. Native Indoor pet, sound and crying pushes use the
+needs the matching acknowledgement. The reporter on #136 saw it acknowledged,
+`stop_confirmed: true`, on the tuple below. Without the acknowledgement a stop
+ends unconfirmed after the existing bound and closes the station session.
+Motion and person pushes from a HomeBase arrive as the base camera's H3 messages. Native Indoor pet, sound and crying pushes use the
 `IndoorCamera` class. The [Indoor tests](../test/indoor.test.mjs), the
 [media profile](../test/fixtures/indoor-media.mjs) and a focused
 [profile test](../test/device-profiles.test.mjs) cover the exact pair, rejected
 variants such as `T817L121` and `t817l`, the H3 and standalone relationships, the
 complete H.264 and H.265 start envelopes, stop, recordings, the four registered
-commands and the normalization of a relayed push. No physical C31 was used. The reporter on #136 can supply the first
-observation through this client.
+commands and the normalization of a relayed push. No physical C31 was used for
+the change.
+
+On 2026-10-05 the reporter on
+[#136](https://github.com/keesmod/ha-eufy-cam/issues/136#issuecomment-5993196872) ran bridge
+0.8.30 with client 0.28.0 and integration 0.8.38 on camera firmware 2.1.0.3
+under a T8030 on firmware 3.8.5.2. They reported discovery under the HomeBase 3,
+a snapshot, live video and audio, a closed live view with
+`stop_confirmed: true`, recording lists and playback, and a person event working.
+Motion, pet, vehicle, sound and crying events were not reported. Playback of a
+recording was a native remux even with H.264 output selected, which means this
+camera's recordings arrived as H.264. This is a reported result, not
+independently reproduced.
 
 ## Remaining obligations
 
