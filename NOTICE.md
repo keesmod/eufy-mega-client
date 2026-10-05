@@ -36,8 +36,8 @@ that preserves the shorter timeout for stalled media; and a three-second
 audio-discovery window for delayed first AAC packets. A `livestream no data`
 event reports a video stream that the library ends before it started. Version
 0.28.0 adds the Wired Cam C31 as `DeviceType.WIRED_CAM_C31` (10031, T817L), with
-detection states, four media commands and the existing HomeBase-controlled
-S350 live branch, as described in [INDOOR.md](docs/INDOOR.md#wired-cam-c31-0280).
+detection states, four media commands, camera push normalization and the
+existing HomeBase-controlled S350 live branch, as described in [INDOOR.md](docs/INDOOR.md#wired-cam-c31-0280).
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

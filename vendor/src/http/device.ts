@@ -1914,6 +1914,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
       type == DeviceType.SOLO_CAMERA_E30 ||
       type == DeviceType.CAMERA_S4 ||
       type == DeviceType.CAMERA_C35 ||
+      type == DeviceType.WIRED_CAM_C31 || // eufy-mega-client 0.28.0
       type == DeviceType.LOCK_85V0 ||
       type == DeviceType.INDOOR_OUTDOOR_CAMERA_1080P ||
       type == DeviceType.INDOOR_OUTDOOR_CAMERA_1080P_NO_LIGHT ||
@@ -2854,6 +2855,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
   }
 
   public isWiredCamC31(): boolean {
+    //T817L, added by eufy-mega-client 0.28.0
     return Device.isWiredCamC31(this.rawDevice.device_type);
   }
 

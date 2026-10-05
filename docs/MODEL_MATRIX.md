@@ -229,8 +229,9 @@ below and their H and P cells are unchanged.
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and
 client 0.26.0, receives a Wired Cam C31 as `T817L` with type 10031, firmware
-2.1.0.3, under a T8030 owner on firmware 3.8.5.2. Type 10031 was absent from the
-pinned catalogue, so discovery reported `unsupported_device`. 0.28.0 adds
+2.1.0.3, under a T8030 owner on firmware 3.8.5.2. The pair was not in the profile
+allowlist, so discovery reported `unsupported_device`. Type 10031 was also absent
+from the pinned catalogue. 0.28.0 adds
 `WIRED_CAM_C31` to the vendored catalogue and admits exactly `T817L`/10031 in the
 indoor family with the additional-H3 media policy, as described in
 [INDOOR.md](INDOOR.md#wired-cam-c31-0280). [C31] names the product, its

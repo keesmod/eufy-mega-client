@@ -15,13 +15,16 @@
   crying detection states, and with the live start, live stop, recording download
   and download cancel commands only. Pan and tilt, presets, talkback, alarm and
   settings are not registered. Battery and availability stay null, as for the
-  other mains-powered indoor cameras.
+  other mains-powered indoor cameras. `Device.isCamera()` includes the type, so
+  a push the HomeBase 3 relays for the C31 is read like those of the other
+  HomeBase cameras.
 - Under a HomeBase 3 the live start uses the existing HomeBase-controlled S350
   branch: `CMD_SET_PAYLOAD` with `CMD_START_REALTIME_MEDIA`, the camera's
   `mChannel`, `camera_type`, `entrytype`, both account fields and the public key.
   A separate MIT-licensed gateway reports live view and snapshots for this camera
   through a HomeBase 3 with the same fields. Stop, stored snapshots, recordings
-  and cancellation use the unchanged H3 paths. See
+  and cancellation use the unchanged H3 paths. Whether the C31 acknowledges the
+  plain H3 stop is not yet verified. See
   [INDOOR.md](https://github.com/keesmod/eufy-mega-client/blob/main/docs/INDOOR.md#wired-cam-c31-0280).
 - A C31 that is its own station, without a HomeBase, is recognized as
   `standalone_transport_unverified` and gets no media. Standalone transport stays
@@ -39,7 +42,8 @@
 
 Upgrade: no identifier, session or option change. Consumers see one more admitted
 camera when a C31 is present. Rollback: retain the previous package and lockfile
-and use 0.27.0, which rejects the C31 again. No mower behavior changes.
+and use 0.27.0, which rejects the C31 again. Its lockfile also brings back
+`http-cache-semantics` 4.2.0 with the advisory above. No mower behavior changes.
 
 ## 0.27.0 - 2026-09-29
 
