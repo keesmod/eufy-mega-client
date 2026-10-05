@@ -27,6 +27,16 @@
   `standalone_transport_unverified` and gets no media. Standalone transport stays
   in #36. The HomeBase Mini stays in #35.
 
+### Dependency update
+
+- The lockfile moves the transitive `http-cache-semantics` from 4.2.0 to 4.3.0
+  for the high advisory
+  [GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp), which
+  failed the required audit. It reaches the client through `got` and
+  `cacheable-request`. The client uses `got` only for the push service, without a
+  response cache, so the affected cache handling was not exercised. No direct
+  dependency or range changes.
+
 Upgrade: no identifier, session or option change. Consumers see one more admitted
 camera when a C31 is present. Rollback: retain the previous package and lockfile
 and use 0.27.0, which rejects the C31 again. No mower behavior changes.
