@@ -18,6 +18,7 @@ was used for these changes.
 | T8414 | 100           | Indoor Cam Mini 2K / P44           |
 | T8416 | 104           | Indoor Cam S350                    |
 | T8417 | 105           | Indoor Cam E30                     |
+| T817L | 10031         | Wired Cam C31, added in 0.28.0     |
 
 Identity and possible topology sources are recorded in the
 [model matrix](MODEL_MATRIX.md). H3 compatibility alone does not establish
@@ -61,10 +62,58 @@ standalone descriptors, unknown state, owner changes and independent failure.
 The #23 phase passed 95 tests across Indoor, SoloCam, eufyCam and battery
 doorbells before media admission was changed.
 
+## Wired Cam C31, 0.28.0
+
+[ha-eufy-cam#136](https://github.com/keesmod/ha-eufy-cam/issues/136) reports a
+Wired Cam C31 received as exactly `T817L` with type 10031, camera firmware
+2.1.0.3, under a T8030 owner on firmware 3.8.5.2. Earlier clients rejected it as
+`unsupported_device` because the pinned catalogue has no type 10031. Eufy's
+[product page](https://www.eufy.com/products/t817l121) describes a mains-powered
+360° pan and tilt Wi-Fi camera with human, vehicle, pet, sound and cry detection,
+compatible with HomeBase 3 and HomeBase Mini but not HomeBase 2. A public
+[homebridge-eufy report](https://github.com/homebridge-plugins/homebridge-eufy/issues/1027)
+shows the same pair as its own station. The profile is therefore
+`h3-or-standalone`. As an outdoor wired camera it follows the indoor family.
+
+0.28.0 is the first change that adds a type to the vendored catalogue. The
+additions are marked in the source and listed in [NOTICE](../NOTICE.md):
+
+- `DeviceType.WIRED_CAM_C31 = 10031` and its type label.
+- A property map with `GenericDeviceProperties` and the motion, person, person
+  name, pet, vehicle, sound and crying detection states. These are client-side
+  `custom_` states. No setting, battery, device state or other wire parameter is
+  claimed, so battery and availability stay null as for the other mains models.
+- `DeviceStartLivestream`, `DeviceStopLivestream`, `DeviceStartDownload` and
+  `DeviceCancelDownload` only. PTZ, presets, talkback, alarm and snooze are not
+  registered.
+- `Device.isWiredCamC31()` and its use in the existing HomeBase-controlled
+  type 31/S350 live branch in `Station.startLivestream`.
+
+Without the last addition the camera would fall through to the generic
+`CMD_SET_PAYLOAD` branch, which sends no `mChannel`, `camera_type`, `entrytype` or
+`accountId`. The selected branch sends the same fields as the HomeBase-attached
+media start of the MIT-licensed
+[eufy-mega-security](https://github.com/mscodemonkey/eufy-mega-security/blob/7980f342ac844457f92388b94ca087747e486e9c/eufy_event_gateway/src/stream/first-party-ppcs.ts#L116-L147)
+gateway. Its [T817L catalogue entry](https://github.com/mscodemonkey/eufy-mega-security/blob/7980f342ac844457f92388b94ca087747e486e9c/eufy_event_gateway/device_catalogue/devices/t817l-wired-cam-c31.yaml)
+records live view and snapshots through a T8030 as tested by its maintainer on
+2026-09-21. No code is taken from that project. Its result is a third-party
+report, not an observation through this client.
+
+Stop, stored snapshots, recording lists, downloads and cancellation use the
+unchanged H3 paths above. Motion and person pushes from a HomeBase arrive as the
+base camera's H3 messages. Native Indoor pet, sound and crying pushes use the
+`IndoorCamera` class. The [Indoor tests](../test/indoor.test.mjs), the
+[media profile](../test/fixtures/indoor-media.mjs) and a focused
+[profile test](../test/device-profiles.test.mjs) cover the exact pair, rejected
+variants such as `T817L121` and `t817l`, the H3 and standalone relationships, the
+complete H.264 and H.265 start envelopes, stop, recordings and the four registered
+commands. No physical C31 was used. The reporter on #136 can supply the first
+observation through this client.
+
 ## Remaining obligations
 
 [#35](https://github.com/keesmod/eufy-mega-client/issues/35) owns other HomeBase
-owners and [#36](https://github.com/keesmod/eufy-mega-client/issues/36) standalone
+owners, including the HomeBase Mini for the C31, and [#36](https://github.com/keesmod/eufy-mega-client/issues/36) standalone
 transport. [#57](https://github.com/keesmod/eufy-mega-client/issues/57) retains
 hardware confirmation and unresolved model observations. Keep evidence per
 model, firmware, topology and feature. PTZ, talkback and settings are outside
@@ -89,7 +138,7 @@ or protocol is changed.
 | Models                            | Existing live branch                | Full envelope distinction                                                                                                                                             |
 | --------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | T8400, T8417                      | HomeBase-controlled Indoor base/E30 | `CMD_DOORBELL_SET_PAYLOAD`, `commandType=1000`, `accountId`, `camera_type=0`, `entrytype=0`, public `encryptkey`, codec 0/1                                           |
-| T8410, T8416                      | HomeBase-controlled type 31/S350    | `CMD_SET_PAYLOAD`, `CMD_START_REALTIME_MEDIA`, actual `mChannel`, `mValue3`, `ClientOS`, both account fields, `camera_type=0`, `entrytype=0`, public `key`, codec 1/2 |
+| T8410, T8416, T817L               | HomeBase-controlled type 31/S350    | `CMD_SET_PAYLOAD`, `CMD_START_REALTIME_MEDIA`, actual `mChannel`, `mValue3`, `ClientOS`, both account fields, `camera_type=0`, `entrytype=0`, public `key`, codec 1/2 |
 | T8401, T8411, T8441, T8442, T8414 | Existing generic Indoor branch      | `CMD_DOORBELL_SET_PAYLOAD`, `commandType=1000`, `account_id`, public `encryptkey`, codec 0/1                                                                          |
 
 The vendor predicate `isIndoorCamC24` in the second branch means protocol type

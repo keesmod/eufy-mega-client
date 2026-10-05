@@ -56,4 +56,6 @@ export const profileBaseline = [
   // Added after the characterization for ha-eufy-cam#129.
   ['T8113-Z', 8, 'camera', '', false, true, 'h3'],
   ['T8424', 39, 'camera', 'floodlight', true, false, 'blocked'],
+  // Added for ha-eufy-cam#136.
+  ['T817L', 10031, 'camera', 'indoor', true, true, 'h3'],
 ];

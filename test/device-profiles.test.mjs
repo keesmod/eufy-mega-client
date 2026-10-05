@@ -10,6 +10,7 @@ import {
 import { discover } from '../dist/discovery.js';
 import { hasCameraMedia } from '../dist/camera-media.js';
 import { EufyError } from '../dist/index.js';
+import { CommandName } from '../dist/vendor/http/index.js';
 import { renderDeviceProfiles } from '../scripts/device-profiles.mjs';
 import { profileBaseline } from './fixtures/device-profile-baseline.mjs';
 import { mediaFixture } from './fixtures/media.mjs';
@@ -127,6 +128,64 @@ test('T8424 is recognized as its own station and never as an H3 camera', () => {
   for (const feature of ['snapshot', 'live', 'recordings'])
     assert.equal(hasCameraMedia(floodlight(owner.device_sn), owner, feature), false);
   assert.equal(exactDeviceProfile({ device_model: 'T8424', device_type: 37 }), undefined);
+});
+
+test('T817L admits only the reported Wired Cam C31 pair, with media commands only', async () => {
+  const { T817L } = deviceProfiles;
+  assert.equal(exactDeviceProfile({ device_model: 'T817L', device_type: 10031 }), T817L);
+  for (const [device_model, device_type] of [
+    ['T817L', 10035],
+    ['T817L', 96],
+    ['T817L121', 10031],
+    ['T817', 10031],
+    ['t817l', 10031],
+    ['T817L ', 10031],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  // The reported owner and camera firmware from ha-eufy-cam#136.
+  const owner = {
+    category: 'eufy_security',
+    device_model: 'T8030',
+    device_type: 18,
+    device_sn: 'T8030_SYNTHETIC',
+    parent_sn: '',
+    main_sw_version: '3.8.5.2',
+  };
+  const camera = (parent_sn) => ({
+    category: 'eufy_security',
+    device_sn: 'C31',
+    device_model: 'T817L',
+    device_type: 10031,
+    parent_sn,
+    main_sw_version: '2.1.0.3',
+  });
+  assert.deepEqual(discover([owner, camera(owner.device_sn)]).relationships.get('C31'), {
+    kind: 'station',
+    ownerId: owner.device_sn,
+  });
+  for (const parent of ['', 'C31'])
+    assert.deepEqual(discover([owner, camera(parent)]).relationships.get('C31'), {
+      kind: 'standalone',
+      ownerId: 'C31',
+      reason: 'standalone_transport_unverified',
+    });
+  for (const feature of ['snapshot', 'live', 'recordings']) {
+    assert.equal(hasCameraMedia(camera(owner.device_sn), owner, feature), true);
+    assert.equal(hasCameraMedia(camera(''), owner, feature), false);
+  }
+  const f = await mediaFixture(indoorMedia.find((p) => p.model === 'T817L'));
+  try {
+    const sdk = f.transport.cameras.get(f.camera.device_sn);
+    assert.equal(sdk.isWiredCamC31(), true);
+    assert.deepEqual(sdk.getCommands(), [
+      CommandName.DeviceStartLivestream,
+      CommandName.DeviceStopLivestream,
+      CommandName.DeviceStartDownload,
+      CommandName.DeviceCancelDownload,
+    ]);
+  } finally {
+    await f.close();
+  }
 });
 
 test('object keys, coercible objects and malformed identities never become profiles', () => {

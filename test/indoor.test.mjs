@@ -21,6 +21,7 @@ const models = [
   ['T8414', 100],
   ['T8416', 104],
   ['T8417', 105],
+  ['T817L', 10031],
 ];
 const owner = (id = 'T8030_OWNER') => ({
   category: 'eufy_security',
@@ -204,7 +205,7 @@ test('public Indoor inventory and observed-state API preserve existing identitie
     const discovery = await client.discoverDevices();
     assert.deepEqual(discovery.issues, []);
     const listed = await client.listDevices();
-    assert.equal(listed.length, 10);
+    assert.equal(listed.length, models.length + 1);
     for (const [model] of models) {
       const state = await client.getDeviceState(model + '_FIXTURE');
       assert.deepEqual(
