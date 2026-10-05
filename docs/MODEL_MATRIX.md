@@ -241,6 +241,13 @@ and snapshots through a T8030, linked from INDOOR.md. These are a reported
 inventory tuple and third-party results, not observations through this client.
 The new rows below are software evidence only.
 
+On 2026-10-05 the same reporter ran bridge 0.8.30 with client 0.28.0 on that
+tuple and reported [C31-result] discovery under the HomeBase 3, a stored
+snapshot, live video and audio, a confirmed live stop, recording lists and
+playback, and a person event working. Motion, pet, vehicle, sound and crying
+events were not reported. This is a reported result, not independently
+reproduced. The feature row and its cells are unchanged.
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)
@@ -816,6 +823,7 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [C31]: https://www.eufy.com/products/t817l121
 [C31-report]: https://github.com/keesmod/ha-eufy-cam/issues/136
 [C31-standalone]: https://github.com/homebridge-plugins/homebridge-eufy/issues/1027
+[C31-result]: https://github.com/keesmod/ha-eufy-cam/issues/136#issuecomment-5993196872
 [Integrated-software]: INTEGRATED_CAMERAS.md
 
 Garage types 132/133 have descriptor recognition only. Their firmware and identity
