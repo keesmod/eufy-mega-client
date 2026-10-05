@@ -109,6 +109,7 @@ export enum DeviceType {
   INDOOR_PT_CAMERA_C210 = 10009, // T8419 / T8W11P?
   INDOOR_PT_CAMERA_C220_V2 = 10010, // T8W11C (Type 10010)
   INDOOR_PT_CAMERA_C220_V3 = 10011, // T8419N
+  WIRED_CAM_C31 = 10031, // T817L, added by eufy-mega-client 0.28.0
   CAMERA_C35 = 10035, //T8110
 }
 
@@ -1081,6 +1082,7 @@ export const GenericTypeProperty: PropertyMetadataNumeric = {
     10009: "Indoor Cam C210 (T8419)",
     10010: "Indoor Cam C220 (T8W11C)",
     10011: "Indoor Cam C220 (T8419N)",
+    10031: "Wired Cam C31 (T817L)",
     10035: "eufyCam C35 (T8110)",
   },
 };
@@ -8723,6 +8725,17 @@ export const DeviceProperties: Properties = {
     [PropertyName.DeviceSnoozeStartTime]: DeviceSnoozeStartTimeProperty,
     [PropertyName.DevicePersonName]: DevicePersonNameProperty,
   },
+  // eufy-mega-client 0.28.0: detection states only. No setting or wire parameter is claimed for T817L.
+  [DeviceType.WIRED_CAM_C31]: {
+    ...GenericDeviceProperties,
+    [PropertyName.DeviceMotionDetected]: DeviceMotionDetectedProperty,
+    [PropertyName.DevicePersonDetected]: DevicePersonDetectedProperty,
+    [PropertyName.DevicePersonName]: DevicePersonNameProperty,
+    [PropertyName.DevicePetDetected]: DevicePetDetectedProperty,
+    [PropertyName.DeviceVehicleDetected]: DeviceVehicleDetectedProperty,
+    [PropertyName.DeviceSoundDetected]: DeviceSoundDetectedProperty,
+    [PropertyName.DeviceCryingDetected]: DeviceCryingDetectedProperty,
+  },
   [DeviceType.ENTRY_SENSOR_E20]: {
     ...GenericDeviceProperties,
     [PropertyName.DeviceSnooze]: DeviceSnoozeProperty,
@@ -10835,6 +10848,13 @@ export const DeviceCommands: Commands = {
     CommandName.DeviceStartTalkback,
     CommandName.DeviceStopTalkback,
     CommandName.DeviceSnooze,
+  ],
+  // eufy-mega-client 0.28.0: media commands only. PTZ, talkback and settings stay out of scope.
+  [DeviceType.WIRED_CAM_C31]: [
+    CommandName.DeviceStartLivestream,
+    CommandName.DeviceStopLivestream,
+    CommandName.DeviceStartDownload,
+    CommandName.DeviceCancelDownload,
   ],
   [DeviceType.SIREN_SENSOR_E20]: [
     CommandName.DeviceSnooze,

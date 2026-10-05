@@ -8,6 +8,7 @@ import { DeviceTransport } from '../dist/device-transport.js';
 import { EventTransport } from '../dist/event-transport.js';
 import { Camera, IndoorCamera, BatteryDoorbellCamera, Station } from '../dist/vendor/http/index.js';
 import { CommandType } from '../dist/vendor/p2p/types.js';
+import { PushNotificationService } from '../dist/vendor/push/service.js';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // Exact pairs from the pinned MODEL_MATRIX.md. All observations are synthetic.
@@ -21,6 +22,7 @@ const models = [
   ['T8414', 100],
   ['T8416', 104],
   ['T8417', 105],
+  ['T817L', 10031],
 ];
 const owner = (id = 'T8030_OWNER') => ({
   category: 'eufy_security',
@@ -204,7 +206,7 @@ test('public Indoor inventory and observed-state API preserve existing identitie
     const discovery = await client.discoverDevices();
     assert.deepEqual(discovery.issues, []);
     const listed = await client.listDevices();
-    assert.equal(listed.length, 10);
+    assert.equal(listed.length, models.length + 1);
     for (const [model] of models) {
       const state = await client.getDeviceState(model + '_FIXTURE');
       assert.deepEqual(
@@ -285,4 +287,43 @@ test('Indoor rejects unresolved aliases, mismatched types and unsupported owners
       assert.equal(t.cameras.get('T8213_FIXTURE').constructor, BatteryDoorbellCamera);
     },
   );
+});
+
+test('T817L pushes relayed by a HomeBase 3 normalize like the other Indoor cameras', () => {
+  const service = Object.create(PushNotificationService.prototype);
+  const raw = (type) => ({
+    payload: {
+      type: String(type),
+      station_sn: 'T8030_OWNER',
+      device_sn: 'CAMERA_FIXTURE',
+      event_time: '1759651200',
+      push_time: '1759651200',
+      title: 'Synthetic',
+      content: 'Synthetic',
+      payload: {
+        a: 3102,
+        channel: 2,
+        msg_type: 18,
+        nick_name: 'Synthetic person',
+        session_id: 'session',
+        pic_url: '',
+        file_path: '/synthetic/path',
+        name: 'Synthetic Indoor',
+        unique_id: 'one',
+        storage_type: 1,
+      },
+    },
+  });
+  const fields = (message) => {
+    const { type, ...rest } = message;
+    return rest;
+  };
+  const c31 = service._normalizePushMessage(raw(10031));
+  assert.equal(c31.type, 10031);
+  assert.equal(c31.event_type, 3102);
+  assert.equal(c31.msg_type, 18);
+  assert.equal(c31.channel, 2);
+  assert.equal(c31.person_name, 'Synthetic person');
+  assert.equal(c31.file_path, '/synthetic/path');
+  assert.deepEqual(fields(c31), fields(service._normalizePushMessage(raw(104))));
 });

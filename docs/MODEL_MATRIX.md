@@ -225,6 +225,22 @@ without media, as in [FLOODLIGHT.md](FLOODLIGHT.md). These are reported inventor
 tuples and a reported result, not independently reproduced. The catalogue rows
 below and their H and P cells are unchanged.
 
+## Reported T817L Wired Cam C31, 0.28.0
+
+A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and
+client 0.26.0, receives a Wired Cam C31 as `T817L` with type 10031, firmware
+2.1.0.3, under a T8030 owner on firmware 3.8.5.2. The pair was not in the profile
+allowlist, so discovery reported `unsupported_device`. Type 10031 was also absent
+from the pinned catalogue. 0.28.0 adds
+`WIRED_CAM_C31` to the vendored catalogue and admits exactly `T817L`/10031 in the
+indoor family with the additional-H3 media policy, as described in
+[INDOOR.md](INDOOR.md#wired-cam-c31-0280). [C31] names the product, its
+detections and its HomeBase 3 and HomeBase Mini compatibility. [C31-standalone]
+shows the same pair as its own station. A separate MIT project records live view
+and snapshots through a T8030, linked from INDOOR.md. These are a reported
+inventory tuple and third-party results, not observations through this client.
+The new rows below are software evidence only.
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)
@@ -279,14 +295,16 @@ mapping. Those gaps, E85V0 variants and hardware acceptance remain with [#39],
 ## Source boundary and reading rules
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
-commit `e69624d79cd43e810a216602cc39eff70a27d046`. The complete file SHA-256 is
-`9b14b5e1f89b97131eb3009f6090c8671992f3c84a3ed499ccdc9d97101c1479`.
+commit `e69624d79cd43e810a216602cc39eff70a27d046`, plus `WIRED_CAM_C31` with its
+label, property map and commands added in 0.28.0. The complete file SHA-256
+including that addition is
+`9d8711575e3c545d6838e783ced4f6034ced848dfa17255ee61996b32c4f76bf`.
 Its attributed upstream is bropat/eufy-security-client 4.1.1-1,
 commit `d75e7996d4cbce3839a6075bed95b752ccc3ee43`, under MIT, as recorded in
 [NOTICE.md](../NOTICE.md). Protocol types are numeric Eufy identifiers, not network
 transport versions. Do not infer wire compatibility from a shared product name.
 
-All 96 enum entries are accounted for below. Camera rows include integrated
+All 97 enum entries are accounted for below. Camera rows include integrated
 products and unresolved candidates. The owner and exclusion tables account for
 the rest. The check compares exact names and numeric values, not just a count.
 `Device.isCamera()` alone is insufficient. In this revision it omits
@@ -415,6 +433,7 @@ evidence section. Every row also has a separate feature row below.
 | 10009         | `INDOOR_PT_CAMERA_C210`                | T8419 / T8W11P candidate                     | Indoor Cam C210. T8W11P alias unverified                                      | indoor     | W candidate, H3. HM disputed                | [Catalogue], [Display], [HB-guide], [HB-DE]  | C           |
 | 10010         | `INDOOR_PT_CAMERA_C220_V2`             | T8W11C candidate                             | Indoor Cam C220. V2 mapping unresolved                                        | indoor     | W candidate, H3. HM disputed                | [Catalogue], [Display], [HB-guide], [HB-DE]  | C           |
 | 10011         | `INDOOR_PT_CAMERA_C220_V3`             | T8419N per catalogue only                    | Unresolved C220 V3 label. No primary model-name confirmation                  | indoor     | Unknown. Do not inherit C210/C220 topology  | [Catalogue]                                  | C           |
+| 10031         | `WIRED_CAM_C31`                        | T817L                                        | Wired Cam C31                                                                 | indoor     | W, H3, HM. Not H2                           | [C31], [C31-report], [C31-standalone]        | R           |
 | 10035         | `CAMERA_C35`                           | T8110                                        | eufyCam C35                                                                   | cam        | H3, HM candidate. W unresolved              | [Catalogue], [Display], [HB-guide]           | C           |
 
 The C210/C220 subtypes deliberately remain separate. Eufy's display list and
@@ -515,6 +534,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 10009 | T8419 / T8W11P candidate / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
 | 10010 | T8W11C candidate / listed topologies                 | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
 | 10011 | T8419N per catalogue only / listed topologies        | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]               |
+| 10031 | T817L / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [C31-report]                     | [C31-report], [#35], [#36], [#57] |
 | 10035 | T8110 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software], [Catalogue]                  | [#39], [#35], [#36], [E2], [E6]   |
 
 For the four R rows, evaluate every listed non-H3 topology as B2/U for each of
@@ -793,6 +813,9 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Floodlight-software]: FLOODLIGHT.md
 [LTE0]: LTE.md
 [Indoor-software]: INDOOR.md
+[C31]: https://www.eufy.com/products/t817l121
+[C31-report]: https://github.com/keesmod/ha-eufy-cam/issues/136
+[C31-standalone]: https://github.com/homebridge-plugins/homebridge-eufy/issues/1027
 [Integrated-software]: INTEGRATED_CAMERAS.md
 
 Garage types 132/133 have descriptor recognition only. Their firmware and identity

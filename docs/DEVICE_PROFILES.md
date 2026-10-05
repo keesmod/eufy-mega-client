@@ -58,6 +58,7 @@ owner firmware at or above 2.0.9.7.
 | T8414   | 100   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8416   | 104   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8417   | 105   | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T817L   | 10031 | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8030   | 18    | station | homebase         | owner              | blocked     | blocked     | blocked     | [Evidence](DISCOVERY.md)          |
 | T86P2   | 111   | camera  | lte              | h3-or-standalone   | h3          | h3          | h3          | [Evidence](LTE.md)                |
 | T8111   | 1     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |

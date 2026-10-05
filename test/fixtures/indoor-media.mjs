@@ -9,6 +9,7 @@ export const indoorMedia = [
   ['T8414', 100, 'indoor'],
   ['T8416', 104, 'indoor-h3'],
   ['T8417', 105, 'doorbell'],
+  ['T817L', 10031, 'indoor-h3'],
 ].map(([model, type, liveEnvelope]) => ({
   id: `indoor-${model}-h3`,
   family: 'indoor',

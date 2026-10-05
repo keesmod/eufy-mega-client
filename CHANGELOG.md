@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.28.0 - 2026-10-05
+
+### Wired Cam C31
+
+- Discovery admits `T817L` with device type `10031`, the Wired Cam C31, in the
+  indoor family with the additional-H3 media policy. The reporter on
+  [ha-eufy-cam#136](https://github.com/keesmod/ha-eufy-cam/issues/136) receives it
+  under a HomeBase 3 on firmware 3.8.5.2 with camera firmware 2.1.0.3, and earlier
+  versions reject it as `unsupported_device`. Only this exact pair is added.
+  `T817L121`, lower case and other types stay unsupported.
+- Type 10031 was not in the vendored device catalogue. It is added as
+  `DeviceType.WIRED_CAM_C31` with the motion, person, pet, vehicle, sound and
+  crying detection states, and with the live start, live stop, recording download
+  and download cancel commands only. Pan and tilt, presets, talkback, alarm and
+  settings are not registered. Battery and availability stay null, as for the
+  other mains-powered indoor cameras. `Device.isCamera()` includes the type, so
+  a push the HomeBase 3 relays for the C31 is read like those of the other
+  HomeBase cameras.
+- Under a HomeBase 3 the live start uses the existing HomeBase-controlled S350
+  branch: `CMD_SET_PAYLOAD` with `CMD_START_REALTIME_MEDIA`, the camera's
+  `mChannel`, `camera_type`, `entrytype`, both account fields and the public key.
+  A separate MIT-licensed gateway reports live view and snapshots for this camera
+  through a HomeBase 3 with the same fields. Stop, stored snapshots, recordings
+  and cancellation use the unchanged H3 paths. Whether the C31 acknowledges the
+  plain H3 stop is not yet verified. See
+  [INDOOR.md](https://github.com/keesmod/eufy-mega-client/blob/main/docs/INDOOR.md#wired-cam-c31-0280).
+- A C31 that is its own station, without a HomeBase, is recognized as
+  `standalone_transport_unverified` and gets no media. Standalone transport stays
+  in #36. The HomeBase Mini stays in #35.
+
+### Dependency update
+
+- The lockfile moves the transitive `http-cache-semantics` from 4.2.0 to 4.3.0
+  for the high advisory
+  [GHSA-ch52-4w7c-c8xp](https://github.com/advisories/GHSA-ch52-4w7c-c8xp), which
+  failed the required audit. It reaches the client through `got` and
+  `cacheable-request`. The client uses `got` only for the push service, without a
+  response cache, so the affected cache handling was not exercised. No direct
+  dependency or range changes.
+
+Upgrade: no identifier, session or option change. Consumers see one more admitted
+camera when a C31 is present. Rollback: retain the previous package and lockfile
+and use 0.27.0, which rejects the C31 again. Its lockfile also brings back
+`http-cache-semantics` 4.2.0 with the advisory above. No mower behavior changes.
+
 ## 0.27.0 - 2026-09-29
 
 ### Mower charger contact

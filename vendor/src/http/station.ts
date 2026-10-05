@@ -7783,7 +7783,8 @@ export class Station extends TypedEmitter<StationEvents> {
         }
       );
     } else if (
-      (device.isIndoorPanAndTiltCameraS350() || device.isIndoorCamC24()) &&
+      // eufy-mega-client 0.28.0 adds isWiredCamC31 (T817L) to this HomeBase-controlled branch.
+      (device.isIndoorPanAndTiltCameraS350() || device.isIndoorCamC24() || device.isWiredCamC31()) &&
       this.isDeviceControlledByHomeBase()
     ) {
       rootHTTPLogger.debug(`Station start livestream - sending command using CMD_SET_PAYLOAD`, {
