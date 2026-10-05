@@ -34,10 +34,10 @@
     "format:check": "prettier --check src test scripts docs *.md *.json .github"
   },
   "devDependencies": {
-    "@types/node": "^24.13.6",
+    "@types/node": "^24.19.0",
     "@types/node-rsa": "^1.1.4",
     "@types/qs": "^6.9.16",
-    "prettier": "3.9.8",
+    "prettier": "3.9.9",
     "typescript": "^5.9.3"
   },
   "dependencies": {
