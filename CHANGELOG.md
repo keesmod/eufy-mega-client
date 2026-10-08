@@ -13,8 +13,8 @@
 - The declared dependencies, `src`, `vendor` and the public API are unchanged.
 
 Upgrade: nothing to change. The published package carries no lockfile, so a
-consumer resolves `uint8array-extras` through its own lockfile. Camera bridge
-0.8.32 already locks 1.6.0 with client 0.28.0. Rollback: 0.28.0.
+consumer resolves `uint8array-extras` through its own lockfile and gets 1.6.0 by
+updating that lockfile, also with client 0.28.0. Rollback: 0.28.0.
 
 No hardware run is needed, because no protocol, command or media path changes.
 
