@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.28.1 - 2026-10-08
+
+### Dependency maintenance
+
+- The lockfile moves `uint8array-extras` from 1.5.0 to 1.6.0. It is a
+  dependency of `file-type`, which `image-type` uses when `getImage` detects
+  the type of a cloud image. 1.6.0 also accepts an `ArrayBuffer` in every
+  method that takes bytes.
+- Development only: `@types/node` 24.19.0, `undici-types` 7.24.6 and
+  `prettier` 3.9.9.
+- The declared dependencies, `src`, `vendor` and the public API are unchanged.
+
+Upgrade: nothing to change. The published package carries no lockfile, so a
+consumer resolves `uint8array-extras` through its own lockfile and gets 1.6.0 by
+updating that lockfile, also with client 0.28.0. Rollback: 0.28.0.
+
+No hardware run is needed, because no protocol, command or media path changes.
+
 ## 0.28.0 - 2026-10-05
 
 ### Wired Cam C31
