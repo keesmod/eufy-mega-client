@@ -63,39 +63,57 @@ test('only T8224 admits a reported type, and only for that exact pair', () => {
   }
 });
 
-test('T8113-Z carries exactly the T8113 policy, and no other suffix is admitted', () => {
-  const { T8113, 'T8113-Z': suffixed } = deviceProfiles;
-  assert.deepEqual({ ...suffixed }, { ...T8113 });
-  assert.equal(exactDeviceProfile({ device_model: 'T8113-Z', device_type: 8 }), suffixed);
-  for (const [device_model, device_type] of [
-    ['T8113-Z', 9],
-    ['T8113-X', 8],
-    ['T8113Z', 8],
-    ['t8113-z', 8],
-    ['T8113-Z ', 8],
-  ])
-    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
-  const owner = {
-    category: 'eufy_security',
-    device_model: 'T8030',
-    device_type: 18,
-    device_sn: 'T8030_SYNTHETIC',
-    parent_sn: '',
-    main_sw_version: '3.8.7.4',
-  };
-  const camera = {
-    category: 'eufy_security',
-    device_sn: 'CAM',
-    device_model: 'T8113-Z',
-    device_type: 8,
-    parent_sn: owner.device_sn,
-  };
-  const result = discover([owner, camera]);
-  assert.deepEqual(result.relationships.get('CAM'), { kind: 'station', ownerId: owner.device_sn });
-  assert.equal(result.result.devices[1].model, 'T8113-Z');
-  for (const feature of ['snapshot', 'live', 'recordings'])
-    assert.equal(hasCameraMedia(camera, owner, feature), true);
-});
+for (const model of ['T8113-Z', 'T8113-V']) {
+  test(`${model} carries the exact T8113 policy and actual H3 owner`, () => {
+    const suffixed = deviceProfiles[model];
+    assert.deepEqual({ ...suffixed }, { ...deviceProfiles.T8113 });
+    assert.equal(exactDeviceProfile({ device_model: model, device_type: 8 }), suffixed);
+    for (const [device_model, device_type] of [
+      [model, 9],
+      [model, '8'],
+      ['T8113-X', 8],
+      [model.replace('-', ''), 8],
+      [model.toLowerCase(), 8],
+      [model + ' ', 8],
+    ])
+      assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+    const owner = {
+      category: 'eufy_security',
+      device_model: 'T8030',
+      device_type: 18,
+      device_sn: 'T8030_SYNTHETIC',
+      parent_sn: '',
+      main_sw_version: '3.8.7.4',
+    };
+    const camera = {
+      category: 'eufy_security',
+      device_sn: 'CAM',
+      device_model: model,
+      device_type: 8,
+      parent_sn: owner.device_sn,
+      main_sw_version: '3.0.7.8',
+    };
+    const result = discover([owner, camera]);
+    assert.deepEqual(result.relationships.get('CAM'), {
+      kind: 'station',
+      ownerId: owner.device_sn,
+    });
+    assert.equal(result.result.devices[1].model, model);
+    for (const feature of ['snapshot', 'live', 'recordings']) {
+      assert.equal(hasCameraMedia(camera, owner, feature), true);
+      assert.equal(hasCameraMedia(camera, { ...owner, device_model: 'T8002' }, feature), false);
+      assert.equal(
+        hasCameraMedia(camera, { ...owner, main_sw_version: '2.0.9.6' }, feature),
+        false,
+      );
+      assert.equal(hasCameraMedia({ ...camera, parent_sn: 'OTHER' }, owner, feature), false);
+    }
+    assert.equal(
+      discover([owner, { ...camera, parent_sn: 'CAM' }]).result.issues[0].code,
+      'invalid_device_relationship',
+    );
+  });
+}
 
 test('T8424 is recognized as its own station and never as an H3 camera', () => {
   const owner = {

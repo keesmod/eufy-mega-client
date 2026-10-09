@@ -3,6 +3,7 @@ export const eufycamMedia = [
   ['T8111', 1],
   ['T8112', 4],
   ['T8113', 8],
+  ['T8113-V', 8],
   ['T8114', 9],
   ['T8140', 14],
   ['T8142', 15],
@@ -22,6 +23,6 @@ export const eufycamMedia = [
   type,
   topology: 'H3',
   admitted: true,
-  firmware: '1.2.3',
-  owner: { model: 'T8030', type: 18, firmware: '3.8.6.0' },
+  firmware: model === 'T8113-V' ? '3.0.7.8' : '1.2.3',
+  owner: { model: 'T8030', type: 18, firmware: model === 'T8113-V' ? '3.8.7.4' : '3.8.6.0' },
 }));

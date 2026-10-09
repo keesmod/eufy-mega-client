@@ -225,6 +225,32 @@ without media, as in [FLOODLIGHT.md](FLOODLIGHT.md). These are reported inventor
 tuples and a reported result, not independently reproduced. The catalogue rows
 below and their H and P cells are unchanged.
 
+## Reported issue #66 update, 0.28.2
+
+On 2026-10-09 the [reporter of ha-eufy-cam#66][66-update] ran integration
+0.8.41, bridge 0.8.32/client 0.28.0, HA OS with Core 2026.10 and a T8030 on
+firmware 3.8.7.4. They reported snapshots, live and recordings working on
+T8213 firmware 0.2.1.8 and T8161 firmware 3.4.3.0. This resolves the original
+reported HomeBase connection failure for that environment. Audio, events,
+confirmed stop/cancel and other features were not separately reported, so no
+full hardware acceptance or new H/P cells are claimed.
+
+The same update reports T8113-V/type 8 firmware 3.0.7.8 under that HomeBase,
+rejected as `unsupported_device` and absent from HA. 0.28.2 admits exactly this
+pair with the T8113 Camera adapter, H3 topology and media policy. Synthetic
+fixtures cover discovery, state/events and snapshot/live/recording lifecycle.
+Post-upgrade physical results on the V variant remain pending.
+
+Standalone T84A1 firmware 1.1.0.4 is discovered, but snapshot/live/recordings
+remain `standalone_transport_unverified`. The update supplies no device type,
+authentication handshake or command lifecycle for this camera. Its catalogue
+pair T84A1/151 and the blocked [standalone route #142][142] stay unchanged.
+T8920/type 20 and T87B0/type 157 are non-camera sensor/tracker products in the
+pinned catalogue and remain outside camera discovery.
+
+[66-update]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017
+[142]: https://github.com/keesmod/eufy-mega-client/issues/142
+
 ## Reported T817L Wired Cam C31, 0.28.0
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and

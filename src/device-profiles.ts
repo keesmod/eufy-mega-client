@@ -88,6 +88,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8113: camera(8, 'eufycam', 'h3', h3Media),
   // ha-eufy-cam#129: an inventory reports eufyCam 2C cameras as T8113-Z. Only this exact model.
   'T8113-Z': camera(8, 'eufycam', 'h3', h3Media),
+  // ha-eufy-cam#66: T8113-V/type 8 under a T8030, reported on 2026-10-09.
+  'T8113-V': camera(8, 'eufycam', 'h3', h3Media),
   T8114: camera(9, 'eufycam', 'h3', h3Media),
   T8140: camera(14, 'eufycam', 'h3', h3Media),
   T8161: camera(23, 'eufycam', 'h3', h3Media),

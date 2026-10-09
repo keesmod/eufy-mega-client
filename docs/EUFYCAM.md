@@ -20,8 +20,26 @@ shows eufyCam 2C cameras received as `T8113-Z` with type 8 under a HomeBase 3.
 0.26.0 admits exactly that model code with the T8113 row below: the same generic
 Camera class, H3 topology and media policy. The reporter saw snapshots, live view
 and HomeBase recordings working with that entry added locally. This is reported,
-not independently reproduced. Other suffixes remain `unsupported_device`. See
+not independently reproduced. Unlisted suffixes remain `unsupported_device`. See
 [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-t8113-z-and-t8424-0260).
+
+## Reported T8113-V, 0.28.2
+
+The [2026-10-09 update on ha-eufy-cam#66][V-report] reports a `T8113-V` with
+`device_type=8`, firmware 3.0.7.8, under a T8030 on firmware 3.8.7.4. Bridge
+0.8.32/client 0.28.0 rejected this exact model as `unsupported_device`, so Home
+Assistant never created the camera. 0.28.2 admits this exact pair using the same
+Camera adapter and H3 media policy as T8113 and T8113-Z. No prefix matching or
+standalone route is added. Other types, owners and unevidenced suffixes retain
+their existing rejection.
+
+The synthetic tests include the V variant in discovery, state/events and the
+shared media/lifecycle fixtures. They cover stored snapshots, both live codecs,
+video/audio, confirmed stop, recording metadata/download and cancellation.
+Physical results on this variant are still pending. See
+[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-66-update-0282).
+
+[V-report]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017
 
 ## Exact hardware validation
 

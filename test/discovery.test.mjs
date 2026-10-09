@@ -291,6 +291,7 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
       deviceType: 95,
     });
   assert.equal(issue('T8113-Z', 8).devices.length, 3);
+  assert.equal(issue('T8113-V', 8).devices.length, 3);
   for (const model of [
     undefined,
     null,

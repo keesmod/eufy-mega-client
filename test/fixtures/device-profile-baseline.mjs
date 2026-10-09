@@ -55,6 +55,8 @@ export const profileBaseline = [
   ['T85V0', 203, 'camera', 'integrated', true, true, 'h3'],
   // Added after the characterization for ha-eufy-cam#129.
   ['T8113-Z', 8, 'camera', '', false, true, 'h3'],
+  // Reported in ha-eufy-cam#66 on 2026-10-09.
+  ['T8113-V', 8, 'camera', '', false, true, 'h3'],
   ['T8424', 39, 'camera', 'floodlight', true, false, 'blocked'],
   // Added for ha-eufy-cam#136.
   ['T817L', 10031, 'camera', 'indoor', true, true, 'h3'],
