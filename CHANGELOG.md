@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.28.2 - 2026-10-09
+
+### eufyCam 2C model variant
+
+- Admit exactly `T8113-V` with device type 8, reported under a HomeBase 3 on
+  [ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017).
+  It uses the same Camera adapter, actual H3 owner and snapshot/live/recording
+  policy as `T8113` and `T8113-Z`. Other suffixes and mismatched types remain
+  unsupported. The existing owner and firmware checks still apply.
+- Synthetic tests cover discovery, state/events and the existing media commands,
+  including confirmed live stop and recording cancellation. This is software
+  coverage. The reporter's T8113-V firmware 3.0.7.8 behind T8030 firmware 3.8.7.4
+  still needs post-upgrade hardware results.
+- Record that the same reporter now has working snapshots, live and recordings
+  on T8213 and T8161. Standalone T84A1 media remains blocked by the missing
+  authentication/transport route in #142.
+
+Upgrade: no configuration or session migration. Rollback: 0.28.1. No new protocol
+or legacy security-cloud fallback is added.
+
 ## 0.28.1 - 2026-10-08
 
 ### Dependency maintenance

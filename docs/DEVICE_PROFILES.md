@@ -66,6 +66,7 @@ owner firmware at or above 2.0.9.7.
 | T8112   | 4     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8113   | 8     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8113-Z | 8     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8113-V | 8     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8114   | 9     | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8140   | 14    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8161   | 23    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
