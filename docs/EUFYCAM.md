@@ -36,10 +36,17 @@ their existing rejection.
 The synthetic tests include the V variant in discovery, state/events and the
 shared media/lifecycle fixtures. They cover stored snapshots, both live codecs,
 video/audio, confirmed stop, recording metadata/download and cancellation.
-Physical results on this variant are still pending. See
-[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-66-update-0282).
+
+On 2026-10-10 the reporter of that update [ran integration 0.8.42][V-result]
+and bridge 0.8.33 with client 0.28.2 on that camera, firmware 3.0.7.8, under
+the T8030 on firmware 3.8.7.4. They reported discovery as its own camera in
+Home Assistant, a snapshot, live view, recording playback and motion events
+working. Audio, confirmed stop, cancellation and other event types were not
+reported separately. This is a reported result, not independently reproduced.
+See [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-66-update-0282).
 
 [V-report]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017
+[V-result]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6098838866
 
 ## Exact hardware validation
 

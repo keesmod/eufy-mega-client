@@ -239,16 +239,25 @@ The same update reports T8113-V/type 8 firmware 3.0.7.8 under that HomeBase,
 rejected as `unsupported_device` and absent from HA. 0.28.2 admits exactly this
 pair with the T8113 Camera adapter, H3 topology and media policy. Synthetic
 fixtures cover discovery, state/events and snapshot/live/recording lifecycle.
-Post-upgrade physical results on the V variant remain pending.
+
+On 2026-10-10 the reporter [ran integration 0.8.42][66-result] and bridge
+0.8.33/client 0.28.2 on the same T8113-V firmware 3.0.7.8 under the T8030 on
+firmware 3.8.7.4. They reported discovery as its own camera in HA, a snapshot,
+live view, recording playback and motion events working. Audio, confirmed
+stop/cancel and other event types were not reported separately. This is a
+reported result, not independently reproduced. The T8113 feature row and its
+cells are unchanged.
 
 Standalone T84A1 firmware 1.1.0.4 is discovered, but snapshot/live/recordings
-remain `standalone_transport_unverified`. The update supplies no device type,
-authentication handshake or command lifecycle for this camera. Its catalogue
-pair T84A1/151 and the blocked [standalone route #142][142] stay unchanged.
+remain `standalone_transport_unverified`. The 2026-10-09 update supplies no
+device type, authentication handshake or command lifecycle for this camera. Its
+catalogue pair T84A1/151 and the blocked [standalone route #142][142] stay
+unchanged.
 T8920/type 20 and T87B0/type 157 are non-camera sensor/tracker products in the
 pinned catalogue and remain outside camera discovery.
 
 [66-update]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017
+[66-result]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6098838866
 [142]: https://github.com/keesmod/eufy-mega-client/issues/142
 
 ## Reported T817L Wired Cam C31, 0.28.0
