@@ -11,12 +11,20 @@ The modular `security` client exposes both methods.
 Each recognized device has a relationship with one of these kinds:
 
 - `station` names the actual connection owner by `ownerId`. The HomeBase itself
-  has its own ID as owner. Only the existing H3 LAN profile can open transport.
+  has its own ID as owner. Only the existing H3 LAN profile can open transport,
+  apart from the opt-in standalone route below.
 - `standalone` names the camera itself as owner. For an exact T8134/type 63
   inventory with an empty or self parent, the client retains a private standalone
-  owner descriptor. The public device remains a camera with its own `stationId`.
+  owner record. The public device remains a camera with its own `stationId`.
   No HomeBase entity, alarm state, SDK station or command session is fabricated.
-  Operations fail with `standalone_transport_unverified`.
+  Operations fail with `standalone_transport_unverified`. Since 0.29.0 the
+  relationship also carries `descriptor`, presence booleans for the row's P2P
+  device ID, license, administrator user and private LAN address. With the
+  client option `experimentalStandalone`, a profile that allows it, only T84A1
+  today, instead returns `transport: 'experimental'` without an issue. Its
+  camera then gets its own SDK station and can open its own local session for
+  media, never for alarm state. See
+  [experimental standalone cameras](API.md#experimental-standalone-cameras).
 - `unsupported` records `unsupported_station` or `invalid_device_relationship`.
   The recognized identity remains visible, but cannot inherit another route.
 

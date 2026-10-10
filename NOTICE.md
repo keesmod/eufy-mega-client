@@ -37,7 +37,9 @@ audio-discovery window for delayed first AAC packets. A `livestream no data`
 event reports a video stream that the library ends before it started. Version
 0.28.0 adds the Wired Cam C31 as `DeviceType.WIRED_CAM_C31` (10031, T817L), with
 detection states, four media commands, camera push normalization and the
-existing HomeBase-controlled S350 live branch, as described in [INDOOR.md](docs/INDOOR.md#wired-cam-c31-0280).
+existing HomeBase-controlled S350 live branch, as described in [INDOOR.md](docs/INDOOR.md#wired-cam-c31-0280). Version
+0.29.0 decodes no cloud addresses for a P2P session whose row has no `app_conn`,
+so a local session can start without them.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

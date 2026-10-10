@@ -137,6 +137,7 @@ test('T8424 is recognized as its own station and never as an H3 camera', () => {
       kind: 'standalone',
       ownerId: 'FLOOD',
       reason: 'standalone_transport_unverified',
+      descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
     });
   const underHomeBase = discover([owner, floodlight(owner.device_sn)]);
   assert.deepEqual(underHomeBase.relationships.get('FLOOD'), {
@@ -186,6 +187,7 @@ test('T817L admits only the reported Wired Cam C31 pair, with media commands onl
       kind: 'standalone',
       ownerId: 'C31',
       reason: 'standalone_transport_unverified',
+      descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
     });
   for (const feature of ['snapshot', 'live', 'recordings']) {
     assert.equal(hasCameraMedia(camera(owner.device_sn), owner, feature), true);

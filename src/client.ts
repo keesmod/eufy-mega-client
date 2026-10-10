@@ -34,6 +34,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   private devices = new Map<string, WireDevice>();
   private readonly liveLimit: number;
   private readonly liveUpperBound: number;
+  private readonly experimentalStandalone: boolean;
   constructor(options: ClientOptions) {
     super();
     this.cloud = new MegaCloud(options);
@@ -45,6 +46,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     if (!Number.isInteger(bound) || bound < 120000 || bound > 3_600_000)
       throw new EufyError('invalid_live_bound');
     this.liveUpperBound = bound;
+    this.experimentalStandalone = options.experimentalStandalone === true;
   }
   get connected(): boolean {
     return this.cloud.connected;
@@ -78,7 +80,9 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
         signal,
       ),
     );
-    const inventory = discover(result.devices);
+    const inventory = discover(result.devices, {
+      experimentalStandalone: this.experimentalStandalone,
+    });
     if (this.closed) throw new EufyError('client_closed');
     this.inventory = inventory;
     this.devices = inventory.raw;

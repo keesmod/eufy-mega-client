@@ -155,6 +155,7 @@ for (const [model, type] of models) {
           kind: 'standalone',
           ownerId: raw.device_sn,
           reason: 'standalone_transport_unverified',
+          descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
         });
         assert.equal(inventory.result.devices[0].kind, 'camera');
         assert.equal(t.stations.has(raw.device_sn), false);

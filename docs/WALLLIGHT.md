@@ -28,6 +28,7 @@ Each camera keeps its actual inventory parent, channel and public identifier.
 A T8030/type 18 parent selects the existing station route. An empty or self
 parent retains a camera descriptor with `standalone_transport_unverified`,
 without creating a HomeBase entity, opening a connection or enabling events.
+The experimental standalone S100 below is the only opt-in exception.
 Other owners return `unsupported_station`. Unknown or mismatched model/type pairs
 return `unsupported_device`. Adapter initialization failures remain local to the
 camera. Changing an owner removes old listeners and observations.
@@ -107,6 +108,25 @@ These new T81A0 tests first failed on #31's media-unverified baseline and pass
 with its exact additional-H3 admission. The existing shared lifecycle and public
 API remain unchanged. Further actual topology evidence can refine admission
 without restricting ordinary library upgrades.
+
+## Experimental standalone S100, 0.29.0
+
+With the client option `experimentalStandalone`, a T84A1/type 151 with an empty
+or self parent becomes its own local owner, as described in
+[API.md](API.md#experimental-standalone-cameras). The camera is then the
+station of the reused Station operations above. Its type 151 command table
+declares `downloadImage`, `databaseQueryLatestInfo`, `databaseQueryByDate` and
+`databaseCountByDate`, and live uses the Wall-light branch above. The session
+uses the existing local lookup and LAN-derived command key. Whether a standalone
+S100 accepts that key, answers the database commands with its own storage or
+needs another credential is unknown. A recording download with a cipher ID
+would need a cloud cipher and is refused, and guard mode and events stay off. The [standalone tests](../test/standalone-experimental.test.mjs)
+cover discovery, credentials, owner wiring, reloads, connection stages, a live
+start and confirmed stop on the one session, snapshot assignment, and the
+refused guard mode, pushes and cipher downloads, with synthetic rows and a
+stubbed station. A real vendor Station is created for the type 151 row without opening
+a socket. A T84A1 under a HomeBase keeps the blocked media above. The physical
+result belongs to [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
 [HB-guide]: https://service.eufy.com/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 [Wall-FAQ]: https://service.eufy.com/article-description/FAQ-About-Wall-Light-Cam-Battery-Connection-to-Homebase3

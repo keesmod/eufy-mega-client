@@ -260,6 +260,18 @@ pinned catalogue and remain outside camera discovery.
 [66-result]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6098838866
 [142]: https://github.com/keesmod/eufy-mega-client/issues/142
 
+## Experimental standalone T84A1, 0.29.0
+
+For [#142][142] and the issue #66 reporter's offer to test, 0.29.0 adds the
+opt-in client option `experimentalStandalone`. With it, a standalone T84A1/151
+becomes its own local owner with experimental snapshot, live and recordings, as
+described in [API.md](API.md#experimental-standalone-cameras) and
+[WALLLIGHT.md](WALLLIGHT.md#experimental-standalone-s100-0290). Without it, the
+standalone T84A1 keeps `standalone_transport_unverified`. Every standalone
+relationship now reports which connection fields its row has, as presence
+booleans. This is software evidence with synthetic rows. No standalone camera
+has used the route, so the T84A1 row and its cells below are unchanged.
+
 ## Reported T817L Wired Cam C31, 0.28.0
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and

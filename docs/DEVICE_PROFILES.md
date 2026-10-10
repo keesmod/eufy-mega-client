@@ -108,6 +108,10 @@ owner firmware at or above 2.0.9.7.
 T8224 also admits the reported type 96 with the same policy.
 See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
 
+With the client option `experimentalStandalone`, a standalone T84A1 becomes its own
+local owner with experimental snapshot, live and recordings. Its blocked cells above apply
+without that option. See [API.md](API.md#experimental-standalone-cameras).
+
 <!-- generated device profiles: end -->
 
 ## Reviewing a known-family addition

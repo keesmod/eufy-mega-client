@@ -1,11 +1,13 @@
 import { exactDeviceProfile, modelProfile } from './device-profiles.js';
 import { observedDeviceState } from './device-state.js';
+import { lanAddress } from './network.js';
 import {
   EufyError,
   type Device,
   type DiscoveryIssue,
   type DiscoveryResult,
   type DeviceRelationship,
+  type StandaloneDescriptor,
   type WireDevice,
 } from './types.js';
 
@@ -24,8 +26,25 @@ export const isIntegratedCamera = (raw: WireDevice): boolean =>
 export interface ConnectionOwner {
   kind: 'station' | 'standalone';
   id: string;
-  transport: 'h3-lan' | 'unsupported';
+  transport: 'h3-lan' | 'lan-experimental' | 'unsupported';
 }
+export interface DiscoveryOptions {
+  /** Admit standalone owners whose exact profile allows the experimental route. */
+  experimentalStandalone?: boolean;
+}
+// Presence only. Values never leave the private inventory.
+const standaloneDescriptor = (device: WireDevice): StandaloneDescriptor => {
+  const member: unknown = device.member;
+  return {
+    did: typeof device.p2p_did === 'string' && device.p2p_did !== '',
+    license: typeof device.p2p_license === 'string' && device.p2p_license !== '',
+    adminUser:
+      typeof member === 'object' &&
+      member !== null &&
+      !!(member as { admin_user_id?: unknown }).admin_user_id,
+    lanAddress: lanAddress(device) !== undefined,
+  };
+};
 export interface Inventory {
   result: DiscoveryResult;
   raw: Map<string, WireDevice>;
@@ -38,7 +57,7 @@ const identity = (value: unknown): value is string =>
 // T8113-Z (ha-eufy-cam#129). Serials and free text never match, so diagnostics stay bounded.
 const diagnosticModel = (value: unknown): value is string =>
   typeof value === 'string' && value.length <= 8 && /^T[A-Z0-9]{4}(?:-[A-Z0-9]{1,2})?$/.test(value);
-export function discover(items: unknown): Inventory {
+export function discover(items: unknown, options: DiscoveryOptions = {}): Inventory {
   if (!Array.isArray(items)) throw new EufyError('invalid_inventory');
   if (items.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');
   const raw = new Map<string, WireDevice>();
@@ -158,12 +177,24 @@ export function discover(items: unknown): Inventory {
       }
     } else if (device.parent_sn === '' || device.parent_sn === id) {
       if (profile.topology === 'standalone' || profile.topology === 'h3-or-standalone') {
-        owners.set(id, { id, kind: 'standalone', transport: 'unsupported' });
-        relationships.set(id, {
-          kind: 'standalone',
-          ownerId: id,
-          reason: 'standalone_transport_unverified',
-        });
+        const descriptor = standaloneDescriptor(device);
+        if (options.experimentalStandalone === true && profile.experimentalStandalone === true) {
+          owners.set(id, { id, kind: 'standalone', transport: 'lan-experimental' });
+          relationships.set(id, {
+            kind: 'standalone',
+            ownerId: id,
+            transport: 'experimental',
+            descriptor,
+          });
+        } else {
+          owners.set(id, { id, kind: 'standalone', transport: 'unsupported' });
+          relationships.set(id, {
+            kind: 'standalone',
+            ownerId: id,
+            reason: 'standalone_transport_unverified',
+            descriptor,
+          });
+        }
       } else relationships.set(id, { kind: 'unsupported', reason: 'invalid_device_relationship' });
     }
   }

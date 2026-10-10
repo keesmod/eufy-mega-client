@@ -11,6 +11,8 @@ interface Connection {
   camera(id: string): Device;
   knownCamera(id: string, stationId: string): boolean;
   busy(id: string): boolean;
+  /** Whether the owner is an experimental standalone camera. */
+  standalone?(id: string): boolean;
 }
 interface Reference {
   stationId: string;
@@ -232,6 +234,14 @@ export class RecordingAccess {
       stationId = ref.stationId;
     if (this.operations.has(stationId) || this.connection.busy(stationId))
       throw new EufyError('station_busy');
+    // A standalone owner needs a cloud cipher for a record with any cipher ID, as
+    // the vendor download checks. The client never fetches one, so refuse before
+    // any connection or device command.
+    if (
+      this.connection.standalone?.(stationId) &&
+      (ref.row.cipher_id as number | null | undefined) !== undefined
+    )
+      throw new EufyError('recording_cipher_unavailable');
     const camera = this.connection.camera(ref.row.device_sn);
     this.operations.add(stationId);
     const abort = AbortSignal.any([
