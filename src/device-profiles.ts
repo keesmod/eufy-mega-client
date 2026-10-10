@@ -23,6 +23,8 @@ export interface DeviceProfile {
   readonly family: CameraFamily | 'homebase';
   readonly topology: CameraTopology | 'owner';
   readonly features: MediaPolicy;
+  // Standalone owner route behind the client's experimentalStandalone opt-in only.
+  readonly experimentalStandalone?: true;
 }
 
 // Each feature is explicit. Shared policies avoid repeating identical admission rules.
@@ -120,7 +122,11 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8173: camera(98, 'solo', 'h3-or-standalone', h3Media),
   T8452: camera(132, 'garage', 'standalone', blockedMedia),
   T8453: camera(133, 'garage', 'standalone', blockedMedia),
-  T84A1: camera(151, 'walllight', 'h3-or-standalone', blockedMedia),
+  // keesmod/eufy-mega-client#142: standalone T84A1 behind experimentalStandalone, ha-eufy-cam#66.
+  T84A1: Object.freeze({
+    ...camera(151, 'walllight', 'h3-or-standalone', blockedMedia),
+    experimentalStandalone: true,
+  }),
   T81A0: camera(10005, 'walllight', 'h3-or-standalone', h3Media),
   T8425: camera(47, 'floodlight', 'h3-or-standalone', h3Media),
   T8426: camera(87, 'floodlight', 'h3-or-standalone', h3Media),

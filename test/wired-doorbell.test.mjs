@@ -46,6 +46,7 @@ for (const [model, type] of models) {
         kind: 'standalone',
         ownerId: raw.device_sn,
         reason: 'standalone_transport_unverified',
+        descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
       });
       const cloud = cloudFixture({ inventory: [raw] });
       const client = new EufyMegaClient(cloud.options);

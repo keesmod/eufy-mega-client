@@ -83,6 +83,7 @@ for (const parent of ['', 'SOLO'])
           kind: 'standalone',
           ownerId: 'SOLO',
           reason: 'standalone_transport_unverified',
+          descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
         },
       ]);
       assert.equal(result.devices[0].stationId, 'SOLO');

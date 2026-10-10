@@ -10,6 +10,7 @@ export type {
   CameraCapabilities,
   CameraMediaCapability,
   DeviceRelationship,
+  StandaloneDescriptor,
   DiscoveryIssue,
   DiscoveryResult,
   ClientOptions,

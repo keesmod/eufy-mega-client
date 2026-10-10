@@ -82,6 +82,8 @@ const MIN_LIVE_BOUND_MS = 1000;
 export class DeviceTransport extends EventEmitter {
   private failures = new Map<string, string>();
   private raw = new Map<string, WireDevice>();
+  /** Experimental standalone cameras admitted by discovery. Each is its own P2P owner. */
+  private standalone = new Set<string>();
   private stations = new Map<string, Station>();
   private cameras = new Map<string, ProtocolDevice>();
   private encryption = new Map<string, 'lan-derived' | 'cipher'>();
@@ -110,7 +112,8 @@ export class DeviceTransport extends EventEmitter {
         return this.station(id);
       },
       camera: (id) => this.camera(id, 'recordings'),
-      knownCamera: (id, station) => this.raw.get(id)?.parent_sn === station,
+      knownCamera: (id, station) => this.ownerOf(this.raw.get(id)) === station,
+      standalone: (id) => this.standalone.has(id),
       busy: (id) =>
         this.lives.has(id) || this.starting.has(id) || this.commands.has(id) || this.extraBusy(id),
     },
@@ -162,7 +165,16 @@ export class DeviceTransport extends EventEmitter {
     return maxDurationMs;
   }
   private cameraWire(raw: WireDevice): DeviceListResponse {
-    return { ...raw, station_sn: raw.parent_sn } as unknown as DeviceListResponse;
+    return { ...raw, station_sn: this.ownerOf(raw) } as unknown as DeviceListResponse;
+  }
+  /** The connection owner: the HomeBase, or the camera itself on the experimental route. */
+  private ownerOf(raw: WireDevice | undefined): string | undefined {
+    return raw && this.standalone.has(raw.device_sn) ? raw.device_sn : raw?.parent_sn;
+  }
+  private hasMedia(id: string, feature: CameraMediaFeature): boolean {
+    if (this.standalone.has(id)) return true;
+    const raw = this.raw.get(id);
+    return hasCameraMedia(raw, this.raw.get(this.ownerOf(raw) ?? ''), feature);
   }
   async load(raw: Map<string, WireDevice>, inventory?: Inventory): Promise<void> {
     if (this.lifetime.signal.aborted) throw new EufyError('client_closed');
@@ -183,12 +195,19 @@ export class DeviceTransport extends EventEmitter {
         if (issue.deviceId) this.failures.set(issue.deviceId, issue.code);
       raw = new Map([...raw].filter(([id]) => !this.failures.has(id)));
     }
-    const previous = this.raw;
+    const previous = this.raw,
+      previousStandalone = this.standalone;
+    const standalone = new Set(
+      [...(inventory?.owners ?? [])]
+        .filter(([id, owner]) => owner.transport === 'lan-experimental' && raw.has(id))
+        .map(([id]) => id),
+    );
     const changed = (id: string) => {
       const before = previous.get(id),
         after = raw.get(id);
       return (
         !after ||
+        previousStandalone.has(id) !== standalone.has(id) ||
         (before &&
           (before.device_model !== after.device_model ||
             before.device_type !== after.device_type ||
@@ -200,6 +219,7 @@ export class DeviceTransport extends EventEmitter {
       );
     };
     this.raw = raw;
+    this.standalone = standalone;
     for (const [id, camera] of this.cameras)
       if (changed(id)) {
         camera.destroy();
@@ -267,7 +287,7 @@ export class DeviceTransport extends EventEmitter {
         }
       }
     for (const device of raw.values())
-      if (isStation(device)) {
+      if (isStation(device) || standalone.has(device.device_sn)) {
         try {
           if (
             typeof device.p2p_did !== 'string' ||
@@ -333,14 +353,16 @@ export class DeviceTransport extends EventEmitter {
       const v = value(name);
       return typeof v === 'number' && Number.isFinite(v) ? v : null;
     };
+    // A standalone owner reports its session only, never alarm state.
+    const alarmState = !this.standalone.has(id);
     return {
       id,
       connected: station.isConnected() && this.encryption.has(id),
-      guardMode: this.observedModes.get(id)?.guard ?? null,
-      currentMode: this.observedModes.get(id)?.current ?? null,
-      alarm: value(PropertyName.StationAlarm) === true,
-      alarmDelay: number(PropertyName.StationAlarmDelay) ?? 0,
-      armDelay: number(PropertyName.StationAlarmArmDelay) ?? 0,
+      guardMode: alarmState ? (this.observedModes.get(id)?.guard ?? null) : null,
+      currentMode: alarmState ? (this.observedModes.get(id)?.current ?? null) : null,
+      alarm: alarmState && value(PropertyName.StationAlarm) === true,
+      alarmDelay: (alarmState && number(PropertyName.StationAlarmDelay)) || 0,
+      armDelay: (alarmState && number(PropertyName.StationAlarmArmDelay)) || 0,
       commandEncryption: this.encryption.get(id) ?? null,
     };
   }
@@ -356,11 +378,7 @@ export class DeviceTransport extends EventEmitter {
     if (failure) throw new EufyError(failure);
     const camera = this.cameras.get(id);
     if (!camera) throw new EufyError('unknown_camera');
-    if (
-      feature &&
-      !hasCameraMedia(this.raw.get(id), this.raw.get(camera.getStationSerial()), feature)
-    )
-      throw new EufyError('camera_media_unverified');
+    if (feature && !this.hasMedia(id, feature)) throw new EufyError('camera_media_unverified');
     return camera;
   }
   cameraCapabilities(id: string): import('./types.js').CameraCapabilities {
@@ -413,6 +431,9 @@ export class DeviceTransport extends EventEmitter {
     return property !== undefined && camera.hasProperty(property);
   }
   acceptPush(message: PushMessage): boolean {
+    // Events are not admitted on the experimental standalone route.
+    if (this.standalone.has(message.station_sn) || this.standalone.has(message.device_sn))
+      return false;
     const raw = this.raw.get(message.device_sn);
     if (raw && isIntegratedCamera(raw) && pushEventType(message) === 'notification') return false;
     if (
@@ -422,7 +443,7 @@ export class DeviceTransport extends EventEmitter {
     )
       return true;
     return (
-      this.raw.get(message.device_sn)?.parent_sn === message.station_sn &&
+      this.ownerOf(this.raw.get(message.device_sn)) === message.station_sn &&
       this.stations.has(message.station_sn) &&
       this.supportsEvent(message.device_sn, pushEventType(message))
     );
@@ -444,6 +465,8 @@ export class DeviceTransport extends EventEmitter {
     );
     station.on('property changed', () => this.emit('station', this.state(id)));
     station.on('parameter observed', (_s, type, value, source) => {
+      // A standalone camera's own arming state is not admitted on its route.
+      if (this.standalone.has(id)) return;
       if (source !== 'p2p' || !guardModes.has(Number(value))) return;
       const state = this.observedModes.get(id) ?? {};
       if (type === CommandType.CMD_SET_ARMING) state.guard = Number(value);
@@ -478,7 +501,7 @@ export class DeviceTransport extends EventEmitter {
       )
         return;
       for (const [cameraId, cover] of this.covers)
-        if (cover === path && this.raw.get(cameraId)?.parent_sn === id) {
+        if (cover === path && this.ownerOf(this.raw.get(cameraId)) === id) {
           const snapshot: Snapshot = {
             deviceId: cameraId,
             data,
@@ -521,8 +544,8 @@ export class DeviceTransport extends EventEmitter {
     for (const row of rows) {
       if (
         !this.cameras.has(row.device_sn) ||
-        this.raw.get(row.device_sn)?.parent_sn !== stationId ||
-        !hasCameraMedia(this.raw.get(row.device_sn), this.raw.get(stationId), 'snapshot') ||
+        this.ownerOf(this.raw.get(row.device_sn)) !== stationId ||
+        !this.hasMedia(row.device_sn, 'snapshot') ||
         !('crop_local_path' in row)
       )
         continue;
@@ -637,8 +660,9 @@ export class DeviceTransport extends EventEmitter {
       throw new EufyError('station_busy');
     // With concurrency enabled every live stream gets its own session, so the
     // primary session stays free for control, snapshots and recordings. With
-    // the default limit of 1 the single stream uses the primary session.
-    if (this.liveLimit > 1) {
+    // the default limit of 1 the single stream uses the primary session. An
+    // experimental standalone camera always uses its one primary session.
+    if (this.liveLimit > 1 && !this.standalone.has(stationId)) {
       if (this.liveCount(stationId) >= this.liveLimit) throw new EufyError('station_busy');
       return this.startExtraLive(id, camera, stationId, bound, progress, signal);
     }
@@ -853,7 +877,7 @@ export class DeviceTransport extends EventEmitter {
       station_name: device.device_name,
       station_model: device.device_model,
       devices: [...this.raw.values()]
-        .filter((d) => this.cameras.has(d.device_sn) && d.parent_sn === device.device_sn)
+        .filter((d) => this.cameras.has(d.device_sn) && this.ownerOf(d) === device.device_sn)
         .map((d) => this.cameraWire(d)),
     } as unknown as StationListResponse;
   }
@@ -1085,7 +1109,12 @@ export class DeviceTransport extends EventEmitter {
     timer.unref();
     this.refreshTimers.set(id, timer);
   }
+  /** The experimental standalone route covers camera media only, never alarm state. */
+  private homeBaseOnly(id: string): void {
+    if (this.standalone.has(id)) throw new EufyError('operation_outside_hardware_scope');
+  }
   async refreshStationState(id: string, signal?: AbortSignal): Promise<StationState> {
+    this.homeBaseOnly(id);
     await this.connect(id, signal);
     await readGuardMode(
       this.station(id),
@@ -1098,6 +1127,7 @@ export class DeviceTransport extends EventEmitter {
     mode: number,
     signal?: AbortSignal,
   ): Promise<{ confirmed: true; commandSent: boolean; state: StationState }> {
+    this.homeBaseOnly(id);
     if (!guardModes.has(mode)) throw new EufyError('invalid_guard_mode');
     // Streams on extra sessions leave the primary session free for this command.
     if (

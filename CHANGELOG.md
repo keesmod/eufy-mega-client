@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.29.0 - 2026-10-10
+
+### Experimental standalone T84A1
+
+- New opt-in client option `experimentalStandalone`, off by default. With it, a
+  standalone Wall Light Cam S100 `T84A1`/151 becomes its own P2P owner on the
+  existing local lookup and LAN-derived command key. Snapshot, live and
+  recordings report `experimental` and use the camera's own session. This is
+  for [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and the
+  [ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66) reporter's
+  offer to test. No physical standalone camera has used it yet. No cloud DSK,
+  cipher or legacy security-cloud call is added. Guard mode, pushes and
+  detection events are not admitted on this route, and live always uses the
+  camera's one session. A recording download that would need a cloud cipher
+  fails with `recording_cipher_unavailable` before any device command.
+- Every standalone relationship has a new `descriptor` with presence booleans
+  for the row's P2P device ID, license, administrator user and private LAN
+  address. Values never leave the library.
+- A P2P session whose row has no `app_conn` starts with no cloud addresses
+  instead of failing during creation. Local sessions do not use them.
+- A malformed `params` value in an inventory row now means no inventory LAN
+  address instead of an error.
+
+Upgrade: no configuration or session migration. Without the option, standalone
+results only gain the `descriptor` field, and the two robustness fixes above
+apply to every row. TypeScript: the new `standalone` relationship has
+`transport` instead of `reason`, so check `'reason' in relationship` before
+reading it. Rollback: 0.28.2.
+
 ## 0.28.2 - 2026-10-09
 
 ### eufyCam 2C model variant

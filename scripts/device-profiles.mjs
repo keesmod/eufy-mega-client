@@ -27,6 +27,14 @@ export async function renderDeviceProfiles(text) {
         `${model} also admits the reported type ${profile.reportedTypes.join(', ')} with the same policy.`,
         'See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.',
       ]),
+    ...Object.entries(deviceProfiles)
+      .filter(([, profile]) => profile.experimentalStandalone)
+      .flatMap(([model]) => [
+        '',
+        `With the client option \`experimentalStandalone\`, a standalone ${model} becomes its own`,
+        'local owner with experimental snapshot, live and recordings. Its blocked cells above apply',
+        'without that option. See [API.md](API.md#experimental-standalone-cameras).',
+      ]),
   ].join('\n');
   const sections = text.split(start);
   if (sections.length !== 2 || sections[1].split(end).length !== 2)

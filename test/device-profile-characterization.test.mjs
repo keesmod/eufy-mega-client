@@ -54,7 +54,17 @@ for (const [model, type, kind, family, standalone, h3, media] of profileBaseline
             : { kind: 'unsupported', reason: 'invalid_device_relationship' }
           : self
             ? standalone
-              ? { kind: 'standalone', ownerId: 'CAMERA', reason: 'standalone_transport_unverified' }
+              ? {
+                  kind: 'standalone',
+                  ownerId: 'CAMERA',
+                  reason: 'standalone_transport_unverified',
+                  descriptor: {
+                    did: false,
+                    license: false,
+                    adminUser: false,
+                    lanAddress: false,
+                  },
+                }
               : { kind: 'unsupported', reason: 'invalid_device_relationship' }
             : h3 && parent === owner.device_sn
               ? { kind: 'station', ownerId: owner.device_sn }

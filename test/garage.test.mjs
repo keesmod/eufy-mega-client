@@ -49,6 +49,7 @@ for (const [model, type] of profiles) {
           kind: 'standalone',
           ownerId: raw.device_sn,
           reason: 'standalone_transport_unverified',
+          descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
         });
         for (const operation of [
           () => client.snapshot(raw.device_sn),

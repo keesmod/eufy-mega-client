@@ -277,7 +277,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     this.preferredIPAddress = ipAddress;
     if (listeningPort >= 0) this.listeningPort = listeningPort;
     this.enableEmbeddedPKCS1Support = enableEmbeddedPKCS1Support;
-    this.cloudAddresses = decodeP2PCloudIPs(rawStation.app_conn);
+    // eufy-mega-client: local sessions need no cloud addresses. A row without
+    // app_conn, such as an unevidenced standalone camera, decodes to none.
+    this.cloudAddresses = decodeP2PCloudIPs(typeof rawStation.app_conn === "string" ? rawStation.app_conn : "");
     rootP2PLogger.debug("Loaded P2P cloud ip addresses", {
       stationSN: rawStation.station_sn,
       ipAddress: ipAddress,

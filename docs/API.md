@@ -803,6 +803,48 @@ relationships and per-device issues. `listDevices(signal?)` retains `Device[]`
 and stable identifier fields. Recognized unsupported identities remain visible.
 See [the discovery contract](DISCOVERY.md) for operation gates and software evidence.
 
+## Experimental standalone cameras
+
+Version 0.29.0 adds the client option `experimentalStandalone`. It is off by
+default. Without it, standalone results only gain the `descriptor` described
+below. With it, a standalone camera whose
+exact profile allows it becomes its own P2P owner on the existing local route.
+Only `T84A1`/151, the Wall Light Cam S100, has that profile, for
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
+[ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66).
+
+- Discovery returns `{ kind: 'standalone', ownerId, transport: 'experimental', descriptor }`
+  without an issue. Every other standalone row keeps
+  `reason: 'standalone_transport_unverified'` and its issue. A T84A1 under a
+  HomeBase keeps its H3 relationship and blocked media.
+- The camera's `stationId` is its own ID. `connectStation(id, { onProgress })`
+  connects to the camera itself with the same lookup, [stages](#station-connection-stages-0260)
+  and LAN-derived command key as a HomeBase. No cloud DSK, cipher or legacy
+  security-cloud call is made.
+- Snapshot, live and recordings report `available: true` with status
+  `experimental`. They use the camera's own session and the vendor command set
+  of its device type. Live always uses that one session, also when
+  `maxLiveStreamsPerStation` is above 1.
+- Recording lists and thumbnails query the camera's own database. A download
+  of a record with a cipher ID fails with `recording_cipher_unavailable` before
+  any connection or command, because it would need a cloud cipher.
+- Guard mode and `refreshStationState` fail with
+  `operation_outside_hardware_scope`. `getStationState` and `station` events
+  report its session only, with null modes and no alarm. Pushes for the camera
+  are not admitted, so it has no detection events on this route.
+- A row without a P2P device ID or administrator user fails with
+  `invalid_connection_credentials` for every operation.
+
+No physical standalone camera has confirmed this route. A failure is the
+expected evidence for the next step, not a regression. The stage a failed
+connection reached says whether the camera answered the lookup, completed the
+session handshake or never accepted the command key.
+
+Every standalone relationship carries `descriptor`: whether the inventory row
+has a P2P device ID (`did`), a P2P license (`license`), an administrator user
+(`adminUser`) and a private IPv4 LAN address (`lanAddress`). The values never
+leave the library. A present field proves neither validity nor authentication.
+
 ## Observed camera state
 
 `getDeviceState(id)` returns the latest available `Device` state without opening

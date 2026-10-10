@@ -60,10 +60,36 @@ export interface Device {
   /** Last reported device status, not reachability inferred from its HomeBase. */
   availability?: 'online' | 'offline' | 'disabled' | null;
 }
+/**
+ * Which connection fields a standalone inventory row carries. Presence only, never
+ * values. A present field is not proof that it is valid or authenticates.
+ */
+export interface StandaloneDescriptor {
+  /** The P2P device ID. */
+  did: boolean;
+  /** The P2P license. */
+  license: boolean;
+  /** The administrator user ID of the account's membership. */
+  adminUser: boolean;
+  /** A private IPv4 LAN address in the row. */
+  lanAddress: boolean;
+}
 /** Discovery is software evidence. Owner IDs are stable device IDs, never credentials. */
 export type DeviceRelationship =
   | { kind: 'station'; ownerId: string }
-  | { kind: 'standalone'; ownerId: string; reason: 'standalone_transport_unverified' }
+  | {
+      kind: 'standalone';
+      ownerId: string;
+      reason: 'standalone_transport_unverified';
+      descriptor: StandaloneDescriptor;
+    }
+  /** Admitted only with the `experimentalStandalone` option. Unverified on hardware. */
+  | {
+      kind: 'standalone';
+      ownerId: string;
+      transport: 'experimental';
+      descriptor: StandaloneDescriptor;
+    }
   | { kind: 'unsupported'; reason: 'invalid_device_relationship' | 'unsupported_station' };
 export interface DiscoveryIssue {
   index: number;
@@ -116,6 +142,12 @@ export interface ClientOptions {
    * default 120000. A start may request up to this value with `maxDurationMs`.
    */
   liveUpperBoundMs?: number;
+  /**
+   * Opt-in, default false. Standalone cameras whose exact profile allows it
+   * become their own P2P owner on the local LAN-derived route, with snapshot,
+   * live and recordings. Unverified on hardware. See docs/API.md.
+   */
+  experimentalStandalone?: boolean;
   diagnostics?: (event: Diagnostic) => void;
   /** Injectable for deterministic protocol tests. */
   fetch?: typeof fetch;
