@@ -65,17 +65,20 @@ which [is not a template](DEVICE_PROFILES.md#reading-the-policy) for new
 devices. T8160-C uses the additional-H3 media policy: snapshot, live and
 recordings require its actual T8030/type 18 parent with a T8030 serial prefix
 and four-part owner firmware at or above 2.0.9.7. The existing owner and
-firmware checks apply. The reporter's owner firmware 3.8.7.4 passes them.
+firmware checks apply. The reporter's owner firmware 3.8.7.4 passes the
+firmware check. The T8030 serial-prefix check cannot be confirmed from the
+redacted report.
 
 The reported firmware 1.5.8.6 and hardware 0.0.3.7 differ from the T8160
 firmware 3.4.3.0 and hardware 0.2.2.6 in the same installation. The T8160
 hardware evidence below therefore does not transfer to T8160-C. Whether this
 revision uses the same type 19 live, download and property behavior is not
 verified. The synthetic tests include T8160-C in discovery, state/events and
-the shared media/lifecycle fixtures with the reported camera and owner
-firmware. They cover stored snapshots, both live codecs, video/audio, confirmed
-stop, recording metadata/download, cancellation and the owner and firmware
-rejections. Physical results on T8160-C are pending. See
+the shared media/lifecycle fixtures. They cover stored snapshots, both live
+codecs, video/audio, confirmed stop, recording metadata/download, cancellation
+and the owner and firmware rejections. Discovery and the media/lifecycle
+fixtures use the reported camera and owner firmware. The state/events tests use
+synthetic firmware. Physical results on T8160-C are pending. See
 [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-149-0292).
 
 [C-report]: https://github.com/keesmod/ha-eufy-cam/issues/149

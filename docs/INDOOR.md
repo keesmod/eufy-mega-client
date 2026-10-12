@@ -33,7 +33,7 @@ route. The [experimental standalone T8410](#experimental-standalone-t8410-0291)
 is the only opt-in exception. T8410C does not have that route. Other owners
 report `unsupported_station`. T8440, T8W11C, T8W11P, T8419 and T8419N remain
 unadmitted because their exact matrix association or relevant topology is
-unresolved. C210/C220 subtypes are not inferred. The product names
+unresolved. C210/C220 subtypes are not inferred. The T8410 and T8410C names
 follow Eufy's [HomeBase compatibility guide][HB-guide-EU], which names T8410
 "Indoor Cam E220" and T8410C "Indoor Cam Pan&Tilt 2K". Earlier versions of this
 document labeled T8410 as the 2K Pan & Tilt, and owners still use that name for

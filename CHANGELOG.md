@@ -30,10 +30,11 @@
   revalidates the value with the older pattern omits these codes until it
   adopts the same bound.
 - Synthetic tests cover discovery, state/events and the existing media commands
-  for both pairs with the reported firmware, including confirmed live stop,
-  recording cancellation, the owner and firmware rejections and the widened
-  diagnostic. This is software coverage. Hardware results for both models are
-  pending.
+  for both pairs, including confirmed live stop, recording cancellation, the
+  owner and firmware rejections and the widened diagnostic. Discovery and the
+  media and lifecycle fixtures use the reported camera and owner firmware. The
+  state/events tests use synthetic firmware. This is software coverage. Hardware
+  results for both models are pending.
 
 Upgrade: no configuration, API or session migration. A `T8160-C`/19 or
 `T8410C`/31 row that was `unsupported_device` now becomes a camera, and
