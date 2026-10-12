@@ -21,6 +21,8 @@ const models = [
   ['T8140', 14],
   ['T8142', 15],
   ['T8160', 19],
+  // ha-eufy-cam#149: additional-H3 media, so it stays out of the established exception below.
+  ['T8160-C', 19],
   ['T8161', 23],
   ['T8600', 24],
   ['T8162', 26],

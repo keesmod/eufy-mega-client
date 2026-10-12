@@ -60,4 +60,8 @@ export const profileBaseline = [
   ['T8424', 39, 'camera', 'floodlight', true, false, 'blocked'],
   // Added for ha-eufy-cam#136.
   ['T817L', 10031, 'camera', 'indoor', true, true, 'h3'],
+  // Reported in ha-eufy-cam#149 on 2026-10-09. Additional-H3 media, not established.
+  ['T8160-C', 19, 'camera', '', false, true, 'h3'],
+  // Added on 2026-10-12 for ha-eufy-cam#149 from public T8410C type 31 evidence.
+  ['T8410C', 31, 'camera', 'indoor', true, true, 'h3'],
 ];

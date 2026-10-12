@@ -48,6 +48,38 @@ See [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-66-update-0282).
 [V-report]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017
 [V-result]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6098838866
 
+## Reported T8160-C, 0.29.1
+
+The [2026-10-09 report on ha-eufy-cam#149][C-report] shows a `T8160-C` with
+`device_type=19`, firmware 1.5.8.6 and hardware 0.0.3.7, under a T8030 on
+firmware 3.8.7.4. The Eufy app shows it as a regular eufyCam 3. Bridge
+0.8.33/client 0.28.2 rejected this exact model as `unsupported_device`, so Home
+Assistant never created the camera. 0.29.1 admits this exact pair with the
+T8160 type, the same generic Camera adapter and H3 topology. No prefix matching
+or standalone route is added. Other types, owners and unevidenced forms such as
+`T8160C`, `T8160-X` or lower case retain their existing rejection.
+
+Unlike `T8113-Z` and `T8113-V`, this row is not a copy of its base row. T8160
+keeps the `established` model-only media check of the original four routes,
+which [is not a template](DEVICE_PROFILES.md#reading-the-policy) for new
+devices. T8160-C uses the additional-H3 media policy: snapshot, live and
+recordings require its actual T8030/type 18 parent with a T8030 serial prefix
+and four-part owner firmware at or above 2.0.9.7. The existing owner and
+firmware checks apply. The reporter's owner firmware 3.8.7.4 passes them.
+
+The reported firmware 1.5.8.6 and hardware 0.0.3.7 differ from the T8160
+firmware 3.4.3.0 and hardware 0.2.2.6 in the same installation. The T8160
+hardware evidence below therefore does not transfer to T8160-C. Whether this
+revision uses the same type 19 live, download and property behavior is not
+verified. The synthetic tests include T8160-C in discovery, state/events and
+the shared media/lifecycle fixtures with the reported camera and owner
+firmware. They cover stored snapshots, both live codecs, video/audio, confirmed
+stop, recording metadata/download, cancellation and the owner and firmware
+rejections. Physical results on T8160-C are pending. See
+[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-149-0291).
+
+[C-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
+
 ## Exact hardware validation
 
 [Story #55 hardware evidence](hardware/T8160_2026_09_11.md) records one T8160

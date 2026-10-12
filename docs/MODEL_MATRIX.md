@@ -272,6 +272,52 @@ relationship now reports which connection fields its row has, as presence
 booleans. This is software evidence with synthetic rows. No standalone camera
 has used the route, so the T84A1 row and its cells below are unchanged.
 
+## Reported issue #149, 0.29.1
+
+On 2026-10-09 the [reporter of ha-eufy-cam#149][149-report] ran HA 2026.10.0,
+integration 0.8.42 and bridge 0.8.33/client 0.28.2 with a T8030 on firmware
+3.8.7.4. They reported discovery, available state, battery and stored snapshots
+working on three T8160 on firmware 3.4.3.0 and hardware 0.2.2.6, and live video
+on one of them through the card on the LAN. A T8213 on firmware 0.2.1.8 was
+discovered with state, battery and snapshots working. Other features were not
+tested. These are reported results, not independently reproduced, and they add
+no H or P cells.
+
+The same report lists three rows rejected as `unsupported_device`, each with
+parent status `present` and a T8030 parent on firmware 3.8.7.4:
+
+- Row 4 is `T8160-C` with type 19, firmware 1.5.8.6 and hardware 0.0.3.7. The
+  Eufy app shows it as a regular eufyCam 3.
+- Rows 6 and 7 have type 31 and firmware 3.3.4.4, with model `unavailable`. The
+  reporter calls them Indoor Cam Pan&Tilt 2K.
+
+0.29.1 admits exactly `T8160-C`/19 with the T8160 type and Camera adapter but
+the additional-H3 media policy, not the established T8160 route, as described in
+[EUFYCAM.md](EUFYCAM.md#reported-t8160-c-0291). Its firmware line differs from
+the T8160 cameras, so the T8160 H cells below do not apply to it.
+
+Rows 6 and 7 could not show their model on 0.28.2, because the received string
+failed the diagnostic model bound of that version. T8410/31 was already
+admitted, so the string was not exactly `T8410`. 0.29.1 admits exactly
+`T8410C`/31 with the T8410 policy, as described in
+[INDOOR.md](INDOOR.md#indoor-cam-pantilt-2k-t8410c-0291). T8410C is the
+evidence-based candidate for these rows. [HB-guide-EU] lists it as Indoor Cam
+Pan&Tilt 2K on HomeBase 3. Public reports show T8410C/31 under a T8030, one of
+them on firmware 3.3.3.2, while plain T8410 firmware is on the 2.3.x line. The
+reporter's firmware 3.3.4.4 fits T8410C. Their product name does not decide it,
+because owners also use that name for cameras received as exactly `T8410`, as on
+ha-eufy-cam#152. T8410C is not a confirmed received value. 0.29.1 also widens the diagnostic model bound to
+unhyphenated codes such as `T8410C`, as described in
+[DIAGNOSTICS.md](DIAGNOSTICS.md#missing-devices). If these rows carry another
+catalogue-shaped code of at most eight characters, the next report shows it,
+provided the bridge and integration apply the same bound. A value of another
+shape is still omitted.
+
+Post-upgrade physical results for T8160-C and for rows 6 and 7 remain pending.
+The type 19 and type 31 feature rows below gain no H or P cells.
+
+[149-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
+
 ## Reported T817L Wired Cam C31, 0.28.0
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and
@@ -433,12 +479,12 @@ evidence section. Every row also has a separate feature row below.
 | 14            | `CAMERA2_PRO`                          | T8140                                        | eufyCam 2 Pro                                                                 | cam        | H3, H1/E/2, HM candidate                    | [Cam], [HB-old], [HB-guide]                  | C           |
 | 15            | `CAMERA2C_PRO`                         | T8142. T8142R variant unresolved             | eufyCam 2C Pro / eufyCam S220                                                 | cam        | H3, H1/E/2. HM for R candidate              | [Cam], [S220-Cam], [HB-guide]                | R           |
 | 16            | `BATTERY_DOORBELL_2`                   | T8220 / T8221 / T8222 candidates             | Video Doorbell Slim / 2E / C210, 1080p                                        | battery    | H3, H1/E/2, chime variant unresolved        | [HB3], [HB-old], [HB-guide]                  | C           |
-| 19            | `CAMERA3`                              | T8160                                        | eufyCam 3 / S330                                                              | cam        | H3. HM, H2 disputed                         | [Cam], [Tracking], [HB-guide]                | R           |
+| 19            | `CAMERA3`                              | T8160. T8160-C admitted in 0.29.1            | eufyCam 3 / S330                                                              | cam        | H3. HM, H2 disputed                         | [Cam], [Tracking], [HB-guide], [149-report]  | R           |
 | 23            | `CAMERA3C`                             | T8161                                        | eufyCam 3C / S300                                                             | cam        | H3. H2 disputed                             | [Cam], [Tracking], [HB-guide]                | C           |
 | 24            | `PROFESSIONAL_247`                     | T8600                                        | eufyCam E330 Professional                                                     | cam        | H3, HM candidate. W is not established here | [Display], [HB-guide]                        | C           |
 | 26            | `CAMERA3_PRO`                          | T8162                                        | eufyCam S3 Pro                                                                | cam        | H3, HM/H2 candidates                        | [Display], [HB-guide]                        | C           |
 | 30            | `INDOOR_CAMERA`                        | T8400                                        | Indoor Cam 2K / C120                                                          | indoor     | W, H3                                       | [Indoor], [HB-guide]                         | R           |
-| 31            | `INDOOR_PT_CAMERA`                     | T8410. T8410C variant unresolved             | Indoor Cam 2K Pan & Tilt / E220                                               | indoor     | W, H3                                       | [Indoor], [HB-guide]                         | R           |
+| 31            | `INDOOR_PT_CAMERA`                     | T8410 / T8410C, admitted in 0.29.1           | Indoor Cam E220 (T8410) / Indoor Cam Pan&Tilt 2K (T8410C)                     | indoor     | W, H3                                       | [Indoor], [HB-guide], [HB-guide-EU]          | R           |
 | 32            | `SOLO_CAMERA`                          | T8130                                        | SoloCam E20                                                                   | solo       | W, H3. HM candidate                         | [Solo], [HB3], [HB-guide]                    | C           |
 | 33            | `SOLO_CAMERA_PRO`                      | T8131                                        | SoloCam E40                                                                   | solo       | W, H3. HM candidate                         | [Solo], [HB3], [HB-guide]                    | C           |
 | 34            | `INDOOR_CAMERA_1080`                   | T8401                                        | Indoor Cam 1080p                                                              | indoor     | W, H3                                       | [Indoor], [HB3]                              | R           |
@@ -534,12 +580,12 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 14    | T8140 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#100]                            |
 | 15    | T8142 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [S1], [C0]                                          | [#101]                            |
 | 16    | T8220 / T8221 / T8222 candidates / listed topologies | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#110], [#111], [#112]            |
-| 19    | T8160 / H3 only                                      | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55]               |
+| 19    | T8160 / H3 only. T8160-C not covered by H            | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55], [149-report] |
 | 23    | T8161 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#102]                            |
 | 24    | T8600 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#103]                            |
 | 26    | T8162 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#104]                            |
 | 30    | T8400 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
-| 31    | T8410 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
+| 31    | T8410 / T8410C / actual H3 owner only                | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue], [149-report]        | [#23], [#24], [#35], [#36], [#57] |
 | 32    | T8130 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 33    | T8131 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]               |
 | 34    | T8401 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57] |
@@ -778,6 +824,7 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [HB-old]: https://service.eufy.com/article-description/Compatibility-Between-eufy-Devices
 [HB3]: https://service.eufy.com/article-description/S380-HomeBase-HomeBase-3-Compatibility
 [HB-guide]: https://service.eufy.com/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
+[HB-guide-EU]: https://service.eufy.com/eu/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 [HB-DE]: https://service.eufy.com/de/article-description/eufy-Security-Vollst%C3%A4ndiger-Kompatibilit%C3%A4tsleitfaden-f%C3%BCr-HomeBase
 [HB-Pro]: https://service.eufy.com/article-description/What-eufy-devices-are-compatible-with-HomeBase-Professional-S1
 [Tracking]: https://service.eufy.com/article-description/Cross-Camera-Tracking-Function-Compatibility

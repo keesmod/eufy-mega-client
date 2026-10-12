@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.29.1 - 2026-10-12
+
+### eufyCam 3 and Indoor Cam Pan&Tilt 2K model codes
+
+- Admit exactly `T8160-C` with device type 19, reported under a HomeBase 3 on
+  [ha-eufy-cam#149](https://github.com/keesmod/ha-eufy-cam/issues/149). It uses
+  the T8160 Camera adapter and H3 topology with the additional-H3 media policy,
+  not the established T8160 route. The existing owner and firmware checks apply.
+  Its reported firmware 1.5.8.6 differs from the T8160 line, so T8160 hardware
+  results do not transfer to it.
+- Admit exactly `T8410C` with device type 31, the Indoor Cam Pan&Tilt 2K, with
+  the T8410 policy: the `IndoorCamera` adapter, `h3-or-standalone` topology and
+  additional-H3 media. This rests on public evidence. Eufy's HomeBase
+  compatibility guide lists T8410C as supported on HomeBase 3, and public
+  inventories show T8410C with type 31 under a T8030. The two type 31 rows in
+  ha-eufy-cam#149 could not show their model, so it is not verified that they
+  carry exactly `T8410C`. The experimental standalone route stays off for
+  T8410C.
+- Other suffixes, twins such as `T8160C` and `T8410-C`, lower case and
+  mismatched types remain `unsupported_device`. No prefix or type-only
+  admission is added.
+- The bounded `deviceModel` of an `unsupported_device` issue and
+  `context.parentModel` now also show catalogue codes with one to three
+  unhyphenated characters, such as `T8410C`, `T8W11C` and `T8419N`, up to eight
+  characters. The hyphen form such as `T8113-Z` is unchanged. Serial numbers and
+  free text still never match, and nothing is trimmed. A consumer that
+  revalidates the value with the older pattern omits these codes until it
+  adopts the same bound.
+- Synthetic tests cover discovery, state/events and the existing media commands
+  for both pairs with the reported firmware, including confirmed live stop,
+  recording cancellation, the owner and firmware rejections and the widened
+  diagnostic. This is software coverage. Hardware results for both models are
+  pending.
+
+Upgrade: no configuration, API or session migration. A `T8160-C`/19 or
+`T8410C`/31 row that was `unsupported_device` now becomes a camera, and
+diagnostics can carry an unhyphenated model code where they omitted the field.
+Rollback: 0.29.0. No new protocol or legacy security-cloud fallback is added.
+
 ## 0.29.0 - 2026-10-10
 
 ### Experimental standalone T84A1

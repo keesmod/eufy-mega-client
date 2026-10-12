@@ -51,6 +51,7 @@ owner firmware at or above 2.0.9.7.
 | ------- | ----- | ------- | ---------------- | ------------------ | ----------- | ----------- | ----------- | --------------------------------- |
 | T8400   | 30    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8410   | 31    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
+| T8410C  | 31    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8401   | 34    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8411   | 35    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
 | T8441   | 45    | camera  | indoor           | h3-or-standalone   | h3          | h3          | h3          | [Evidence](INDOOR.md)             |
@@ -75,6 +76,7 @@ owner firmware at or above 2.0.9.7.
 | T8144   | 49    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8172   | 89    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8160   | 19    | camera  | eufycam          | h3                 | established | established | established | [Evidence](EUFYCAM.md)            |
+| T8160-C | 19    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8200   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
 | T8201   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
 | T8202   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
@@ -136,10 +138,14 @@ h3Media)`. Use the actual proven model and numeric type. No wildcard, guessed
 
 ## Unknown-device evidence
 
-An `unsupported_device` report already carries a received model code bounded to
-`T[A-Z0-9]{4}`, optionally followed by `-` and one or two characters from
-`[A-Z0-9]`, an integer type from 0 through 65535 and bounded firmware/topology
-context when available. Use the received pair, parent status/model and owner
+An `unsupported_device` report already carries a received model code of at most
+eight characters, bounded to `T[A-Z0-9]{4}` optionally followed by `-` and one or
+two characters from `[A-Z0-9]`, or by one to three such characters without a
+hyphen. It also carries an integer type from 0 through 65535 and bounded
+firmware/topology context when available. Since 0.29.1 unhyphenated catalogue
+codes such as `T8410C`, `T8W11C` and `T8419N` are shown as received instead of
+being omitted. Serial numbers and free text still never match, and nothing is
+trimmed to fit the bound. Use the received pair, parent status/model and owner
 firmware to identify a candidate family and the missing evidence. A product
 name or serial prefix cannot substitute for the received model field.
 

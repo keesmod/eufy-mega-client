@@ -67,6 +67,8 @@ export const h3MediaOwner = Object.freeze({
 export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.freeze({
   T8400: camera(30, 'indoor', 'h3-or-standalone', h3Media),
   T8410: camera(31, 'indoor', 'h3-or-standalone', h3Media),
+  // ha-eufy-cam#149, 2026-10-12: public evidence of T8410C/type 31 under a HomeBase 3.
+  T8410C: camera(31, 'indoor', 'h3-or-standalone', h3Media),
   T8401: camera(34, 'indoor', 'h3-or-standalone', h3Media),
   T8411: camera(35, 'indoor', 'h3-or-standalone', h3Media),
   T8441: camera(45, 'indoor', 'h3-or-standalone', h3Media),
@@ -100,6 +102,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8144: camera(49, 'eufycam', 'h3', h3Media),
   T8172: camera(89, 'eufycam', 'h3', h3Media),
   T8160: camera(19, 'eufycam', 'h3', establishedMedia),
+  // ha-eufy-cam#149: T8160-C/type 19 under a T8030, reported on 2026-10-09. H3 media only.
+  'T8160-C': camera(19, 'eufycam', 'h3', h3Media),
   T8200: camera(5, 'wired-doorbell', 'standalone', blockedMedia),
   T8201: camera(5, 'wired-doorbell', 'standalone', blockedMedia),
   T8202: camera(5, 'wired-doorbell', 'standalone', blockedMedia),
