@@ -15,6 +15,8 @@ import { cloudFixture } from './fixtures/mega-cloud.mjs';
 const models = [
   ['T8400', 30],
   ['T8410', 31],
+  // Admitted for ha-eufy-cam#149 from public T8410C type 31 evidence.
+  ['T8410C', 31],
   ['T8401', 34],
   ['T8411', 35],
   ['T8441', 45],
@@ -264,7 +266,6 @@ test('Indoor rejects unresolved aliases, mismatched types and unsupported owners
   await fixture(
     [
       owner(),
-      camera('T8410C', 31),
       camera('T8440', 44),
       camera('T8W11C', 10008),
       camera('T8419', 10009),
@@ -279,7 +280,7 @@ test('Indoor rejects unresolved aliases, mismatched types and unsupported owners
     async (t, inventory) => {
       assert.deepEqual(
         inventory.result.issues.map((i) => i.code),
-        [...Array(6).fill('unsupported_device'), 'unsupported_station'],
+        [...Array(5).fill('unsupported_device'), 'unsupported_station'],
       );
       assert.throws(() => t.device('T8414_FIXTURE'), { code: 'device_initialization_failed' });
       assert.throws(() => t.device('T8411_FIXTURE'), { code: 'unsupported_station' });

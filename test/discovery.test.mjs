@@ -283,7 +283,18 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
   assert.equal(issue('T8224').devices.length, 3);
   assert.equal(issue('T8224', 96).devices.length, 3);
   // A model code with a short suffix is reported as received (ha-eufy-cam#129).
-  for (const model of ['T8113-X', 'T9999-ZZ'])
+  // Catalogue codes with one to three unhyphenated characters too (ha-eufy-cam#149).
+  for (const model of [
+    'T8113-X',
+    'T9999-ZZ',
+    'T8410-C',
+    'T8410C',
+    'T8W11C',
+    'T8419N',
+    'T9999AB',
+    'T9999ABC',
+    'T8410C21',
+  ])
     assert.deepEqual(issue(model).issues[0], {
       index: 2,
       deviceId: 'PRIVATE_SERIAL',
@@ -293,6 +304,20 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
     });
   assert.equal(issue('T8113-Z', 8).devices.length, 3);
   assert.equal(issue('T8113-V', 8).devices.length, 3);
+  assert.equal(issue('T8160-C', 19).devices.length, 3);
+  assert.equal(issue('T8410C', 31).devices.length, 3);
+  assert.equal(issue('T8410', 31).devices.length, 3);
+  for (const [model, type] of [
+    ['T8160-C', 23],
+    ['T8410C', 30],
+  ])
+    assert.deepEqual(issue(model, type).issues[0], {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'unsupported_device',
+      deviceModel: model,
+      deviceType: type,
+    });
   for (const model of [
     undefined,
     null,
@@ -312,6 +337,31 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
     '192.0.2.1',
     'PRIVATE_NAME',
     'T9999'.repeat(1000),
+    // Widened shape: nine characters, mixed forms, case, separators and serial-like values.
+    'T9999ABCD',
+    'T8410C21X',
+    'T8224A-B',
+    'T8410C-Z',
+    'T8410c',
+    'T8410Cc',
+    'T8410_C',
+    'T8410.C',
+    'T841',
+    'T8410P0000000000',
+    'T8410C0000000000',
+    'T8030000000000000',
+    'T8410C\n',
+    'T8410C\r',
+    'T8410\tC',
+    'T8410C\u0000',
+    'T8410 C',
+    'T8410C ',
+    ' T8410C',
+    'T8410\u00a0C',
+    'T8410\u200bC',
+    'T8410C\u200b',
+    '\uff348410C',
+    '\u04228410C',
   ]) {
     const rejection = issue(model).issues[0];
     assert.deepEqual(rejection, {
@@ -386,4 +436,17 @@ test('rejection context preserves received firmware and parent evidence without 
     assert.equal(value.parentModel, undefined);
   }
   assert.equal(get({ ...rejected, device_type: null }).context.firmware, '0.2.1.8');
+  // The parent model uses the same bound as the rejected model (ha-eufy-cam#149).
+  for (const [device_model, parentModel] of [
+    ['T8W11C', 'T8W11C'],
+    ['T8410C', 'T8410C'],
+    ['T9999ABCD', undefined],
+    ['T8410C0000000000', undefined],
+    ['T8410c', undefined],
+  ])
+    assert.equal(
+      get(rejected, [{ ...base(), device_model }]).context.parentModel,
+      parentModel,
+      device_model,
+    );
 });

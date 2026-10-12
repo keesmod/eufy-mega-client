@@ -53,10 +53,14 @@ export interface Inventory {
 }
 const identity = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
-// A received model code in the catalogue shape, optionally with a short suffix such as
-// T8113-Z (ha-eufy-cam#129). Serials and free text never match, so diagnostics stay bounded.
+// A received model code in the catalogue shape, at most eight characters. It may end in a
+// hyphen suffix such as T8113-Z (ha-eufy-cam#129) or up to three unhyphenated characters
+// such as T8410C (ha-eufy-cam#149). Serials and free text never match, and values are
+// never trimmed, so diagnostics stay bounded.
 const diagnosticModel = (value: unknown): value is string =>
-  typeof value === 'string' && value.length <= 8 && /^T[A-Z0-9]{4}(?:-[A-Z0-9]{1,2})?$/.test(value);
+  typeof value === 'string' &&
+  value.length <= 8 &&
+  /^T[A-Z0-9]{4}(?:[A-Z0-9]{1,3}|-[A-Z0-9]{1,2})?$/.test(value);
 export function discover(items: unknown, options: DiscoveryOptions = {}): Inventory {
   if (!Array.isArray(items)) throw new EufyError('invalid_inventory');
   if (items.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');

@@ -94,7 +94,10 @@ export type DeviceRelationship =
 export interface DiscoveryIssue {
   index: number;
   deviceId: string | null;
-  /** Unsupported-device diagnostics only. Exact T + four uppercase ASCII letters/digits. */
+  /**
+   * Unsupported-device diagnostics only. At most eight characters: T, four uppercase ASCII
+   * letters/digits, then optionally one to three more or a hyphen and one or two more.
+   */
   deviceModel?: string;
   /** Unsupported-device diagnostics only. Integer in 0..65535, never coerced. */
   deviceType?: number;

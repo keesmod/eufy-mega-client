@@ -31,18 +31,24 @@ changing an allowlist or claiming independence.
 `discoverDevices().issues` preserves its existing `index`, `deviceId` and `code`.
 Never log the whole issue: `deviceId` is private. For `unsupported_device`,
 optional `deviceModel` and `deviceType` fields describe the received pair.
-Only a model matching `T[A-Z0-9]{4}`, optionally followed by `-` and one or two
-characters from `[A-Z0-9]` such as `-Z` (since 0.26.0), and an integer type
-from 0 through 65535 are included. These are conservative diagnostic bounds, not protocol limits or
-recognition rules. Values are never trimmed, truncated, coerced or derived from
-serial numbers. Missing or invalid values are omitted.
+Only a model of at most eight characters matching
+`^T[A-Z0-9]{4}(?:[A-Z0-9]{1,3}|-[A-Z0-9]{1,2})?$`, and an integer type from 0
+through 65535 are included. The model is `T` and four characters from `[A-Z0-9]`,
+optionally followed by `-` and one or two such characters, such as `T8113-Z`
+(since 0.26.0), or by one to three such characters without a hyphen, such as
+`T8410C` (since 0.29.2). A longer value, such as a typical 16-character serial
+number, never matches. These are conservative diagnostic bounds, not protocol
+limits or recognition rules. Values are never trimmed, truncated, coerced or
+derived from serial numbers. Missing or invalid values are omitted.
+`context.parentModel` uses the same model bound.
 
 Consumers can log the fixed error code and these two fields, revalidate them
 at the logging boundary, and deduplicate by code plus model plus type. Distinct
-unknown pairs must remain visible. Keep the existing code when either field is
-absent. Other rejection codes have no new fields. Usable devices in a mixed
-inventory remain available. This does not add device support or diagnose the
-reported C30 without its actual received pair.
+unknown pairs must remain visible. A consumer that revalidates with an older,
+narrower pattern omits the unhyphenated codes until it adopts this bound. Keep
+the existing code when either field is absent. Other rejection codes have no new
+fields. Usable devices in a mixed inventory remain available. This does not add
+device support or diagnose the reported C30 without its actual received pair.
 
 ## Rejected-device context, 0.12.2
 

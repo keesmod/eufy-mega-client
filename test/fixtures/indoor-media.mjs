@@ -1,7 +1,10 @@
 // Independently authored exact tuples and branch expectations. Sources: docs/INDOOR.md.
+// T8410C uses the firmware of the ha-eufy-cam#149 type 31 rows, whose model is unconfirmed.
+const reported = { T8410C: ['3.3.4.4', '3.8.7.4'] };
 export const indoorMedia = [
   ['T8400', 30, 'doorbell'],
   ['T8410', 31, 'indoor-h3'],
+  ['T8410C', 31, 'indoor-h3'],
   ['T8401', 34, 'indoor'],
   ['T8411', 35, 'indoor'],
   ['T8441', 45, 'indoor'],
@@ -18,6 +21,6 @@ export const indoorMedia = [
   liveEnvelope,
   topology: 'H3',
   admitted: true,
-  firmware: '1.2.3',
-  owner: { model: 'T8030', type: 18, firmware: '3.8.6.0' },
+  firmware: reported[model]?.[0] ?? '1.2.3',
+  owner: { model: 'T8030', type: 18, firmware: reported[model]?.[1] ?? '3.8.6.0' },
 }));

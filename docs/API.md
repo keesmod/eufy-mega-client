@@ -812,8 +812,11 @@ exact profile allows it becomes its own P2P owner on the existing local route.
 Two profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
 [ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66). `T8410`/31,
-the Indoor Cam Pan & Tilt 2K, has it since 0.29.1 for
+the Indoor Cam E220, which Eufy's comparison page calls Indoor Cam 2K Pan & Tilt,
+has it since 0.29.1 for
 [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152).
+`T8410C`/31, the Indoor Cam Pan&Tilt 2K admitted in 0.29.2, does not have it. A
+standalone T8410C keeps `standalone_transport_unverified`.
 
 - Discovery returns `{ kind: 'standalone', ownerId, transport: 'experimental', descriptor }`
   without an issue. Every other standalone row keeps

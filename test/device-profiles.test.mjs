@@ -115,6 +115,167 @@ for (const model of ['T8113-Z', 'T8113-V']) {
   });
 }
 
+// ha-eufy-cam#149: the reported owner and camera firmware. Synthetic identities only.
+const reportedOwner = {
+  category: 'eufy_security',
+  device_model: 'T8030',
+  device_type: 18,
+  device_sn: 'T8030_SYNTHETIC',
+  parent_sn: '',
+  main_sw_version: '3.8.7.4',
+};
+const h3Policy = { snapshot: 'h3', live: 'h3', recordings: 'h3' };
+// The additional-H3 owner gates every admitted feature, unlike the established route.
+function assertH3OwnerGates(camera, owner) {
+  for (const feature of ['snapshot', 'live', 'recordings']) {
+    assert.equal(hasCameraMedia(camera, owner, feature), true, feature);
+    for (const other of [
+      undefined,
+      { ...owner, device_model: 'T8002' },
+      { ...owner, main_sw_version: '2.0.9.6' },
+      { ...owner, main_sw_version: undefined },
+    ])
+      assert.equal(hasCameraMedia(camera, other, feature), false, feature);
+    assert.equal(hasCameraMedia({ ...camera, parent_sn: 'OTHER' }, owner, feature), false);
+    assert.equal(
+      hasCameraMedia({ ...camera, parent_sn: 'HB' }, { ...owner, device_sn: 'HB' }, feature),
+      false,
+    );
+    assert.equal(hasCameraMedia({ ...camera, parent_sn: '' }, owner, feature), false);
+  }
+}
+
+test('T8160-C has the T8160 type and adapter with the additional-H3 media policy', () => {
+  const profile = deviceProfiles['T8160-C'];
+  // Not a copy of the T8160 row: established media stays with the original four models.
+  assert.deepEqual(
+    { ...profile, features: { ...profile?.features } },
+    { type: 19, kind: 'camera', family: 'eufycam', topology: 'h3', features: h3Policy },
+  );
+  assert.equal(deviceProfiles.T8160.features.live, 'established');
+  assert.equal(exactDeviceProfile({ device_model: 'T8160-C', device_type: 19 }), profile);
+  for (const [device_model, device_type] of [
+    ['T8160-C', 23],
+    ['T8160-C', 31],
+    ['T8160-C', '19'],
+    ['T8160-X', 19],
+    ['T8160-Z', 19],
+    ['T8160-CC', 19],
+    ['T8160C', 19],
+    ['t8160-c', 19],
+    ['T8160-c', 19],
+    ['T8160-C ', 19],
+    [' T8160-C', 19],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8160-C',
+    device_type: 19,
+    parent_sn: reportedOwner.device_sn,
+    main_sw_version: '1.5.8.6',
+    main_hw_version: '0.0.3.7',
+  };
+  const result = discover([reportedOwner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), {
+    kind: 'station',
+    ownerId: reportedOwner.device_sn,
+  });
+  assert.equal(result.result.devices[1].model, 'T8160-C');
+  assert.equal(result.result.devices[1].firmware, '1.5.8.6');
+  assert.deepEqual(result.result.issues, []);
+  assertH3OwnerGates(camera, reportedOwner);
+  // The original T8160 keeps its model-only check, so only T8160-C needs the owner.
+  for (const feature of ['snapshot', 'live', 'recordings']) {
+    assert.equal(hasCameraMedia({ ...camera, device_model: 'T8160' }, undefined, feature), true);
+    assert.equal(hasCameraMedia(camera, undefined, feature), false);
+  }
+  for (const parent_sn of ['', 'CAM'])
+    assert.deepEqual(discover([reportedOwner, { ...camera, parent_sn }]).relationships.get('CAM'), {
+      kind: 'unsupported',
+      reason: 'invalid_device_relationship',
+    });
+  assert.equal(
+    discover([reportedOwner, { ...camera, parent_sn: 'HB\n' }]).result.issues[0].code,
+    'invalid_device_relationship',
+  );
+});
+
+test('T8410C has the T8410 H3 policy without the experimental standalone flag', () => {
+  const profile = deviceProfiles.T8410C;
+  const indoor = { type: 31, kind: 'camera', family: 'indoor', topology: 'h3-or-standalone' };
+  assert.deepEqual(
+    { ...profile, features: { ...profile?.features } },
+    { ...indoor, features: h3Policy },
+  );
+  assert.equal(profile.experimentalStandalone, undefined);
+  // T8410 carries the experimentalStandalone flag since 0.29.1 (ha-eufy-cam#152). The rest of
+  // its profile is the H3 policy that T8410C shares.
+  const { experimentalStandalone, ...t8410H3 } = deviceProfiles.T8410;
+  assert.equal(experimentalStandalone, true);
+  assert.deepEqual(
+    { ...t8410H3, features: { ...t8410H3.features } },
+    { ...indoor, features: h3Policy },
+  );
+  assert.equal(exactDeviceProfile({ device_model: 'T8410C', device_type: 31 }), profile);
+  assert.equal(
+    exactDeviceProfile({ device_model: 'T8410', device_type: 31 }),
+    deviceProfiles.T8410,
+  );
+  for (const [device_model, device_type] of [
+    ['T8410C', 30],
+    ['T8410C', 19],
+    ['T8410C', '31'],
+    ['T8410-C', 31],
+    ['T8410P', 31],
+    ['T8410N', 31],
+    ['T8410CC', 31],
+    ['T8410C21', 31],
+    ['t8410c', 31],
+    ['T8410c', 31],
+    ['T8410C ', 31],
+    [' T8410C', 31],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8410C',
+    device_type: 31,
+    parent_sn: reportedOwner.device_sn,
+    main_sw_version: '3.3.4.4',
+  };
+  const result = discover([reportedOwner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), {
+    kind: 'station',
+    ownerId: reportedOwner.device_sn,
+  });
+  assert.equal(result.result.devices[1].model, 'T8410C');
+  assert.deepEqual(result.result.issues, []);
+  assertH3OwnerGates(camera, reportedOwner);
+  // An empty or self parent keeps the unverified descriptor, also with the opt-in.
+  for (const parent_sn of ['', 'CAM'])
+    for (const options of [{}, { experimentalStandalone: true }]) {
+      const standalone = discover([reportedOwner, { ...camera, parent_sn }], options);
+      assert.deepEqual(standalone.relationships.get('CAM'), {
+        kind: 'standalone',
+        ownerId: 'CAM',
+        reason: 'standalone_transport_unverified',
+        descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
+      });
+      assert.deepEqual(standalone.owners.get('CAM'), {
+        id: 'CAM',
+        kind: 'standalone',
+        transport: 'unsupported',
+      });
+    }
+  assert.equal(
+    discover([reportedOwner, { ...camera, parent_sn: 'HB\n' }]).result.issues[0].code,
+    'invalid_device_relationship',
+  );
+});
+
 test('T8424 is recognized as its own station and never as an H3 camera', () => {
   const owner = {
     category: 'eufy_security',
