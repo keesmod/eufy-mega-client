@@ -326,24 +326,23 @@ Rows 6 and 7 could not show their model on 0.28.2, because the received string
 failed the diagnostic model bound of that version. T8410/31 was already
 admitted, so the string was not exactly `T8410`. 0.29.2 admits exactly
 `T8410C`/31 with the T8410 H3 policy without the experimental standalone flag,
-as described in [INDOOR.md](INDOOR.md#indoor-cam-pantilt-2k-t8410c-0292). T8410C is the
-evidence-based candidate for these rows. [HB-guide-EU] lists it as Indoor Cam
-Pan&Tilt 2K on HomeBase 3. The numeric type comes from public inventory, not
+as described in [INDOOR.md](INDOOR.md#indoor-cam-pantilt-2k-t8410c-0292). T8410C
+is the evidence-based candidate for these rows. [HB-guide-EU] lists it as Indoor
+Cam Pan&Tilt 2K on HomeBase 3. The numeric type comes from public inventory, not
 from Eufy's pages. [bropat-722] reports a T8410C/31 on camera firmware 3.3.3.2
-under a T8030, in a live start failure that upstream has since fixed. A public Mega
-inventory log, [Mega-7], shows T8410C/31 with a parent next to a T8030/18 and a
-separate T8410/31. Both come from other clients. That they read the
-same inventory field as this client is not verified. Plain T8410 firmware is on
-the 2.3.x line, as on the two ha-eufy-cam#152 cameras above. The reporter's
-firmware 3.3.4.4 fits T8410C. Their product name and their T8410 label do not
-decide it. The rows cannot carry exactly `T8410`, and the [Mega-7] owner uses
-Indoor Cam Pan&Tilt for both a T8410/31 and a T8410C/31. T8410C is not a
-confirmed received value. 0.29.2 also widens
-the diagnostic model bound to unhyphenated codes such as `T8410C`, as described in
-[DIAGNOSTICS.md](DIAGNOSTICS.md#missing-devices). If these rows carry another
-catalogue-shaped code of at most eight characters, the next report shows it,
-provided the bridge and integration apply the same bound. A value of another
-shape is still omitted.
+under a T8030, in a live start failure that upstream has since fixed. A public
+Mega inventory log, [Mega-7], shows T8410C/31 with a parent next to a T8030/18
+and a separate T8410/31. Both come from other clients. That they read the same
+inventory field as this client is not verified. Plain T8410 firmware is on the
+2.3.x line, as on the two ha-eufy-cam#152 cameras above. The reporter's firmware
+3.3.4.4 fits T8410C. Their product name and their T8410 label do not decide it.
+The rows cannot carry exactly `T8410`, and the [Mega-7] owner uses Indoor Cam
+Pan&Tilt for both a T8410/31 and a T8410C/31. T8410C is not a confirmed received
+value. 0.29.2 also widens the diagnostic model bound to unhyphenated codes such
+as `T8410C`, as described in [DIAGNOSTICS.md](DIAGNOSTICS.md#missing-devices).
+If these rows carry another catalogue-shaped code of at most eight characters,
+the next report shows it, provided the bridge and integration apply the same
+bound. A value of another shape is still omitted.
 
 Post-upgrade physical results for T8160-C and for rows 6 and 7 remain pending.
 The type 19 and type 31 feature rows below gain no H or P cells.
