@@ -36,7 +36,7 @@ Only a model of at most eight characters matching
 through 65535 are included. The model is `T` and four characters from `[A-Z0-9]`,
 optionally followed by `-` and one or two such characters, such as `T8113-Z`
 (since 0.26.0), or by one to three such characters without a hyphen, such as
-`T8410C` (since 0.29.1). A longer value, such as a typical 16-character serial
+`T8410C` (since 0.29.2). A longer value, such as a typical 16-character serial
 number, never matches. These are conservative diagnostic bounds, not protocol
 limits or recognition rules. Values are never trimmed, truncated, coerced or
 derived from serial numbers. Missing or invalid values are omitted.

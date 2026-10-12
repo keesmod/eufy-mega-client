@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.29.1 - 2026-10-12
+## 0.29.2 - 2026-10-12
 
 ### eufyCam 3 and Indoor Cam Pan&Tilt 2K model codes
 
@@ -11,13 +11,14 @@
   Its reported firmware 1.5.8.6 differs from the T8160 line, so T8160 hardware
   results do not transfer to it.
 - Admit exactly `T8410C` with device type 31, the Indoor Cam Pan&Tilt 2K, with
-  the T8410 policy: the `IndoorCamera` adapter, `h3-or-standalone` topology and
-  additional-H3 media. This rests on public evidence. Eufy's HomeBase
-  compatibility guide lists T8410C as supported on HomeBase 3, and public
-  inventories show T8410C with type 31 under a T8030. The two type 31 rows in
-  ha-eufy-cam#149 could not show their model, so it is not verified that they
-  carry exactly `T8410C`. The experimental standalone route stays off for
-  T8410C.
+  the T8410 H3 policy without the experimental standalone flag: the
+  `IndoorCamera` adapter, `h3-or-standalone` topology and additional-H3 media.
+  This rests on public evidence. Eufy's HomeBase compatibility guide lists
+  T8410C as supported on HomeBase 3, and public inventories show T8410C with
+  type 31 under a T8030. The two type 31 rows in ha-eufy-cam#149 could not show
+  their model, so it is not verified that they carry exactly `T8410C`. The
+  experimental standalone route that 0.29.1 opened for a standalone `T8410`
+  stays off for T8410C, also with `experimentalStandalone`.
 - Other suffixes, twins such as `T8160C` and `T8410-C`, lower case and
   mismatched types remain `unsupported_device`. No prefix or type-only
   admission is added.
@@ -37,7 +38,9 @@
 Upgrade: no configuration, API or session migration. A `T8160-C`/19 or
 `T8410C`/31 row that was `unsupported_device` now becomes a camera, and
 diagnostics can carry an unhyphenated model code where they omitted the field.
-Rollback: 0.29.0. No new protocol or legacy security-cloud fallback is added.
+Rollback: 0.29.1. No new protocol or legacy security-cloud fallback is added.
+
+## 0.29.1 - 2026-10-12
 
 ### Experimental standalone T8410
 

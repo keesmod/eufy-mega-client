@@ -147,7 +147,7 @@ An `unsupported_device` report already carries a received model code of at most
 eight characters, bounded to `T[A-Z0-9]{4}` optionally followed by `-` and one or
 two characters from `[A-Z0-9]`, or by one to three such characters without a
 hyphen. It also carries an integer type from 0 through 65535 and bounded
-firmware/topology context when available. Since 0.29.1 unhyphenated catalogue
+firmware/topology context when available. Since 0.29.2 unhyphenated catalogue
 codes such as `T8410C`, `T8W11C` and `T8419N` are shown as received instead of
 being omitted. Serial numbers and free text still never match, and nothing is
 trimmed to fit the bound. Use the received pair, parent status/model and owner

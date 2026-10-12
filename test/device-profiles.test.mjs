@@ -202,7 +202,7 @@ test('T8160-C has the T8160 type and adapter with the additional-H3 media policy
   );
 });
 
-test('T8410C has the exact T8410 policy, actual H3 owner and no experimental route', () => {
+test('T8410C has the T8410 H3 policy without the experimental standalone flag', () => {
   const profile = deviceProfiles.T8410C;
   const indoor = { type: 31, kind: 'camera', family: 'indoor', topology: 'h3-or-standalone' };
   assert.deepEqual(
@@ -210,9 +210,14 @@ test('T8410C has the exact T8410 policy, actual H3 owner and no experimental rou
     { ...indoor, features: h3Policy },
   );
   assert.equal(profile.experimentalStandalone, undefined);
-  for (const [field, value] of Object.entries(indoor))
-    assert.equal(deviceProfiles.T8410[field], value, field);
-  assert.deepEqual({ ...deviceProfiles.T8410.features }, h3Policy);
+  // T8410 carries the experimentalStandalone flag since 0.29.1 (ha-eufy-cam#152). The rest of
+  // its profile is the H3 policy that T8410C shares.
+  const { experimentalStandalone, ...t8410H3 } = deviceProfiles.T8410;
+  assert.equal(experimentalStandalone, true);
+  assert.deepEqual(
+    { ...t8410H3, features: { ...t8410H3.features } },
+    { ...indoor, features: h3Policy },
+  );
   assert.equal(exactDeviceProfile({ device_model: 'T8410C', device_type: 31 }), profile);
   assert.equal(
     exactDeviceProfile({ device_model: 'T8410', device_type: 31 }),

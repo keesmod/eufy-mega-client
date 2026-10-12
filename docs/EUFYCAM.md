@@ -48,13 +48,13 @@ See [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-66-update-0282).
 [V-report]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6083775017
 [V-result]: https://github.com/keesmod/ha-eufy-cam/issues/66#issuecomment-6098838866
 
-## Reported T8160-C, 0.29.1
+## Reported T8160-C, 0.29.2
 
 The [2026-10-09 report on ha-eufy-cam#149][C-report] shows a `T8160-C` with
 `device_type=19`, firmware 1.5.8.6 and hardware 0.0.3.7, under a T8030 on
 firmware 3.8.7.4. The Eufy app shows it as a regular eufyCam 3. Bridge
 0.8.33/client 0.28.2 rejected this exact model as `unsupported_device`, so Home
-Assistant never created the camera. 0.29.1 admits this exact pair with the
+Assistant never created the camera. 0.29.2 admits this exact pair with the
 T8160 type, the same generic Camera adapter and H3 topology. No prefix matching
 or standalone route is added. Other types, owners and unevidenced forms such as
 `T8160C`, `T8160-X` or lower case retain their existing rejection.
@@ -76,7 +76,7 @@ the shared media/lifecycle fixtures with the reported camera and owner
 firmware. They cover stored snapshots, both live codecs, video/audio, confirmed
 stop, recording metadata/download, cancellation and the owner and firmware
 rejections. Physical results on T8160-C are pending. See
-[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-149-0291).
+[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-149-0292).
 
 [C-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
 

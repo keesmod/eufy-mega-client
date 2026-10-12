@@ -11,7 +11,7 @@ was used for these changes.
 | ------ | ------------- | --------------------------------------- |
 | T8400  | 30            | Indoor Cam 2K / C120                    |
 | T8410  | 31            | Indoor Cam E220                         |
-| T8410C | 31            | Indoor Cam Pan&Tilt 2K, added in 0.29.1 |
+| T8410C | 31            | Indoor Cam Pan&Tilt 2K, added in 0.29.2 |
 | T8401  | 34            | Indoor Cam 1080p                        |
 | T8411  | 35            | Indoor Cam 1080p Pan & Tilt / E210      |
 | T8441  | 45            | Outdoor Cam Pro / C24                   |
@@ -30,9 +30,10 @@ HomeBase merely because that HomeBase can store the camera's recordings.
 An empty or self parent retains a camera descriptor and
 `standalone_transport_unverified`. It creates no station or working event/media
 route. The [experimental standalone T8410](#experimental-standalone-t8410-0291)
-is the only opt-in exception. Other owners report `unsupported_station`. T8440, T8W11C, T8W11P, T8419
-and T8419N remain unadmitted because their exact matrix association or relevant
-topology is unresolved. C210/C220 subtypes are not inferred. The product names
+is the only opt-in exception. T8410C does not have that route. Other owners
+report `unsupported_station`. T8440, T8W11C, T8W11P, T8419 and T8419N remain
+unadmitted because their exact matrix association or relevant topology is
+unresolved. C210/C220 subtypes are not inferred. The product names
 follow Eufy's [HomeBase compatibility guide][HB-guide-EU], which names T8410
 "Indoor Cam E220" and T8410C "Indoor Cam Pan&Tilt 2K". Earlier versions of this
 document labeled T8410 as the 2K Pan & Tilt, and owners still use that name for
@@ -144,24 +145,25 @@ independently reproduced.
 ## Experimental standalone T8410, 0.29.1
 
 [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) reports two
-Indoor Cam Pan & Tilt 2K cameras received as exactly `T8410` with type 31, on
-camera firmware 2.3.2.4 and 2.3.1.6. On 2026-10-10 the reporter ran integration
-0.8.43, bridge 0.8.34 and client 0.29.0 on HA OS amd64 with
-`experimental_standalone` on. Both cameras are standalone Wi-Fi cameras without a
-HomeBase, on the same subnet as the bridge. Discovery passed with a complete
-descriptor. Snapshot, live and recordings stayed `standalone_transport_unverified`
-and no local session was attempted, because 0.29.0 admitted only the T84A1
-profile to the opt-in route.
+cameras received as exactly `T8410` with type 31, which the reporter calls Indoor
+Cam Pan & Tilt 2K, on camera firmware 2.3.2.4 and 2.3.1.6. On 2026-10-10 the
+reporter ran integration 0.8.43, bridge 0.8.34 and client 0.29.0 on HA OS amd64
+with `experimental_standalone` on. Both cameras are standalone Wi-Fi cameras
+without a HomeBase, on the same subnet as the bridge. Discovery passed with a
+complete descriptor. Snapshot, live and recordings stayed
+`standalone_transport_unverified` and no local session was attempted, because
+0.29.0 admitted only the T84A1 profile to the opt-in route.
 
 With the client option `experimentalStandalone`, 0.29.1 admits exactly
 T8410/type 31 with an empty or self parent as its own local owner, as described
 in [API.md](API.md#experimental-standalone-cameras). No other Indoor model,
-`T8410C` or type-only match is admitted. The camera is then the station of the
-reused Station operations. Its type 31 station table declares `downloadImage`,
-`databaseQueryLatestInfo`, `databaseQueryByDate` and `databaseCountByDate`, and
-its device table declares live start and stop and download start and cancel. The
-session uses the existing local lookup and the LAN-derived command key from the
-camera's own serial and P2P device ID. No vendor source changes.
+`T8410C` or type-only match is admitted to this route. The camera is then the
+station of the reused Station operations. Its type 31 station table declares
+`downloadImage`, `databaseQueryLatestInfo`, `databaseQueryByDate` and
+`databaseCountByDate`, and its device table declares live start and stop and
+download start and cancel. The session uses the existing local lookup and the
+LAN-derived command key from the camera's own serial and P2P device ID. No
+vendor source changes.
 
 Live takes the generic Indoor branch of the [H3 media profile](#h3-media-profile)
 table, not the HomeBase-controlled type 31/S350 row, because the camera's own
@@ -192,7 +194,7 @@ the option. No standalone T8410 has used the route. The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
-## Indoor Cam Pan&Tilt 2K T8410C, 0.29.1
+## Indoor Cam Pan&Tilt 2K T8410C, 0.29.2
 
 The [2026-10-09 report on ha-eufy-cam#149][149-report] lists two cameras with
 `device_type=31` and firmware 3.3.4.4 under a T8030 on firmware 3.8.7.4, which
@@ -201,8 +203,9 @@ both as `unsupported_device`. Their model showed as unavailable, because the
 received string failed the diagnostic model bound of that version. T8410/31 was
 already admitted, so the received string was not exactly `T8410`.
 
-0.29.1 admits exactly `T8410C` with type 31, using the T8410 policy: the
-`IndoorCamera` adapter, `h3-or-standalone` topology and additional-H3 media.
+0.29.2 admits exactly `T8410C` with type 31, using the T8410 H3 policy without
+the experimental standalone flag: the `IndoorCamera` adapter, `h3-or-standalone`
+topology and additional-H3 media.
 The admission rests on public evidence, not on a value received in this report:
 
 - Eufy's [EU HomeBase compatibility guide][HB-guide-EU] lists "Indoor Cam
@@ -219,18 +222,20 @@ The admission rests on public evidence, not on a value received in this report:
 Limits of this evidence:
 
 - It is not verified that the reporter's rows carry exactly `T8410C`. If they
-  carry another string, 0.29.1 still rejects them. The widened
+  carry another string, 0.29.2 still rejects them. The widened
   [diagnostic bound](DIAGNOSTICS.md#missing-devices) then shows that string on
   the next report if it is a catalogue-shaped code of at most eight
   characters. A value of another shape is still omitted.
-- The sources above come from other clients. That they read the same inventory
-  field as this client is not verified.
+- The inventory and firmware sources above (the Mega log and the bropat
+  reports) come from other clients. That they read the same inventory field as
+  this client is not verified.
 - Only the exact pair is added. `T8410-C`, `T8410P`, lower case, trailing
   spaces and other types stay `unsupported_device`. No prefix or type-only
   admission exists.
 - An empty or self parent keeps `standalone_transport_unverified`. The
-  experimental standalone route stays off for T8410C, also with
-  `experimentalStandalone`.
+  experimental standalone route that 0.29.1 opened for the
+  [standalone T8410](#experimental-standalone-t8410-0291) stays off for T8410C,
+  also with `experimentalStandalone`.
 - Under a HomeBase the vendored live start selects the type 31 branch by device
   type and HomeBase control, so T8410C sends the T8410 envelope below. Branch
   selection does not read the camera serial, and the P2P session's serial-prefix
@@ -269,7 +274,9 @@ matching T8030/type 18 inventory parent with a T8030 serial prefix, LAN-derived
 credentials and numeric four-part owner firmware at or above 2.0.9.7. This is
 the conservative additional-H3 profile already used by the client, not a newly
 observed Indoor firmware minimum. Camera firmware 1.2.3 and owner 3.8.6.0 in
-fixtures are synthetic. Admission is also checked at 2.0.9.7. Unknown, malformed
+the other fixtures are synthetic. The T8410C fixture uses camera firmware 3.3.4.4
+and owner firmware 3.8.7.4 from the ha-eufy-cam#149 type 31 rows, whose model is
+unconfirmed. Admission is also checked at 2.0.9.7. Unknown, malformed
 or earlier owner firmware returns `camera_media_unverified` before media starts.
 
 The existing attributed `vendor/src/http/station.ts` at commit

@@ -212,6 +212,8 @@ test('the opt-in admits no other standalone model, type or HomeBase topology', (
     ['T8411', 35],
     ['T8416', 104],
     ['T817L', 10031],
+    // ha-eufy-cam#149: admitted under a HomeBase since 0.29.2, without the standalone flag.
+    ['T8410C', 31],
   ];
   for (const [device_model, device_type] of others) {
     const inventory = discover([wallLight({ device_model, device_type })], {
@@ -224,7 +226,7 @@ test('the opt-in admits no other standalone model, type or HomeBase topology', (
   for (const wrong of [
     wallLight({ device_type: 150 }),
     indoorPanTilt({ device_type: 35 }),
-    indoorPanTilt({ device_model: 'T8410C' }),
+    indoorPanTilt({ device_model: 'T8410-C' }),
   ]) {
     const inventory = discover([wrong], { experimentalStandalone: true });
     const pair = `${wrong.device_model}/${wrong.device_type}`;
