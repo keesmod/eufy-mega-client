@@ -66,7 +66,11 @@ export const h3MediaOwner = Object.freeze({
 // check. Discovery still validates their exact pairs and actual connection owner.
 export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.freeze({
   T8400: camera(30, 'indoor', 'h3-or-standalone', h3Media),
-  T8410: camera(31, 'indoor', 'h3-or-standalone', h3Media),
+  // ha-eufy-cam#152: standalone T8410 behind experimentalStandalone. H3 media is unchanged.
+  T8410: Object.freeze({
+    ...camera(31, 'indoor', 'h3-or-standalone', h3Media),
+    experimentalStandalone: true,
+  }),
   // ha-eufy-cam#149, 2026-10-12: public evidence of T8410C/type 31 under a HomeBase 3.
   T8410C: camera(31, 'indoor', 'h3-or-standalone', h3Media),
   T8401: camera(34, 'indoor', 'h3-or-standalone', h3Media),

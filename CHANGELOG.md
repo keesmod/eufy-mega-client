@@ -39,6 +39,36 @@ Upgrade: no configuration, API or session migration. A `T8160-C`/19 or
 diagnostics can carry an unhyphenated model code where they omitted the field.
 Rollback: 0.29.0. No new protocol or legacy security-cloud fallback is added.
 
+### Experimental standalone T8410
+
+- The opt-in client option `experimentalStandalone` now also admits a standalone
+  Indoor Cam Pan & Tilt 2K `T8410`/31 with an empty or self parent, for
+  [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152). Its
+  reporter has two such cameras without a HomeBase. On 0.29.0 they were
+  discovered with a complete descriptor but stayed
+  `standalone_transport_unverified` with no session attempt, because only the
+  T84A1 profile allowed the route. With the option the camera becomes its own
+  P2P owner on the existing local lookup and LAN-derived command key, with
+  experimental snapshot, live and recordings on its own session, as for the
+  T84A1. Live uses the existing generic Indoor start envelope, because the
+  camera's own station is not a HomeBase. No physical standalone camera has
+  used the route yet.
+- With the option on, a consumer that connects experimental owners at
+  discovery, as the ha-eufy-cam bridge does, now opens a local session to each
+  standalone T8410 there. A camera that does not answer adds up to the
+  20-second connect bound to that discovery.
+- Without the option nothing changes. A T8410 under a HomeBase keeps its H3
+  relationship, media and live branch, also with the option. Other Indoor
+  models, `T8410C` and other types stay unverified or unsupported. Guard mode,
+  pushes, detection events and cipher downloads stay refused on the route. The
+  only runtime change is the T8410 profile flag, with no API, type or vendor
+  change.
+
+Upgrade: no configuration, API or session migration. With the option already
+set, a standalone T8410 now reports `transport: 'experimental'` instead of
+`reason: 'standalone_transport_unverified'`. Rollback: 0.29.0, or turn the
+option off.
+
 ## 0.29.0 - 2026-10-10
 
 ### Experimental standalone T84A1

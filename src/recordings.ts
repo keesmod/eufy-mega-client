@@ -59,7 +59,7 @@ export async function completeHistory(
   throw new EufyError('history_completeness_unconfirmed');
 }
 
-/** Recording references originate exclusively from a complete HomeBase query. */
+/** Recording references originate exclusively from a complete query of the owner's database. */
 export class RecordingAccess {
   private readonly operations = new Set<string>();
   private references = new Map<string, Reference>();
