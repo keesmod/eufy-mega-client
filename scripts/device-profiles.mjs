@@ -29,12 +29,18 @@ export async function renderDeviceProfiles(text) {
       ]),
     ...Object.entries(deviceProfiles)
       .filter(([, profile]) => profile.experimentalStandalone)
-      .flatMap(([model]) => [
-        '',
-        `With the client option \`experimentalStandalone\`, a standalone ${model} becomes its own`,
-        'local owner with experimental snapshot, live and recordings. Its blocked cells above apply',
-        'without that option. See [API.md](API.md#experimental-standalone-cameras).',
-      ]),
+      .flatMap(([model, { features }]) => {
+        // Blocked cells apply without the option. H3 cells apply only under a HomeBase.
+        const [cells, scope] = Object.values(features).every((policy) => policy === 'blocked')
+          ? ['blocked', 'without that option']
+          : ['H3', 'only under a HomeBase'];
+        return [
+          '',
+          `With the client option \`experimentalStandalone\`, a standalone ${model} becomes its own`,
+          `local owner with experimental snapshot, live and recordings. Its ${cells} cells above apply`,
+          `${scope}. See [API.md](API.md#experimental-standalone-cameras).`,
+        ];
+      }),
   ].join('\n');
   const sections = text.split(start);
   if (sections.length !== 2 || sections[1].split(end).length !== 2)

@@ -28,7 +28,8 @@ HomeBase merely because that HomeBase can store the camera's recordings.
 
 An empty or self parent retains a camera descriptor and
 `standalone_transport_unverified`. It creates no station or working event/media
-route. Other owners report `unsupported_station`. T8410C, T8440, T8W11C,
+route. The [experimental standalone T8410](#experimental-standalone-t8410-0291)
+is the only opt-in exception. Other owners report `unsupported_station`. T8410C, T8440, T8W11C,
 T8W11P, T8419 and T8419N remain unadmitted because their exact matrix association
 or relevant topology is unresolved. C210/C220 subtypes are not inferred.
 
@@ -134,6 +135,57 @@ Motion, pet, vehicle, sound and crying events were not reported. Playback of a
 recording was a native remux even with H.264 output selected, which means this
 camera's recordings arrived as H.264. This is a reported result, not
 independently reproduced.
+
+## Experimental standalone T8410, 0.29.1
+
+[ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) reports two
+Indoor Cam Pan & Tilt 2K cameras received as exactly `T8410` with type 31, on
+camera firmware 2.3.2.4 and 2.3.1.6. On 2026-10-10 the reporter ran integration
+0.8.43, bridge 0.8.34 and client 0.29.0 on HA OS amd64 with
+`experimental_standalone` on. Both cameras are standalone Wi-Fi cameras without a
+HomeBase, on the same subnet as the bridge. Discovery passed with a complete
+descriptor. Snapshot, live and recordings stayed `standalone_transport_unverified`
+and no local session was attempted, because 0.29.0 admitted only the T84A1
+profile to the opt-in route.
+
+With the client option `experimentalStandalone`, 0.29.1 admits exactly
+T8410/type 31 with an empty or self parent as its own local owner, as described
+in [API.md](API.md#experimental-standalone-cameras). No other Indoor model,
+`T8410C` or type-only match is admitted. The camera is then the station of the
+reused Station operations. Its type 31 station table declares `downloadImage`,
+`databaseQueryLatestInfo`, `databaseQueryByDate` and `databaseCountByDate`, and
+its device table declares live start and stop and download start and cancel. The
+session uses the existing local lookup and the LAN-derived command key from the
+camera's own serial and P2P device ID. No vendor source changes.
+
+Live takes the generic Indoor branch of the [H3 media profile](#h3-media-profile)
+table, not the HomeBase-controlled type 31/S350 row, because the camera's own
+station is not a HomeBase. It sends `CMD_DOORBELL_SET_PAYLOAD` with
+`commandType=1000`, `account_id`, public `encryptkey` and codec 0/1 on the
+camera's channel. Stop is the plain `CMD_STOP_REALTIME_MEDIA`.
+
+Whether a standalone T8410 accepts that key and envelope is unknown. It is also
+unknown whether it answers the gateway information request after the handshake.
+Without that answer no command key is set and the connection ends at the
+`session_open` stage. Whether it serves snapshot covers and recordings from its
+own storage, such as a microSD card, is unknown too. A recording download with a
+cipher ID would need a cloud cipher and is refused. Guard mode and events stay
+off.
+
+The [standalone tests](../test/standalone-experimental.test.mjs) run the
+model-independent T84A1 cases for the T8410 too: discovery, credentials,
+connection stages, a live start and confirmed stop on the one session, snapshot
+assignment, and the refused guard mode, pushes and cipher downloads, with
+synthetic rows and a stubbed station. They also cover the `IndoorCamera` owner
+wiring, reloads between its own owner, a HomeBase and no transport, and a real
+vendor Station and `IndoorCamera` for the type 31 row without a socket, with the
+complete H.264 and H.265 start envelopes and the stop.
+
+Without the option a standalone T8410 keeps `standalone_transport_unverified`.
+Under a HomeBase it keeps its H3 relationship, media and live branch, also with
+the option. No standalone T8410 has used the route. The physical result belongs
+to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
 ## Remaining obligations
 

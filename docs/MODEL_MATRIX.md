@@ -272,6 +272,31 @@ relationship now reports which connection fields its row has, as presence
 booleans. This is software evidence with synthetic rows. No standalone camera
 has used the route, so the T84A1 row and its cells below are unchanged.
 
+## Reported standalone T8410 and experimental route, 0.29.1
+
+A reporter on [ha-eufy-cam#152][T8410-report], on 2026-10-10 with integration
+0.8.43, bridge 0.8.34 and client 0.29.0 on HA OS amd64, has two T8410/type 31
+Indoor Cam Pan & Tilt 2K cameras on firmware 2.3.2.4 and 2.3.1.6. Both are
+standalone Wi-Fi cameras without a HomeBase, on the same subnet as the bridge.
+With `experimental_standalone` enabled, discovery passed with both cameras
+standalone and a complete descriptor: P2P device ID, license, administrator user
+and LAN address present. Snapshot, live and recordings stayed
+`standalone_transport_unverified` and no local session was attempted, because
+0.29.0 admitted only the T84A1 profile to the opt-in route. This is a reported
+inventory tuple and descriptor, not a media result, and not independently
+reproduced. The report's diagnostic excerpt is empty. The exact pair therefore
+rests on the descriptor, which discovery only creates for an exact profile match.
+
+0.29.1 admits exactly T8410/31 with an empty or self parent to that route, as
+described in [API.md](API.md#experimental-standalone-cameras) and
+[INDOOR.md](INDOOR.md#experimental-standalone-t8410-0291). Without the option a
+standalone T8410 keeps `standalone_transport_unverified`, and under a HomeBase it
+keeps its H3 relationship and media. This is software evidence with synthetic
+rows only. No standalone T8410 has used the route yet, so the type 31 rows and
+their cells below are unchanged.
+
+[T8410-report]: https://github.com/keesmod/ha-eufy-cam/issues/152
+
 ## Reported T817L Wired Cam C31, 0.28.0
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and
