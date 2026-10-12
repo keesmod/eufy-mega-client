@@ -205,7 +205,8 @@ The additional model gate requires the exact pairs below, a T8030/type 18 owner
 whose serial follows the existing T8030 branch, and a four-part numeric owner
 firmware at or above 2.0.9.7. This is the existing payload branch threshold,
 not a firmware-support claim. Fixtures use owner firmware 3.8.6.0 and camera
-firmware 1.2.3. Unknown, malformed and earlier owner versions retain
+firmware 1.2.3, except the reported T8113-V and T8160-C fixtures, which use
+their reported camera firmware under owner firmware 3.8.7.4. Unknown, malformed and earlier owner versions retain
 `EufyError` code `camera_media_unverified`. Existing baseline model behavior is
 preserved. Command credentials, connections and media stay with the actual owner.
 

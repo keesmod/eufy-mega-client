@@ -18,7 +18,11 @@
   type 31 under a T8030. The two type 31 rows in ha-eufy-cam#149 could not show
   their model, so it is not verified that they carry exactly `T8410C`. The
   experimental standalone route that 0.29.1 opened for a standalone `T8410`
-  stays off for T8410C, also with `experimentalStandalone`.
+  stays off for T8410C, also with `experimentalStandalone`. The 0.29.1 entry
+  calls that `T8410` an Indoor Cam Pan & Tilt 2K. Eufy's HomeBase guide names
+  T8410 the Indoor Cam E220 and T8410C the Indoor Cam Pan&Tilt 2K, and owners
+  use Pan & Tilt names for both. The received model code, not the product name,
+  decides which profile applies.
 - Other suffixes, twins such as `T8160C` and `T8410-C`, lower case and
   mismatched types remain `unsupported_device`. No prefix or type-only
   admission is added.

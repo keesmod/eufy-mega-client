@@ -276,7 +276,7 @@ has used the route, so the T84A1 row and its cells below are unchanged.
 
 A reporter on [ha-eufy-cam#152][T8410-report], on 2026-10-10 with integration
 0.8.43, bridge 0.8.34 and client 0.29.0 on HA OS amd64, has two T8410/type 31
-cameras, which the reporter calls Indoor Cam Pan & Tilt 2K, on firmware 2.3.2.4
+cameras, which the reporter calls Indoor Cam Pan & Tilt, on firmware 2.3.2.4
 and 2.3.1.6. Both are
 standalone Wi-Fi cameras without a HomeBase, on the same subnet as the bridge.
 With `experimental_standalone` enabled, discovery passed with both cameras
@@ -330,13 +330,15 @@ as described in [INDOOR.md](INDOOR.md#indoor-cam-pantilt-2k-t8410c-0292). T8410C
 evidence-based candidate for these rows. [HB-guide-EU] lists it as Indoor Cam
 Pan&Tilt 2K on HomeBase 3. The numeric type comes from public inventory, not
 from Eufy's pages. [bropat-722] reports T8410C/31 under a T8030 on firmware
-3.3.3.2, and a public Mega inventory log, [Mega-7], shows T8410C/31 with a
-parent next to a T8030/18. Both come from other clients. That they read the
+3.3.3.2, in a live start failure that upstream has since fixed. A public Mega
+inventory log, [Mega-7], shows T8410C/31 with a parent next to a T8030/18 and a
+separate T8410/31. Both come from other clients. That they read the
 same inventory field as this client is not verified. Plain T8410 firmware is on
 the 2.3.x line, as on the two ha-eufy-cam#152 cameras above. The reporter's
-firmware 3.3.4.4 fits T8410C. Their product name does not decide it, because
-owners also use that name for cameras received as exactly `T8410`, as on
-ha-eufy-cam#152. T8410C is not a confirmed received value. 0.29.2 also widens
+firmware 3.3.4.4 fits T8410C. Their product name and their T8410 label do not
+decide it. The rows cannot carry exactly `T8410`, and the [Mega-7] owner uses
+Indoor Cam Pan&Tilt for both a T8410/31 and a T8410C/31. T8410C is not a
+confirmed received value. 0.29.2 also widens
 the diagnostic model bound to unhyphenated codes such as `T8410C`, as described in
 [DIAGNOSTICS.md](DIAGNOSTICS.md#missing-devices). If these rows carry another
 catalogue-shaped code of at most eight characters, the next report shows it,

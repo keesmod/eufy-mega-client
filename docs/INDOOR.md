@@ -37,9 +37,12 @@ unresolved. C210/C220 subtypes are not inferred. The T8410 and T8410C names
 follow Eufy's [HomeBase compatibility guide][HB-guide-EU], which names T8410
 "Indoor Cam E220" and T8410C "Indoor Cam Pan&Tilt 2K". Eufy's own
 [Indoor Cam comparison][Indoor] still names T8410 "Indoor Cam 2K Pan & Tilt"
-and lists no T8410C. Owners also use that name for T8410 cameras, and earlier
-versions of this document followed the comparison page. Eufy's sources
-therefore disagree, and a product name alone does not identify the model.
+and lists no T8410C. Earlier versions of this document followed the comparison
+page. Owners use Pan & Tilt names for both models. The ha-eufy-cam#152 reporter
+calls cameras received as exactly `T8410` Indoor Cam Pan & Tilt, and the owner
+in the [Mega inventory log][Mega-7] uses Indoor Cam Pan&Tilt for a T8410/31 and
+a T8410C/31. Eufy's sources therefore disagree, and a product name alone does
+not identify the model.
 
 ## Discovery, state and events
 
@@ -148,7 +151,7 @@ independently reproduced.
 
 [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) reports two
 cameras received as exactly `T8410` with type 31, which the reporter calls Indoor
-Cam Pan & Tilt 2K, on camera firmware 2.3.2.4 and 2.3.1.6. On 2026-10-10 the
+Cam Pan & Tilt, on camera firmware 2.3.2.4 and 2.3.1.6. On 2026-10-10 the
 reporter ran integration 0.8.43, bridge 0.8.34 and client 0.29.0 on HA OS amd64
 with `experimental_standalone` on. Both cameras are standalone Wi-Fi cameras
 without a HomeBase, on the same subnet as the bridge. Discovery passed with a
@@ -214,9 +217,13 @@ The admission rests on public evidence, not on a value received in this report:
   Pan&Tilt 2K" as T8410C and "Indoor Cam E220" as T8410, both supported on
   HomeBase 3.
 - A [public Mega inventory log][Mega-7] of 2026-09-14 shows model `T8410C` with
-  device type 31 and a parent, next to T8030/18, T8160/19 and T8213/91.
+  device type 31 and a parent, next to T8030/18, T8160/19, T8213/91 and a
+  separate T8410/31.
 - [bropat/eufy-security-client#722][bropat-722] of 2025-12-11 reports a T8410C
-  with firmware 3.3.3.2 and type 31 under a T8030.
+  with firmware 3.3.3.2 and type 31 under a T8030. That issue reports live start
+  failing with `return_code -104`. Upstream fixed it with a third-party change
+  that later became the HomeBase-controlled type 31 live branch the vendored
+  code carries. No hardware has confirmed that branch here.
 - T8410C firmware is on the 3.3.x line and plain T8410 firmware on the 2.3.x
   line, as in [eufy-security-ws#486][ws-486] and [#489][ws-489]. The reporter's
   firmware 3.3.4.4 fits T8410C.
