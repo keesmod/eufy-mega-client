@@ -436,4 +436,17 @@ test('rejection context preserves received firmware and parent evidence without 
     assert.equal(value.parentModel, undefined);
   }
   assert.equal(get({ ...rejected, device_type: null }).context.firmware, '0.2.1.8');
+  // The parent model uses the same bound as the rejected model (ha-eufy-cam#149).
+  for (const [device_model, parentModel] of [
+    ['T8W11C', 'T8W11C'],
+    ['T8410C', 'T8410C'],
+    ['T9999ABCD', undefined],
+    ['T8410C0000000000', undefined],
+    ['T8410c', undefined],
+  ])
+    assert.equal(
+      get(rejected, [{ ...base(), device_model }]).context.parentModel,
+      parentModel,
+      device_model,
+    );
 });

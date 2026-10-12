@@ -598,10 +598,11 @@ new exposure or event-specific image.
 | N/A  | No camera function on an owner-only device. This does not exclude its station status or recording ownership.                                                                                                                                     |
 
 For R rows, H3 results apply only to the exact model stated in the evidence
-column. Candidate suffixes remain B1/U. For C rows, B1/U applies to every listed
-topology. State covers available identity, firmware and availability. Battery is
-shown separately. Discovery initially returns battery null. The adapter reads a
-valid observed percentage or leaves it null. No battery lifetime claim is made.
+column. Unadmitted candidate suffixes remain B1/U. For C rows, B1/U applies to
+every listed topology. State covers available identity, firmware and
+availability. Battery is shown separately. Discovery initially returns battery
+null. The adapter reads a valid observed percentage or leaves it null. No
+battery lifetime claim is made.
 
 | Type  | Model / evaluated topology                           | Discovery | Available state     | Battery   | Stored snapshot | Live video | Live audio | Events          | Recordings    | Evidence                                            | Remaining work                                  |
 | ----- | ---------------------------------------------------- | --------- | ------------------- | --------- | --------------- | ---------- | ---------- | --------------- | ------------- | --------------------------------------------------- | ----------------------------------------------- |
@@ -615,7 +616,7 @@ valid observed percentage or leaves it null. No battery lifetime claim is made.
 | 14    | T8140 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#100]                                          |
 | 15    | T8142 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [S1], [C0]                                          | [#101]                                          |
 | 16    | T8220 / T8221 / T8222 candidates / listed topologies | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#110], [#111], [#112]                          |
-| 19    | T8160 / H3 only. T8160-C not covered by H            | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55], [149-report]               |
+| 19    | T8160 / H3 only. T8160-C software only, no H         | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55], [149-report]               |
 | 23    | T8161 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#102]                                          |
 | 24    | T8600 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#103]                                          |
 | 26    | T8162 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#104]                                          |
