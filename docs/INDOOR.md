@@ -37,12 +37,12 @@ unresolved. C210/C220 subtypes are not inferred. The T8410 and T8410C names
 follow Eufy's [HomeBase compatibility guide][HB-guide-EU], which names T8410
 "Indoor Cam E220" and T8410C "Indoor Cam Pan&Tilt 2K". Eufy's own
 [Indoor Cam comparison][Indoor] still names T8410 "Indoor Cam 2K Pan & Tilt"
-and lists no T8410C. Earlier versions of this document followed the comparison
-page. Owners use Pan & Tilt names for both models. The ha-eufy-cam#152 reporter
-calls cameras received as exactly `T8410` Indoor Cam Pan & Tilt, and the owner
-in the [Mega inventory log][Mega-7] uses Indoor Cam Pan&Tilt for a T8410/31 and
-a T8410C/31. Eufy's sources therefore disagree, and a product name alone does
-not identify the model.
+and lists no T8410C, so Eufy's sources disagree. Earlier versions of this
+document followed the comparison page. Owners use Pan & Tilt names for both
+models. The ha-eufy-cam#152 reporter calls cameras received as exactly `T8410`
+Indoor Cam Pan & Tilt. The owner behind the [Mega inventory log][Mega-7] lists
+two Indoor Cam Pan&Tilt, which that log shows as a T8410/31 and a T8410C/31. A
+product name alone therefore does not identify the model.
 
 ## Discovery, state and events
 

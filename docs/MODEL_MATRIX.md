@@ -315,7 +315,7 @@ parent status `present` and a T8030 parent on firmware 3.8.7.4:
 - Row 4 is `T8160-C` with type 19, firmware 1.5.8.6 and hardware 0.0.3.7. The
   Eufy app shows it as a regular eufyCam 3.
 - Rows 6 and 7 have type 31 and firmware 3.3.4.4, with model `unavailable`. The
-  reporter calls them Indoor Cam Pan&Tilt 2K.
+  reporter labels them Indoor Cam Pan&Tilt 2K T8410.
 
 0.29.2 admits exactly `T8160-C`/19 with the T8160 type and Camera adapter but
 the additional-H3 media policy, not the established T8160 route, as described in
@@ -329,8 +329,8 @@ admitted, so the string was not exactly `T8410`. 0.29.2 admits exactly
 as described in [INDOOR.md](INDOOR.md#indoor-cam-pantilt-2k-t8410c-0292). T8410C is the
 evidence-based candidate for these rows. [HB-guide-EU] lists it as Indoor Cam
 Pan&Tilt 2K on HomeBase 3. The numeric type comes from public inventory, not
-from Eufy's pages. [bropat-722] reports T8410C/31 under a T8030 on firmware
-3.3.3.2, in a live start failure that upstream has since fixed. A public Mega
+from Eufy's pages. [bropat-722] reports a T8410C/31 on camera firmware 3.3.3.2
+under a T8030, in a live start failure that upstream has since fixed. A public Mega
 inventory log, [Mega-7], shows T8410C/31 with a parent next to a T8030/18 and a
 separate T8410/31. Both come from other clients. That they read the
 same inventory field as this client is not verified. Plain T8410 firmware is on
