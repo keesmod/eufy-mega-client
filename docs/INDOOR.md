@@ -35,9 +35,11 @@ report `unsupported_station`. T8440, T8W11C, T8W11P, T8419 and T8419N remain
 unadmitted because their exact matrix association or relevant topology is
 unresolved. C210/C220 subtypes are not inferred. The T8410 and T8410C names
 follow Eufy's [HomeBase compatibility guide][HB-guide-EU], which names T8410
-"Indoor Cam E220" and T8410C "Indoor Cam Pan&Tilt 2K". Earlier versions of this
-document labeled T8410 as the 2K Pan & Tilt, and owners still use that name for
-T8410 cameras. A product name alone therefore does not identify the model.
+"Indoor Cam E220" and T8410C "Indoor Cam Pan&Tilt 2K". Eufy's own
+[Indoor Cam comparison][Indoor] still names T8410 "Indoor Cam 2K Pan & Tilt"
+and lists no T8410C. Owners also use that name for T8410 cameras, and earlier
+versions of this document followed the comparison page. Eufy's sources
+therefore disagree, and a product name alone does not identify the model.
 
 ## Discovery, state and events
 
@@ -251,6 +253,7 @@ physical T8410C was used. Hardware results are pending.
 
 [149-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
 [HB-guide-EU]: https://service.eufy.com/eu/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
+[Indoor]: https://service.eufy.com/article-description/Differences-Between-eufy-Indoor-Cams
 [Mega-7]: https://github.com/mscodemonkey/eufy-mega-security/issues/7
 [bropat-722]: https://github.com/bropat/eufy-security-client/issues/722
 [ws-486]: https://github.com/bropat/eufy-security-ws/issues/486
