@@ -10,8 +10,9 @@ public API and private protocol adapters remain unchanged.
 Recognition only means the exact model/type pair has a descriptor. Discovery
 validates the actual inventory relationship. `h3` requires an admitted HomeBase
 owner, `h3-or-standalone` also retains an empty/self-parent descriptor, and
-`standalone` rejects an H3 command relationship. A standalone descriptor always
-reports `standalone_transport_unverified`. It does not enable a connection.
+`standalone` rejects an H3 command relationship. A standalone descriptor reports
+`standalone_transport_unverified` and does not enable a connection, unless the
+client option `experimentalStandalone` admits its profile as noted below the table.
 `owner` denotes the station itself.
 
 Each media feature selects one of three existing rules:
@@ -107,6 +108,10 @@ owner firmware at or above 2.0.9.7.
 
 T8224 also admits the reported type 96 with the same policy.
 See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
+
+With the client option `experimentalStandalone`, a standalone T8410 becomes its own
+local owner with experimental snapshot, live and recordings. Its H3 cells above apply
+only under a HomeBase. See [API.md](API.md#experimental-standalone-cameras).
 
 With the client option `experimentalStandalone`, a standalone T84A1 becomes its own
 local owner with experimental snapshot, live and recordings. Its blocked cells above apply

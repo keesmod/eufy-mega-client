@@ -28,7 +28,7 @@ Each camera keeps its actual inventory parent, channel and public identifier.
 A T8030/type 18 parent selects the existing station route. An empty or self
 parent retains a camera descriptor with `standalone_transport_unverified`,
 without creating a HomeBase entity, opening a connection or enabling events.
-The experimental standalone S100 below is the only opt-in exception.
+The experimental standalone S100 below is the only wall-light opt-in exception.
 Other owners return `unsupported_station`. Unknown or mismatched model/type pairs
 return `unsupported_device`. Adapter initialization failures remain local to the
 camera. Changing an owner removes old listeners and observations.

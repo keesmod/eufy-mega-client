@@ -809,14 +809,17 @@ Version 0.29.0 adds the client option `experimentalStandalone`. It is off by
 default. Without it, standalone results only gain the `descriptor` described
 below. With it, a standalone camera whose
 exact profile allows it becomes its own P2P owner on the existing local route.
-Only `T84A1`/151, the Wall Light Cam S100, has that profile, for
+Two profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
-[ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66).
+[ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66). `T8410`/31,
+the Indoor Cam Pan & Tilt 2K, has it since 0.29.1 for
+[ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152).
 
 - Discovery returns `{ kind: 'standalone', ownerId, transport: 'experimental', descriptor }`
   without an issue. Every other standalone row keeps
-  `reason: 'standalone_transport_unverified'` and its issue. A T84A1 under a
-  HomeBase keeps its H3 relationship and blocked media.
+  `reason: 'standalone_transport_unverified'` and its issue. Under a HomeBase
+  both models keep their H3 relationship and table media policy, blocked for the
+  T84A1 and H3 for the T8410.
 - The camera's `stationId` is its own ID. `connectStation(id, { onProgress })`
   connects to the camera itself with the same lookup, [stages](#station-connection-stages-0260)
   and LAN-derived command key as a HomeBase. No cloud DSK, cipher or legacy
@@ -838,7 +841,9 @@ Only `T84A1`/151, the Wall Light Cam S100, has that profile, for
 No physical standalone camera has confirmed this route. A failure is the
 expected evidence for the next step, not a regression. The stage a failed
 connection reached says whether the camera answered the lookup, completed the
-session handshake or never accepted the command key.
+session handshake, or opened the session without a command key being established.
+A connected session sets the key locally, so the first answered command or media
+result is what shows the camera accepts it.
 
 Every standalone relationship carries `descriptor`: whether the inventory row
 has a P2P device ID (`did`), a P2P license (`license`), an administrator user
