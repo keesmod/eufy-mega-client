@@ -754,6 +754,27 @@ test('every reply is classified when it arrives and the session keeps counters o
   assert.equal(kept.includes('192.168.1.9'), false);
 });
 
+test('new account DIDs replace the earlier ones, so a device that left the account is foreign', (t) => {
+  const { protocol } = runningLookup(t);
+  protocol.setLookupAccountDids(new Set([ACCOUNT_DID]));
+  // A later attempt hands the session the account as it is now.
+  protocol.setLookupAccountDids(new Set());
+  protocol.handleMsg(lookupResponse(ACCOUNT_DID), from('192.168.1.9'));
+  assert.deepEqual(protocol.getLookupObservation(), {
+    ...emptyLookup,
+    rounds: 1,
+    datagrams: 1,
+    foreignReplies: 1,
+  });
+  const kept = util.inspect(protocol, {
+    depth: Infinity,
+    showHidden: true,
+    maxArrayLength: Infinity,
+    maxStringLength: Infinity,
+  });
+  assert.equal(kept.includes(ACCOUNT_DID), false);
+});
+
 test('inventoryReply names the class of the first reply from the inventory address', (t) => {
   const { protocol } = runningLookup(t);
   protocol.setLookupAccountDids(new Set([ACCOUNT_DID]));
@@ -1066,6 +1087,20 @@ test('a failing lookup consumer never alters the connection', async () => {
   const fails = () => {
     throw new Error('consumer failure');
   };
+  let observed = 0;
+  const throwing = () => {
+    observed++;
+    throw new Error('consumer failure');
+  };
+  // A consumer that throws on a successful attempt connects the same way.
+  const { t: plain } = connectionFixture({ lookup: sessionLookup });
+  try {
+    await plain.connect('HB', undefined, undefined, throwing);
+    assert.equal(observed, 1);
+    assert.equal(plain.state('HB').connected, true);
+  } finally {
+    await plain.close();
+  }
   const { t: transport, station } = connectionFixture({ lookup: sessionLookup });
   // A session that refuses both observation calls connects the same way.
   station.setLookupAccountDids = fails;

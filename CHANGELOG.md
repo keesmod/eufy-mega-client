@@ -26,6 +26,7 @@
 - The observation carries no DID, address, port, serial or interface name, and
   every count is bounded. Before an attempt starts its session, the client hands
   the P2P session the DIDs of the inventory's other devices and stations. The
+  session keeps its own copy of them, which never leaves the process. The
   session compares the DID of each lookup reply with the station's own DID and
   with those when the reply arrives, and then only counts it. The DID of a
   replying device is never stored or reported. Only the counters are kept, also
