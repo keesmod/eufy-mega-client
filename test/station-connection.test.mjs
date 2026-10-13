@@ -553,6 +553,27 @@ test('the lookup observation classifies replies by DID and names the round of a 
   });
 });
 
+test('a reply is near when only the inventory DID differs in padding, case or whitespace', (t) => {
+  const { protocol, connects } = runningLookup(t);
+  // The own side is normalised too, and its middle part is compared as an integer.
+  for (const own of ['ABCDEFG-12345-HIJKL', 'abcdefg-012345-hijkl', ' ABCDEFG -012345- HIJKL ']) {
+    protocol._clearLocalLookupRetryTimeout();
+    protocol._clearLookupTimeout();
+    protocol.rawStation = { station_sn: 'HB', p2p_did: own };
+    protocol.lookup();
+    protocol.handleMsg(lookupResponse(OWN_DID), from(INVENTORY_IP));
+    // The exact check still rejects the reply, as before.
+    assert.deepEqual(connects, []);
+    assert.deepEqual(protocol.getLookupObservation(new Set()), {
+      ...emptyLookup,
+      rounds: 1,
+      datagrams: 1,
+      nearReplies: 1,
+      inventoryReply: 'near',
+    });
+  }
+});
+
 test('a short lookup reply counts as a datagram and the counting path never throws', (t) => {
   const { protocol } = runningLookup(t);
   const reply = lookupResponse(OWN_DID);
@@ -612,6 +633,12 @@ test('failed lookup sends are counted, other failed sends are not', async (t) =>
   fail = false;
   await P2PClientProtocol.prototype.localLookupByAddress.call(protocol, address);
   assert.deepEqual(sends, ['f130', 'f1e0', 'f130']);
+  // A lookup send that fails after the lookup has ended is not counted.
+  fail = true;
+  const late = P2PClientProtocol.prototype.localLookupByAddress.call(protocol, address);
+  protocol._clearLookupTimeout();
+  protocol._clearLocalLookupRetryTimeout();
+  await late;
   assert.equal(protocol.getLookupObservation(new Set()).sendErrors, 1);
 });
 
@@ -620,13 +647,22 @@ test('lookup observation counts saturate at 999, rounds and ownRound at 99', asy
   for (let round = 1; round < 150; round++) t.mock.timers.tick(1000);
   protocol.socket = { send: (_message, _port, _host, callback) => callback(new Error('refused')) };
   const address = { host: INVENTORY_IP, port: 32108 };
+  const ACCOUNT_DID_2 = 'ACCOUNT-000003-AAAAA';
+  const FOREIGN_DID_2 = 'OTHERDV-000004-ZZZZZ';
   for (let i = 0; i < 1001; i++) {
     protocol.handleMsg(otherHeader, from('192.168.1.9'));
     protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+    // The sums over several DIDs saturate too, not only each DID's count.
+    if (i < 600) {
+      protocol.handleMsg(lookupResponse(FOREIGN_DID_2), from('192.168.1.9'));
+      protocol.handleMsg(lookupResponse(ACCOUNT_DID), from('192.168.1.9'));
+      protocol.handleMsg(lookupResponse(ACCOUNT_DID_2), from('192.168.1.9'));
+    }
+    protocol.handleMsg(lookupPacket('abcdefg', 12345, 'hijkl'), from('192.168.1.9'));
     await protocol.sendMessage('Local lookup address', address, RequestMessageType.LOCAL_LOOKUP);
   }
   protocol.handleMsg(lookupResponse(OWN_DID), from(INVENTORY_IP));
-  assert.deepEqual(protocol.getLookupObservation(new Set()), {
+  assert.deepEqual(protocol.getLookupObservation(new Set([ACCOUNT_DID, ACCOUNT_DID_2])), {
     rounds: 99,
     broadcastTargets: 3,
     broadcastEnabled: false,
@@ -635,9 +671,9 @@ test('lookup observation counts saturate at 999, rounds and ownRound at 99', asy
     otherHeaders: 999,
     ownReplies: 1,
     ownRound: 99,
-    accountReplies: 0,
+    accountReplies: 999,
     foreignReplies: 999,
-    nearReplies: 0,
+    nearReplies: 999,
     inventoryReply: 'own',
   });
 });
@@ -726,6 +762,49 @@ test('broadcastEnabled reports whether the bound socket accepted broadcasts, and
     await protocol.connect(INVENTORY_IP);
     assert.deepEqual(sent, [INVENTORY_IP, INVENTORY_IP]);
     assert.equal(protocol.getLookupObservation(new Set()).broadcastEnabled, true);
+  } finally {
+    protocol._clearLocalLookupRetryTimeout();
+    protocol._clearLookupTimeout();
+  }
+});
+
+test('a renewed socket reports its own broadcast result', async (t) => {
+  const { protocol, sent } = lookupProtocol(t);
+  protocol.connectionType = P2PConnectionType.ONLY_LOCAL;
+  protocol.MAX_LOOKUP_TIMEOUT = 20000;
+  protocol.connected = false;
+  protocol.connecting = false;
+  protocol.binded = false;
+  protocol.listeningPort = 0;
+  protocol._disconnected = () => {};
+  let refuse = false;
+  const stub = {
+    bind: (_port, callback) => callback(),
+    setRecvBufferSize() {},
+    setBroadcast() {
+      if (refuse) throw new Error('refused');
+    },
+    getRecvBufferSize: () => 0,
+    removeAllListeners() {},
+  };
+  protocol.socket = stub;
+  try {
+    await protocol.connect(INVENTORY_IP);
+    assert.equal(protocol.getLookupObservation(new Set()).broadcastEnabled, true);
+    protocol._clearLocalLookupRetryTimeout();
+    protocol._clearLookupTimeout();
+    // The socket closes and the session replaces it with a new one.
+    protocol.onClose();
+    const renewed = protocol.socket;
+    renewed.removeAllListeners();
+    renewed.close();
+    assert.equal(protocol.binded, false);
+    protocol.socket = stub;
+    protocol.connecting = false;
+    refuse = true;
+    await protocol.connect(INVENTORY_IP);
+    assert.deepEqual(sent, [INVENTORY_IP, INVENTORY_IP]);
+    assert.equal(protocol.getLookupObservation(new Set()).broadcastEnabled, false);
   } finally {
     protocol._clearLocalLookupRetryTimeout();
     protocol._clearLookupTimeout();
@@ -875,6 +954,22 @@ test('onLookup reports a cancelled attempt once, empty when no session started',
   }
 });
 
+test('an attempt cancelled before its lookup reports nothing', async () => {
+  const { t: transport, calls, reads } = connectionFixture({ answer: [], lookup: sessionLookup });
+  const observations = [];
+  try {
+    await assert.rejects(
+      transport.connect('HB', AbortSignal.abort(), undefined, (value) => observations.push(value)),
+      { code: 'cancelled' },
+    );
+    assert.deepEqual(observations, []);
+    assert.deepEqual(reads, []);
+    assert.equal(calls.connect, 0);
+  } finally {
+    await transport.close();
+  }
+});
+
 test('a failing lookup consumer never alters the connection', async () => {
   const fails = () => {
     throw new Error('consumer failure');
@@ -951,6 +1046,14 @@ test('the inventory address flags use the address the session was created with',
       inventoryAddressOnSubnet: true,
       inventoryAddressShared: true,
     });
+    // Only the owner's own row carries the address, which is not shared.
+    inventory = discover([row('T8030_OWNER', INVENTORY_IP), row('T8030_SECOND', '192.168.2.9')]);
+    await transport.load(inventory.raw, inventory);
+    assert.deepEqual(await observe(transport), {
+      ...emptyLookup,
+      inventoryAddressOnSubnet: true,
+      inventoryAddressShared: false,
+    });
     // The address leaves the owner's row and the other station moves. The
     // session keeps the address it was created with.
     inventory = discover([row('T8030_OWNER'), row('T8030_SECOND', '192.168.2.9')]);
@@ -974,6 +1077,19 @@ test('the inventory address flags use the address the session was created with',
     assert.deepEqual(await observe(fresh), emptyLookup);
   } finally {
     await fresh.close();
+  }
+  networks.mock.mockImplementation(() => interfaces);
+  const outside = new DeviceTransport();
+  try {
+    const inventory = discover([row('T8030_OWNER', '192.168.2.9'), row('T8030_SECOND')]);
+    await outside.load(inventory.raw, inventory);
+    assert.deepEqual(await observe(outside), {
+      ...emptyLookup,
+      inventoryAddressOnSubnet: false,
+      inventoryAddressShared: false,
+    });
+  } finally {
+    await outside.close();
   }
 });
 
@@ -1044,5 +1160,70 @@ test('an attempt without onLookup still drops the DIDs its lookup kept', async (
     await transport.close();
   }
   assert.equal(reads.length, 1);
+  assert.equal(protocol.lookupObservation, undefined);
+});
+
+test('a lookup the library starts itself drops its DIDs when its session is ready or fails', async (t) => {
+  const { protocol } = runningLookup(t);
+  const {
+    t: transport,
+    station,
+    reads,
+  } = connectionFixture({
+    lookup: (accountDids) => protocol.getLookupObservation(accountDids),
+  });
+  try {
+    // A reconnect after a drop: a neighbour answers, then the station itself.
+    protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+    protocol.handleMsg(lookupResponse(OWN_DID), from(INVENTORY_IP));
+    assert.equal(protocol.lookupObservation.others.size, 1);
+    station.emit('connect', station);
+    station.emit('encryption ready', station, 'lan-derived');
+    assert.equal(protocol.lookupObservation, undefined);
+    // A reconnect whose lookup times out, as Station.onTimeout reports it.
+    protocol.lookup();
+    protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+    protocol._clearLocalLookupRetryTimeout();
+    protocol._clearLookupTimeout();
+    assert.equal(protocol.lookupObservation.others.size, 1);
+    station.emit('connection error', station, new Error('timeout'));
+    assert.equal(protocol.lookupObservation, undefined);
+    // Neither drop passes inventory DIDs.
+    assert.deepEqual(reads, [
+      { accountDids: [], closes: 0 },
+      { accountDids: [], closes: 0 },
+    ]);
+  } finally {
+    await transport.close();
+  }
+});
+
+test('an extra live session drops the DIDs of its lookup when it connects or fails', (t) => {
+  const { protocol } = runningLookup(t);
+  const transport = new DeviceTransport();
+  for (const event of ['connect', 'connection error']) {
+    protocol._clearLocalLookupRetryTimeout();
+    protocol._clearLookupTimeout();
+    protocol.lookup();
+    protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+    const station = Object.assign(new EventEmitter(), {
+      getLookupObservation: (accountDids) => protocol.getLookupObservation(accountDids),
+    });
+    transport.bindExtra(station, 'HB:0');
+    assert.equal(protocol.lookupObservation.others.size, 1, event);
+    station.emit(event, station);
+    assert.equal(protocol.lookupObservation, undefined, event);
+  }
+});
+
+test('closing the session drops a lookup observation nobody read', async (t) => {
+  const { protocol } = runningLookup(t);
+  protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+  assert.equal(protocol.lookupObservation.others.size, 1);
+  protocol.messageStates = new Map();
+  protocol.messageVideoStates = new Map();
+  protocol.socket = undefined;
+  protocol.binded = false;
+  await protocol.close();
   assert.equal(protocol.lookupObservation, undefined);
 });

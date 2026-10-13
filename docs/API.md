@@ -203,10 +203,10 @@ An already connected station resolves without stages. The callback runs
 synchronously until the attempt resolves, fails or is cancelled. Errors it
 throws are ignored, and it cannot change or retry the connection. A stage
 carries no identifiers or addresses. A failure after `lookup` alone means no
-station answered, after `station_found` the station did not complete the
-handshake, and after `session_open` the command key was not established.
-The [lookup observation](#station-lookup-observation-0300) shows whether
-anything answered the lookup at all.
+reply with the station's own DID arrived, after `station_found` the station did
+not complete the handshake, and after `session_open` the command key was not
+established. The [lookup observation](#station-lookup-observation-0300) shows
+whether anything else answered the lookup.
 
 ### Station lookup observation, 0.30.0
 
@@ -248,9 +248,10 @@ itself reports that lookup from its start.
 The observation carries no DID, address, port, serial or interface name. The
 session keeps the DIDs of other replies only to classify them, and the client
 reads and drops them when each attempt that started a session ends, also
-without `onLookup`. A lookup of a reconnect the library started itself keeps
-them until the next attempt ends, the next lookup starts or the session closes.
-The inventory's DIDs are passed in for that read and are not kept.
+without `onLookup`. A lookup the library starts itself, a reconnect or the
+session of an extra live stream, has no reader. The client drops its DIDs by
+the time that session is ready or fails. The inventory's DIDs are passed in for
+that read and are not kept.
 
 `datagrams: 0` means nothing reached the session's socket during the lookup.
 `sendErrors` and `broadcastEnabled` then show whether the lookups could leave

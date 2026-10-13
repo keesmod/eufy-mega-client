@@ -26,7 +26,9 @@
 - The observation carries no DID, address, port, serial or interface name, and
   every count is bounded. The P2P session keeps the DIDs of other replies only
   to classify them, at most 16. The client reads and drops them when each
-  connection attempt ends, also without `onLookup`.
+  connection attempt ends, also without `onLookup`, and drops those of a lookup
+  the library starts itself, a reconnect or an extra live session, by the time
+  that session is ready or fails.
 - Observation only. The lookup's targets, timing and retries, the DID it
   accepts, the socket and the connection stages are unchanged, with and without
   `onLookup`.
