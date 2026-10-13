@@ -136,14 +136,21 @@ without a client release.
 From the approval of a batch or hotfix run until the run is complete, only the
 release PRs of that run merge to main. Publication uses only the commit that was
 rehearsed. When a run stops with `main advanced`, compare the rehearsed commit
-with current main. If only documentation changed, rehearse and publish current
-main. A runtime change after the approval needs a new approval. Before the
-release PR merges, such a change joins the candidate under its current version.
+with current main and check whether the tag `v<version>` exists. If only
+documentation changed and the tag does not exist yet, rehearse and publish
+current main. A stop just before the draft becomes public comes after the tag
+was created, so that version is used up. A runtime change after the approval
+needs a new approval. Before the release PR merges, such a change joins the same
+`X.Y.Z` batch. It keeps the version while that beta is unpublished, raises `N`
+after a published beta, or goes directly into the release PR.
 
 A tag created at a superseded commit uses up its version, because tags never
 move. A runtime PR merged after a release PR has to raise the version, so the
 dated version can no longer be published from main. Versions never decrease.
 Release the newer version instead and keep the unpublished section as history.
+The release notes contain only the new version's section, so that section
+carries the user-visible changes and upgrade steps of the unpublished section.
+Its rollback names the last published stable version.
 
 ## Rehearse and publish
 
@@ -170,11 +177,12 @@ Release the newer version instead and keep the unpublished section as history.
    once more. Only the publish job has repository write access.
 
 The main branch must still point at the candidate when publication begins and
-immediately before the draft becomes public. If it advanced, rerun from current
-main. A new version must be newer than every public release, betas included.
-Reusing an existing tag at another commit is rejected. A merge or a pushed tag
-alone does not publish a release. Releases do not deploy to a Home Assistant
-instance.
+immediately before the draft becomes public. If it advanced and the tag does not
+exist yet, rerun from current main. An existing tag uses up its version, as
+described under the merge freeze. A new version must be newer than every public
+release, betas included. Reusing an existing tag at another commit is rejected.
+A merge or a pushed tag alone does not publish a release. Releases do not deploy
+to a Home Assistant instance.
 
 ## Hardware coverage and release scope
 
@@ -237,11 +245,13 @@ Use Python 3.11+ and Node.js 24. GitHub uses bounded Ubuntu jobs.
 python3 scripts/check_workflows.py
 python3 -m unittest discover -s scripts/tests -v
 python3 scripts/release.py check
-python3 scripts/release.py check --base "$(git rev-parse origin/main)"
+python3 scripts/release.py check --base "$(git merge-base origin/main HEAD)"
 ```
 
-With `--base`, the pull request rules run against that commit. The published
-lookup needs an authenticated `gh` session.
+With `--base`, the pull request rules run against that commit. This
+approximates CI, which checks the pull request's merge commit against main.
+Rebase onto `origin/main` first for an exact result. The published lookup needs
+an authenticated `gh` session.
 
 Install development dependencies with `npm ci --ignore-scripts`. From a clean
 committed checkout, build the complete bundle into a new empty directory:
