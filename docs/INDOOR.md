@@ -195,7 +195,11 @@ complete H.264 and H.265 start envelopes and the stop.
 
 Without the option a standalone T8410 keeps `standalone_transport_unverified`.
 Under a HomeBase it keeps its H3 relationship, media and live branch, also with
-the option. No standalone T8410 has used the route. The physical result belongs
+the option. On 2026-10-13 the reporter of ha-eufy-cam#152 reported live video
+working on a standalone T8410 with firmware 2.3.2.4 and a failed connection on
+one with firmware 2.3.1.6, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
+The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
