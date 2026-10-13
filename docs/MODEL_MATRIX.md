@@ -321,10 +321,11 @@ on HA OS amd64. Those versions do not admit a T8410 to the route, which needs
 client 0.29.1 from bridge 0.8.35. The installed versions are therefore
 unconfirmed.
 
-- The camera on firmware 2.3.2.4 reached the `experimental` transport. Stored
-  snapshots, live video and WebRTC playback were reported working, with 242
-  frames through the software encoder in one session. Live audio, recordings,
-  events and the stop result were not reported. This client sends live START
+- The camera on firmware 2.3.2.4 reached the `experimental` transport. A
+  snapshot, live video and WebRTC playback were reported working, with 242
+  frames through the software encoder in one session. Whether the snapshot was
+  a stored cover or the last live frame was not reported. Live audio,
+  recordings, events and the stop result were not reported. This client sends live START
   only after the camera's own session has set the LAN-derived command key. So
   this firmware answered the gateway information request and accepted that key
   and the `CMD_DOORBELL_SET_PAYLOAD` start described in
@@ -332,10 +333,11 @@ unconfirmed.
 - The camera on firmware 2.3.1.6 failed live video on every attempt, also after
   restarts of the camera and the bridge. Its live pipeline ended with
   `fallback_startup_timeout`, 0 frames and 0 input bytes, and the event log had
-  `device_request_timeout` for its reference. On a standalone owner that code
+  `device_request_timeout` for its reference. On a standalone owner, that code
+  with a camera reference comes only from the bridge's discovery connection. It
   points to a connection that set no command key within the 20-second connect
-  bound, so START was never sent. Which connection stage the camera reached was
-  not reported yet.
+  bound, so START was most likely never sent on the live attempts either. Which
+  connection stage the camera reached was not reported yet.
 
 These are reported results, not independently reproduced. The reporter sees the
 firmware as the only difference. Nothing on this route branches on the firmware,
