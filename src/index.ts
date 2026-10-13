@@ -28,6 +28,7 @@ export type {
   StationConnectionStage,
   StationConnectionProgress,
   StationConnectOptions,
+  StationLookupObservation,
   Recording,
   DetectionEvent,
   EventSession,

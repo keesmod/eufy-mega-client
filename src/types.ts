@@ -259,6 +259,44 @@ export interface StationConnectionProgress {
    */
   inventoryAddress?: boolean;
 }
+/**
+ * What the local lookup of one connection attempt saw. No DID, address, port,
+ * serial or interface name. Counts saturate at 999 unless stated.
+ * See docs/API.md, station lookup observation.
+ */
+export interface StationLookupObservation {
+  /** Lookup rounds sent, 0 to 99. A round with no target is not counted. */
+  rounds: number;
+  /** Directed broadcast targets of the latest round, 0 to 16. */
+  broadcastTargets: number;
+  /** Whether the session socket accepted broadcasts. False when the attempt ran no lookup. */
+  broadcastEnabled: boolean;
+  /** Lookup sends that failed. */
+  sendErrors: number;
+  /** Datagrams received on the session socket while the lookup ran. */
+  datagrams: number;
+  /** Of those, datagrams that are not lookup replies. */
+  otherHeaders: number;
+  /** Lookup replies carrying the station's own DID. */
+  ownReplies: number;
+  /** Only with an own reply: the latest round sent when the first one arrived, 0 to 99. */
+  ownRound?: number;
+  /** Replies carrying the DID of another device or station in this inventory. */
+  accountReplies: number;
+  /** Replies carrying a DID that is not in this inventory. */
+  foreignReplies: number;
+  /** Replies that are not own but match the own DID after normalisation. */
+  nearReplies: number;
+  /** Class of the first reply from the inventory address, `none` without one. */
+  inventoryReply: 'none' | 'own' | 'account' | 'foreign' | 'near';
+  /**
+   * Only with an inventory address: whether it lies in the IPv4 subnet of one of
+   * the host's external interfaces. Absent when the interfaces cannot be read.
+   */
+  inventoryAddressOnSubnet?: boolean;
+  /** Only with an inventory address: whether another inventory row has the same LAN address. */
+  inventoryAddressShared?: boolean;
+}
 export interface StationConnectOptions {
   signal?: AbortSignal;
   /**
@@ -268,6 +306,12 @@ export interface StationConnectOptions {
    * connection stages.
    */
   onProgress?: (progress: StationConnectionProgress) => void;
+  /**
+   * Called synchronously at most once per attempt that reached `lookup`, when it
+   * resolves, fails or is cancelled. Errors it throws are ignored. It cannot
+   * change the connection. See docs/API.md, station lookup observation.
+   */
+  onLookup?: (observation: StationLookupObservation) => void;
 }
 export interface Recording {
   id: string;

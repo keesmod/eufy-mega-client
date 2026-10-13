@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.30.0 - Unreleased
+
+### Station lookup observation
+
+- `connectStation(id, { onLookup })` reports what the local lookup of a
+  connection attempt saw, once per attempt that reached the `lookup` stage, when
+  it resolves, fails or is cancelled: the rounds and broadcast targets sent,
+  whether the socket accepted broadcasts, failed sends, the datagrams received
+  and the lookup replies by class. A reply carries the station's own DID, the
+  DID of another device in the inventory, a DID outside the inventory, or a near
+  match of the own DID that differs only after a NUL byte, in surrounding
+  whitespace, in case or in the format of its number. The observation also gives
+  the class of the first reply from the inventory address, whether that address
+  lies in one of the host's subnets and whether another inventory row has the
+  same address. See the
+  [station lookup observation](docs/API.md#station-lookup-observation-0300).
+- This is for
+  [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152), where a
+  standalone T8410 on firmware 2.3.1.6 ends every connection at the `lookup`
+  stage with `inventoryAddress: true` while a T8410 on 2.3.2.4 connects. Until
+  now a reply with another DID was dropped without a trace, so a camera that
+  sent nothing could not be told apart from one whose reply was not accepted.
+  The cause on that camera is not known.
+- The observation carries no DID, address, port, serial or interface name, and
+  every count is bounded. Before an attempt starts its session, the client hands
+  the P2P session the DIDs of the inventory's other devices and stations. The
+  session keeps its own copy of them, which never leaves the process. The
+  session compares the DID of each lookup reply with the station's own DID and
+  with those when the reply arrives, and then only counts it. The DID of a
+  replying device is never stored or reported. Only the counters are kept, also
+  across a close, until the session starts its next connection, so a close the
+  attempt did not make still leaves its counts for `onLookup`.
+- Observation only. The lookup's targets, timing and retries, the DID it
+  accepts, the socket and the connection stages are unchanged, with and without
+  `onLookup`.
+
+Upgrade: additive and optional. `StationConnectOptions` gains `onLookup`, and
+the type `StationLookupObservation` is exported. Consumers that do not pass it,
+older ones included, see no change, and `connectStation(id, signal?)` is
+unchanged. Rollback: 0.29.2, and drop `onLookup`.
+
 ## 0.29.2 - 2026-10-12
 
 ### eufyCam 3 and Indoor Cam Pan&Tilt 2K model codes

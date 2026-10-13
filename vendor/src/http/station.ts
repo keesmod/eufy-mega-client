@@ -93,6 +93,7 @@ import {
   DynamicLighting,
   InternalColoredLighting,
   InternalDynamicLighting,
+  LookupObservation,
   MotionZone,
   P2PCommand,
   RGBColor,
@@ -1023,6 +1024,16 @@ export class Station extends TypedEmitter<StationEvents> {
 
   public isConnected(): boolean {
     return this.p2pSession.isConnected();
+  }
+
+  /** Client addition: the account's other DIDs for the session's lookup observation, see P2PClientProtocol. */
+  public setLookupAccountDids(dids: ReadonlySet<string>): void {
+    this.p2pSession.setLookupAccountDids(dids);
+  }
+
+  /** Client addition: the session's lookup observation, see P2PClientProtocol. */
+  public getLookupObservation(): LookupObservation | undefined {
+    return this.p2pSession.getLookupObservation();
   }
 
   public async close(): Promise<void> {
