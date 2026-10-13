@@ -137,27 +137,7 @@ import { getError, parseJSON } from "../utils";
 import { rootP2PLogger } from "../logging";
 import { normalizeAdtsFrames } from "./adts";
 
-/**
- * Client addition: what the session saw during its latest local lookup. The
- * DIDs of other answering devices stay here, at most 16, until the observation
- * is read, the next lookup starts or the session closes.
- */
-interface LookupState {
-  rounds: number;
-  broadcastTargets: number;
-  sendErrors: number;
-  datagrams: number;
-  otherHeaders: number;
-  ownReplies: number;
-  ownRound?: number;
-  nearReplies: number;
-  /** Replies per other DID, classified as account or foreign when read. */
-  others: Map<string, number>;
-  /** The first classified reply from the preferred address. */
-  inventory?: "own" | "near" | { did: string };
-}
-
-const LOOKUP_OTHER_DIDS = 16;
+/** Client addition: the next value of a lookup observation count, at most 999. */
 const lookupCount = (value: number): number => Math.min(999, value + 1);
 /** Client addition: a DID part cut at its first NUL, trimmed and upper-cased. */
 const didPart = (value: string): string => value.split("\0", 1)[0].trim().toUpperCase();
@@ -256,8 +236,13 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private lookupRetryTimeout?: NodeJS.Timeout;
   private lookup2Timeout?: NodeJS.Timeout;
   private lookup2RetryTimeout?: NodeJS.Timeout;
-  /** Client addition: the latest local lookup, for diagnostics only. */
-  private lookupObservation?: LookupState;
+  /**
+   * Client addition: the counters of the latest local lookup, for diagnostics
+   * only. No DID or address. `rounds` counts to 999 here and is cut to 99 when read.
+   */
+  private lookupObservation?: LookupObservation;
+  /** Client addition: the account's other DIDs, compared with each lookup reply as it arrives. */
+  private lookupAccountDids?: ReadonlySet<string>;
   /** Client addition: whether setBroadcast(true) succeeded on the bound socket. */
   private broadcastEnabled = false;
   private heartbeatTimeout?: NodeJS.Timeout;
@@ -525,7 +510,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   }
 
   /** Client addition: the lookup observation while its lookup runs, before the session connects. */
-  private runningLookup(): LookupState | undefined {
+  private runningLookup(): LookupObservation | undefined {
     if (this.connected || (this.lookupTimeout === undefined && this.localLookupRetryTimeout === undefined))
       return undefined;
     return this.lookupObservation;
@@ -723,16 +708,20 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   }
 
   private lookup(host?: string): void {
-    // Client addition: every lookup starts a new lookup observation.
+    // Client addition: every lookup starts a new lookup observation, with the
+    // broadcast result of the socket it runs on.
     this.lookupObservation = {
       rounds: 0,
       broadcastTargets: 0,
+      broadcastEnabled: this.broadcastEnabled === true,
       sendErrors: 0,
       datagrams: 0,
       otherHeaders: 0,
       ownReplies: 0,
+      accountReplies: 0,
+      foreignReplies: 0,
       nearReplies: 0,
-      others: new Map<string, number>(),
+      inventoryReply: "none",
     };
     this.localLookup(host ?? this.preferredIPAddress ?? this.localIPAddress);
     if (this.connectionType !== P2PConnectionType.ONLY_LOCAL) {
@@ -754,6 +743,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     if (!this.connected && !this.connecting && this.rawStation.p2p_did !== undefined) {
       this.connecting = true;
       this.terminating = false;
+      // Client addition: a new connection never reports an earlier lookup as its own.
+      this.lookupObservation = undefined;
       if (this.connectionType !== P2PConnectionType.ONLY_LOCAL) await this.renewDSKKey();
       if (!this.binded)
         this.socket.bind(this.listeningPort, () => {
@@ -1246,7 +1237,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   /**
    * Client addition: counts a datagram that arrives while the local lookup
    * runs and classifies a lookup reply by the DID the handling below parses.
-   * Observation only. It does not throw and changes nothing below.
+   * The DID is compared here and not kept. Observation only. It does not
+   * throw and changes nothing below.
    */
   private observeLookupDatagram(msg: Buffer, rinfo: RemoteInfo): void {
     const state = this.runningLookup();
@@ -1263,7 +1255,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     const suffix = msg.subarray(16, 24).toString("utf8");
     const did = `${prefix.replace(/[\0]+$/g, "")}-${number.toString().padStart(6, "0")}-${suffix.replace(/[\0]+$/g, "")}`;
     const own = typeof this.rawStation.p2p_did === "string" ? this.rawStation.p2p_did.split("-") : [];
-    let kind: "own" | "near" | { did: string };
+    let kind: Exclude<LookupObservation["inventoryReply"], "none">;
     if (did === this.rawStation.p2p_did) {
       kind = "own";
       state.ownReplies = lookupCount(state.ownReplies);
@@ -1277,56 +1269,32 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     ) {
       kind = "near";
       state.nearReplies = lookupCount(state.nearReplies);
+    } else if (this.lookupAccountDids?.has(did) === true) {
+      kind = "account";
+      state.accountReplies = lookupCount(state.accountReplies);
     } else {
-      const count = state.others.get(did);
-      // A reply with a seventeenth or later distinct DID stays unclassified.
-      if (count === undefined && state.others.size >= LOOKUP_OTHER_DIDS) return;
-      state.others.set(did, lookupCount(count ?? 0));
-      kind = { did };
+      kind = "foreign";
+      state.foreignReplies = lookupCount(state.foreignReplies);
     }
-    if (state.inventory === undefined && rinfo.address === this.preferredIPAddress) state.inventory = kind;
+    if (state.inventoryReply === "none" && rinfo.address === this.preferredIPAddress) state.inventoryReply = kind;
   }
 
   /**
-   * Client addition: the observation of the latest local lookup, undefined
-   * without one. `accountDids` holds the DIDs of the account's other devices
-   * and only classifies the other replies. Reading drops the observation and
-   * the DIDs it held.
+   * Client addition: the counters of the latest local lookup, undefined when
+   * no lookup ran since the session last started a connection. Reading leaves
+   * them in place.
    */
-  public getLookupObservation(accountDids: ReadonlySet<string>): LookupObservation | undefined {
+  public getLookupObservation(): LookupObservation | undefined {
     const state = this.lookupObservation;
-    this.lookupObservation = undefined;
-    if (state === undefined) return undefined;
-    let accountReplies = 0;
-    let foreignReplies = 0;
-    for (const [did, count] of state.others) {
-      if (accountDids.has(did)) accountReplies += count;
-      else foreignReplies += count;
-    }
-    const inventory = state.inventory;
-    state.others.clear();
-    state.inventory = undefined;
-    return {
-      rounds: Math.min(99, state.rounds),
-      broadcastTargets: state.broadcastTargets,
-      broadcastEnabled: this.broadcastEnabled === true,
-      sendErrors: state.sendErrors,
-      datagrams: state.datagrams,
-      otherHeaders: state.otherHeaders,
-      ownReplies: state.ownReplies,
-      ...(state.ownRound === undefined ? {} : { ownRound: state.ownRound }),
-      accountReplies: Math.min(999, accountReplies),
-      foreignReplies: Math.min(999, foreignReplies),
-      nearReplies: state.nearReplies,
-      inventoryReply:
-        inventory === undefined
-          ? "none"
-          : typeof inventory === "string"
-            ? inventory
-            : accountDids.has(inventory.did)
-              ? "account"
-              : "foreign",
-    };
+    return state === undefined ? undefined : { ...state, rounds: Math.min(99, state.rounds) };
+  }
+
+  /**
+   * Client addition: the DIDs of the account's other devices. A lookup reply
+   * with one of them counts as an account reply. Kept as a private copy.
+   */
+  public setLookupAccountDids(dids: ReadonlySet<string>): void {
+    this.lookupAccountDids = new Set(dids);
   }
 
   private handleMsg(msg: Buffer, rinfo: RemoteInfo): void {
@@ -4346,10 +4314,6 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
 
   private async closeConnection(): Promise<void> {
     this.terminating = true;
-    // Client addition: a waiting reader takes the lookup observation before the
-    // close drops it, so no DID of the ended attempt outlives the close.
-    if (this.lookupObservation !== undefined) this.emit("lookup closing");
-    this.lookupObservation = undefined;
     this._clearLookupTimeout();
     this._clearLocalLookupRetryTimeout();
     this._clearLookupRetryTimeout();

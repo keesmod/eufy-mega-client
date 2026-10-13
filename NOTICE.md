@@ -42,11 +42,11 @@ existing HomeBase-controlled S350 live branch, as described in [INDOOR.md](docs/
 so a local session can start without them. Version 0.30.0 adds a lookup
 observation to the P2P session: bounded counts of its local lookup rounds,
 failed lookup sends, received datagrams and lookup replies by DID class, which
-the client reads once per connection attempt. For a reconnect or an extra live
-session, which no attempt reads, it drops the observation by the time that
-session is ready, fails or closes. The session keeps at most 16 other DIDs until then and does not
-change the lookup. A close that drops an unread observation first announces it,
-so a running attempt can read it.
+the client reads once per connection attempt. The session classifies each reply
+when it arrives, against the station's own DID and a copy of the other inventory
+DIDs that the client sets before the attempt, and stores no DID of a replying
+device. Its counters last, also across a close, until the session starts its
+next connection. The observation does not change the lookup.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

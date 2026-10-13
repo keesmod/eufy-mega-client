@@ -95,8 +95,6 @@ export class DeviceTransport extends EventEmitter {
   /** That address itself, read only for the lookup observation. */
   private sessionAddresses = new Map<string, string>();
   private connecting = new Map<string, Promise<void>>();
-  /** Stations with an attempt that reads its lookup observation when it ends. */
-  private lookupReaders = new Set<string>();
   private snapshots = new Map<string, Snapshot>();
   private covers = new Map<string, string>();
   private lives = new Map<string, ActiveLive>();
@@ -462,32 +460,19 @@ export class DeviceTransport extends EventEmitter {
   }
   private bind(station: Station): void {
     const id = station.getSerial();
-    // A lookup the library starts itself, a reconnect after a drop or a
-    // timeout, has no reader. Drop its DIDs when that session is ready, fails or closes.
-    const dropLookup = () => {
-      if (this.lookupReaders.has(id)) return;
-      try {
-        station.getLookupObservation(new Set());
-      } catch {
-        // Observation only. Dropping it never alters the connection.
-      }
-    };
     station.on('encryption ready', (_station, mode) => {
-      dropLookup();
       this.encryption.set(id, mode);
       station.getCameraInfo();
       this.emit('station', this.state(id));
     });
     station.on('close', () => {
-      dropLookup();
       this.encryption.delete(id);
       this.finishLive(id, { confirmed: false, reason: 'connection_lost' });
       this.emit('station', this.state(id));
     });
-    station.on('connection error', () => {
-      dropLookup();
-      this.emit('fault', new EufyError('device_connection_failed'));
-    });
+    station.on('connection error', () =>
+      this.emit('fault', new EufyError('device_connection_failed')),
+    );
     station.on('property changed', () => this.emit('station', this.state(id)));
     station.on('parameter observed', (_s, type, value, source) => {
       // A standalone camera's own arming state is not admitted on its route.
@@ -609,37 +594,16 @@ export class DeviceTransport extends EventEmitter {
       }
     };
     // An attempt that reached its lookup reads the session's lookup observation
-    // once, when it ends and before a failed attempt closes the session. It is
-    // read without a consumer too, so no DID of the attempt stays behind.
+    // once, when it ends and before a failed attempt closes the session.
     let lookup: 'reached' | 'started' | undefined;
     // Every other account row counts, also one that discovery or load did not admit.
     const others = this.accountRows.filter((row) => row.device_sn !== id);
-    // The DIDs of the other inventory rows only classify the replies.
-    const accountDids = new Set(
-      others.flatMap((row) =>
-        typeof row.p2p_did === 'string' && row.p2p_did ? [row.p2p_did] : [],
-      ),
-    );
-    // A close during the attempt, after a rejected command key or by another
-    // operation, would drop the observation first. The attempt takes it then.
-    let snapshot: StationLookupObservation | undefined;
-    const take = () => {
-      if (lookup !== 'started' || snapshot) return;
-      try {
-        snapshot = station.getLookupObservation(accountDids);
-      } catch {
-        // Ignored by contract. The observation never alters the connection.
-      }
-    };
     const observe = () => {
-      if (!lookup) return;
+      if (!lookup || !onLookup) return;
       try {
         // An attempt cancelled before its session started observed nothing.
-        const observed =
-          lookup === 'started'
-            ? (snapshot ?? station.getLookupObservation(accountDids))
-            : undefined;
-        if (onLookup) onLookup(this.lookupObservation(id, others, observed));
+        const observed = lookup === 'started' ? station.getLookupObservation() : undefined;
+        onLookup(this.lookupObservation(id, others, observed));
       } catch {
         // Ignored by contract. The observation never alters the connection.
       }
@@ -647,11 +611,8 @@ export class DeviceTransport extends EventEmitter {
     const found = () => mark('station_found');
     const opened = () => mark('session_open');
     try {
-      // Marked before the lookup can start, so its end does not drop what observe() reads.
-      this.lookupReaders.add(id);
       station.on('station found', found);
       station.on('connect', opened);
-      station.on('lookup closing', take);
       const operation = this.wait(
         station,
         'encryption ready',
@@ -662,6 +623,19 @@ export class DeviceTransport extends EventEmitter {
           // starts that the close below would race.
           if (signal?.aborted || this.lifetime.signal.aborted) return;
           lookup = 'started';
+          try {
+            // The session compares each lookup reply with the other rows' DIDs
+            // as it arrives and keeps only counts.
+            station.setLookupAccountDids(
+              new Set(
+                others.flatMap((row) =>
+                  typeof row.p2p_did === 'string' && row.p2p_did ? [row.p2p_did] : [],
+                ),
+              ),
+            );
+          } catch {
+            // Observation only. It never alters the connection.
+          }
           void station
             .connect()
             .catch(() => station.emit('connection error', station, new Error('Connection failed')));
@@ -682,9 +656,7 @@ export class DeviceTransport extends EventEmitter {
     } finally {
       station.off('station found', found);
       station.off('connect', opened);
-      station.off('lookup closing', take);
       this.connecting.delete(id);
-      this.lookupReaders.delete(id);
     }
   }
   /** The public lookup observation of an ended attempt, without identifiers or addresses. */
@@ -1117,16 +1089,6 @@ export class DeviceTransport extends EventEmitter {
     }
   }
   private bindExtra(station: Station, key: string): void {
-    // An extra live session's lookup has no reader. Drop its DIDs when it connects or fails.
-    const dropLookup = () => {
-      try {
-        station.getLookupObservation(new Set());
-      } catch {
-        // Observation only. Dropping it never alters the connection.
-      }
-    };
-    station.on('connect', dropLookup);
-    station.on('connection error', dropLookup);
     station.on('close', () => {
       this.finishExtraLive(key, { confirmed: false, reason: 'connection_lost' });
     });

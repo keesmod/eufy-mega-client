@@ -24,11 +24,13 @@
   sent nothing could not be told apart from one whose reply was not accepted.
   The cause on that camera is not known.
 - The observation carries no DID, address, port, serial or interface name, and
-  every count is bounded. The P2P session keeps the DIDs of other replies only
-  to classify them, at most 16. The client reads and drops them when each
-  connection attempt ends, also without `onLookup`, and drops those of a lookup
-  the library starts itself, a reconnect or an extra live session, by the time
-  that session is ready, fails or closes.
+  every count is bounded. Before an attempt starts its session, the client hands
+  the P2P session the DIDs of the inventory's other devices and stations. The
+  session compares the DID of each lookup reply with the station's own DID and
+  with those when the reply arrives, and then only counts it. The DID of a
+  replying device is never stored or reported. Only the counters are kept, also
+  across a close, until the session starts its next connection, so a close the
+  attempt did not make still leaves its counts for `onLookup`.
 - Observation only. The lookup's targets, timing and retries, the DID it
   accepts, the socket and the connection stages are unchanged, with and without
   `onLookup`.

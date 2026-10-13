@@ -224,7 +224,6 @@ export class Station extends TypedEmitter<StationEvents> {
       this.emit('connection error', this, new Error('Device command credentials rejected'));
     });
     this.p2pSession.on("station found", () => this.emit("station found", this));
-    this.p2pSession.on("lookup closing", () => this.emit("lookup closing", this));
     this.p2pSession.on("connect", (address: Address) => this.onConnect(address));
     this.p2pSession.on("close", () => this.onDisconnect());
     this.p2pSession.on("timeout", () => this.onTimeout());
@@ -1027,9 +1026,14 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.p2pSession.isConnected();
   }
 
-  /** Client addition: reads and drops the session's lookup observation, see P2PClientProtocol. */
-  public getLookupObservation(accountDids: ReadonlySet<string>): LookupObservation | undefined {
-    return this.p2pSession.getLookupObservation(accountDids);
+  /** Client addition: the account's other DIDs for the session's lookup observation, see P2PClientProtocol. */
+  public setLookupAccountDids(dids: ReadonlySet<string>): void {
+    this.p2pSession.setLookupAccountDids(dids);
+  }
+
+  /** Client addition: the session's lookup observation, see P2PClientProtocol. */
+  public getLookupObservation(): LookupObservation | undefined {
+    return this.p2pSession.getLookupObservation();
   }
 
   public async close(): Promise<void> {

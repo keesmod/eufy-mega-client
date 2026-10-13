@@ -238,21 +238,22 @@ the DID it accepts are the same with and without `onLookup`.
 | `inventoryAddressShared`   | Only with an inventory address: whether another device or station in the inventory has the same private LAN address                                                         |
 
 Counts without a bound in the table saturate at 999. A lookup reply shorter
-than 16 bytes has no complete DID and counts only in `datagrams`. The session
-keeps at most 16 other DIDs for classification, so a reply with a seventeenth or
-later distinct DID also counts only in `datagrams`. An attempt whose session
-ran no lookup, such as one cancelled from its `lookup` stage callback, reports
-zero counts, `broadcastEnabled: false` and `inventoryReply: 'none'`, whatever an
-earlier socket of the session accepted. An attempt that joins a reconnect the
-library started itself reports that lookup from its start.
+than 16 bytes has no complete DID and counts only in `datagrams`. An attempt
+whose session ran no lookup, such as one cancelled from its `lookup` stage
+callback, reports zero counts, `broadcastEnabled: false` and
+`inventoryReply: 'none'`, whatever an earlier lookup of the session saw. An
+attempt that joins a reconnect the library started itself reports that lookup
+from its start. A close the attempt did not make, after a rejected command key
+or by another operation, keeps the counts for its report.
 
-The observation carries no DID, address, port, serial or interface name. The
-session keeps the DIDs of other replies only to classify them, and the client
-reads and drops them when each attempt that started a session ends, also
-without `onLookup`. A lookup the library starts itself, a reconnect or the
-session of an extra live stream, has no reader. The client drops its DIDs by
-the time that session is ready, fails or closes. The inventory's DIDs are passed in for
-that read and are not kept.
+The observation carries no DID, address, port, serial or interface name. Before
+an attempt starts its session, the client hands the session the DIDs of the
+other devices and stations in the inventory. The session keeps its own copy of
+them, which never leaves the process. It compares the DID of each lookup reply
+with the station's own DID and with that copy when the reply arrives, and then
+only counts the reply. The DID of a replying device is never stored or
+reported. Only the counters are kept, also across a close, until the session
+starts its next connection.
 
 `rounds: 0` means no lookup left the session. `datagrams: 0` means nothing
 reached the session's socket during the lookup. `sendErrors` and
