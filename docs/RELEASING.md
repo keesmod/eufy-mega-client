@@ -136,9 +136,11 @@ separate fix PR merge during the freeze. Then continue with the batch release
 run from step 2. When the camera needs the fix, its release PR pins the new
 stable version. When ha-eufy-cam main pins a client beta, every camera hotfix
 needs a client stable release at or above that beta, so revert client work that
-must not ship first, as part of the same run. An advisory in a transitive
-dependency of the camera bridge can be fixed in the bridge lockfile without a
-client release.
+must not ship first, as part of the same run. Step 5 applies only in these two
+cases. Otherwise, lift the freeze in both repositories after the publication
+and the reporter follow-ups for this repository's range, collected as in step 6.
+An advisory in a transitive dependency of the camera bridge can be fixed in the
+bridge lockfile without a client release.
 
 ## Merge freeze
 
