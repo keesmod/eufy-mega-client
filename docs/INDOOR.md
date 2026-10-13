@@ -176,10 +176,12 @@ station is not a HomeBase. It sends `CMD_DOORBELL_SET_PAYLOAD` with
 `commandType=1000`, `account_id`, public `encryptkey` and codec 0/1 on the
 camera's channel. Stop is the plain `CMD_STOP_REALTIME_MEDIA`.
 
-Whether a standalone T8410 accepts that key and envelope is unknown. It is also
-unknown whether it answers the gateway information request after the handshake.
-Without that answer no command key is set and the connection ends at the
-`session_open` stage. Whether it serves snapshot covers and recordings from its
+Before the 2026-10-13 report it was unknown whether a standalone T8410 accepts
+that key and envelope, and whether it answers the gateway information request
+after the handshake. The reported live video on firmware 2.3.2.4 implies that
+this firmware does both. For other firmware, including 2.3.1.6, both remain
+unknown. Without that answer no command key is set and the connection ends at
+the `session_open` stage. Whether it serves snapshot covers and recordings from its
 own storage, such as a microSD card, is unknown too. A recording download with a
 cipher ID would need a cloud cipher and is refused. Guard mode and events stay
 off.
@@ -195,7 +197,12 @@ complete H.264 and H.265 start envelopes and the stop.
 
 Without the option a standalone T8410 keeps `standalone_transport_unverified`.
 Under a HomeBase it keeps its H3 relationship, media and live branch, also with
-the option. No standalone T8410 has used the route. The physical result belongs
+the option. On 2026-10-13 the reporter of ha-eufy-cam#152 reported live video
+working on a standalone T8410 with firmware 2.3.2.4. Live video failed on one
+with firmware 2.3.1.6, and its event log had `device_request_timeout`, as
+recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
+The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 

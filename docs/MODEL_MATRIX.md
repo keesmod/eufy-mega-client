@@ -311,6 +311,40 @@ their cells below are unchanged.
 
 [T8410-report]: https://github.com/keesmod/ha-eufy-cam/issues/152
 
+## Reported standalone T8410 result, 2026-10-13
+
+On 2026-10-13 the [same reporter][T8410-result] tried the experimental route on
+both standalone T8410/31 cameras, mounted side by side on the same Wi-Fi, subnet
+and bridge, with `experimental_standalone` on. The comment repeats the earlier
+versions, integration 0.8.43, bridge 0.8.34 and client 0.29.0, with HA 2026.9.4
+on HA OS amd64. Those versions do not admit a T8410 to the route, which needs
+client 0.29.1 from bridge 0.8.35. The installed versions are therefore
+unconfirmed.
+
+- The camera on firmware 2.3.2.4 reached the `experimental` transport. A
+  snapshot, live video and WebRTC playback were reported working, with 242
+  frames through the software encoder in one session. Whether the snapshot was
+  a stored cover or the last live frame was not reported. Live audio,
+  recordings, events and the stop result were not reported. This client sends live START
+  only after the camera's own session has set the LAN-derived command key. So
+  this firmware answered the gateway information request and accepted that key
+  and the `CMD_DOORBELL_SET_PAYLOAD` start described in
+  [INDOOR.md](INDOOR.md#experimental-standalone-t8410-0291).
+- The camera on firmware 2.3.1.6 failed live video on every attempt, also after
+  restarts of the camera and the bridge. Its live pipeline ended with
+  `fallback_startup_timeout`, 0 frames and 0 input bytes, and the event log had
+  `device_request_timeout` for its reference. On a standalone owner, that code
+  with a camera reference comes only from the bridge's discovery connection. It
+  points to a connection that set no command key within the 20-second connect
+  bound, so START was most likely never sent on the live attempts either. Which
+  connection stage the camera reached was not reported yet.
+
+These are reported results, not independently reproduced. The reporter sees the
+firmware as the only difference. Nothing on this route branches on the firmware,
+so a firmware cause is unproven. The type 31 rows below gain no H or P cells.
+
+[T8410-result]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6140901994
+
 ## Reported issue #149, 0.29.2
 
 On 2026-10-09 the [reporter of ha-eufy-cam#149][149-report] ran HA 2026.10.0,

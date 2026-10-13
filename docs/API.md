@@ -842,10 +842,14 @@ standalone T8410C keeps `standalone_transport_unverified`.
 - A row without a P2P device ID or administrator user fails with
   `invalid_connection_credentials` for every operation.
 
-No physical standalone camera has confirmed this route. A failure is the
-expected evidence for the next step, not a regression. The stage a failed
-connection reached says whether the camera answered the lookup, completed the
-session handshake, or opened the session without a command key being established.
+No standalone result on this route has been independently reproduced. On
+2026-10-13 a T8410 on firmware 2.3.2.4 was reported with working live video, as
+recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
+A failure is still useful evidence for the next step, not a regression. The
+stage a failed connection reached says whether the camera answered the lookup,
+completed the session handshake, or opened the session without a command key
+being established.
 A connected session sets the key locally, so the first answered command or media
 result is what shows the camera accepts it.
 
