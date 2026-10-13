@@ -574,6 +574,21 @@ test('a reply is near when only the inventory DID differs in padding, case or wh
   }
 });
 
+test('a reply that differs from the own DID in one part after normalisation is foreign, not near', (t) => {
+  const { protocol, connects } = runningLookup(t);
+  protocol.handleMsg(lookupPacket('abcdefx', 12345, 'hijkl'), from(INVENTORY_IP));
+  protocol.handleMsg(lookupPacket('abcdefg', 12346, 'hijkl'), from('192.168.1.11'));
+  protocol.handleMsg(lookupPacket('abcdefg', 12345, 'hijkx'), from('192.168.1.12'));
+  assert.deepEqual(connects, []);
+  assert.deepEqual(protocol.getLookupObservation(new Set()), {
+    ...emptyLookup,
+    rounds: 1,
+    datagrams: 3,
+    foreignReplies: 3,
+    inventoryReply: 'foreign',
+  });
+});
+
 test('a short lookup reply counts as a datagram and the counting path never throws', (t) => {
   const { protocol } = runningLookup(t);
   const reply = lookupResponse(OWN_DID);
@@ -872,6 +887,8 @@ test('onLookup reports once when the connection resolves, after its stages', asy
     p2p_did: FOREIGN_DID,
     params: [{ param_type: 1176, param_value: '192.168.1.60' }],
   });
+  // As load() keeps them, the account rows classify the replies.
+  transport.accountRows = [...transport.raw.values()];
   const events = [];
   const progress = ({ stage, inventoryAddress }) => events.push({ stage, inventoryAddress });
   const observe = (observation) => events.push(observation);
@@ -1093,6 +1110,85 @@ test('the inventory address flags use the address the session was created with',
   }
 });
 
+test('account rows that discovery or load did not admit still classify replies and addresses', async (t) => {
+  t.mock.method(os, 'networkInterfaces', () => interfaces);
+  const reads = [];
+  t.mock.method(Station, 'getInstance', async (_provider, wire) =>
+    Object.assign(new EventEmitter(), {
+      getSerial: () => wire.station_sn,
+      setConnectionType() {},
+      initialize() {},
+      update() {},
+      dispose: async () => {},
+      hasProperty: () => false,
+      hasCommand: () => false,
+      isConnected: () => false,
+      getCameraInfo() {},
+      connect: async () => {},
+      close: async () => {},
+      getLookupObservation: (accountDids) => {
+        reads.push([...accountDids].sort());
+        return undefined;
+      },
+    }),
+  );
+  const row = (sn, model, type, address) => ({
+    category: 'eufy_security',
+    device_sn: sn,
+    parent_sn: '',
+    device_model: model,
+    device_type: type,
+    main_sw_version: '3.8.7.4',
+    p2p_did: `synthetic-${sn}`,
+    member: { admin_user_id: 'synthetic' },
+    params: [{ param_type: 1176, param_value: address }],
+  });
+  const transport = new DeviceTransport();
+  try {
+    for (const [standalone, unsupported, shared] of [
+      [INVENTORY_IP, '192.168.2.9', true],
+      ['192.168.2.9', INVENTORY_IP, true],
+      ['192.168.2.9', '192.168.2.10', false],
+    ]) {
+      const inventory = discover([
+        row('T8030_OWNER', 'T8030', 18, INVENTORY_IP),
+        // A standalone T8410C stays unverified, and an unknown model is unsupported.
+        row('T8410C_CAM', 'T8410C', 31, standalone),
+        row('UNKNOWN_CAM', 'T9999', 9999, unsupported),
+      ]);
+      assert.deepEqual(
+        inventory.result.issues.map(({ deviceId, code }) => [deviceId, code]),
+        [
+          ['T8410C_CAM', 'standalone_transport_unverified'],
+          ['UNKNOWN_CAM', 'unsupported_device'],
+        ],
+      );
+      await transport.load(inventory.raw, inventory);
+      assert.deepEqual([...transport.raw.keys()], ['T8030_OWNER']);
+      reads.length = 0;
+      // Cancelled after its session started, so the attempt reads the observation.
+      const controller = new AbortController();
+      let observation;
+      const connecting = transport.connect(
+        'T8030_OWNER',
+        controller.signal,
+        undefined,
+        (value) => (observation = value),
+      );
+      controller.abort();
+      await assert.rejects(connecting, { code: 'cancelled' });
+      assert.deepEqual(reads, [['synthetic-T8410C_CAM', 'synthetic-UNKNOWN_CAM']]);
+      assert.deepEqual(observation, {
+        ...emptyLookup,
+        inventoryAddressOnSubnet: true,
+        inventoryAddressShared: shared,
+      });
+    }
+  } finally {
+    await transport.close();
+  }
+});
+
 test('a lookup observation carries no DID or address from the session or the inventory', async (t) => {
   const { protocol } = runningLookup(t);
   protocol.handleMsg(lookupResponse(ACCOUNT_DID), from(INVENTORY_IP));
@@ -1113,6 +1209,7 @@ test('a lookup observation carries no DID or address from the session or the inv
     p2p_did: ACCOUNT_DID,
     ip_addr: INVENTORY_IP,
   });
+  transport.accountRows = [...transport.raw.values()];
   let observation;
   try {
     await transport.connect('HB', undefined, undefined, (value) => (observation = value));
@@ -1173,6 +1270,11 @@ test('a lookup the library starts itself drops its DIDs when its session is read
     lookup: (accountDids) => protocol.getLookupObservation(accountDids),
   });
   try {
+    // An earlier attempt of the client reads its own lookup and leaves no reader behind.
+    await transport.connect('HB');
+    assert.equal(reads.length, 1);
+    reads.length = 0;
+    protocol.lookup();
     // A reconnect after a drop: a neighbour answers, then the station itself.
     protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
     protocol.handleMsg(lookupResponse(OWN_DID), from(INVENTORY_IP));
@@ -1193,6 +1295,29 @@ test('a lookup the library starts itself drops its DIDs when its session is read
       { accountDids: [], closes: 0 },
       { accountDids: [], closes: 0 },
     ]);
+  } finally {
+    await transport.close();
+  }
+});
+
+test('a lookup the library starts itself drops its DIDs when its session closes before it is ready', async (t) => {
+  const { protocol } = runningLookup(t);
+  const {
+    t: transport,
+    station,
+    reads,
+  } = connectionFixture({
+    lookup: (accountDids) => protocol.getLookupObservation(accountDids),
+  });
+  try {
+    // A reconnect whose session opens and drops before the command key is in place.
+    protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+    protocol.handleMsg(lookupResponse(OWN_DID), from(INVENTORY_IP));
+    assert.equal(protocol.lookupObservation.others.size, 1);
+    station.emit('connect', station);
+    station.emit('close', station);
+    assert.equal(protocol.lookupObservation, undefined);
+    assert.deepEqual(reads, [{ accountDids: [], closes: 0 }]);
   } finally {
     await transport.close();
   }

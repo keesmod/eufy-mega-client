@@ -48,6 +48,11 @@ const standaloneDescriptor = (device: WireDevice): StandaloneDescriptor => {
 export interface Inventory {
   result: DiscoveryResult;
   raw: Map<string, WireDevice>;
+  /**
+   * Every Eufy Security row with a valid unique serial, admitted or not. Read
+   * only to classify lookup replies.
+   */
+  accountRows: WireDevice[];
   owners: Map<string, ConnectionOwner>;
   relationships: Map<string, DeviceRelationship>;
 }
@@ -65,6 +70,7 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
   if (!Array.isArray(items)) throw new EufyError('invalid_inventory');
   if (items.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');
   const raw = new Map<string, WireDevice>();
+  const accountRows: WireDevice[] = [];
   const issues: DiscoveryIssue[] = [];
   const identities = new Map<string, number>();
   for (const item of items) {
@@ -143,6 +149,7 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
       reject(index, identity(item.device_sn) ? item.device_sn : null, 'invalid_device_identity');
       return;
     }
+    accountRows.push(item as WireDevice);
     if (
       typeof item.parent_sn !== 'string' ||
       (item.parent_sn !== '' && !identity(item.parent_sn)) ||
@@ -247,6 +254,7 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
       issues: issues.sort((a, b) => a.index - b.index),
     },
     raw,
+    accountRows,
     owners,
     relationships,
   };

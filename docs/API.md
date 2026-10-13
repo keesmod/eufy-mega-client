@@ -250,7 +250,7 @@ session keeps the DIDs of other replies only to classify them, and the client
 reads and drops them when each attempt that started a session ends, also
 without `onLookup`. A lookup the library starts itself, a reconnect or the
 session of an extra live stream, has no reader. The client drops its DIDs by
-the time that session is ready or fails. The inventory's DIDs are passed in for
+the time that session is ready, fails or closes. The inventory's DIDs are passed in for
 that read and are not kept.
 
 `datagrams: 0` means nothing reached the session's socket during the lookup.
@@ -902,9 +902,11 @@ No standalone result on this route has been independently reproduced. On
 recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
 A failure is still useful evidence for the next step, not a regression. The
-stage a failed connection reached says whether the camera answered the lookup,
-completed the session handshake, or opened the session without a command key
-being established.
+stage a failed connection reached says whether the camera answered the lookup
+with its own DID, completed the session handshake, or opened the session without
+a command key being established. The
+[lookup observation](#station-lookup-observation-0300) from `onLookup` shows
+whether anything else answered the lookup.
 A connected session sets the key locally, so the first answered command or media
 result is what shows the camera accepts it.
 

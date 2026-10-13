@@ -83,6 +83,8 @@ const MIN_LIVE_BOUND_MS = 1000;
 export class DeviceTransport extends EventEmitter {
   private failures = new Map<string, string>();
   private raw = new Map<string, WireDevice>();
+  /** Every account row, admitted or not, read only to classify lookup replies. */
+  private accountRows: WireDevice[] = [];
   /** Experimental standalone cameras admitted by discovery. Each is its own P2P owner. */
   private standalone = new Set<string>();
   private stations = new Map<string, Station>();
@@ -195,6 +197,7 @@ export class DeviceTransport extends EventEmitter {
     )
       throw new EufyError('devices_busy');
     this.failures.clear();
+    const accountRows = inventory?.accountRows ?? [...raw.values()];
     if (inventory) {
       for (const issue of inventory.result.issues)
         if (issue.deviceId) this.failures.set(issue.deviceId, issue.code);
@@ -224,6 +227,7 @@ export class DeviceTransport extends EventEmitter {
       );
     };
     this.raw = raw;
+    this.accountRows = accountRows;
     this.standalone = standalone;
     for (const [id, camera] of this.cameras)
       if (changed(id)) {
@@ -459,7 +463,7 @@ export class DeviceTransport extends EventEmitter {
   private bind(station: Station): void {
     const id = station.getSerial();
     // A lookup the library starts itself, a reconnect after a drop or a
-    // timeout, has no reader. Drop its DIDs when that session is ready or fails.
+    // timeout, has no reader. Drop its DIDs when that session is ready, fails or closes.
     const dropLookup = () => {
       if (this.lookupReaders.has(id)) return;
       try {
@@ -475,6 +479,7 @@ export class DeviceTransport extends EventEmitter {
       this.emit('station', this.state(id));
     });
     station.on('close', () => {
+      dropLookup();
       this.encryption.delete(id);
       this.finishLive(id, { confirmed: false, reason: 'connection_lost' });
       this.emit('station', this.state(id));
@@ -610,7 +615,8 @@ export class DeviceTransport extends EventEmitter {
     const observe = () => {
       if (!lookup) return;
       try {
-        const others = [...this.raw].filter(([sn]) => sn !== id).map(([, row]) => row);
+        // Every other account row counts, also one that discovery or load did not admit.
+        const others = this.accountRows.filter((row) => row.device_sn !== id);
         // The DIDs of the other inventory rows only classify the replies.
         const accountDids = new Set(
           others.flatMap((row) =>
@@ -1261,6 +1267,7 @@ export class DeviceTransport extends EventEmitter {
     this.sessionAddresses.clear();
     this.cameras.clear();
     this.raw.clear();
+    this.accountRows = [];
     this.snapshots.clear();
     this.removeAllListeners();
   }

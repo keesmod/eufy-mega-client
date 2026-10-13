@@ -28,7 +28,7 @@
   to classify them, at most 16. The client reads and drops them when each
   connection attempt ends, also without `onLookup`, and drops those of a lookup
   the library starts itself, a reconnect or an extra live session, by the time
-  that session is ready or fails.
+  that session is ready, fails or closes.
 - Observation only. The lookup's targets, timing and retries, the DID it
   accepts, the socket and the connection stages are unchanged, with and without
   `onLookup`.
