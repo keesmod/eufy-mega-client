@@ -73,8 +73,8 @@ Node 24 is required. The final source commit, successful CI, Release rehearsal
 and package evidence are recorded in #63. A rehearsal supplies a compiled tarball
 and a manifest with source commit and hashes. Follow the
 [release verification procedure](RELEASING.md) before using that exact artifact.
-The [README installation command](../README.md#install-and-upgrade) uses the published
-0.12.0 tarball.
+At release, the [README installation command](../README.md#install-and-upgrade) used the
+published 0.12.0 tarball.
 
 Before upgrading, retain the previous package and lockfile and back
 up private session data. Install the verified tarball in an isolated consumer,

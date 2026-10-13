@@ -1,4 +1,8 @@
-"""Compiled library release invariants and clean-consumer checks."""
+"""Compiled library release invariants and clean-consumer checks.
+
+release.py imports this module before its own definitions exist, so hooks
+import release lazily.
+"""
 
 import json
 from pathlib import Path
@@ -9,6 +13,11 @@ import tarfile
 import tempfile
 
 REPOSITORY = "keesmod/eufy-mega-client"
+# The only changelog headings a PR may add. Older headings stay as they are.
+HEADING = re.compile(
+    r"## (?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r" - (?:Unreleased|[0-9]{4}-[0-9]{2}-[0-9]{2})"
+)
 
 
 def run(root, *args):
@@ -17,16 +26,33 @@ def run(root, *args):
     ).stdout
 
 
-def changelog(root, version):
-    text = (root / "CHANGELOG.md").read_text()
+def section(text, stable):
+    """The X.Y.Z changelog section as (heading, body), or None."""
     match = re.search(
-        r"^## " + re.escape(version) + r"(?:\s[^\n]*)?\n(.+?)(?=^## |\Z)",
+        r"^(## " + re.escape(stable) + r"(?: [^\n]*)?)\n(.*?)(?=^## |\Z)",
         text,
         re.M | re.S,
     )
-    if not match or len(match[1].strip()) < 20:
-        raise ValueError("Missing substantive changelog entry for " + version)
-    return match[1].strip()
+    return match and match.groups()
+
+
+def dated(text, stable):
+    return bool(
+        re.search(
+            r"^## " + re.escape(stable) + r" - [0-9]{4}-[0-9]{2}-[0-9]{2}$", text, re.M
+        )
+    )
+
+
+def changelog(root, version):
+    """Release notes for version. A beta reads its X.Y.Z section."""
+    import release
+
+    stable = release.stable_part(version)
+    found = section((root / "CHANGELOG.md").read_text(), stable)
+    if not found or len(found[1].strip()) < 20:
+        raise ValueError("Missing substantive changelog entry for " + stable)
+    return found[1].strip()
 
 
 def metadata(root):
@@ -64,67 +90,13 @@ def production_lock(lock):
     }
 
 
-def check_unpublished_candidate(root, meta):
-    """Allow an explicitly tracked batch only while its version is unused."""
-    path = root / "release-candidate.json"
-    if not path.is_file():
-        raise ValueError(
-            "Library runtime changes require a version bump or an explicit unpublished candidate"
-        )
-    candidate = json.loads(path.read_text())
-    if (
-        not isinstance(candidate, dict)
-        or set(candidate) != {"version", "issue"}
-        or candidate["version"] != meta["version"]
-        or not isinstance(candidate["issue"], str)
-        or not re.fullmatch(
-            r"https://github\.com/keesmod/eufy-mega-client/issues/[1-9][0-9]*",
-            candidate["issue"],
-        )
-    ):
-        raise ValueError(
-            "Candidate must name the current version and its library tracking issue"
-        )
-    tag = "v" + meta["version"]
-    # Check the canonical remote, including lightweight and annotated tags.
-    if run(
-        root,
-        "git",
-        "ls-remote",
-        "--tags",
-        "https://github.com/" + REPOSITORY + ".git",
-        "refs/tags/" + tag,
-    ).strip():
-        raise ValueError("Candidate version already has a remote tag")
-    # Authenticated pagination includes drafts. Network/auth failures are fatal.
-    pages = json.loads(
-        run(
-            root,
-            "gh",
-            "api",
-            "--paginate",
-            "--slurp",
-            "repos/" + REPOSITORY + "/releases?per_page=100",
-        )
-    )
-    if (
-        not isinstance(pages, list)
-        or not pages
-        or any(not isinstance(page, list) for page in pages)
-    ):
-        raise ValueError("Invalid release inventory")
-    for release in (item for page in pages for item in page):
-        if not isinstance(release, dict) or not isinstance(
-            release.get("tag_name"), str
-        ):
-            raise ValueError("Invalid release inventory")
-        if release["tag_name"] == tag:
-            raise ValueError("Candidate version already has a release or draft")
-
-
-def check_changes(root, base, meta):
-    paths = run(root, "git", "diff", "--name-only", base, "HEAD").splitlines()
-    previous = json.loads(run(root, "git", "show", base + ":package.json"))
+def runtime_changed(root, rev):
+    """Whether the shipped library differs between rev and the checkout."""
+    # Without renames, a file moved out of src/ also lists its old path.
+    paths = run(
+        root, "git", "diff", "--name-only", "--no-renames", rev, "HEAD"
+    ).splitlines()
+    previous = json.loads(run(root, "git", "show", rev + ":package.json"))
     current = json.loads((root / "package.json").read_text())
     keys = (
         "dependencies",
@@ -135,21 +107,86 @@ def check_changes(root, base, meta):
         "type",
     )
     changed = any(
-        p.startswith(("src/", "vendor/")) or p == "scripts/copy-assets.mjs"
+        p.startswith(("src/", "vendor/"))
+        or p in ("scripts/copy-assets.mjs", "tsconfig.json")
         for p in paths
     )
     changed |= any(current.get(k) != previous.get(k) for k in keys)
-    old_lock = json.loads(run(root, "git", "show", base + ":package-lock.json"))
+    scripts = previous.get("scripts", {}), current.get("scripts", {})
+    # npm run build also runs prebuild and postbuild.
+    build = ("prebuild", "build", "postbuild")
+    changed |= any(scripts[0].get(k) != scripts[1].get(k) for k in build)
+    old_lock = json.loads(run(root, "git", "show", rev + ":package-lock.json"))
     new_lock = json.loads((root / "package-lock.json").read_text())
-    changed |= production_lock(old_lock) != production_lock(new_lock)
-    current_version = tuple(map(int, meta["version"].split(".")))
-    previous_version = tuple(map(int, previous["version"].split(".")))
-    if current_version < previous_version:
-        raise ValueError("Library version cannot decrease")
-    if changed and current_version == previous_version:
-        if "CHANGELOG.md" not in paths:
-            raise ValueError("Runtime candidate changes require updated release notes")
-        check_unpublished_candidate(root, meta)
+    return changed or production_lock(old_lock) != production_lock(new_lock)
+
+
+def check_release(root, meta):
+    """A stable release needs its dated changelog heading."""
+    import release
+
+    version = meta["version"]
+    if not release.is_prerelease(version) and not dated(
+        (root / "CHANGELOG.md").read_text(), version
+    ):
+        raise ValueError(
+            f"Release {version} needs the heading '## {version} - YYYY-MM-DD'"
+        )
+
+
+def check_changes(root, base, meta):
+    """Pull request rules against the base commit.
+
+    Runtime changes accumulate in one unpublished candidate. A plain version
+    reaches main only through a release PR, which passes check_release.
+    """
+    import release
+
+    version = meta["version"]
+    previous = json.loads(run(root, "git", "show", base + ":package.json"))["version"]
+    if release.version_key(version) < release.version_key(previous):
+        major, minor, patch, beta = release.parse_version(previous)
+        hint = (
+            f"Raise the version, for example to {major}.{minor}.{patch + 1}-beta.1"
+            if beta is None
+            else f"Keep {previous}, or {major}.{minor}.{patch}-beta.{beta + 1} "
+            "if it is published"
+        )
+        raise ValueError(f"Library version cannot decrease below {previous}. {hint}")
+    text = (root / "CHANGELOG.md").read_text()
+    old_text = run(root, "git", "show", base + ":CHANGELOG.md")
+    known = set(re.findall(r"^## .*$", old_text, re.M))
+    for heading in re.findall(r"^## .*$", text, re.M):
+        if heading not in known and not HEADING.fullmatch(heading):
+            raise ValueError(
+                "Add only '## X.Y.Z - Unreleased' or '## X.Y.Z - YYYY-MM-DD' "
+                f"headings, not '{heading}'"
+            )
+    if version != previous and not release.is_prerelease(version):
+        check_release(root, meta)
+    if not runtime_changed(root, base):
+        return
+    stable = release.stable_part(version)
+    major, minor, patch, beta = release.parse_version(version)
+    # Messages name the next valid candidate.
+    raise_to = f"Raise the version, for example to {major}.{minor}.{patch + 1}-beta.1"
+    if version == previous and dated(old_text, stable):
+        raise ValueError(f"The {stable} batch is closed by its release PR. {raise_to}")
+    if version == previous and beta is None:
+        raise ValueError(
+            f"Runtime changes need a beta candidate, not {version}. {raise_to}"
+        )
+    if section(text, stable) == section(old_text, stable):
+        raise ValueError(
+            f"Runtime changes require updated release notes in the {stable} section"
+        )
+    # A version above the base is unpublished, because main never falls below
+    # a published version. Lookup failures are fatal.
+    if version == previous and release.published(release.GitHub(REPOSITORY), version):
+        raise ValueError(
+            f"{version} is published. Raise the version, for example to "
+            f"{stable}-beta.{beta + 1}"
+        )
 
 
 def asset_names(meta):

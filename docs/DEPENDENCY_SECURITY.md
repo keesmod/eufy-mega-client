@@ -45,9 +45,12 @@ the required CI and release gates are relaxed for Dependabot.
 
 For any dependency PR, review the changes and applicable advisories, preserve exact
 lockfile integrity, and complete [the normal release requirements](RELEASING.md).
-Production dependency changes require a library version bump, changelog and
-appropriate acceptance tests. After releasing a library fix, update the exact
-GitHub tarball URL and integrity in ha-eufy-cam, then test and release the bridge.
+Development-only updates change no runtime and merge as they are. Production
+dependency changes are runtime changes. They need an unpublished beta candidate
+version, a changelog line in its section and appropriate acceptance tests, so a
+maintainer PR with those additions supersedes the Dependabot PR. After releasing a
+library fix, `scripts/bump_client.py` in ha-eufy-cam pins the exact GitHub tarball
+URL and integrity. Then test and release the bridge.
 
 ## Local verification and limits
 

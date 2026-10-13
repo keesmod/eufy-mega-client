@@ -14,7 +14,7 @@ npm pack
 assets. Install the resulting `.tgz` in a consuming project:
 
 ```sh
-npm install /path/to/keesmod-eufy-mega-client-0.10.0.tgz
+npm install /path/to/keesmod-eufy-mega-client-X.Y.Z.tgz
 ```
 
 Use the filename printed by `npm pack` for your checkout's version. Test the
@@ -38,7 +38,9 @@ physical actions, arrange recovery and restore Guard Mode. A successful command
 call is not proof of a physical result. Report missing features and uncertain
 history explicitly. Adding another model requires its own compatibility evidence.
 
-Follow [the release flow](docs/RELEASING.md). Protocol/device/media changes need
+Follow [the release flow](docs/RELEASING.md). A runtime change joins the open
+beta candidate or opens the next one, with notes in its changelog section. Stable
+versions come only from release PRs. Protocol/device/media changes need
 acceptance on the declared hardware and HA routes; document observation duration
 and unproven behavior. The first release used an explicitly agreed 11-hour-26-minute
 window, not a 24-hour test. CI-only changes do not need a physical device test.
