@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
+import util from 'node:util';
 import { EventEmitter } from 'node:events';
 import { P2PClientProtocol } from '../dist/vendor/p2p/session.js';
 import { getLocalBroadcastAddresses } from '../dist/vendor/p2p/utils.js';
@@ -739,9 +740,18 @@ test('every reply is classified when it arrives and the session keeps counters o
   assert.equal(observed.datagrams, 21);
   assert.equal(observed.accountReplies, 2);
   assert.equal(observed.foreignReplies, 19);
-  // No replying DID or address stays in the session's lookup state.
-  const kept = JSON.stringify(protocol.lookupObservation);
-  for (const value of ['OTHERDV', 'ZZZZZ', '192.168.']) assert.equal(kept.includes(value), false);
+  // No replying DID or address stays anywhere in the session, Map and Set
+  // contents and private fields included. Only the account DIDs it was handed remain.
+  const kept = util.inspect(protocol, {
+    depth: Infinity,
+    showHidden: true,
+    maxArrayLength: Infinity,
+    maxStringLength: Infinity,
+  });
+  assert.equal(kept.includes(did(3)), true);
+  for (let n = 0; n < 20; n++)
+    if (n !== 3 && n !== 19) assert.equal(kept.includes(did(n)), false, did(n));
+  assert.equal(kept.includes('192.168.1.9'), false);
 });
 
 test('inventoryReply names the class of the first reply from the inventory address', (t) => {
@@ -1337,6 +1347,27 @@ test('a session close keeps the lookup counters until the session starts a new c
   protocol.socket = { bind() {} };
   await protocol.connect();
   assert.equal(protocol.getLookupObservation(), undefined);
+});
+
+test('a real session close keeps the lookup counters', async (t) => {
+  const protocol = new P2PClientProtocol(
+    { station_sn: 'HB', p2p_did: OWN_DID, device_type: 18, app_conn: '' },
+    {},
+    INVENTORY_IP,
+  );
+  t.after(() => protocol.dispose());
+  protocol.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+  protocol.localLookupByAddress = async () => {};
+  // Binding the real socket starts the lookup.
+  await protocol.connect();
+  while (protocol.getLookupObservation() === undefined)
+    await new Promise((resolve) => setImmediate(resolve));
+  protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
+  const counted = protocol.getLookupObservation();
+  assert.equal(counted.foreignReplies, 1);
+  // The close runs _initialize, the socket close event, onClose and _disconnected.
+  await protocol.close();
+  assert.deepEqual(protocol.getLookupObservation(), counted);
 });
 
 test('a close the attempt did not make still lets onLookup report the counts', async (t) => {

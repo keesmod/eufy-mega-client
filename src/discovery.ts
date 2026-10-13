@@ -49,8 +49,9 @@ export interface Inventory {
   result: DiscoveryResult;
   raw: Map<string, WireDevice>;
   /**
-   * Every Eufy Security row with a valid unique serial, admitted or not. Read
-   * only to classify lookup replies.
+   * Every Eufy Security row with a valid unique serial, admitted or not. Read only
+   * for the lookup observation, to classify lookup replies and to tell whether the
+   * inventory address is shared.
    */
   accountRows: WireDevice[];
   owners: Map<string, ConnectionOwner>;

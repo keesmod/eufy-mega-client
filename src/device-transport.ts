@@ -83,7 +83,10 @@ const MIN_LIVE_BOUND_MS = 1000;
 export class DeviceTransport extends EventEmitter {
   private failures = new Map<string, string>();
   private raw = new Map<string, WireDevice>();
-  /** Every account row, admitted or not, read only to classify lookup replies. */
+  /**
+   * Every account row, admitted or not, read only for the lookup observation: to
+   * classify lookup replies and to tell whether the inventory address is shared.
+   */
   private accountRows: WireDevice[] = [];
   /** Experimental standalone cameras admitted by discovery. Each is its own P2P owner. */
   private standalone = new Set<string>();

@@ -42,7 +42,7 @@ existing HomeBase-controlled S350 live branch, as described in [INDOOR.md](docs/
 so a local session can start without them. Version 0.30.0 adds a lookup
 observation to the P2P session: bounded counts of its local lookup rounds,
 failed lookup sends, received datagrams and lookup replies by DID class, which
-the client reads once per connection attempt. The session classifies each reply
+the client reads at most once per connection attempt. The session classifies each reply
 when it arrives, against the station's own DID and a copy of the other inventory
 DIDs that the client sets before the attempt, and stores no DID of a replying
 device. Its counters last, also across a close, until the session starts its
