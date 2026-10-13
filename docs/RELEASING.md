@@ -125,8 +125,10 @@ A hotfix is a stable release of current main between batch runs. There are no
 release branches. Work that must not ship is reverted first, in an ordinary PR
 under the candidate rules. Land the fix as a beta candidate, or with a small fix
 directly in the release PR, then follow the batch release run. When the camera
-needs the fix, its release PR pins the new stable version. An advisory in a
-transitive dependency of the camera bridge can be fixed in the bridge lockfile
+needs the fix, its release PR pins the new stable version. When ha-eufy-cam main
+pins a client beta, every camera hotfix needs a client stable release at or
+above that beta, so revert client work that must not ship first. An advisory in
+a transitive dependency of the camera bridge can be fixed in the bridge lockfile
 without a client release.
 
 ## Merge freeze
