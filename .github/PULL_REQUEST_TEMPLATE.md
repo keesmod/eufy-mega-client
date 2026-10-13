@@ -16,6 +16,6 @@ For a release PR or a beta publication:
 - [ ] A stable release has its run approval (batch release run or hotfix lane) and the merge freeze is in effect.
 - [ ] After the merge, confirm `ci` on main and run the Release workflow. Rehearse a stable release first and inspect its package artifact. A beta may publish on its first run.
 - [ ] Supply sanitized acceptance evidence. Confirm public tag, assets and checksums.
-- [ ] After a stable release, continue with the camera release PR (`scripts/bump_client.py X.Y.Z`).
+- [ ] After a stable release in a batch run, or in a hotfix that the camera needs or that camera main's client beta pin requires (see the hotfix lane), continue with the camera release PR (`scripts/bump_client.py X.Y.Z`). Otherwise, lift the freeze after the reporter follow-ups.
 
 See [the release flow](https://github.com/keesmod/eufy-mega-client/blob/main/docs/RELEASING.md), including its batch release run and betas sections.
