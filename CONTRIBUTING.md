@@ -14,7 +14,7 @@ npm pack
 assets. Install the resulting `.tgz` in a consuming project:
 
 ```sh
-npm install /path/to/keesmod-eufy-mega-client-0.10.0.tgz
+npm install /path/to/keesmod-eufy-mega-client-X.Y.Z.tgz
 ```
 
 Use the filename printed by `npm pack` for your checkout's version. Test the

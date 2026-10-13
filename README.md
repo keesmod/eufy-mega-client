@@ -24,17 +24,16 @@ integration and optional bridge, instead.
 
 Packages are published through
 [GitHub Releases](https://github.com/keesmod/eufy-mega-client/releases), not the npm registry.
-Each package contains compiled JavaScript and type declarations. Install a release with an exact
-version:
+Betas `X.Y.Z-beta.N` for opt-in testing are marked Pre-release there and install the same way
+from their exact `.tgz` URL. See [betas](docs/RELEASING.md#betas). Each package contains
+compiled JavaScript and type declarations. Install a release with an exact version:
 
 ```sh
 npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.29.2/keesmod-eufy-mega-client-0.29.2.tgz
 ```
 
 Commit your lockfile so `npm ci` verifies package integrity. Releases also publish `SHA256SUMS`
-and a `release-manifest.json` with file hashes. Betas `X.Y.Z-beta.N` for opt-in testing are
-marked Pre-release on GitHub Releases and install the same way from their exact `.tgz` URL. See
-[betas](docs/RELEASING.md#betas).
+and a `release-manifest.json` with file hashes.
 
 To upgrade:
 

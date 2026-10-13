@@ -1017,7 +1017,7 @@ the private credential/session store. No data migration is required.
 
 References #139 and [camera #78](https://github.com/keesmod/ha-eufy-cam/issues/78).
 
-## 0.12.2 - Unreleased
+## 0.12.2 - 2026-09-11
 
 ### Logging improvements for diagnostics
 
@@ -1027,7 +1027,7 @@ References #139 and [camera #78](https://github.com/keesmod/ha-eufy-cam/issues/7
 - Preserve model admission, topology guards and mixed inventories. This supplies
   support evidence for camera issue #40 without claiming its cause or a C30 fix.
 
-## 0.12.1 - Unreleased
+## 0.12.1 - 2026-09-11
 
 - Add optional bounded `deviceModel` and `deviceType` diagnostics to
   `unsupported_device` discovery issues. Omit invalid values without coercion
@@ -1037,7 +1037,7 @@ References #139 and [camera #78](https://github.com/keesmod/ha-eufy-cam/issues/7
 - This diagnostic patch follows [camera issue #40](https://github.com/keesmod/ha-eufy-cam/issues/40).
   It does not establish why the reported C30 is missing or add hardware support.
 
-## 0.12.0 - Unreleased
+## 0.12.0 - 2026-09-11
 
 - Combine the unpublished SoloCam discovery/media work with exact H3 profiles
   for Indoor, Floodlight, Wall-light, eufyCam C35, T86P2 in Wi-Fi mode and camera
