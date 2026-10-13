@@ -2,8 +2,8 @@
 
 Version 0.12.0 adds experimental software coverage for exact **T8425/type 47
 (E340)** and **T8426/type 87 (E30)**. This does not confirm operation on physical
-cameras. [#29](https://github.com/keesmod/eufy-mega-client/issues/29) owns discovery,
-state and events. [#30](https://github.com/keesmod/eufy-mega-client/issues/30) owns
+cameras. [#29](https://github.com/keesmod/eufy-mega-client/issues/29) added discovery,
+state and events. [#30](https://github.com/keesmod/eufy-mega-client/issues/30) added
 media on the selected connection profile.
 
 ## Model and connection boundary
@@ -23,11 +23,11 @@ automation. Product compatibility alone is not evidence of a Mega command route.
 
 The original T8420 and X variant are not merged or inferred from their common
 type. No new model alias or guessed serial discriminator is introduced.
-Remaining Floodlight model and command-owner work stays in
-[epic #9](https://github.com/keesmod/eufy-mega-client/issues/9) and the matrix.
-[#35](https://github.com/keesmod/eufy-mega-client/issues/35) owns other HomeBases,
-[#36](https://github.com/keesmod/eufy-mega-client/issues/36) standalone transport,
-and [#60](https://github.com/keesmod/eufy-mega-client/issues/60) hardware evidence.
+The matrix records hardware evidence status per tuple and the remaining
+Floodlight model and command-owner work.
+[#143](https://github.com/keesmod/eufy-mega-client/issues/143) tracks other
+HomeBases and [#142](https://github.com/keesmod/eufy-mega-client/issues/142)
+standalone transport.
 
 ## Discovery, state and events
 
@@ -106,6 +106,6 @@ before media commands. The two snapshot regressions fail with
 `camera_media_unverified` before #30 admission and pass after it.
 
 No physical stream, decoded video, audible track, device stop or recovery has
-been confirmed for either model. Those feature-specific results remain #60.
-The other Floodlight model barriers remain under epic #9. They are not counted
-as delivered by this bounded profile.
+been confirmed for either model. Those feature-specific obligations and the other
+Floodlight model barriers remain open in the matrix. They are not counted as
+delivered by this bounded profile.

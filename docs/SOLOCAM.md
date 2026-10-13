@@ -1,7 +1,8 @@
 # SoloCam software evidence
 
 Story [#21](https://github.com/keesmod/eufy-mega-client/issues/21) adds discovery,
-observed state and event routing in unreleased 0.11.0. The
+observed state and event routing in 0.11.0, which was not published. The work
+first shipped in 0.12.0, published on 2026-09-11. The
 [per-model regressions](../test/solocam.test.mjs) exercise the actual private
 SoloCamera adapter. They establish software behavior, not physical support.
 
@@ -69,12 +70,13 @@ media unverified for the other nine models. The [0.12.0 H3 media profile](#h3-co
 below supersedes that restriction for its exact connection profile. Selecting
 SoloCamera alone does not enable media, settings or physical controls.
 
-- [#36](https://github.com/keesmod/eufy-mega-client/issues/36) owns standalone
-  transport and [#35](https://github.com/keesmod/eufy-mega-client/issues/35) other
-  HomeBase owners. Candidate and unresolved variants remain in the matrix and
-  those existing family/validation obligations.
-- [#56](https://github.com/keesmod/eufy-mega-client/issues/56) owns scoped hardware
-  confirmation. [Camera #10](https://github.com/keesmod/ha-eufy-cam/issues/10)
+- [#142](https://github.com/keesmod/eufy-mega-client/issues/142) tracks standalone
+  transport and [#143](https://github.com/keesmod/eufy-mega-client/issues/143) other
+  HomeBase owners. Candidate and unresolved variants remain recorded in the
+  matrix.
+- [#56](https://github.com/keesmod/eufy-mega-client/issues/56) held scoped hardware
+  confirmation until it was closed as not planned on 2026-09-16.
+  [Camera #10](https://github.com/keesmod/ha-eufy-cam/issues/10)
   retains the T8134 reporter investigation, missing audio, requested retest and
   recovery confirmation. Earlier successful discovery/state/events and recordings
   remain dated partial evidence. This software change does not resolve that issue.
@@ -159,8 +161,8 @@ The nine stored-snapshot regressions failed with `camera_media_unverified` on
 the baseline and pass with admission added. Existing T8134 behavior receives the
 same shared checks, including a regression that preserves its firmware admission.
 These synthetic bytes do not prove decodable or audible media on real hardware.
-Camera #10's audio, live-route and recovery questions remain open. #56 retains
-exact hardware confirmation, #36 standalone transport and #35 other owners.
+Camera #10's audio, live-route and recovery questions remain open. At 0.12.0, #56
+held exact hardware confirmation, #36 standalone transport and #35 other owners.
 
 No physical camera test, consumer upgrade or product publication is performed
 for this software story. Version 0.12.0 needs no session-store migration. Retain

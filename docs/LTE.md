@@ -3,7 +3,8 @@
 Version 0.12.0 adds experimental software coverage for **T86P2 / type 111 in
 Wi-Fi mode with its actual T8030 HomeBase 3 parent**. This is not cellular
 support. Research [#37](https://github.com/keesmod/eufy-mega-client/issues/37)
-remains open for the LTE transport and hardware obligations below.
+closed on 2026-09-16. [#142](https://github.com/keesmod/eufy-mega-client/issues/142)
+tracks the LTE transport and hardware obligations below.
 
 ## Exact scope
 
@@ -89,16 +90,15 @@ not a failed network probe or a claim that LTE support is impossible:
    `Station.startDownload()`. The existing provider rejects `getCipher()`.
    H3 storage/download tests do not establish that cellular route.
 
-Keep #37 and [E2](https://github.com/keesmod/eufy-mega-client/issues/9) open for
-these obligations. A consented, private LTE descriptor and read-only relay
-observation must establish the exact model, firmware, owner, credential source
-and media route. Raw identifiers, tokens, keys and footage must remain private.
-Then implement the proven Mega credential path and validate snapshot, live
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142) tracks these
+obligations. A consented, private LTE descriptor and read-only relay observation
+must establish the exact model, firmware, owner, credential source and media
+route. Raw identifiers, tokens, keys and footage must remain private. Then
+implement the proven Mega credential path and validate snapshot, live
 video/audio, recording and acknowledged cleanup independently on hardware.
-Standalone Wi-Fi is coordinated with [#36](https://github.com/keesmod/eufy-mega-client/issues/36),
-other owners with [#35](https://github.com/keesmod/eufy-mega-client/issues/35).
-Do not create a replacement story or close the cellular obligation because
-this H3 contribution passes software checks.
+Standalone Wi-Fi is part of the same issue. Other owners are tracked in
+[#143](https://github.com/keesmod/eufy-mega-client/issues/143). Do not close the
+cellular obligation in #142 because this H3 contribution passes software checks.
 
 Upgrades remain available without a maintainer hardware test. Runtime
 capabilities retain the explicit unverified reason. No migration is required.

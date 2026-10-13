@@ -85,9 +85,8 @@ and must not be used as the native Tuya UID. It
 requires a successful discovery. Cancellation, shutdown, expiry and a subsequent
 discovery revoke the supplied signal. Callbacks must honor that signal and must
 not retain or serialize connection values. This method and its connection type
-are not exported by the public package entry point. #48 may extend the internal
-owner using the verified EU binding contract. No generic cloud or RTC request API is
-exposed in #40.
+are not exported by the public package entry point. No generic cloud or RTC
+request API is exposed in #40.
 
 ## Software evidence and remaining acceptance
 
@@ -108,5 +107,6 @@ The initial automatic approval block was resolved by direct user approval on
 the EU Home/Tuya profile, exact E15 identity, private local-key equality and
 SID reuse. The [live receipt](research/E15_AUTH_VALIDATION_2026-09-10.md) records
 what was tested and the recovery evidence. #40 does not implement or validate
-local transport, commands, firmware control, RTC or map delivery. Those remain
-with #41 through #46 and #48 under the open E3/E4 epics.
+local transport, commands, firmware control, RTC or map delivery. #48 completed
+the portable session research. Read-only local transport and typed telemetry
+shipped in 0.13.0 under #145 and #147, which replaced #41 and #42.

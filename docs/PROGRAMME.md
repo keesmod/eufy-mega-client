@@ -4,9 +4,12 @@ The goal is one modular Eufy client for all known camera families and the E15
 mower, including settings and portable maps without Android. Each purpose has
 its own bridge and Home Assistant integration. Both bridges consume the library.
 
-The [programme issue](https://github.com/keesmod/eufy-mega-client/issues/7) owns
-scope coverage. GitHub issues and the [Eufy platform Project](https://github.com/users/keesmod/projects/1) own current work
-status. This document records decisions and working rules, not a second backlog.
+The [programme issue](https://github.com/keesmod/eufy-mega-client/issues/7) and
+its epics were closed on 2026-09-16 and remain readable as history. Work status
+now lives in individual GitHub issues and the
+[Eufy platform Project](https://github.com/users/keesmod/projects/1). Hardware
+evidence status lives in the [model matrix](MODEL_MATRIX.md). This document
+records decisions and working rules, not a second backlog.
 
 ## Accepted product decisions
 
@@ -67,10 +70,11 @@ upgrade/rollback paths. Either installation must work when the other is absent
 or stopped. The library does not host an HTTP service or Home Assistant entities.
 Mower routes and runtime dependencies belong in the mower repository.
 
-[E5](https://github.com/keesmod/eufy-mega-client/issues/12) covers the separate
-consumer paths. E5-01 through E5-03 create the dedicated mower bridge and its
-API. E5-08 packages that bridge independently. Camera work remains in E5-04.
-The mower integration connects to its own bridge in E5-05 through E5-07.
+[E5](https://github.com/keesmod/eufy-mega-client/issues/12) covered the separate
+consumer paths until it closed on 2026-09-16. It planned the dedicated mower
+bridge and its API in E5-01 through E5-03, independent packaging of that bridge
+in E5-08, camera work in E5-04 and the mower integration's connection to its
+own bridge in E5-05 through E5-07.
 
 ## Ownership and goal coverage
 
@@ -83,10 +87,10 @@ The mower integration connects to its own bridge in E5-05 through E5-07.
 | Separate bridges and Home Assistant integrations               | Camera and mower repositories | [E5](https://github.com/keesmod/eufy-mega-client/issues/12) |
 | Hardware claims, migration and release preparation             | Owning repository             | [E6](https://github.com/keesmod/eufy-mega-client/issues/13) |
 
-Implementation stories live in the repository that owns the change. All epics
-live in the client repository and are children of the programme issue. The
-existing [S220 report](https://github.com/keesmod/ha-eufy-cam/issues/10) remains
-the original reporter's issue and is linked into E2 without a duplicate.
+Implementation stories live in the repository that owns the change. The epics
+in this table closed with the programme issue. The existing
+[S220 report](https://github.com/keesmod/ha-eufy-cam/issues/10) remains the
+original reporter's issue and was linked into E2 without a duplicate.
 
 The [model/topology/feature evidence matrix](MODEL_MATRIX.md) records the pinned
 catalogue, primary model sources and outstanding obligations from
@@ -184,8 +188,9 @@ task-specific approvals, required checks and acceptance gates to those actions.
   authorization buffer. The [standalone Linux receipt](research/E15_LINUX_PEER_RESPONSE_2026-09-10.md)
   now proves a correlated authenticated E15 read-only version response. Portable
   [map/file transfer](research/E15_PORTABLE_MAP_TRANSFER_2026-09-10.md) now passes
-  #49 with exact private comparison and confirmed cancellation. Library lifecycle,
-  decoding, deltas and consumer acceptance remain open under E4.
+  #49 with exact private comparison and confirmed cancellation. When #49 closed on
+  2026-09-10, library lifecycle, decoding, deltas and consumer acceptance were
+  open under E4.
 - [Client compatibility](COMPATIBILITY.md), [public API](API.md),
   [diagnostics](DIAGNOSTICS.md) and [attribution](../NOTICE.md).
 - [Existing mower functionality](https://github.com/keesmod/eufy-robomow-ha/blob/main/README.md),
@@ -198,22 +203,26 @@ task-specific approvals, required checks and acceptance gates to those actions.
 
 - [Portable map acquisition](MAP_ACQUISITION.md) records the #50 library adapter,
   bounded demand and last-complete behavior. Its software evidence is separate
-  from the #49 hardware research and the existing #51 through #54 obligations.
+  from the #49 hardware research and the #51 through #54 obligations. #51 closed
+  as completed on 2026-09-29 and #52 through #54 as not planned on 2026-09-16.
 - [Mower transport provenance](MOWER_TRANSPORT_PROVENANCE.md) records the #145
   read-only local Tuya 3.5 session, its public protocol sources and the offline
   reproduction, with a link to the subsequent bounded E15 hardware observations.
 - [Typed mower telemetry](MOWER_TELEMETRY.md) records the #147 decoder, the
   definition levels and the device schema provenance. The
   [2026-09-16 observations](research/E15_TELEMETRY_OBSERVATION_2026-09-16.md)
-  confirm E15 battery, Wifi and signal percentage. Activity and mowing progress
-  still need an evidenced fresh read-only source.
+  confirm E15 battery, Wifi and signal percentage. The
+  [2026-09-19 reproduction](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md)
+  confirms DP 107 activity `mowing`, `paused` and `returning`. Mowing progress
+  still needs an evidenced fresh read-only source.
 - [Concurrent live streams on one HomeBase 3](research/CONCURRENT_LIVE_2026-09-18.md)
   records the #157 bench result: a second P2P session per camera delivered a
-  second concurrent live stream on a T8030 with STOP confirmed per session. The
-  library design for more than one live camera per station follows in its
-  next-step issue. The public one-live-per-station contract is unchanged.
+  second concurrent live stream on a T8030 with STOP confirmed per session.
+  Since 0.13.0 the opt-in `maxLiveStreamsPerStation` (default 1) allows more
+  than one live camera per station.
 - [Live streams beyond 120 seconds and a free primary session](research/LIVE_BOUND_2026-09-19.md)
   records the #163 bench result: a T8030 kept one T8160 live stream running for
   ten minutes at a flat rate with STOP confirmed, and a guard mode command on an
-  idle primary session succeeded while the stream ran on an extra session. The
-  120-second bound stays until the next-step design issue lands.
+  idle primary session succeeded while the stream ran on an extra session.
+  Since 0.14.0 a raised `liveUpperBoundMs` with a per-start `maxDurationMs` can
+  extend a stream beyond the 120-second default.

@@ -56,10 +56,10 @@ error redaction and separate bridge-consumer instances with separate persisted
 sessions. A [TypeScript consumer](../test/fixtures/modular-consumer.ts) checks
 existing types and rejects access to private owners and cross-module sessions.
 
-The mower tests use a synthetic lifecycle adapter. No mower protocol or hardware
-support is delivered. [E3-01](https://github.com/keesmod/eufy-mega-client/issues/40)
-owns authentication and discovery. E3/E4 retain the remaining mower feature
-obligations. E5 owns real bridge integration and E6 owns hardware acceptance.
+The mower tests use a synthetic lifecycle adapter. Version 0.2.0 delivered no
+mower protocol or hardware support. [E3-01](https://github.com/keesmod/eufy-mega-client/issues/40)
+owned authentication and discovery. E3/E4 held the remaining mower feature
+obligations, E5 held real bridge integration and E6 held hardware acceptance.
 The model matrix and its hardware claims are unchanged by this API boundary.
 
 ## E15 portable-session research, 2026-09-10
@@ -74,7 +74,8 @@ confirmed transfer cancellation and normal acquisition was restored afterwards.
 This is isolated research for the #40-bound E15 on owner-reported firmware
 6.9.28. It does not deliver a public map API or migrate the Android source.
 Library lifecycle #50, decoding #51, deltas #52, consumer compatibility #53 and
-architecture/shutdown acceptance #54 remain open under E4.
+architecture/shutdown acceptance #54 were open under E4 when #49 closed on
+2026-09-10.
 
 ## S220 discovery, 0.1.1
 
@@ -233,5 +234,7 @@ telemetry, local transport, commands or maps are claimed.
 
 [Provenance and remaining #40 acceptance](MOWER_AUTH_PROVENANCE.md) record the
 source revisions, tests and completed live experiment. The
-[live receipt](research/E15_AUTH_VALIDATION_2026-09-10.md) bounds that evidence. #41 owns local transport, #42 telemetry, and #48 the
-portable session research. E3 and E4 remain open.
+[live receipt](research/E15_AUTH_VALIDATION_2026-09-10.md) bounds that evidence. #48
+completed the portable session research. The read-only
+[local transport](MOWER_TRANSPORT_PROVENANCE.md) of #145 and the
+[typed telemetry](MOWER_TELEMETRY.md) of #147 shipped in 0.13.0.

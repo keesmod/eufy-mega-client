@@ -2,8 +2,10 @@
 
 Version 0.12.0 adds experimental camera software coverage for three exact
 model/type pairs. [Issue #39](https://github.com/keesmod/eufy-mega-client/issues/39)
-retains the unresolved models and protocols. No physical hardware was tested for
-this contribution. Successful software checks do not establish hardware support.
+closed on 2026-09-16. The unresolved models and protocols are listed under
+[Sources and unresolved entries](#sources-and-unresolved-entries). No physical
+hardware was tested for this contribution. Successful software checks do not
+establish hardware support.
 
 | Exact pair  | Product               | Existing private camera implementation    | Observed state and events                                                           |
 | ----------- | --------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -74,8 +76,10 @@ The exact H3 owner and conservative firmware guard above also apply to C35.
 The source has native battery/state metadata, camera detection properties and
 start/stop/download/cancel commands for type 10035. Tests exercise observed state,
 H3 motion/person events, duplicate suppression and rejected ring/owner/model
-variants. Empty or self-parent descriptors remain explicitly unverified. Wi-Fi,
-MiniBase, regional variants and physical validation remain in #39/#35/#36.
+variants. Empty or self-parent descriptors remain explicitly unverified.
+Standalone Wi-Fi is tracked in #142 and MiniBase owners in #143. Regional
+variants and physical validation stay recorded in the
+[model matrix](MODEL_MATRIX.md).
 
 [C35 regressions](../test/c35.test.mjs), [eufyCam state tests](../test/eufycam.test.mjs)
 and the shared [eufyCam media profiles](../test/fixtures/eufycam-media.mjs) separately
@@ -104,7 +108,7 @@ and [Video Smart Lock setup](https://service.eufy.com/article-description/How-to
 They establish product/topology associations, not numeric protocol identifiers,
 Mega descriptors or a successful command round trip.
 
-| Remaining item                                           | Concrete evidence gap                                                                                                                                                                                                | Existing owner   |
+| Remaining item                                           | Concrete evidence gap                                                                                                                                                                                                | Former owner     |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
 | T8531 / 189 Video Smart Lock E330                        | The pinned `DeviceProperties` and `DeviceCommands` entries contain lock behavior but no camera detection metadata or media commands. `Device.isCamera` also excludes it. Do not borrow S330 commands to fill the gap | #39 and E2       |
 | E85V0 and other suffix or bundle variants                | A marketing relationship does not establish their exact Mega model/type descriptor                                                                                                                                   | #39 and E2       |
@@ -113,10 +117,14 @@ Mega descriptors or a successful command round trip.
 | Standalone Wi-Fi, Wi-Fi bridge and older HomeBase owners | Their actual descriptor, authentication and recording route need separate evidence. H3 storage compatibility cannot supply it                                                                                        | #36, #35 and #39 |
 | Hardware acceptance for each admitted tuple              | Exact firmware, real discovery/owner, each feature, stop/reopen and recovery observations are still needed                                                                                                           | #39 and E6       |
 
-These obligations stay on the existing issues. The user requested no new stories.
-Issue #39 and the parent family goal remain open while required coverage is
-missing. A later community report can provide hardware evidence without the
-maintainer buying each device, under the [community policy](COMMUNITY_VALIDATION.md).
+The user requested no new stories at 0.12.0. Issue #39 and the parent family goal
+E2 closed on 2026-09-16. The unresolved entries stay recorded in the
+[model matrix](MODEL_MATRIX.md) and get a scoped issue when an owner reports such
+a device. [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
+[#143](https://github.com/keesmod/eufy-mega-client/issues/143) track standalone and
+older HomeBase owners. A later community report can provide hardware evidence
+without the maintainer buying each device, under the
+[community policy](COMMUNITY_VALIDATION.md).
 
 No session migration is required. Keep the prior package, dependency lockfile
-and private session store for rollback. Version 0.12.0 is an unpublished candidate.
+and private session store for rollback. Version 0.12.0 was published on 2026-09-11.

@@ -2,7 +2,10 @@
 
 Reviewed 2026-09-10 for [story #15][Story]. This is an evidence inventory for the
 [programme][Programme], not a list of supported products. Product implementation
-belongs to [E2] and hardware acceptance to [E6]. Current work status stays in GitHub.
+belonged to [E2] and hardware acceptance to [E6] until both closed on 2026-09-16.
+Where this matrix still names them, they mark where an obligation was recorded.
+This matrix holds hardware evidence status. Current work status lives in
+individual GitHub issues.
 
 The generated [device-profile policy](DEVICE_PROFILES.md) lists current runtime
 recognition, topology and separate media admission from one typed source. Dated
@@ -38,8 +41,9 @@ The library leaves unconfirmed fields withheld and exposes raw snapshots
 unchanged. Library cleaning-path history and HA display accumulation are separate
 implementations. The dated map receipt identifies which was exercised. Map decoding is recorded in
 [Decoded mower map geometry](MAP_GEOMETRY.md) from
-[#51](https://github.com/keesmod/eufy-mega-client/issues/51). The implementation work is tracked in
-[#149](https://github.com/keesmod/eufy-mega-client/issues/149).
+[#51](https://github.com/keesmod/eufy-mega-client/issues/51).
+[#149](https://github.com/keesmod/eufy-mega-client/issues/149) tracked the
+telemetry definition work until it closed on 2026-09-16.
 The opt-in [private map provisioning producer](research/E15_MAP_PROVISIONING.md)
 supplied the fresh docked downloads and the later bounded moving-map streams.
 The [2026-09-25 migration receipt](https://github.com/keesmod/eufy-robomow-ha/issues/8#issuecomment-5839090826)
@@ -49,15 +53,22 @@ retirement with verified archives. The
 confirmed stream cancellation, mowing updates and owner-confirmed dock return.
 The 0.16.1 display fix was validated by recorded-data replay and a docked
 installation readback before any mowing run with 0.16.1. The 2026-09-27 receipt
-does not assess it. Since 2026-09-27 the lasting
-installation uses integration 0.16.1, bridge/app 0.13.1 and library 0.25.2 in
+does not assess it. On 2026-09-27 the lasting
+installation used integration 0.16.1, bridge/app 0.13.1 and library 0.25.2 in
 control mode with settings writes disabled. The [2026-09-27 receipt](https://github.com/keesmod/eufy-robomow-ha/issues/8#issuecomment-5857986097) adds commands
 through Home Assistant, the session renewal during a running stream demand and
-host-reboot recovery. Longer daily use remains open in
-[mower acceptance #8](https://github.com/keesmod/eufy-robomow-ha/issues/8).
+host-reboot recovery. The [daily-use receipt](https://github.com/keesmod/eufy-robomow-ha/issues/8#issuecomment-5864644965)
+adds about 13 hours overnight with the mower at its station, a healthy map and
+14 session renewals without error. The mower entity was unavailable eleven
+times, each for up to a minute at one of 30 LAN state-query timeouts. The
+receipt left the timeout cause as a separate follow-up.
+[Mower acceptance #8](https://github.com/keesmod/eufy-robomow-ha/issues/8) was
+closed as completed on 2026-09-28. The versions installed since then are
+recorded in `docs/release-candidates.md` of the
+[mower repository](https://github.com/keesmod/eufy-robomow-ha).
 The app-operated run of 2026-09-26 adds no command or settings acceptance to the earlier rows.
-The report acquisition work is
-[#150](https://github.com/keesmod/eufy-mega-client/issues/150).
+The report acquisition work was
+[#150](https://github.com/keesmod/eufy-mega-client/issues/150), closed on 2026-09-16.
 Its [report-acquisition receipt](research/E15_ACTIVITY_REPORTS_2026-09-16.md)
 records the separate incoming report path and its current evidence limits.
 The DP 107 field contract and evidence-gated activity decoder of
@@ -125,9 +136,10 @@ firmware 3.8.5.2. Later comments do not independently reconfirm those versions.
 | 2026-09-11, [R7] | Software delivery: bridge/integration 0.7.1 adds video-only JPEG fallback and diagnostics. Reporter retest requested.                                               | No subsequent T8134 result at this review. JPEG fallback carries no audio. Local-audio diagnostics and session recovery remain separate obligations.                 |
 
 Unknown component versions stay unknown. These observations do not upgrade any
-feature to confirmed behavior. [Camera-10], [#21], [#22] and [#56] retain their
-respective investigation, software and validation obligations. Keep successful and
-failed route observations together when processing a new report.
+feature to confirmed behavior. [Camera-10] retains the reporter investigation.
+At this review, [#21], [#22] and [#56] held the software and validation
+obligations. Keep successful and failed route observations together when
+processing a new report.
 
 ## Discovery relationship evidence, 0.5.0
 
@@ -139,7 +151,7 @@ and an explicit `standalone_transport_unverified` operation error. It creates
 no HomeBase entity. Unknown pairs remain unadmitted with `unsupported_device`.
 [Regression tests](../test/discovery.test.mjs) prove this software boundary.
 The dated feature rows and hardware claims below remain unchanged. Other owner
-protocols and standalone authentication remain with [#35] and [#36].
+protocols and standalone authentication remained with [#35] and [#36] at 0.5.0.
 
 ## eufyCam software evidence, 0.6.0
 
@@ -150,7 +162,8 @@ supersede the historical unimplemented discovery/state/event cells for those
 exact tuples only. This is software evidence. No hardware cell changes.
 T8111/T8112 availability remains unknown and wired T8600 battery is not applicable.
 The original 0.6.0 media guard is superseded only by the profile below. Older owners,
-unresolved suffixes and hardware acceptance remain with [#35], [#55], [E2] and [E6].
+unresolved suffixes and hardware acceptance remained with [#35], [#55], [E2] and
+[E6] at 0.6.0.
 
 ## eufyCam media evidence, 0.7.0
 
@@ -162,7 +175,7 @@ asserted. Snapshot, live video/audio forwarding, recordings and confirmed
 stop/cancel have software fixtures. This supersedes the historical media B1/U
 cells only for that exact profile. It assigns no new hardware evidence.
 Unsupported firmware, models and topologies remain explicit. [#55], [#35],
-[#36], [E2] and [E6] retain the remaining obligations.
+[#36], [E2] and [E6] held the remaining obligations at 0.7.0.
 
 ## Exact T8213 hardware evidence, 2026-09-11
 
@@ -184,7 +197,7 @@ state, battery, discovery and motion/person/ring cells for these exact H3 tuples
 only. Available values are observations, never synthesized from connection state.
 No hardware cell changes. The media profile below supersedes the 0.8.0 guard. Candidate
 model/type 7/16 associations remain unadmitted. [#58], [#35], [#36] and [E2]
-retain those evidence and owner obligations.
+held those evidence and owner obligations at 0.8.0.
 
 ## Battery doorbell media evidence, 0.9.0
 
@@ -194,8 +207,8 @@ firmware branch. T8213/91 retains its existing route and gains regression covera
 Separate E340 and generic C30/C31 live envelopes, stored snapshots, video/audio
 forwarding, recording operations and acknowledged stop/cancel have software tests.
 This supersedes historical B1/U media cells only for that exact profile. No H
-cells change. [#58], [#35], [#36], [E2] and [E6] retain hardware, other owners,
-standalone and candidate inventory obligations.
+cells change. [#58], [#35], [#36], [E2] and [E6] held hardware, other owners,
+standalone and candidate inventory obligations at 0.9.0.
 
 ## Reported C30 type 96, 0.18.1
 
@@ -386,9 +399,10 @@ exact connection scope. No hardware claim changes.
 
 The updated SoloCam rows below evaluate H3 only. Standalone descriptors identify
 the camera as owner but remain `standalone_transport_unverified`, without a
-station or operation path. [#36] retains transport research, [#35] other owners
-and [#56] hardware and unresolved model variants. T8124V/R remain unadmitted.
-[Camera-10] retains the original reporter investigation and requested retest.
+station or operation path. At 0.11.0, [#36] held transport research, [#35]
+other owners and [#56] hardware and unresolved model variants. T8124V/R remain
+unadmitted. [Camera-10] retains the original reporter investigation and
+requested retest.
 
 ## SoloCam media evidence, 0.12.0
 
@@ -401,10 +415,10 @@ conservative numeric owner firmware admission as other additional-H3 cameras.
 
 This supersedes the 0.11.0 media restriction only for that exact H3 profile.
 The nine updated rows mark software evidence, not hardware confirmation.
-T8134 reporter cells and dated follow-up observations are preserved. [#56],
-[Camera-10], [#35] and [#36] retain hardware, recovery, other-owner and standalone
-obligations. Software audio forwarding is not proof that the reporter's missing
-audio is resolved.
+T8134 reporter cells and dated follow-up observations are preserved. At 0.12.0,
+[#56], [Camera-10], [#35] and [#36] held hardware, recovery, other-owner and
+standalone obligations. Software audio forwarding is not proof that the
+reporter's missing audio is resolved.
 
 ## Integrated camera software evidence, 0.12.0
 
@@ -417,13 +431,15 @@ mechanism or user-management control is exposed. Non-camera pushes are excluded.
 
 The remaining-catalogue audit also adds exact T8110/type 10035 eufyCam C35
 coverage using the generic Camera class and existing Solo live envelope.
-It remains an eufyCam, with its other-owner and hardware obligations in [#39].
+It remains an eufyCam. At 0.12.0, its other-owner and hardware obligations were
+in [#39].
 
 These four feature rows supersede their historical B1/U software cells only for
 this exact H3 profile. No hardware cells change. T8531/189 lacks camera metadata
 and media commands in the pinned source. Types 101/102 have no model or operation
-mapping. Those gaps, E85V0 variants and hardware acceptance remain with [#39],
-[E2] and [E6]. Standalone and other owners remain with [#36] and [#35].
+mapping. Those gaps, E85V0 variants and hardware acceptance remained with
+[#39], [E2] and [E6] at 0.12.0. Standalone and other owners remained with [#36]
+and [#35].
 
 ## Source boundary and reading rules
 
@@ -457,16 +473,16 @@ ownership. Outdoor wired cameras follow the existing indoor protocol family.
 
 ## Topology inventory
 
-| Code           | Product topology and current client boundary                                                                                                   | Evidence and obligation                                                                                                              |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| H3             | Camera paired with T8030 HomeBase 3, S380. Only the local LAN-derived credential path is implemented. Host networking was observed.            | [C0], [H0]. Other network/encryption profiles remain with [#17], [#18], [E2], [E6].                                                  |
-| H1/E/2         | HomeBase 1, HomeBase E or HomeBase 2 as the connection owner. Model and firmware matter.                                                       | [HB-old], [HB-guide]. Not admitted by the current client. [#35], [#17], [E2], [E6].                                                  |
-| HM             | HomeBase Mini, T8025, as a possible owner. This is not MiniBase Chime T8023.                                                                   | [Catalogue], [Display], [HB-guide]. Conflicting regional tables and exact revisions need [#35]. All features remain with [E2], [E6]. |
-| W              | Standalone Wi-Fi camera with its own transport/storage owner. Optional HomeBase storage does not prove HomeBase command ownership.             | Product sources per row. A T8134 standalone descriptor is implemented. Transport is unverified. [#36], [#17], [E2], [E6].            |
-| L              | Cellular connection. T86P2 also has a distinct Wi-Fi mode. Do not project Wi-Fi evidence onto LTE.                                             | [HB3], [HB-guide]. Route, credentials and media remain unknown. [#37], [E2], [E6].                                                   |
-| N              | PoE camera connected directly or through a PoE switch to an NVR.                                                                               | [NVR-setup]. [NVR-HB] explicitly excludes HomeBase 2/3. [#38], [E2], [E6].                                                           |
-| Chime / bridge | A Wi-Fi Chime, MiniBase Chime or Wi-Fi bridge may own a device connection. A chime used only for sound is not necessarily its transport owner. | [HB-old], [Lock-setup]. Exact relationships remain with [#35], [#36], [#17], [E2], [E6].                                             |
-| Unknown        | Neither the model association nor connection owner is established.                                                                             | Preserve the row under [E2], [E6] and its family/research obligation.                                                                |
+| Code           | Product topology and current client boundary                                                                                                   | Evidence and obligation                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H3             | Camera paired with T8030 HomeBase 3, S380. Only the local LAN-derived credential path is implemented. Host networking was observed.            | [C0], [H0]. Other network/encryption profiles remain open, first recorded under [#17], [#18], [E2], [E6].                                                                              |
+| H1/E/2         | HomeBase 1, HomeBase E or HomeBase 2 as the connection owner. Model and firmware matter.                                                       | [HB-old], [HB-guide]. Not admitted by the current client. Tracked in [#143], first recorded under [#35], [#17], [E2], [E6].                                                            |
+| HM             | HomeBase Mini, T8025, as a possible owner. This is not MiniBase Chime T8023.                                                                   | [Catalogue], [Display], [HB-guide]. Conflicting regional tables and exact revisions need owner evidence, tracked in [#143]. All features remain open, first recorded under [E2], [E6]. |
+| W              | Standalone Wi-Fi camera with its own transport/storage owner. Optional HomeBase storage does not prove HomeBase command ownership.             | Product sources per row. A T8134 standalone descriptor is implemented. Transport is unverified. Tracked in [#142], first recorded under [#36], [#17], [E2], [E6].                      |
+| L              | Cellular connection. T86P2 also has a distinct Wi-Fi mode. Do not project Wi-Fi evidence onto LTE.                                             | [HB3], [HB-guide]. Route, credentials and media remain unknown. Tracked in [#142], first recorded under [#37], [E2], [E6].                                                             |
+| N              | PoE camera connected directly or through a PoE switch to an NVR.                                                                               | [NVR-setup]. [NVR-HB] explicitly excludes HomeBase 2/3. Tracked in [#144], first recorded under [#38], [E2], [E6].                                                                     |
+| Chime / bridge | A Wi-Fi Chime, MiniBase Chime or Wi-Fi bridge may own a device connection. A chime used only for sound is not necessarily its transport owner. | [HB-old], [Lock-setup]. Exact relationships remain open, first recorded under [#35], [#36], [#17], [E2], [E6].                                                                         |
+| Unknown        | Neither the model association nor connection owner is established.                                                                             | Preserve the row and its family/research obligation as open, first recorded under [E2], [E6].                                                                                          |
 
 H3 product compatibility can mean storage only. [HB3] separates storage from AI.
 It does not prove the Mega command route. It excludes original T8420 but lists a
@@ -483,18 +499,20 @@ model/firmware evidence.
 
 The primary [HomeBase Professional S1 list][HB-Pro] also names T9000, an owner
 absent from the pinned enum. Its possible camera relationships are retained as
-an explicit [E2] owner-discovery obligation via [#17] and hardware obligation in
-[E6]. Do not map it to `STATION` or H3 without evidence. The optional NVR Wi-Fi
-module is described as forthcoming by [NVR-WiFi]. Its availability, owner and
-transport remain unknown under [#38]. Neither case enlarges this story into
-protocol implementation.
+an explicit owner-discovery and hardware obligation, first recorded under
+[#17], [E2] and [E6]. Do not map it to `STATION` or H3 without evidence. The
+optional NVR Wi-Fi module is described as forthcoming by [NVR-WiFi]. Its
+availability, owner and transport remain unknown, and [#38] closed on 2026-09-16
+without resolving them. Neither case enlarges this story into protocol
+implementation.
 
 ## Wired inventory recognition, 0.12.0
 
 The four exact wired pairs in [Wired-software] now retain received inventory
-state and standalone identity. H3 and foreign owners are rejected. The existing
-[#27], [#28] and [#36] obligations remain open for live state, event routing,
-authentication and media. No wired transport or hardware support is claimed.
+state and standalone identity. H3 and foreign owners are rejected. Live state,
+event routing, authentication and media remain open in [#142], which
+consolidates [#27], [#28] and the open part of [#36]. No wired transport or
+hardware support is claimed.
 
 ## Catalogue rows
 
@@ -578,7 +596,8 @@ The catalogue comment for 10011 says T8419N, while the primary guide lists
 T8418N under C220. There is no basis here to correct the enum or merge the rows.
 `CAMERA_GARAGE_T8453_COMMON` likewise is not proof of a separate retail model.
 Battery-doorbell model sets are candidate associations to the two generic enum
-branches. Their exact inventory types remain a [#25] obligation.
+branches. Their exact inventory types remain a matrix obligation, first recorded
+in [#25].
 
 ## Core features by protocol type
 
@@ -676,19 +695,21 @@ battery lifetime claim is made.
 
 For the four R rows, evaluate every listed non-H3 topology as B2/U for each of
 discovery, state, battery, snapshot, live video, live audio, events and recordings.
-Their separate owner obligations are [#17], [#35], [#36] and [E6]. The H3
-implementation explicitly uses local-only P2P and LAN-derived credentials.
-Routed LAN/VLAN, remote relay, stronger cipher modes and legacy-cloud credential
-retrieval are not established by H. [C0] rejects unavailable credential paths.
+Their separate owner obligations were first recorded under [#17], [#35], [#36]
+and [E6]. The H3 implementation explicitly uses local-only P2P and LAN-derived
+credentials. Routed LAN/VLAN, remote relay, stronger cipher modes and
+legacy-cloud credential retrieval are not established by H. [C0] rejects
+unavailable credential paths.
 These are implementation boundaries, not proof that a product cannot use them.
 
 For T8142, X in the media/state/event columns denotes reachable shared code,
 not eight passing model-specific fixture suites. [Discovery-tests] proves the
 allowlist/parent rules. [S1] checks the existing live command choice. T8142 uses
 `CMD_SET_PAYLOAD`, T8134 uses `CMD_DOORBELL_SET_PAYLOAD` in that test.
-The adapter currently instantiates generic `Camera` for both and
-`BatteryDoorbellCamera` for T8213 and the three exact pairs in the 0.8.0 section. It does not yet instantiate a new SoloCam
-family factory. That obligation remains [#21].
+Since 0.11.0 the adapter instantiates `SoloCamera` for T8134. It instantiates
+generic `Camera` for T8142 and `BatteryDoorbellCamera` for T8213, T85V0/203 and
+the exact pairs in the 0.8.0 and 0.18.1 sections. [#21] added that SoloCam
+selection and closed on 2026-09-11.
 
 For excluded models, available vendor predicates, properties or command tables
 are protocol leads only. They are not experimental public-client coverage.
@@ -701,8 +722,8 @@ not applicable, and availability remains unknown because the attributed model
 properties have no such field. Standalone recognition retains an explicit
 transport blocker and does not inherit H3 media or event coverage. Other owners
 remain blocked. T8420/X, T8422, T8423 and T8424 retain their entry barriers.
-H3 storage compatibility alone does not establish command ownership. [E2]
-retains that model work after scoped software acceptance of [#29]/[#30].
+H3 storage compatibility alone does not establish command ownership. That model
+work remains open in this matrix after scoped software acceptance of [#29]/[#30].
 
 ## Dated device evidence and failures
 
@@ -739,21 +760,22 @@ implementation and hardware obligations below remain unchanged.
 These types remain visible in the accounting even though they are not camera
 rows. Station status and media ownership remain in scope where applicable.
 
-| Protocol type | Enum             | Owner model / primary name                                                              | Current evidence and remaining obligation                                                                                                                                                                            |
-| ------------- | ---------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0             | `STATION`        | T8001 HomeBase, T8002 HomeBase E, T8010 HomeBase 2 candidates                           | [Display], [HB-old], [Catalogue]. Recognition is catalogue-only. All client functions B1/U. [#35], [#17], [E2], [E6].                                                                                                |
-| 18            | `HB3`            | T8030 HomeBase 3 / S380                                                                 | [HB-guide], [H0], [H1], [C0]. Discovery and station availability historically observed. Battery and own camera media N/A. It owns the proven child-camera routes. Other firmware/network profiles remain [E2], [E6]. |
-| 25            | `MINIBASE_CHIME` | T8023 MiniBase Chime candidate                                                          | [Display], [Catalogue]. Catalogue-only. All client functions B1/U. [#35], [#17], [E2], [E6].                                                                                                                         |
-| 28            | `HOMEBASE_MINI`  | T8025 HomeBase Mini                                                                     | [Catalogue], [Display], [HB-guide]. Catalogue-only. All client functions B1/U. [#35], [#17], [E2], [E6].                                                                                                             |
-| 300           | `NVR_S4_MAX`     | T8N00 NVR, catalogue S4 Max label. E8P10 is a system code, not an assumed device_model. | [Catalogue], [NVR-setup]. Catalogue-only. All client functions B1/U. [#38], [#17], [E2], [E6].                                                                                                                       |
+| Protocol type | Enum             | Owner model / primary name                                                              | Current evidence and remaining obligation                                                                                                                                                                                                       |
+| ------------- | ---------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0             | `STATION`        | T8001 HomeBase, T8002 HomeBase E, T8010 HomeBase 2 candidates                           | [Display], [HB-old], [Catalogue]. Recognition is catalogue-only. All client functions B1/U. Tracked in [#143], first recorded under [#35], [#17], [E2], [E6].                                                                                   |
+| 18            | `HB3`            | T8030 HomeBase 3 / S380                                                                 | [HB-guide], [H0], [H1], [C0]. Discovery and station availability historically observed. Battery and own camera media N/A. It owns the proven child-camera routes. Other firmware/network profiles remain open, first recorded under [E2], [E6]. |
+| 25            | `MINIBASE_CHIME` | T8023 MiniBase Chime candidate                                                          | [Display], [Catalogue]. Catalogue-only. All client functions B1/U. Tracked in [#143], first recorded under [#35], [#17], [E2], [E6].                                                                                                            |
+| 28            | `HOMEBASE_MINI`  | T8025 HomeBase Mini                                                                     | [Catalogue], [Display], [HB-guide]. Catalogue-only. All client functions B1/U. Tracked in [#143], first recorded under [#35], [#17], [E2], [E6].                                                                                                |
+| 300           | `NVR_S4_MAX`     | T8N00 NVR, catalogue S4 Max label. E8P10 is a system code, not an assumed device_model. | [Catalogue], [NVR-setup]. Catalogue-only. All client functions B1/U. Tracked in [#144], first recorded under [#38], [#17], [E2], [E6].                                                                                                          |
 
 T8020 Wi-Fi Chime and T8021 Wi-Fi Bridge appear in [Display] but have no dedicated
-enum name here. Preserve their exact inventory-type question in [#35]/[#17].
-Do not fabricate a HomeBase entity for a standalone device or sound-only chime.
+enum name here. Preserve their exact inventory-type question, first recorded in
+[#35]/[#17]. Do not fabricate a HomeBase entity for a standalone device or
+sound-only chime.
 
 The [standalone and older-owner investigation](research/CAMERA_TRANSPORTS_2026-09-11.md)
 records the pinned Mega and P2P evidence, an offline descriptor inspection tool
-and the exact authentication/media gaps retained in [#35] and [#36].
+and the exact authentication/media gaps that [#143] and [#142] now track.
 Descriptor field presence does not establish a working connection.
 
 ## Explicit non-camera exclusions
@@ -795,27 +817,33 @@ variants require reclassification, not inheritance from this exclusion list.
 
 ## Open obligations and update procedure
 
-Every missing core feature remains an [E2] obligation and every missing hardware
-tuple remains an [E6] obligation under the [programme's completion gate][Programme].
+Every missing core feature and every missing hardware tuple remains an open
+obligation in this matrix. [E2] and [E6] tracked them until both closed on
+2026-09-16. Open work lives in individual GitHub issues.
 The per-row family links distinguish discovery/state/events implementation from
 snapshot/live/recording implementation and hardware acceptance. Family stories
-cover one evidenced profile. Hardware stories #55 through #62 cover one exact
-tuple each. Closing one cannot close all rows in that family.
+covered one evidenced profile. Hardware stories #55 through #62 covered one exact
+tuple each. Closing one did not close the other rows in that family. The
+eufy-mega-client issues in the Remaining work column mark where each obligation
+was first recorded. All of them closed by 2026-09-16. [#142], [#143] and [#144]
+track the open standalone, older-owner and NVR gaps.
 
 For LTE, PoE/NVR, integrated products and unresolved catalogue labels, [#37],
-[#38] and [#39] own bounded research. Their completion must link implementation
-follow-ups before closing. [E2] retains all eight feature columns until delivered
-or bounded by evidence. [E6] retains separate model, firmware, topology and
-feature validation. Camera functions on locks, garages and SmartDrop do not
-include unlocking, garage actuation or parcel controls.
+[#38] and [#39] closed their bounded research as completed on 2026-09-16. Their
+follow-ups are [#142] and [#144], and unresolved integrated entries stay
+recorded in this matrix. All eight feature columns stay open until delivered or
+bounded by evidence. Hardware validation stays separate for each model,
+firmware, topology and feature. Camera functions on locks, garages and SmartDrop
+do not include unlocking, garage actuation or parcel controls.
 
-No additional implementation story is needed for this inventory. Existing
-stories plus the explicit E2/E6 obligations cover the gaps. If research exposes
+No additional implementation story is needed for this inventory. Open issues
+plus the obligations recorded in this matrix cover the gaps. If research exposes
 an additional protocol, split a one- or two-day story before making it Ready.
 The catalogued but unresolved labels 101, 102 and 10011 remain obligations.
 New models visible in primary sources but absent from this pinned catalogue,
-including PoE E40/E41 in [Display], require the same E2/E6 intake. Do not silently
-add their product names to an existing numeric type.
+including PoE E40/E41 in [Display], require intake as matrix obligations and get
+a scoped issue when an owner reports such a model. Do not silently add their
+product names to an existing numeric type.
 
 To maintain this document:
 
@@ -948,6 +976,9 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [#113]: https://github.com/keesmod/eufy-mega-client/issues/113
 [#114]: https://github.com/keesmod/eufy-mega-client/issues/114
 [#115]: https://github.com/keesmod/eufy-mega-client/issues/115
+[#142]: https://github.com/keesmod/eufy-mega-client/issues/142
+[#143]: https://github.com/keesmod/eufy-mega-client/issues/143
+[#144]: https://github.com/keesmod/eufy-mega-client/issues/144
 [Solo-software]: SOLOCAM.md
 [Wall-software]: WALLLIGHT.md
 [Floodlight-software]: FLOODLIGHT.md

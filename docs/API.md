@@ -83,10 +83,10 @@ the same result. There is no automatic retry of authentication or physical work.
 
 ### Mower adapter boundary
 
-A mower-only client can be constructed without camera credentials. Version 0.3.0
-uses the independent Home/Tuya adapter by default. Existing custom lifecycle
-adapters remain supported. A custom adapter without discovery reports
-`mower_protocol_unavailable` when discovery is requested.
+A mower-only client can be constructed without camera credentials. Since 0.3.0
+the mower module uses the independent Home/Tuya adapter by default. Existing
+custom lifecycle adapters remain supported. A custom adapter without discovery
+reports `mower_protocol_unavailable` when discovery is requested.
 
 ```ts
 const mower = new EufyClient({
@@ -125,8 +125,9 @@ bridge. Neither module shuts down the other installation.
 
 The default Home/Tuya authentication and discovery profile is described in
 [Mower authentication](MOWER_AUTH_PROVENANCE.md). The EU E15 binding has a [live validation receipt](research/E15_AUTH_VALIDATION_2026-09-10.md).
-Telemetry, commands, settings and maps remain in their E3/E4 stories. The adapter
-contract adds no physical control methods and makes no E15 hardware claims.
+Telemetry, commands, settings and maps are described in the mower sections below.
+The adapter contract adds no physical control methods. Dated E15 hardware results
+per feature are in the [model matrix](MODEL_MATRIX.md#e15-local-telemetry-2026-09-16).
 
 ## Authentication and sessions
 
@@ -537,12 +538,12 @@ if (wire?.shape === 'fields') {
 
 The shipped DP 107 definitions are `confirmed` for `mowing`, `paused` and
 `returning`. A `wire` definition reports its activity only when every listed
-field matches, so the transitional first frame after a control, the map-saving
-payload, field 6 and the default payload leave `status` `invalid` for that
-report. See the
-[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md)
-and the
-[reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md).
+field matches, so the transitional first frame after a control and the
+map-saving payload leave `status` `invalid` for that report. Since 0.22.0 the
+mission status reports field 6 = 1 and the default payload as `idle`. See the
+[DP 107 contract receipt](research/E15_ROBOT_STATUS_CONTRACT_2026-09-16.md),
+the [reproduction receipt](research/E15_ROBOT_STATUS_REPRODUCTION_2026-09-19.md)
+and the [mission status receipt](research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md).
 
 ## Opt-in mower commands, 0.16.0 and 0.17.0
 

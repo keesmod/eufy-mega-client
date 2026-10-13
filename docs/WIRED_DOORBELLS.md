@@ -32,25 +32,29 @@ observations use client commit `34863d81eb3bc50dbc095ff537fe156640f7042e`:
 
 ## Remaining acceptance
 
-[Story #27](https://github.com/keesmod/eufy-mega-client/issues/27) remains open.
+[Story #27](https://github.com/keesmod/eufy-mega-client/issues/27) was closed as
+not planned on 2026-09-16, and
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142) tracks its open work.
 The library does not yet admit a wired protocol object with a verified standalone
 connection owner. Live state and motion/person/ring routing therefore remain
 unverified. `getDeviceState` returns `standalone_transport_unverified`, while
 `discoverDevices` and `listDevices` expose the received inventory state.
 
-[Story #28](https://github.com/keesmod/eufy-mega-client/issues/28) remains open.
+[Story #28](https://github.com/keesmod/eufy-mega-client/issues/28) was closed as
+not planned on 2026-09-16, and #142 tracks its open work.
 There is no accepted wired Mega authentication/media profile. Snapshot, live
 video/audio and recordings return `standalone_transport_unverified` before
 opening a connection. Stop/cancel and recovery cannot be claimed for this
 unimplemented path. No media allowlist or protocol factory is expanded here.
 
-[Existing transport research #36](https://github.com/keesmod/eufy-mega-client/issues/36)
-owns the missing representative Mega descriptor, owner/authentication evidence
-and recording route. A reproducible descriptor-to-authentication-to-command
-chain is required before admitting that path. No legacy security-cloud fallback
-or inferred keys are permitted. Unresolved work stays on these existing issues.
-[Hardware acceptance #59](https://github.com/keesmod/eufy-mega-client/issues/59)
-remains separate.
+Issue #142 also tracks the missing representative Mega descriptor,
+owner/authentication evidence and recording route from
+[transport research #36](https://github.com/keesmod/eufy-mega-client/issues/36).
+A reproducible descriptor-to-authentication-to-command chain is required before
+admitting that path. No legacy security-cloud fallback or inferred keys are
+permitted. [Hardware acceptance #59](https://github.com/keesmod/eufy-mega-client/issues/59)
+was closed as not planned on 2026-09-16. Hardware evidence stays separate in the
+[model matrix](MODEL_MATRIX.md).
 
 ## Validation
 

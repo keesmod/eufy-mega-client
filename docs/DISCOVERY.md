@@ -72,11 +72,14 @@ The compiled TypeScript consumer checks both public discovery APIs.
 
 All data and mocked owner events are synthetic. There is no new physical support
 claim, firmware validation, live test, release publication or deployment.
-[Standalone research #36](https://github.com/keesmod/eufy-mega-client/issues/36)
-owns wire/auth evidence. [Older-owner research #35](https://github.com/keesmod/eufy-mega-client/issues/35)
-owns other HomeBases. The matrix family stories own model expansion, and
-[camera integration #19](https://github.com/keesmod/ha-eufy-cam/issues/19) owns
-consumer capability presentation. Legacy removal is separate work.
+At 0.5.0, [standalone research #36](https://github.com/keesmod/eufy-mega-client/issues/36)
+owned wire/auth evidence and [older-owner research #35](https://github.com/keesmod/eufy-mega-client/issues/35)
+other HomeBases. The matrix family stories owned model expansion, and
+[camera integration #19](https://github.com/keesmod/ha-eufy-cam/issues/19) owned
+consumer capability presentation. Legacy removal was separate work.
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
+[#143](https://github.com/keesmod/eufy-mega-client/issues/143) now track the
+standalone and older-owner gaps.
 
 No session-store migration is required. Retain the previous package and private
 session store for rollback. The existing `Device` shape is unchanged, but callers
