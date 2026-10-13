@@ -319,17 +319,28 @@ class ChangeTests(unittest.TestCase):
         self.published.assert_not_called()
 
     def test_version_cannot_decrease(self):
-        for previous, version in (
-            ("0.29.2", "0.29.1"),
-            ("0.29.3", "0.29.3-beta.1"),
-            ("0.29.3-beta.2", "0.29.3-beta.1"),
-            ("0.30.0-beta.1", "0.29.9"),
+        # The message names the next valid candidate after the base version.
+        raise_to = "Raise the version, for example to "
+        for previous, version, hint in (
+            ("0.29.2", "0.29.1", raise_to + "0.29.3-beta.1"),
+            ("0.29.3", "0.29.3-beta.1", raise_to + "0.29.4-beta.1"),
+            (
+                "0.29.3-beta.2",
+                "0.29.3-beta.1",
+                "Keep 0.29.3-beta.2, or 0.29.3-beta.3 if it is published",
+            ),
+            (
+                "0.30.0-beta.1",
+                "0.29.9",
+                "Keep 0.30.0-beta.1, or 0.30.0-beta.2 if it is published",
+            ),
         ):
             stable = dict.fromkeys(release.stable_part(v) for v in (previous, version))
             sections = [entry(v, "2026-10-20") for v in stable]
             with self.subTest(previous=previous, version=version):
                 self.base(previous, *sections)
-                self.rejected(f"cannot decrease below {previous}", version, *sections)
+                message = f"Library version cannot decrease below {previous}. {hint}"
+                self.rejected(f"^{re.escape(message)}$", version, *sections)
 
     def test_release_pr_sets_the_plain_version_with_a_dated_heading(self):
         released = entry("0.29.3", "2026-10-20")
@@ -415,7 +426,13 @@ class ChangeTests(unittest.TestCase):
                 lambda p: p["scripts"].update(build="tsc -p tsconfig.json"),
             )
 
-        for edit in (tsconfig, build):
+        def postbuild():
+            self.edit_json(
+                "package.json",
+                lambda p: p["scripts"].update(postbuild="node scripts/patch.mjs"),
+            )
+
+        for edit in (tsconfig, build, postbuild):
             with self.subTest(edit=edit.__name__):
                 self.rejected("The 0.29.2 batch is closed", "0.29.2", STABLE, edit=edit)
 
@@ -456,6 +473,16 @@ class ChangeTests(unittest.TestCase):
             ("files", package(lambda p: p["files"].append("extra")), True),
             ("type", package(lambda p: p.update(type="commonjs")), True),
             ("build", package(lambda p: p["scripts"].update(build="tsc")), True),
+            (
+                "prebuild",
+                package(lambda p: p["scripts"].update(prebuild="node x.mjs")),
+                True,
+            ),
+            (
+                "postbuild",
+                package(lambda p: p["scripts"].update(postbuild="node x.mjs")),
+                True,
+            ),
             ("production lock", lock(dev=False), True),
             ("readme", lambda: self.write("README.md", "# Changed\n"), False),
             ("tests", lambda: self.write("test/x.test.mjs", "//\n"), False),

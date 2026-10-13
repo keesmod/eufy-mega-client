@@ -23,9 +23,9 @@ other heading that a PR adds. Older headings are never inspected or rewritten.
 
 Runtime changes are files under `src/` and `vendor/`, `scripts/copy-assets.mjs`,
 the root `tsconfig.json`, the `dependencies`, `optionalDependencies`, `exports`,
-`engines`, `files`, `type` and `scripts.build` fields of `package.json`, and the
-production entries of the lockfile. Validate applies these rules to every PR
-against its base commit:
+`engines`, `files`, `type`, `scripts.prebuild`, `scripts.build` and
+`scripts.postbuild` fields of `package.json`, and the production entries of the
+lockfile. Validate applies these rules to every PR against its base commit:
 
 - The version never decreases.
 - A PR with runtime changes leaves the version at an unpublished value and
@@ -42,17 +42,19 @@ The usual sequence after the stable release `0.29.2`:
 
 | PR                               | Version                                 | Changelog                          |
 | -------------------------------- | --------------------------------------- | ---------------------------------- |
-| First runtime change             | `0.29.3-beta.1` or `0.30.0-beta.1`      | adds `## 0.29.3 - Unreleased`      |
+| First runtime change             | `0.29.3-beta.1`                         | adds `## 0.29.3 - Unreleased`      |
 | Further runtime changes          | keeps `0.29.3-beta.1` while unpublished | extends the `0.29.3` section       |
 | After `v0.29.3-beta.1` is public | `0.29.3-beta.2`                         | extends the `0.29.3` section       |
 | Release PR                       | `0.29.3`                                | dates it, `## 0.29.3 - 2026-10-20` |
+
+A minor bump such as `0.30.0-beta.1` opens `## 0.30.0 - Unreleased` instead.
 
 When a runtime PR keeps the base version, CI looks up its tag and every page of
 GitHub releases with the workflow token. A failed lookup fails the check. The
 release workflow creates the tag before its draft, so the tag lookup also covers
 drafts that a read-only token cannot list. A version above the base needs no
-lookup, because main never falls below a published version. Each rejection names
-the next valid candidate.
+lookup, because main never falls below a published version. Each version
+rejection names the next valid candidate.
 
 ## Prepare a pull request
 
@@ -87,7 +89,7 @@ Stable releases happen on request, in one run together with ha-eufy-cam. One
 approval covers the whole run: this stable release, the camera release PR whose
 merge updates the stable Home Assistant app, and both GitHub releases.
 
-1. Start the merge freeze in both repositories.
+1. Start the merge freeze in both repositories with the approval.
 2. Open the release PR. It sets the version to `X.Y.Z`, the stable part of the
    candidate, dates `## X.Y.Z - YYYY-MM-DD`, completes the upgrade and rollback
    text and points the README install URL at `X.Y.Z`. It normally changes
@@ -124,25 +126,28 @@ it from main with the Release workflow and the beta version as input.
 A hotfix is a stable release of current main between batch runs. There are no
 release branches. Work that must not ship is reverted first, in an ordinary PR
 under the candidate rules. Land the fix as a beta candidate, or with a small fix
-directly in the release PR, then follow the batch release run. When the camera
-needs the fix, its release PR pins the new stable version. When ha-eufy-cam main
-pins a client beta, every camera hotfix needs a client stable release at or
-above that beta, so revert client work that must not ship first. An advisory in
-a transitive dependency of the camera bridge can be fixed in the bridge lockfile
+directly in the release PR, then follow the batch release run. The revert and a
+separate fix PR merge before the run. Ask for the run approval once they are on
+main, because the merge freeze starts with that approval. When the camera needs
+the fix, its release PR pins the new stable version. When ha-eufy-cam main pins
+a client beta, every camera hotfix needs a client stable release at or above
+that beta, so revert client work that must not ship first. An advisory in a
+transitive dependency of the camera bridge can be fixed in the bridge lockfile
 without a client release.
 
 ## Merge freeze
 
-From the approval of a batch or hotfix run until the run is complete, only the
-release PRs of that run merge to main. Publication uses only the commit that was
-rehearsed. When a run stops with `main advanced`, compare the rehearsed commit
-with current main and check whether the tag `v<version>` exists. If only
-documentation changed and the tag does not exist yet, rehearse and publish
-current main. A stop just before the draft becomes public comes after the tag
-was created, so that version is used up. A runtime change after the approval
-needs a new approval. Before the release PR merges, such a change joins the same
-`X.Y.Z` batch. It keeps the version while that beta is unpublished, raises `N`
-after a published beta, or goes directly into the release PR.
+The freeze starts with the approval of a batch or hotfix run, in step 1 of the
+run. Until the run is complete, only the release PRs of that run merge to main.
+Publication uses only the commit that was rehearsed. When a run stops with
+`main advanced`, compare the rehearsed commit with current main and check
+whether the tag `v<version>` exists. If only documentation changed and the tag
+does not exist yet, rehearse and publish current main. A stop just before the
+draft becomes public comes after the tag was created, so that version is used
+up. A runtime change after the approval needs a new approval. Before the release
+PR merges, such a change joins the same `X.Y.Z` batch. It keeps the version
+while that beta is unpublished, raises `N` after a published beta, or goes
+directly into the release PR.
 
 A tag created at a superseded commit uses up its version, because tags never
 move. A runtime PR merged after a release PR has to raise the version, so the

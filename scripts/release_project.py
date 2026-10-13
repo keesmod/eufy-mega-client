@@ -113,7 +113,9 @@ def runtime_changed(root, rev):
     )
     changed |= any(current.get(k) != previous.get(k) for k in keys)
     scripts = previous.get("scripts", {}), current.get("scripts", {})
-    changed |= scripts[0].get("build") != scripts[1].get("build")
+    # npm run build also runs prebuild and postbuild.
+    build = ("prebuild", "build", "postbuild")
+    changed |= any(scripts[0].get(k) != scripts[1].get(k) for k in build)
     old_lock = json.loads(run(root, "git", "show", rev + ":package-lock.json"))
     new_lock = json.loads((root / "package-lock.json").read_text())
     return changed or production_lock(old_lock) != production_lock(new_lock)
@@ -143,7 +145,14 @@ def check_changes(root, base, meta):
     version = meta["version"]
     previous = json.loads(run(root, "git", "show", base + ":package.json"))["version"]
     if release.version_key(version) < release.version_key(previous):
-        raise ValueError(f"Library version cannot decrease below {previous}")
+        major, minor, patch, beta = release.parse_version(previous)
+        hint = (
+            f"Raise the version, for example to {major}.{minor}.{patch + 1}-beta.1"
+            if beta is None
+            else f"Keep {previous}, or {major}.{minor}.{patch}-beta.{beta + 1} "
+            "if it is published"
+        )
+        raise ValueError(f"Library version cannot decrease below {previous}. {hint}")
     text = (root / "CHANGELOG.md").read_text()
     old_text = run(root, "git", "show", base + ":CHANGELOG.md")
     known = set(re.findall(r"^## .*$", old_text, re.M))
