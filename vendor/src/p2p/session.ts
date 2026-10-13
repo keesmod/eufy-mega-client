@@ -630,7 +630,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     // Client addition: the lookup observation counts this round and its broadcasts.
     const state = this.connected ? undefined : this.lookupObservation;
     if (state !== undefined) {
-      state.rounds = lookupCount(state.rounds);
+      // A round without any target sends nothing and is not counted.
+      if (targets.size > 0) state.rounds = lookupCount(state.rounds);
       state.broadcastTargets = Math.min(16, [...targets].filter((target) => target !== host).length);
     }
     for (const target of targets) this.localLookupByAddress({ host: target, port: 32108 });
@@ -4345,7 +4346,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
 
   private async closeConnection(): Promise<void> {
     this.terminating = true;
-    // Client addition: no DID of the ended attempt outlives the close.
+    // Client addition: a waiting reader takes the lookup observation before the
+    // close drops it, so no DID of the ended attempt outlives the close.
+    if (this.lookupObservation !== undefined) this.emit("lookup closing");
     this.lookupObservation = undefined;
     this._clearLookupTimeout();
     this._clearLocalLookupRetryTimeout();

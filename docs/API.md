@@ -222,7 +222,7 @@ the DID it accepts are the same with and without `onLookup`.
 
 | Field                      | Meaning                                                                                                                                                                     |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rounds`                   | Lookup rounds sent, 0 to 99                                                                                                                                                 |
+| `rounds`                   | Lookup rounds sent, 0 to 99. A round with no target is not counted                                                                                                          |
 | `broadcastTargets`         | Directed broadcast targets of the latest round, 0 to 16. The first round to a known address has none                                                                        |
 | `broadcastEnabled`         | Whether the session's UDP socket accepted broadcasts when it was bound                                                                                                      |
 | `sendErrors`               | Lookup sends that failed                                                                                                                                                    |
@@ -240,10 +240,11 @@ the DID it accepts are the same with and without `onLookup`.
 Counts without a bound in the table saturate at 999. A lookup reply shorter
 than 16 bytes has no complete DID and counts only in `datagrams`. The session
 keeps at most 16 other DIDs for classification, so a reply with a seventeenth or
-later distinct DID also counts only in `datagrams`. An attempt cancelled from
-its `lookup` stage callback starts no session and reports zero counts with
-`inventoryReply: 'none'`. An attempt that joins a reconnect the library started
-itself reports that lookup from its start.
+later distinct DID also counts only in `datagrams`. An attempt whose session
+ran no lookup, such as one cancelled from its `lookup` stage callback, reports
+zero counts, `broadcastEnabled: false` and `inventoryReply: 'none'`, whatever an
+earlier socket of the session accepted. An attempt that joins a reconnect the
+library started itself reports that lookup from its start.
 
 The observation carries no DID, address, port, serial or interface name. The
 session keeps the DIDs of other replies only to classify them, and the client
@@ -253,12 +254,13 @@ session of an extra live stream, has no reader. The client drops its DIDs by
 the time that session is ready, fails or closes. The inventory's DIDs are passed in for
 that read and are not kept.
 
-`datagrams: 0` means nothing reached the session's socket during the lookup.
-`sendErrors` and `broadcastEnabled` then show whether the lookups could leave
-the host. Account or foreign replies without an own reply show that other
-devices answered. `nearReplies` points to a reply that the exact DID comparison
-rejects. `inventoryAddressOnSubnet: false` says the inventory address is outside
-every local subnet of the host. None of these values proves a cause on its own.
+`rounds: 0` means no lookup left the session. `datagrams: 0` means nothing
+reached the session's socket during the lookup. `sendErrors` and
+`broadcastEnabled` then show whether the lookups could leave the host. Account
+or foreign replies without an own reply show that other devices answered.
+`nearReplies` points to a reply that the exact DID comparison rejects.
+`inventoryAddressOnSubnet: false` says the inventory address is outside every
+local subnet of the host. None of these values proves a cause on its own.
 
 ## Live media
 

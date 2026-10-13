@@ -224,6 +224,7 @@ export class Station extends TypedEmitter<StationEvents> {
       this.emit('connection error', this, new Error('Device command credentials rejected'));
     });
     this.p2pSession.on("station found", () => this.emit("station found", this));
+    this.p2pSession.on("lookup closing", () => this.emit("lookup closing", this));
     this.p2pSession.on("connect", (address: Address) => this.onConnect(address));
     this.p2pSession.on("close", () => this.onDisconnect());
     this.p2pSession.on("timeout", () => this.onTimeout());

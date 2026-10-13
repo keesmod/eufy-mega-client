@@ -612,20 +612,33 @@ export class DeviceTransport extends EventEmitter {
     // once, when it ends and before a failed attempt closes the session. It is
     // read without a consumer too, so no DID of the attempt stays behind.
     let lookup: 'reached' | 'started' | undefined;
+    // Every other account row counts, also one that discovery or load did not admit.
+    const others = this.accountRows.filter((row) => row.device_sn !== id);
+    // The DIDs of the other inventory rows only classify the replies.
+    const accountDids = new Set(
+      others.flatMap((row) =>
+        typeof row.p2p_did === 'string' && row.p2p_did ? [row.p2p_did] : [],
+      ),
+    );
+    // A close during the attempt, after a rejected command key or by another
+    // operation, would drop the observation first. The attempt takes it then.
+    let snapshot: StationLookupObservation | undefined;
+    const take = () => {
+      if (lookup !== 'started' || snapshot) return;
+      try {
+        snapshot = station.getLookupObservation(accountDids);
+      } catch {
+        // Ignored by contract. The observation never alters the connection.
+      }
+    };
     const observe = () => {
       if (!lookup) return;
       try {
-        // Every other account row counts, also one that discovery or load did not admit.
-        const others = this.accountRows.filter((row) => row.device_sn !== id);
-        // The DIDs of the other inventory rows only classify the replies.
-        const accountDids = new Set(
-          others.flatMap((row) =>
-            typeof row.p2p_did === 'string' && row.p2p_did ? [row.p2p_did] : [],
-          ),
-        );
         // An attempt cancelled before its session started observed nothing.
         const observed =
-          lookup === 'started' ? station.getLookupObservation(accountDids) : undefined;
+          lookup === 'started'
+            ? (snapshot ?? station.getLookupObservation(accountDids))
+            : undefined;
         if (onLookup) onLookup(this.lookupObservation(id, others, observed));
       } catch {
         // Ignored by contract. The observation never alters the connection.
@@ -638,6 +651,7 @@ export class DeviceTransport extends EventEmitter {
       this.lookupReaders.add(id);
       station.on('station found', found);
       station.on('connect', opened);
+      station.on('lookup closing', take);
       const operation = this.wait(
         station,
         'encryption ready',
@@ -668,6 +682,7 @@ export class DeviceTransport extends EventEmitter {
     } finally {
       station.off('station found', found);
       station.off('connect', opened);
+      station.off('lookup closing', take);
       this.connecting.delete(id);
       this.lookupReaders.delete(id);
     }

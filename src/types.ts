@@ -265,11 +265,11 @@ export interface StationConnectionProgress {
  * See docs/API.md, station lookup observation.
  */
 export interface StationLookupObservation {
-  /** Lookup rounds sent, 0 to 99. */
+  /** Lookup rounds sent, 0 to 99. A round with no target is not counted. */
   rounds: number;
   /** Directed broadcast targets of the latest round, 0 to 16. */
   broadcastTargets: number;
-  /** Whether the session socket accepted broadcasts. */
+  /** Whether the session socket accepted broadcasts. False when the attempt ran no lookup. */
   broadcastEnabled: boolean;
   /** Lookup sends that failed. */
   sendErrors: number;

@@ -45,7 +45,8 @@ failed lookup sends, received datagrams and lookup replies by DID class, which
 the client reads once per connection attempt. For a reconnect or an extra live
 session, which no attempt reads, it drops the observation by the time that
 session is ready, fails or closes. The session keeps at most 16 other DIDs until then and does not
-change the lookup.
+change the lookup. A close that drops an unread observation first announces it,
+so a running attempt can read it.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

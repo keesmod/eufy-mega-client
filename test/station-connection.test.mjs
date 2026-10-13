@@ -330,6 +330,33 @@ test('without any address and without an interface list no lookup is sent and no
   }
 });
 
+test('a lookup round without any target is not counted as sent', (t) => {
+  const { protocol, sent } = lookupProtocol(t);
+  t.mock.method(os, 'networkInterfaces', () => {
+    throw new Error('refused');
+  });
+  protocol.connectionType = P2PConnectionType.ONLY_LOCAL;
+  protocol.MAX_LOOKUP_TIMEOUT = 20000;
+  protocol.connected = false;
+  try {
+    protocol.lookup(undefined);
+    t.mock.timers.tick(3000);
+    assert.deepEqual(sent, []);
+    assert.equal(protocol.lookupObservation.rounds, 0);
+    assert.equal(protocol.lookupObservation.sendErrors, 0);
+    // A round that sends counts as before.
+    protocol.localLookup('192.168.1.50');
+    assert.deepEqual(sent, ['192.168.1.50']);
+    const observation = protocol.getLookupObservation(new Set());
+    assert.equal(observation.rounds, 1);
+    assert.equal(observation.broadcastTargets, 0);
+    assert.equal(observation.sendErrors, 0);
+  } finally {
+    protocol._clearLocalLookupRetryTimeout();
+    protocol._clearLookupTimeout();
+  }
+});
+
 test('without broadcast targets the earlier first-interface guess still applies, never a bare 255', (t) => {
   const { protocol, sent } = lookupProtocol(t);
   const point = { tailscale0: [v4('100.64.0.5', '255.255.255.255')] };
@@ -1351,4 +1378,63 @@ test('closing the session drops a lookup observation nobody read', async (t) => 
   protocol.binded = false;
   await protocol.close();
   assert.equal(protocol.lookupObservation, undefined);
+});
+
+test('a session close during the attempt keeps what its lookup saw for onLookup', async (t) => {
+  const { protocol } = runningLookup(t);
+  protocol.messageStates = new Map();
+  protocol.messageVideoStates = new Map();
+  protocol.socket = undefined;
+  protocol.binded = false;
+  const {
+    t: transport,
+    station,
+    calls,
+    reads,
+  } = connectionFixture({
+    answer: [],
+    lookup: (accountDids) => protocol.getLookupObservation(accountDids),
+  });
+  // As Station does, closing closes the session and its close notice is passed through.
+  station.close = async () => {
+    calls.close++;
+    await protocol.close();
+  };
+  protocol.on('lookup closing', () => station.emit('lookup closing', station));
+  const observations = [];
+  const observe = (observation) => observations.push(observation);
+  try {
+    // A rejected command key: the session reports the failure and closes in
+    // the same tick, before the attempt's rejection is handled.
+    const rejected = transport.connect('HB', undefined, undefined, observe);
+    protocol.handleMsg(lookupResponse(OWN_DID), from(INVENTORY_IP));
+    station.emit('connection error', station, new Error('Device command credentials rejected'));
+    void protocol.close();
+    await assert.rejects(rejected, { code: 'device_disconnected' });
+    assert.deepEqual(observations, [
+      {
+        ...emptyLookup,
+        rounds: 1,
+        datagrams: 1,
+        ownReplies: 1,
+        ownRound: 0,
+        inventoryReply: 'own',
+      },
+    ]);
+    assert.equal(protocol.lookupObservation, undefined);
+    // Another operation on the station during the lookup is refused and closes the session.
+    const controller = new AbortController();
+    const cancelled = transport.connect('HB', controller.signal, undefined, observe);
+    protocol.lookup();
+    await assert.rejects(transport.setGuardMode('HB', 1), { code: 'connection_busy' });
+    assert.equal(protocol.lookupObservation, undefined);
+    controller.abort();
+    await assert.rejects(cancelled, { code: 'cancelled' });
+    assert.deepEqual(observations.slice(1), [{ ...emptyLookup, rounds: 1 }]);
+    // Each attempt read its session once, at the close.
+    assert.equal(reads.length, 2);
+    assert.equal(station.listenerCount('lookup closing'), 0);
+  } finally {
+    await transport.close();
+  }
 });
