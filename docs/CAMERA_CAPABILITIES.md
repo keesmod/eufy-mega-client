@@ -25,9 +25,11 @@ kind camera and do not become HomeBase alarm entities.
 The synthetic capability tests cover all current eufyCam and battery doorbell media
 profiles, owner failure, firmware rejection, result isolation and public standalone
 rejection. Existing media tests retain command and lifecycle evidence. No physical
-hardware was tested. Model-specific acceptance stays in client #55/#58, SoloCam
-#56 and camera #10, with migration and legacy retirement in camera #20/#24.
+hardware was tested. At 0.10.0, model-specific acceptance was in client
+#55/#58, SoloCam #56 and camera #10, with migration and legacy retirement in
+camera #20/#24.
 
-Version 0.10.0 needs no session migration. Retain the previous package and private
-session store for rollback. Publication and consumer package validation must be
-completed separately before changing a pinned consumer dependency.
+Version 0.10.0 was published on 2026-09-11 and needs no session migration. Retain
+the previous package and private session store for rollback. Consumer package
+validation must be completed separately before changing a pinned consumer
+dependency.

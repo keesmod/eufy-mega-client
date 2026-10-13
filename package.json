@@ -1,7 +1,7 @@
 {
   "name": "@keesmod/eufy-mega-client",
   "version": "0.29.2",
-  "description": "Independent Eufy Mega client for HomeBase 3 cameras",
+  "description": "Independent Eufy Mega client for HomeBase 3 cameras and the Eufy E15 robotic mower",
   "type": "module",
   "license": "(MIT AND Apache-2.0)",
   "engines": {

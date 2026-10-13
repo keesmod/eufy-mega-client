@@ -54,16 +54,19 @@ No device was contacted and no live support claim is made.
 
 ## Remaining acceptance
 
-- [#33](https://github.com/keesmod/eufy-mega-client/issues/33) remains open for a
-  proven connection owner, actual GarageCamera instantiation and public event
-  routing/deduplication on that route. Recognition is only part of the story.
-- [#34](https://github.com/keesmod/eufy-mega-client/issues/34) remains blocked until
+- [#33](https://github.com/keesmod/eufy-mega-client/issues/33) was closed as not
+  planned on 2026-09-16. A proven connection owner, actual GarageCamera
+  instantiation and public event routing/deduplication on that route remain open
+  in [#142](https://github.com/keesmod/eufy-mega-client/issues/142). Recognition
+  is only part of that work.
+- [#34](https://github.com/keesmod/eufy-mega-client/issues/34) was closed as not
+  planned on 2026-09-16. Its media work, tracked in #142, remains blocked until
   one exact media profile is evidenced, including authentication, snapshots,
   live video/audio, recordings and confirmed stop/cancel behavior.
-- [#36](https://github.com/keesmod/eufy-mega-client/issues/36) owns standalone
-  transport evidence and [#35](https://github.com/keesmod/eufy-mega-client/issues/35)
-  other connection owners. [#62](https://github.com/keesmod/eufy-mega-client/issues/62)
-  retains exact hardware acceptance.
+- Issue #142 also tracks standalone transport evidence and
+  [#143](https://github.com/keesmod/eufy-mega-client/issues/143) other connection
+  owners. [#62](https://github.com/keesmod/eufy-mega-client/issues/62) held exact
+  hardware acceptance until it was closed as not planned on 2026-09-16.
 
 Garage-door commands, calibration, settings and other physical controls remain
 outside the public API. No new migration is required. Retain the previous

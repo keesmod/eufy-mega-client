@@ -87,11 +87,13 @@ security, release metadata and the compiled package. Fixtures stay outside the
 published package. GitHub #18 and its PR hold the dated results.
 
 The existing per-row obligations in the matrix remain open. Family discovery
-and media stories #19 through #34 own implementation. #35 and #36 own owner and
-standalone transport gaps. #37, #38 and #39 own LTE, NVR and integrated/unresolved
-research. E2 retains implementation and E6 retains hardware validation. No new
-protocol work is hidden in the fixture story and none of those obligations is
-closed by this software evidence. Mower protocols are outside this camera matrix.
+and media stories #19 through #34 held implementation. #35 and #36 held owner
+and standalone transport gaps. #37, #38 and #39 held LTE, NVR and
+integrated/unresolved research. E2 held implementation and E6 hardware
+validation. All of these issues closed by 2026-09-16. #142, #143 and #144 track
+the open standalone, older-owner and NVR gaps. No new protocol work is hidden in
+the fixture story and none of those obligations is closed by this software
+evidence. Mower protocols are outside this camera matrix.
 
 The [#20 eufyCam command/media tests](../test/eufycam-media.test.mjs) extend the
 H3 software profile using the exact tuples and envelopes in [EUFYCAM.md](EUFYCAM.md).

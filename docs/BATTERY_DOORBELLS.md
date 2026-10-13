@@ -1,7 +1,7 @@
 # Battery doorbell software evidence
 
 Story [#25](https://github.com/keesmod/eufy-mega-client/issues/25) adds the following
-bounded discovery and state/event slice in unreleased 0.8.0.
+bounded discovery and state/event slice in 0.8.0.
 
 | Model/type | Adapter               | Discovery                   | Battery/availability | Motion/person/ring | Media                    |
 | ---------- | --------------------- | --------------------------- | -------------------- | ------------------ | ------------------------ |
@@ -65,21 +65,29 @@ No standalone owner or older HomeBase protocol is enabled. Invalid initializatio
 is isolated as `device_initialization_failed` without raw protocol data. Other
 families continue to work in the same inventory.
 
-- [#26](https://github.com/keesmod/eufy-mega-client/issues/26) must select its own
+- [#26](https://github.com/keesmod/eufy-mega-client/issues/26) selected its own
   exact Ready media profile before implementation. The selected profile is below.
-- [#58](https://github.com/keesmod/eufy-mega-client/issues/58) retains per-model,
+- [#58](https://github.com/keesmod/eufy-mega-client/issues/58) held per-model,
   firmware and topology hardware acceptance, including candidate-pair evidence,
-  observed battery, real motion/person/ring events and restart recovery.
-- [#35](https://github.com/keesmod/eufy-mega-client/issues/35) retains older owners
-  and chime relationships. [#36](https://github.com/keesmod/eufy-mega-client/issues/36)
-  retains standalone authentication and transport.
-- [Camera #19](https://github.com/keesmod/ha-eufy-cam/issues/19) owns HA capability
-  presentation. E2/E6 and camera migration/release acceptance remain open.
+  observed battery, real motion/person/ring events and restart recovery, until it
+  closed on 2026-09-11. The [model matrix](MODEL_MATRIX.md) records the evidence
+  status and gaps per tuple.
+- [#35](https://github.com/keesmod/eufy-mega-client/issues/35) held older owners
+  and chime relationships.
+  [#36](https://github.com/keesmod/eufy-mega-client/issues/36) held standalone
+  authentication and transport. Both closed on 2026-09-16.
+  [#143](https://github.com/keesmod/eufy-mega-client/issues/143) and
+  [#142](https://github.com/keesmod/eufy-mega-client/issues/142) track the
+  older-owner and standalone gaps.
+- [Camera #19](https://github.com/keesmod/ha-eufy-cam/issues/19) held HA capability
+  presentation until it closed on 2026-09-11. At 0.8.0, E2/E6 and camera
+  migration/release acceptance were open.
 
 No hardware or live service is tested for #25. Dated T8213 baseline evidence in
 [MODEL_MATRIX.md](MODEL_MATRIX.md) remains dated and unchanged. Software tests do
 not add H cells. Version 0.8.0 requires no session-store migration. For rollback,
-retain the preceding package and private store. No release is published here.
+retain the preceding package and private store. Version 0.8.0 was not published.
+This slice first shipped in 0.10.0, published on 2026-09-11.
 
 ## H3 core media, 0.9.0
 
@@ -143,14 +151,15 @@ model/property-bound ring regressions remain in the discovery suite.
 
 These tests establish software forwarding and lifecycle behavior. Synthetic
 bytes do not prove decoded video or audible playback. No new hardware cells are
-assigned. #58 retains exact model/firmware/topology snapshots, real live video
-and audio, confirmed stop, recordings/playback/cancel, events and restart recovery,
-including unavailable models and type 7/16 inventory gaps. #35/#36 retain other
-owners and standalone protocols. E2/E6 remain open. Camera #19 owns capability
-presentation, with migration, release and legacy retirement still required by
-the camera chain. Version 0.9.0 is unreleased and needs no store migration.
-Retain the preceding package and private store for rollback. No live device was
-tested for this software story.
+assigned. At 0.9.0, #58 held exact model/firmware/topology snapshots, real live
+video and audio, confirmed stop, recordings/playback/cancel, events and restart
+recovery, including unavailable models and type 7/16 inventory gaps. #35/#36
+held other owners and standalone protocols, and E2/E6 were open. Camera #19
+owned capability presentation, and the camera chain still required migration,
+release and legacy retirement. Version 0.9.0 was not published. This profile
+first shipped in 0.10.0 and needs no store migration. Retain the preceding
+package and private store for rollback. No live device was tested for this
+software story.
 
 ## Reported C30 type 96, 0.18.1
 

@@ -167,8 +167,8 @@ pin the original permitted artifacts and independently reproduced wire evidence.
 No source, schema, constant, fixture or test was copied or translated from the
 unlicensed mower fork. The original Android source remains recoverable.
 
-Version 0.4.0 adds this API without changing existing camera or mower identifiers
-or persisted sessions. It remains unreleased until separately authorized.
-Consumers can opt into this adapter with current private provisioning after
-publication. Retain the previous package and existing source for rollback.
-No product deployment, release publication or automatic migration is included.
+Version 0.4.0 added this API without changing existing camera or mower identifiers
+or persisted sessions, but was not published. The API first shipped in version
+0.10.0, published on 2026-09-11. Consumers can opt into this adapter with current
+private provisioning. Retain the previous package and existing source for rollback.
+No product deployment or automatic migration is included.

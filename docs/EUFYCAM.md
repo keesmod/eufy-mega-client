@@ -5,11 +5,13 @@ The 0.12.0 remaining-catalogue work in
 [C35/T8110/type 10035 H3 software coverage](INTEGRATED_CAMERAS.md#remaining-catalogue-addition-eufycam-c35).
 The existing generic Camera class and native Solo live envelope are reused.
 Observed state, H3 motion/person events and core media have software tests.
-Other owners, standalone operation, variants and hardware validation remain
-with #39. The original twelve-model evidence below is preserved.
+Other owners are tracked in #143 and standalone operation in #142. Variants and
+hardware validation stay recorded in the [model matrix](MODEL_MATRIX.md). The
+original twelve-model evidence below is preserved.
 
 Story [#19](https://github.com/keesmod/eufy-mega-client/issues/19) adds software
-coverage in unreleased 0.6.0. The independently authored
+coverage in 0.6.0, which was not published. The work first shipped in 0.10.0,
+published on 2026-09-11. The independently authored
 [regressions](../test/eufycam.test.mjs) exercise the actual private `Camera` factory,
 state adapter and event route. They do not establish physical support.
 
@@ -123,7 +125,8 @@ T8142R and other unresolved suffixes are not aliases. Unknown model/type pairs
 report `unsupported_device`. Unsupported parents retain `unsupported_station`.
 The same inventory can retain usable cameras from another family. A malformed
 camera initialization reports `device_initialization_failed` without a protocol
-payload. Older-owner protocols remain in #35 and standalone transport in #36.
+payload. Issue #143 tracks older-owner protocols and issue #142 standalone
+transport.
 
 ## State contract
 
@@ -176,13 +179,17 @@ are added.
 
 - [#20](https://github.com/keesmod/eufy-mega-client/issues/20) delivers the software
   media profile below. Additional owner/encryption profiles remain outside it.
-- [#55](https://github.com/keesmod/eufy-mega-client/issues/55), E2 and E6 retain
+- [#55](https://github.com/keesmod/eufy-mega-client/issues/55), E2 and E6 held
   model/firmware/topology-specific hardware acceptance, including discovery,
-  observed state, real events, media and recovery. Fixture success adds no H cells.
-- [Camera #19](https://github.com/keesmod/ha-eufy-cam/issues/19) owns HA capability
-  presentation. Existing HA identifiers and public client methods are preserved.
-- T8111/T8112 availability mapping remains unverified within E2/#55. Do not
-  substitute a battery or HomeBase connection for that missing observation.
+  observed state, real events, media and recovery, until #55 closed on
+  2026-09-11 and E2 and E6 on 2026-09-16. The [model matrix](MODEL_MATRIX.md)
+  records the evidence status and gaps per tuple. Fixture success adds no H
+  cells.
+- [Camera #19](https://github.com/keesmod/ha-eufy-cam/issues/19) held HA capability
+  presentation until it closed on 2026-09-11. Existing HA identifiers and public
+  client methods are preserved.
+- T8111/T8112 availability mapping remains unverified. Do not substitute a
+  battery or HomeBase connection for that missing observation.
 
 No publication, deployment or physical device operation is required for #19.
 For package rollback, retain the preceding version and private session store.
@@ -268,9 +275,10 @@ each newly admitted eufyCam through duplicate events and cancelled-start cleanup
 Software success does not establish decoded or audible hardware playback.
 
 No new H evidence is assigned. The dated T8160/T8030 baseline remains in
-[COMPATIBILITY.md](COMPATIBILITY.md). #55 retains physical acceptance for each
-model/firmware/topology, including unavailable hardware, real video/audio,
-recordings, events and restart recovery. #35 retains older owners and #36
-standalone protocols. E2/E6 remain open. Release/HA integration acceptance is
-separate from this software story. Version 0.7.0 is unreleased and requires no
-session migration. Retain the prior package and private store for rollback.
+[COMPATIBILITY.md](COMPATIBILITY.md). At 0.7.0, #55 held physical acceptance for
+each model/firmware/topology, including unavailable hardware, real video/audio,
+recordings, events and restart recovery. #35 held older owners, #36 standalone
+protocols, and E2/E6 were open. Release/HA integration acceptance is separate
+from this software story. Version 0.7.0 was not published. This profile first
+shipped in 0.10.0 and requires no session migration. Retain the prior package
+and private store for rollback.

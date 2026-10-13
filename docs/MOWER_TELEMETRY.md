@@ -115,9 +115,10 @@ and reproduced in the
 which they cite. Each reached at least four app-correlated transitions across
 two owner-operated windows, so `status` reports `mowing`, `paused` or
 `returning` on the owned device. The `mowing` payload also covers the app's
-Defogging phase. A transitional first frame, the map-saving payload, field 6
-and the default payload make `status` `invalid` for that report, and an absent
-DP 107 makes it `missing`. Progress remains `unconfirmed` without a candidate. Passing
+Defogging phase. A transitional first frame and the map-saving payload make
+`status` `invalid` for that report, and an absent DP 107 makes it `missing`.
+Since 0.22.0 the mission status reports field 6 = 1 and the default payload as
+`idle`. Progress remains `unconfirmed` without a candidate. Passing
 `definitions: []` explicitly opts out of the built-in registry. Built-in
 definitions and their decode rules are frozen so consumers cannot alter the
 defaults shared by other sessions.
@@ -254,11 +255,14 @@ for [#156](https://github.com/keesmod/eufy-mega-client/issues/156) confirms
 pause and return cycles. Defogging shares the `mowing` payload and is
 indistinguishable in the persistent fields. Field 2 = 9 during defogging has
 two app-correlated reproductions, field 2 = 3 coincides with the displayed
-change to mowing three times but is transient, field 2 = 1 during returning
-has no correlated app change, and field 6 = 1 and the default payload follow
-every map save in the field and at the dock, so none of them is decoded. The
-map-saving payload is reproduced but has no `MowerActivity` value. No payload
-identifies `docked`, `charging`, `idle` or `error`. The mowing-progress source
+change to mowing three times but is transient, and field 2 = 1 during returning
+has no correlated app change, so none of them is decoded. Field 6 = 1 and the
+default payload follow every map save in the field and at the dock. Since
+0.22.0 the `mission_status` definition reports both as `idle`, which means no
+mission and does not mean `docked`. See the
+[mission status receipt](research/E15_MISSION_STATUS_SCHEMA_2026-09-25.md).
+The map-saving payload is reproduced but has no `MowerActivity` value. No
+payload identifies `docked`, `charging` or `error`. The mowing-progress source
 remains unidentified. The app displayed 0% and once 1%, and no data point
 changed alongside it. DP 118 remains map-save progress. Cloud cached values
 are not substituted for local observations. `None` as network kind was

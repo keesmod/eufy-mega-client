@@ -1,7 +1,7 @@
 # Wall-light camera software evidence
 
 Story [#31](https://github.com/keesmod/eufy-mega-client/issues/31) adds exact
-recognition, observed state and event routing to unreleased 0.12.0. Tests use
+recognition, observed state and event routing to 0.12.0. Tests use
 synthetic inventories and the actual private protocol classes. They do not
 establish physical support.
 
@@ -68,7 +68,8 @@ T84A1/type 151 remains `camera_media_unverified` for snapshots, live and recordi
 media even with an H3 inventory parent. Its matrix evidence establishes H3
 storage, with unresolved AI/owner behavior. Storage compatibility alone cannot
 establish which device owns commands. T84A1 keeps recognition/state/events from
-#31. Its remaining transport/owner and hardware obligations stay under #36 and #61.
+#31. Its remaining transport/owner obligation is tracked in #142. #61 held its
+hardware obligation until it was closed as not planned on 2026-09-16.
 
 ### Reused media commands
 
@@ -131,11 +132,12 @@ result belongs to [#142](https://github.com/keesmod/eufy-mega-client/issues/142)
 [HB-guide]: https://service.eufy.com/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 [Wall-FAQ]: https://service.eufy.com/article-description/FAQ-About-Wall-Light-Cam-Battery-Connection-to-Homebase3
 
-[#36](https://github.com/keesmod/eufy-mega-client/issues/36) retains standalone
-transport and [#35](https://github.com/keesmod/eufy-mega-client/issues/35) other
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142) tracks standalone
+transport and [#143](https://github.com/keesmod/eufy-mega-client/issues/143) other
 HomeBase owners. [#61](https://github.com/keesmod/eufy-mega-client/issues/61)
-retains hardware validation for exact model, firmware, topology and feature.
-These software changes do not close those obligations.
+held hardware validation for exact model, firmware, topology and feature until it
+was closed as not planned on 2026-09-16. These software changes do not close
+those obligations.
 
 The [community process](COMMUNITY_VALIDATION.md) accepts voluntary results.
 Missing hardware evidence alone does not block ordinary upgrades. No live test,

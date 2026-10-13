@@ -1,9 +1,9 @@
 # Indoor camera software evidence
 
 Stories [#23](https://github.com/keesmod/eufy-mega-client/issues/23) and
-[#24](https://github.com/keesmod/eufy-mega-client/issues/24) contribute to the
-unpublished 0.12.0 batch. Software coverage is experimental. No physical camera
-was used for these changes.
+[#24](https://github.com/keesmod/eufy-mega-client/issues/24) contributed to
+0.12.0, published on 2026-09-11. Software coverage is experimental. No physical
+camera was used for these changes.
 
 ## Exact model and owner scope
 
@@ -268,13 +268,15 @@ physical T8410C was used. Hardware results are pending.
 
 ## Remaining obligations
 
-[#35](https://github.com/keesmod/eufy-mega-client/issues/35) owns other HomeBase
-owners, including the HomeBase Mini for the C31, and [#36](https://github.com/keesmod/eufy-mega-client/issues/36) standalone
-transport. [#57](https://github.com/keesmod/eufy-mega-client/issues/57) retains
-hardware confirmation and unresolved model observations. Keep evidence per
-model, firmware, topology and feature. PTZ, talkback and settings are outside
-this slice. No physical movement, live test, consumer upgrade or publication
-is performed. Voluntary reports use the [community process](COMMUNITY_VALIDATION.md)
+[#143](https://github.com/keesmod/eufy-mega-client/issues/143) tracks other HomeBase
+owners, including the HomeBase Mini for the C31, and [#142](https://github.com/keesmod/eufy-mega-client/issues/142) standalone
+transport. [#57](https://github.com/keesmod/eufy-mega-client/issues/57) held
+hardware confirmation and unresolved model observations until it was closed as
+not planned on 2026-09-16. The [model matrix](MODEL_MATRIX.md) records hardware
+evidence status per tuple. Keep evidence per model, firmware, topology and
+feature. PTZ, talkback and settings are outside this slice. No physical
+movement, live test, consumer upgrade or publication is performed.
+Voluntary reports use the [community process](COMMUNITY_VALIDATION.md)
 and missing hardware reports alone do not block ordinary upgrades.
 
 ## H3 media profile
@@ -334,6 +336,7 @@ Synthetic streams do not prove decodable video or audible sound on hardware.
 The T8400 snapshot regression fails with `camera_media_unverified` before the
 admission change. All nine real command paths and the expanded shared tests pass
 after it. #23 software evidence was recorded before #24 admission. The batch
-acceptance and final package evidence are tracked in #63. #57 remains the
-separate hardware obligation. Version 0.12.0 needs no session-store migration.
+acceptance and final package evidence were tracked in #63, which closed on
+2026-09-11. #57 held the separate hardware obligation until it was closed as
+not planned on 2026-09-16. Version 0.12.0 needs no session-store migration.
 Retain the preceding package, lockfile and private store for rollback.
