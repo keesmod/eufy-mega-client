@@ -503,3 +503,23 @@ export interface CustomDataType {
     timestamp: number;
   };
 }
+
+/**
+ * Client addition: counters of the latest local lookup of a session, for
+ * diagnostics only. It carries no DID, address or port. Counts saturate at 999,
+ * `rounds` and `ownRound` at 99.
+ */
+export interface LookupObservation {
+  rounds: number;
+  broadcastTargets: number;
+  broadcastEnabled: boolean;
+  sendErrors: number;
+  datagrams: number;
+  otherHeaders: number;
+  ownReplies: number;
+  ownRound?: number;
+  accountReplies: number;
+  foreignReplies: number;
+  nearReplies: number;
+  inventoryReply: "none" | "own" | "account" | "foreign" | "near";
+}

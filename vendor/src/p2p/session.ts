@@ -121,6 +121,7 @@ import {
   P2PDatabaseQueryLocalHistoryRecordInfo,
   P2PDatabaseQueryLocalRecordCropPictureInfo,
   CustomDataType,
+  LookupObservation,
 } from "./interfaces";
 import { DskKeyResponse, ResultResponse, StationListResponse } from "../http/models";
 import { CloudProvider } from "../http/api";
@@ -135,6 +136,31 @@ import { CommandName, ParamType, Station } from "../http";
 import { getError, parseJSON } from "../utils";
 import { rootP2PLogger } from "../logging";
 import { normalizeAdtsFrames } from "./adts";
+
+/**
+ * Client addition: what the session saw during its latest local lookup. The
+ * DIDs of other answering devices stay here, at most 16, until the observation
+ * is read, the next lookup starts or the session closes.
+ */
+interface LookupState {
+  rounds: number;
+  broadcastTargets: number;
+  sendErrors: number;
+  datagrams: number;
+  otherHeaders: number;
+  ownReplies: number;
+  ownRound?: number;
+  nearReplies: number;
+  /** Replies per other DID, classified as account or foreign when read. */
+  others: Map<string, number>;
+  /** The first classified reply from the preferred address. */
+  inventory?: "own" | "near" | { did: string };
+}
+
+const LOOKUP_OTHER_DIDS = 16;
+const lookupCount = (value: number): number => Math.min(999, value + 1);
+/** Client addition: a DID part cut at its first NUL, trimmed and upper-cased. */
+const didPart = (value: string): string => value.split("\0", 1)[0].trim().toUpperCase();
 
 export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private readonly MAX_RETRIES = 10;
@@ -230,6 +256,10 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private lookupRetryTimeout?: NodeJS.Timeout;
   private lookup2Timeout?: NodeJS.Timeout;
   private lookup2RetryTimeout?: NodeJS.Timeout;
+  /** Client addition: the latest local lookup, for diagnostics only. */
+  private lookupObservation?: LookupState;
+  /** Client addition: whether setBroadcast(true) succeeded on the bound socket. */
+  private broadcastEnabled = false;
   private heartbeatTimeout?: NodeJS.Timeout;
   private keepaliveTimeout?: NodeJS.Timeout;
   private esdDisconnectTimeout?: NodeJS.Timeout;
@@ -488,7 +518,17 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         msgID: msgID.toString("hex"),
         payload: payload?.toString("hex"),
       });
+      // Client addition: a failed lookup send counts in the lookup observation.
+      const state = msgID.equals(RequestMessageType.LOCAL_LOOKUP) ? this.runningLookup() : undefined;
+      if (state !== undefined) state.sendErrors = lookupCount(state.sendErrors);
     });
+  }
+
+  /** Client addition: the lookup observation while its lookup runs, before the session connects. */
+  private runningLookup(): LookupState | undefined {
+    if (this.connected || (this.lookupTimeout === undefined && this.localLookupRetryTimeout === undefined))
+      return undefined;
+    return this.lookupObservation;
   }
 
   private _disconnected(): void {
@@ -587,6 +627,12 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     rootP2PLogger.debug(`Trying to local lookup address for station ${this.rawStation.station_sn}`, {
       hosts: [...targets],
     });
+    // Client addition: the lookup observation counts this round and its broadcasts.
+    const state = this.connected ? undefined : this.lookupObservation;
+    if (state !== undefined) {
+      state.rounds = lookupCount(state.rounds);
+      state.broadcastTargets = Math.min(16, [...targets].filter((target) => target !== host).length);
+    }
     for (const target of targets) this.localLookupByAddress({ host: target, port: 32108 });
     this._clearLocalLookupRetryTimeout();
     this.localLookupRetryTimeout = setTimeout(() => {
@@ -676,6 +722,17 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   }
 
   private lookup(host?: string): void {
+    // Client addition: every lookup starts a new lookup observation.
+    this.lookupObservation = {
+      rounds: 0,
+      broadcastTargets: 0,
+      sendErrors: 0,
+      datagrams: 0,
+      otherHeaders: 0,
+      ownReplies: 0,
+      nearReplies: 0,
+      others: new Map<string, number>(),
+    };
     this.localLookup(host ?? this.preferredIPAddress ?? this.localIPAddress);
     if (this.connectionType !== P2PConnectionType.ONLY_LOCAL) {
       this.cloudLookup();
@@ -703,6 +760,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           try {
             this.socket.setRecvBufferSize(this.UDP_RECVBUFFERSIZE_BYTES);
             this.socket.setBroadcast(true);
+            // Client addition: recorded for the lookup observation only.
+            this.broadcastEnabled = true;
           } catch (err) {
             const error = ensureError(err);
             rootP2PLogger.error(`connect - Error`, {
@@ -1183,7 +1242,94 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     }
   }
 
+  /**
+   * Client addition: counts a datagram that arrives while the local lookup
+   * runs and classifies a lookup reply by the DID the handling below parses.
+   * Observation only. It does not throw and changes nothing below.
+   */
+  private observeLookupDatagram(msg: Buffer, rinfo: RemoteInfo): void {
+    const state = this.runningLookup();
+    if (state === undefined) return;
+    state.datagrams = lookupCount(state.datagrams);
+    if (msg.length < 2 || !hasHeader(msg, ResponseMessageType.LOCAL_LOOKUP_RESP)) {
+      state.otherHeaders = lookupCount(state.otherHeaders);
+      return;
+    }
+    // A reply without its 4-byte number has no DID and counts only as a datagram.
+    if (msg.length < 16) return;
+    const prefix = msg.subarray(4, 12).toString("utf8");
+    const number = msg.subarray(12, 16).readUInt32BE();
+    const suffix = msg.subarray(16, 24).toString("utf8");
+    const did = `${prefix.replace(/[\0]+$/g, "")}-${number.toString().padStart(6, "0")}-${suffix.replace(/[\0]+$/g, "")}`;
+    const own = typeof this.rawStation.p2p_did === "string" ? this.rawStation.p2p_did.split("-") : [];
+    let kind: "own" | "near" | { did: string };
+    if (did === this.rawStation.p2p_did) {
+      kind = "own";
+      state.ownReplies = lookupCount(state.ownReplies);
+      state.ownRound ??= Math.min(99, Math.max(0, state.rounds - 1));
+    } else if (
+      own.length === 3 &&
+      /^\d+$/.test(didPart(own[1])) &&
+      number === Number(didPart(own[1])) &&
+      didPart(prefix) === didPart(own[0]) &&
+      didPart(suffix) === didPart(own[2])
+    ) {
+      kind = "near";
+      state.nearReplies = lookupCount(state.nearReplies);
+    } else {
+      const count = state.others.get(did);
+      // A reply with a seventeenth or later distinct DID stays unclassified.
+      if (count === undefined && state.others.size >= LOOKUP_OTHER_DIDS) return;
+      state.others.set(did, lookupCount(count ?? 0));
+      kind = { did };
+    }
+    if (state.inventory === undefined && rinfo.address === this.preferredIPAddress) state.inventory = kind;
+  }
+
+  /**
+   * Client addition: the observation of the latest local lookup, undefined
+   * without one. `accountDids` holds the DIDs of the account's other devices
+   * and only classifies the other replies. Reading drops the observation and
+   * the DIDs it held.
+   */
+  public getLookupObservation(accountDids: ReadonlySet<string>): LookupObservation | undefined {
+    const state = this.lookupObservation;
+    this.lookupObservation = undefined;
+    if (state === undefined) return undefined;
+    let accountReplies = 0;
+    let foreignReplies = 0;
+    for (const [did, count] of state.others) {
+      if (accountDids.has(did)) accountReplies += count;
+      else foreignReplies += count;
+    }
+    const inventory = state.inventory;
+    state.others.clear();
+    state.inventory = undefined;
+    return {
+      rounds: Math.min(99, state.rounds),
+      broadcastTargets: state.broadcastTargets,
+      broadcastEnabled: this.broadcastEnabled === true,
+      sendErrors: state.sendErrors,
+      datagrams: state.datagrams,
+      otherHeaders: state.otherHeaders,
+      ownReplies: state.ownReplies,
+      ...(state.ownRound === undefined ? {} : { ownRound: state.ownRound }),
+      accountReplies: Math.min(999, accountReplies),
+      foreignReplies: Math.min(999, foreignReplies),
+      nearReplies: state.nearReplies,
+      inventoryReply:
+        inventory === undefined
+          ? "none"
+          : typeof inventory === "string"
+            ? inventory
+            : accountDids.has(inventory.did)
+              ? "account"
+              : "foreign",
+    };
+  }
+
   private handleMsg(msg: Buffer, rinfo: RemoteInfo): void {
+    this.observeLookupDatagram(msg, rinfo);
     if (hasHeader(msg, ResponseMessageType.LOCAL_LOOKUP_RESP)) {
       if (!this.connected) {
         const p2pDid = `${msg
@@ -4199,6 +4345,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
 
   private async closeConnection(): Promise<void> {
     this.terminating = true;
+    // Client addition: no DID of the ended attempt outlives the close.
+    this.lookupObservation = undefined;
     this._clearLookupTimeout();
     this._clearLocalLookupRetryTimeout();
     this._clearLookupRetryTimeout();
@@ -4256,6 +4404,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     this.socket.on("error", (error) => this.onError(error));
     this.socket.on("close", () => this.onClose());
     this.binded = false;
+    // Client addition: the new socket reports its own broadcast result once bound.
+    this.broadcastEnabled = false;
     this._disconnected();
   }
 

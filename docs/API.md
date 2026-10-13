@@ -163,8 +163,9 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
   Unknown hardware is excluded; a supported camera with an unsupported parent
   causes an error. Inventory at the server's 100-device boundary is unconfirmed.
 - `connectStation(id, signal?)` establishes the explicit LAN connection.
-  `connectStation(id, { signal?, onProgress? })` also reports its
-  [stages](#station-connection-stages-0260).
+  `connectStation(id, { signal?, onProgress?, onLookup? })` also reports its
+  [stages](#station-connection-stages-0260) and its
+  [lookup observation](#station-lookup-observation-0300).
 - `getStationState(id)` returns the last observed state. Mode values can be
   `null` before device telemetry arrives.
 - `refreshStationState(id, signal?)` requests a fresh device observation.
@@ -204,6 +205,59 @@ throws are ignored, and it cannot change or retry the connection. A stage
 carries no identifiers or addresses. A failure after `lookup` alone means no
 station answered, after `station_found` the station did not complete the
 handshake, and after `session_open` the command key was not established.
+The [lookup observation](#station-lookup-observation-0300) shows whether
+anything answered the lookup at all.
+
+### Station lookup observation, 0.30.0
+
+`connectStation(id, { onLookup })` reports what the local lookup of an attempt
+saw, so a failure at the `lookup` stage can tell a lookup that received nothing
+from one whose replies arrived and were dropped. It is called synchronously at
+most once per attempt that reached `lookup`, when that attempt resolves, fails
+or is cancelled, and before a failed attempt closes its session. An already
+connected station, an attempt refused with `connection_busy` and an attempt that
+ended before `lookup` report nothing. Errors it throws are ignored, and it
+cannot change the connection. The lookup's targets, timing, retries, socket and
+the DID it accepts are the same with and without `onLookup`.
+
+| Field                      | Meaning                                                                                                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rounds`                   | Lookup rounds sent, 0 to 99                                                                                                                                                 |
+| `broadcastTargets`         | Directed broadcast targets of the latest round, 0 to 16. The first round to a known address has none                                                                        |
+| `broadcastEnabled`         | Whether the session's UDP socket accepted broadcasts when it was bound                                                                                                      |
+| `sendErrors`               | Lookup sends that failed                                                                                                                                                    |
+| `datagrams`                | Datagrams the session's socket received while the lookup ran                                                                                                                |
+| `otherHeaders`             | Of those, datagrams that are not lookup replies                                                                                                                             |
+| `ownReplies`               | Replies with the station's own DID, by the exact comparison the lookup uses. The first one ends the lookup                                                                  |
+| `ownRound`                 | Only with an own reply: the latest round sent when the first one arrived, counted from 0, at most 99                                                                        |
+| `accountReplies`           | Replies with the DID of another device or station in the inventory the client loaded                                                                                        |
+| `foreignReplies`           | Replies with a DID that is not in that inventory                                                                                                                            |
+| `nearReplies`              | Replies that are not own but match the own DID once each part is cut at its first NUL byte, trimmed and upper-cased, with the middle number compared as an integer          |
+| `inventoryReply`           | `own`, `account`, `foreign` or `near`: the class of the first classified reply from the inventory address the session was created with. `none` without one                  |
+| `inventoryAddressOnSubnet` | Only with an inventory address: whether it lies inside the address and netmask of one of the host's external IPv4 interfaces. Absent when the interface list cannot be read |
+| `inventoryAddressShared`   | Only with an inventory address: whether another device or station in the inventory has the same private LAN address                                                         |
+
+Counts without a bound in the table saturate at 999. A lookup reply shorter
+than 16 bytes has no complete DID and counts only in `datagrams`. The session
+keeps at most 16 other DIDs for classification, so a reply with a seventeenth or
+later distinct DID also counts only in `datagrams`. An attempt cancelled from
+its `lookup` stage callback starts no session and reports zero counts with
+`inventoryReply: 'none'`. An attempt that joins a reconnect the library started
+itself reports that lookup from its start.
+
+The observation carries no DID, address, port, serial or interface name. The
+session keeps the DIDs of other replies only to classify them, and the client
+reads and drops them when each attempt that started a session ends, also
+without `onLookup`. A lookup of a reconnect the library started itself keeps
+them until the next attempt ends, the next lookup starts or the session closes.
+The inventory's DIDs are passed in for that read and are not kept.
+
+`datagrams: 0` means nothing reached the session's socket during the lookup.
+`sendErrors` and `broadcastEnabled` then show whether the lookups could leave
+the host. Account or foreign replies without an own reply show that other
+devices answered. `nearReplies` points to a reply that the exact DID comparison
+rejects. `inventoryAddressOnSubnet: false` says the inventory address is outside
+every local subnet of the host. None of these values proves a cause on its own.
 
 ## Live media
 

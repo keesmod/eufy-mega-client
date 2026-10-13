@@ -9,7 +9,7 @@ import {
   isStation,
   type Inventory,
 } from './discovery.js';
-import { lanAddress } from './network.js';
+import { hostSubnetContains, lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
 import { awaitEvent } from './operations.js';
@@ -46,6 +46,7 @@ import {
   type LiveStartProgress,
   type StationConnectionProgress,
   type StationConnectionStage,
+  type StationLookupObservation,
   type StreamStop,
   type MediaMetadata,
 } from './types.js';
@@ -89,6 +90,8 @@ export class DeviceTransport extends EventEmitter {
   private encryption = new Map<string, 'lan-derived' | 'cipher'>();
   /** Whether each station session was created with an inventory LAN address. */
   private stationAddresses = new Map<string, boolean>();
+  /** That address itself, read only for the lookup observation. */
+  private sessionAddresses = new Map<string, string>();
   private connecting = new Map<string, Promise<void>>();
   private snapshots = new Map<string, Snapshot>();
   private covers = new Map<string, string>();
@@ -234,6 +237,7 @@ export class DeviceTransport extends EventEmitter {
         await station.dispose();
         this.stations.delete(id);
         this.stationAddresses.delete(id);
+        this.sessionAddresses.delete(id);
         this.encryption.delete(id);
         this.observedModes.delete(id);
       }
@@ -306,6 +310,7 @@ export class DeviceTransport extends EventEmitter {
           station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
           this.stations.set(device.device_sn, station);
           this.stationAddresses.set(device.device_sn, address !== undefined);
+          if (address !== undefined) this.sessionAddresses.set(device.device_sn, address);
           this.bind(station);
           station.initialize();
         } catch (error) {
@@ -316,6 +321,7 @@ export class DeviceTransport extends EventEmitter {
           }
           this.stations.delete(device.device_sn);
           this.stationAddresses.delete(device.device_sn);
+          this.sessionAddresses.delete(device.device_sn);
           this.encryption.delete(device.device_sn);
           this.observedModes.delete(device.device_sn);
           this.failures.set(
@@ -560,6 +566,7 @@ export class DeviceTransport extends EventEmitter {
     id: string,
     signal?: AbortSignal,
     onProgress?: (progress: StationConnectionProgress) => void,
+    onLookup?: (observation: StationLookupObservation) => void,
   ): Promise<void> {
     if (this.state(id).connected) return;
     if (this.connecting.has(id)) throw new EufyError('connection_busy');
@@ -582,6 +589,28 @@ export class DeviceTransport extends EventEmitter {
         // Ignored by contract. Progress never alters the connection.
       }
     };
+    // An attempt that reached its lookup reads the session's lookup observation
+    // once, when it ends and before a failed attempt closes the session. It is
+    // read without a consumer too, so no DID of the attempt stays behind.
+    let lookup: 'reached' | 'started' | undefined;
+    const observe = () => {
+      if (!lookup) return;
+      try {
+        const others = [...this.raw].filter(([sn]) => sn !== id).map(([, row]) => row);
+        // The DIDs of the other inventory rows only classify the replies.
+        const accountDids = new Set(
+          others.flatMap((row) =>
+            typeof row.p2p_did === 'string' && row.p2p_did ? [row.p2p_did] : [],
+          ),
+        );
+        // An attempt cancelled before its session started observed nothing.
+        const observed =
+          lookup === 'started' ? station.getLookupObservation(accountDids) : undefined;
+        if (onLookup) onLookup(this.lookupObservation(id, others, observed));
+      } catch {
+        // Ignored by contract. The observation never alters the connection.
+      }
+    };
     const found = () => mark('station_found');
     const opened = () => mark('session_open');
     try {
@@ -591,10 +620,12 @@ export class DeviceTransport extends EventEmitter {
         station,
         'encryption ready',
         () => {
+          lookup = 'reached';
           mark('lookup');
           // A consumer may cancel from its lookup callback. Then no session
           // starts that the close below would race.
           if (signal?.aborted || this.lifetime.signal.aborted) return;
+          lookup = 'started';
           void station
             .connect()
             .catch(() => station.emit('connection error', station, new Error('Connection failed')));
@@ -607,14 +638,44 @@ export class DeviceTransport extends EventEmitter {
       try {
         await operation;
       } catch (error) {
+        observe();
         await station.close();
         throw error;
       }
+      observe();
     } finally {
       station.off('station found', found);
       station.off('connect', opened);
       this.connecting.delete(id);
     }
+  }
+  /** The public lookup observation of an ended attempt, without identifiers or addresses. */
+  private lookupObservation(
+    id: string,
+    others: WireDevice[],
+    observed: StationLookupObservation | undefined,
+  ): StationLookupObservation {
+    const observation: StationLookupObservation = observed ?? {
+      rounds: 0,
+      broadcastTargets: 0,
+      broadcastEnabled: false,
+      sendErrors: 0,
+      datagrams: 0,
+      otherHeaders: 0,
+      ownReplies: 0,
+      accountReplies: 0,
+      foreignReplies: 0,
+      nearReplies: 0,
+      inventoryReply: 'none',
+    };
+    const address = this.sessionAddresses.get(id);
+    if (address === undefined) return { ...observation };
+    const onSubnet = hostSubnetContains(address);
+    return {
+      ...observation,
+      ...(onSubnet === undefined ? {} : { inventoryAddressOnSubnet: onSubnet }),
+      inventoryAddressShared: others.some((row) => lanAddress(row) === address),
+    };
   }
   async snapshot(id: string, signal?: AbortSignal): Promise<Snapshot> {
     const camera = this.camera(id, 'snapshot');
@@ -1170,6 +1231,7 @@ export class DeviceTransport extends EventEmitter {
     }
     this.stations.clear();
     this.stationAddresses.clear();
+    this.sessionAddresses.clear();
     this.cameras.clear();
     this.raw.clear();
     this.snapshots.clear();
