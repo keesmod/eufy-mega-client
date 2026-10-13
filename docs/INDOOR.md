@@ -198,8 +198,9 @@ complete H.264 and H.265 start envelopes and the stop.
 Without the option a standalone T8410 keeps `standalone_transport_unverified`.
 Under a HomeBase it keeps its H3 relationship, media and live branch, also with
 the option. On 2026-10-13 the reporter of ha-eufy-cam#152 reported live video
-working on a standalone T8410 with firmware 2.3.2.4, and live video failing
-with `device_request_timeout` on one with firmware 2.3.1.6, as recorded in the
+working on a standalone T8410 with firmware 2.3.2.4. Live video failed on one
+with firmware 2.3.1.6, and its event log had `device_request_timeout`, as
+recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
 The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
