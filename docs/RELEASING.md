@@ -97,7 +97,8 @@ merge updates the stable Home Assistant app, and both GitHub releases.
 5. Continue with the camera release PR, which pins this stable version with
    `scripts/bump_client.py X.Y.Z`. See the camera
    [release guide](https://github.com/keesmod/ha-eufy-cam/blob/main/docs/RELEASING.md).
-6. Lift the freeze once the camera release is published.
+6. Lift the freeze once the camera run is complete, after its bench check and
+   reporter follow-ups.
 
 ## Betas
 
@@ -130,15 +131,16 @@ without a client release.
 
 ## Merge freeze
 
-From the approval of a batch or hotfix run until its last publication, only the
+From the approval of a batch or hotfix run until the run is complete, only the
 release PRs of that run merge to main. Publication uses only the commit that was
 rehearsed. When a run stops with `main advanced`, compare the rehearsed commit
 with current main. If only documentation changed, rehearse and publish current
-main. A runtime change after the approval needs a new approval.
+main. A runtime change after the approval needs a new approval. Before the
+release PR merges, such a change joins the candidate under its current version.
 
 A tag created at a superseded commit uses up its version, because tags never
-move. A runtime PR merged during the freeze has to raise the version, so the
-frozen version can no longer be published from main. Versions never decrease.
+move. A runtime PR merged after a release PR has to raise the version, so the
+dated version can no longer be published from main. Versions never decrease.
 Release the newer version instead and keep the unpublished section as history.
 
 ## Rehearse and publish
