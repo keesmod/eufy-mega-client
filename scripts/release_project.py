@@ -122,9 +122,10 @@ def check_unpublished_candidate(root, meta):
             raise ValueError("Candidate version already has a release or draft")
 
 
-def check_changes(root, base, meta):
-    paths = run(root, "git", "diff", "--name-only", base, "HEAD").splitlines()
-    previous = json.loads(run(root, "git", "show", base + ":package.json"))
+def runtime_changed(root, rev):
+    """Whether the shipped library differs between rev and the checkout."""
+    paths = run(root, "git", "diff", "--name-only", rev, "HEAD").splitlines()
+    previous = json.loads(run(root, "git", "show", rev + ":package.json"))
     current = json.loads((root / "package.json").read_text())
     keys = (
         "dependencies",
@@ -139,9 +140,19 @@ def check_changes(root, base, meta):
         for p in paths
     )
     changed |= any(current.get(k) != previous.get(k) for k in keys)
-    old_lock = json.loads(run(root, "git", "show", base + ":package-lock.json"))
+    old_lock = json.loads(run(root, "git", "show", rev + ":package-lock.json"))
     new_lock = json.loads((root / "package-lock.json").read_text())
-    changed |= production_lock(old_lock) != production_lock(new_lock)
+    return changed or production_lock(old_lock) != production_lock(new_lock)
+
+
+def check_release(root, meta):
+    """Release-only rules beyond metadata() and changelog(). None yet."""
+
+
+def check_changes(root, base, meta):
+    paths = run(root, "git", "diff", "--name-only", base, "HEAD").splitlines()
+    previous = json.loads(run(root, "git", "show", base + ":package.json"))
+    changed = runtime_changed(root, base)
     current_version = tuple(map(int, meta["version"].split(".")))
     previous_version = tuple(map(int, previous["version"].split(".")))
     if current_version < previous_version:
