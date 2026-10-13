@@ -2,35 +2,68 @@
 
 Releases use **Actions → Release → Run workflow** on `main`. The default is a
 full rehearsal. Publishing is a separate, explicit selection on the same form.
-Stable `X.Y.Z` versions are supported; this flow does not create npm releases.
+Versions are stable `X.Y.Z` or beta `X.Y.Z-beta.N`. A beta is published as a
+GitHub prerelease that never becomes the latest release. This flow does not
+create npm releases.
 
 Every release also runs [the complete dependency security checks](DEPENDENCY_SECURITY.md),
 including development dependencies. The same checks run daily between releases.
 
+## Versions and candidates
+
+The package version is the release version. A version is published once the tag
+`v<version>` exists or a GitHub release uses that tag. Versions follow semver
+precedence: `0.29.3-beta.1` < `0.29.3-beta.2` < `0.29.3` < `0.29.4-beta.1`. A
+beta `X.Y.Z-beta.N` takes its release notes from the `X.Y.Z` section of
+`CHANGELOG.md`. Documentation written in a PR names that stable part.
+
+Changelog headings have two forms. `## X.Y.Z - Unreleased` marks an open batch.
+`## X.Y.Z - YYYY-MM-DD` marks a batch dated by its release PR. CI rejects any
+other heading that a PR adds. Older headings are never inspected or rewritten.
+
+Runtime changes are files under `src/` and `vendor/`, `scripts/copy-assets.mjs`,
+the root `tsconfig.json`, the `dependencies`, `optionalDependencies`, `exports`,
+`engines`, `files`, `type` and `scripts.build` fields of `package.json`, and the
+production entries of the lockfile. Validate applies these rules to every PR
+against its base commit:
+
+- The version never decreases.
+- A PR with runtime changes leaves the version at an unpublished value and
+  changes the changelog section of its stable part. Several PRs accumulate in
+  one candidate.
+- A plain `X.Y.Z` version reaches main only through a release PR, the PR that
+  changes the version to `X.Y.Z`. It passes the release checks, so its heading
+  is dated. A PR that keeps a plain version cannot change runtime.
+- A dated section at the base closes that batch. A runtime PR must then raise
+  the version, also while the release itself is not published yet.
+- CI and documentation changes keep the version and need no changelog entry.
+
+The usual sequence after the stable release `0.29.2`:
+
+| PR                               | Version                                 | Changelog                          |
+| -------------------------------- | --------------------------------------- | ---------------------------------- |
+| First runtime change             | `0.29.3-beta.1` or `0.30.0-beta.1`      | adds `## 0.29.3 - Unreleased`      |
+| Further runtime changes          | keeps `0.29.3-beta.1` while unpublished | extends the `0.29.3` section       |
+| After `v0.29.3-beta.1` is public | `0.29.3-beta.2`                         | extends the `0.29.3` section       |
+| Release PR                       | `0.29.3`                                | dates it, `## 0.29.3 - 2026-10-20` |
+
+When a runtime PR keeps the base version, CI looks up its tag and every page of
+GitHub releases with the workflow token. A failed lookup fails the check. The
+release workflow creates the tag before its draft, so the tag lookup also covers
+drafts that a read-only token cannot list. A version above the base needs no
+lookup, because main never falls below a published version. Each rejection names
+the next valid candidate.
+
 ## Prepare a pull request
 
 Keep `package.json`, the lockfile's root version and its root package entry
-aligned. Runtime changes under `src`/`vendor`, dependency changes and public API
-changes require a new library version or inclusion in an explicit unpublished
-candidate as described below. Preserve the MIT license, NOTICE and the
-upstream source attribution. Update API and compatibility documentation where the
-behavior changes.
+aligned. `npm version 0.29.3-beta.1 --no-git-tag-version` updates all three.
+Preserve the MIT license, NOTICE and the upstream source attribution. Update API
+and compatibility documentation where the behavior changes.
 
-Update the release's `CHANGELOG.md` section with the user-visible behavior,
-upgrade steps, compatibility limits and rollback instructions. Runtime changes
-must advance the version unless they belong to the current unpublished batch.
-CI/documentation-only changes can retain the current version and state that no
-product release is needed.
-
-For a selected batch, `release-candidate.json` records the current package version
-and the existing library issue coordinating its scope and acceptance. Runtime PRs
-may retain that version only with updated release notes. CI checks the canonical
-remote for a matching tag and queries every page of authenticated GitHub releases,
-including drafts. An existing tag, release or draft, or a failed lookup rejects
-the exception. Version downgrades remain forbidden. Use an authenticated `gh`
-session for local checks. Remove or replace the candidate record when preparing
-the next version. All normal tests, package checks and immutable publication
-checks still apply. This record does not authorize publication.
+Update the candidate's `CHANGELOG.md` section with the user-visible behavior,
+upgrade steps, compatibility limits and rollback instructions. Rollback names the
+previous stable version.
 
 All Validate checks must pass on the current PR commit. The final **ci** check
 fails if any prerequisite failed, timed out, was cancelled or skipped. Protect
@@ -42,9 +75,75 @@ After merge, check `ci` on the resulting `main` commit. Branch CI alone is not
 release evidence. Each Release run calls the same complete Validate workflow
 from its own commit, so the release cannot use an older green run.
 
+On a push to main, Validate also fails when `v<version>` is tagged at an earlier
+commit and runtime changed since that tag. This catches a PR that passed while
+its version was unpublished and merged after the publication. Open a PR that
+raises the version. A tag at the pushed commit passes, so reruns of a published
+commit stay green.
+
+## Batch release run
+
+Stable releases happen on request, in one run together with ha-eufy-cam. One
+approval covers the whole run: this stable release, the camera release PR whose
+merge updates the stable Home Assistant app, and both GitHub releases.
+
+1. Start the merge freeze in both repositories.
+2. Open the release PR. It sets the version to `X.Y.Z`, the stable part of the
+   candidate, dates `## X.Y.Z - YYYY-MM-DD`, completes the upgrade and rollback
+   text and points the README install URL at `X.Y.Z`. It normally changes
+   nothing else. CI runs the release checks on it.
+3. Merge it and wait for `ci` on the resulting main commit.
+4. Rehearse and publish that commit as described below.
+5. Continue with the camera release PR, which pins this stable version with
+   `scripts/bump_client.py X.Y.Z`. See the camera
+   [release guide](https://github.com/keesmod/ha-eufy-cam/blob/main/docs/RELEASING.md).
+6. Lift the freeze once the camera release is published.
+
+## Betas
+
+A beta lets willing testers install a candidate before its stable release. Publish
+it from main with the Release workflow and the beta version as input.
+
+- A beta may be published on its first run without a separate rehearsal. That run
+  still validates, builds and verifies the package before it creates the tag.
+- An acceptance text without hardware results is enough, for example
+  `Prerelease for opt-in testing of ha-eufy-cam#149. CI only, no hardware result yet.`
+- The notes open with a sentence that this is a prerelease of `X.Y.Z` for opt-in
+  testing, followed by the current `X.Y.Z` section.
+- The asset is `keesmod-eufy-mega-client-X.Y.Z-beta.N.tgz`. Consumers pin it by
+  its exact URL and integrity, like a stable release.
+- A beta must be newer than every public release, stable or beta. It never becomes
+  the latest release. After its publication, the next runtime PR raises `N`.
+- ha-eufy-cam can pin a client beta on its main between stable releases with
+  `scripts/bump_client.py X.Y.Z-beta.N`. A stable camera release requires a
+  stable client pin.
+
+## Hotfix lane
+
+A hotfix is a stable release of current main between batch runs. There are no
+release branches. Work that must not ship is reverted first, in an ordinary PR
+under the candidate rules. Land the fix as a beta candidate, or with a small fix
+directly in the release PR, then follow the batch release run. When the camera
+needs the fix, its release PR pins the new stable version. An advisory in a
+transitive dependency of the camera bridge can be fixed in the bridge lockfile
+without a client release.
+
+## Merge freeze
+
+From the approval of a batch or hotfix run until its last publication, only the
+release PRs of that run merge to main. Publication uses only the commit that was
+rehearsed. When a run stops with `main advanced`, compare the rehearsed commit
+with current main. If only documentation changed, rehearse and publish current
+main. A runtime change after the approval needs a new approval.
+
+A tag created at a superseded commit uses up its version, because tags never
+move. A runtime PR merged during the freeze has to raise the version, so the
+frozen version can no longer be published from main. Versions never decrease.
+Release the newer version instead and keep the unpublished section as history.
+
 ## Rehearse and publish
 
-1. Merge the version/notes PR and wait for `main` CI.
+1. Merge the release PR or the beta candidate and wait for `main` CI.
 2. Open **Actions → Release → Run workflow**, select `main`, enter the version
    without `v`, and leave **publish** unchecked.
 3. Inspect the successful run and download its `release-package` artifact. It
@@ -68,9 +167,10 @@ from its own commit, so the release cannot use an older green run.
 
 The main branch must still point at the candidate when publication begins and
 immediately before the draft becomes public. If it advanced, rerun from current
-main. New stable versions must be newer than the latest stable release. Reusing
-an existing tag at another commit is rejected. A merge or a pushed tag alone
-does not publish a release. Releases do not deploy to a Home Assistant instance.
+main. A new version must be newer than every public release, betas included.
+Reusing an existing tag at another commit is rejected. A merge or a pushed tag
+alone does not publish a release. Releases do not deploy to a Home Assistant
+instance.
 
 ## Hardware coverage and release scope
 
@@ -84,7 +184,7 @@ State confirmed behavior, reported results, unconfirmed implementation, known
 problems and missing support separately. Required software/security checks and
 actual protocol, migration and safety gates remain. For a new protocol path or
 major migration, arrange voluntary testing of a recoverable candidate before a
-stable claim. The current workflow does not publish prerelease versions.
+stable claim. Publish such a candidate as a beta.
 
 Dependencies must match the release slice. Unchanged mower-map work cannot block
 a camera-focused library or camera release. Changed shared behavior still needs
@@ -133,7 +233,11 @@ Use Python 3.11+ and Node.js 24. GitHub uses bounded Ubuntu jobs.
 python3 scripts/check_workflows.py
 python3 -m unittest discover -s scripts/tests -v
 python3 scripts/release.py check
+python3 scripts/release.py check --base "$(git rev-parse origin/main)"
 ```
+
+With `--base`, the pull request rules run against that commit. The published
+lookup needs an authenticated `gh` session.
 
 Install development dependencies with `npm ci --ignore-scripts`. From a clean
 committed checkout, build the complete bundle into a new empty directory:
@@ -149,12 +253,14 @@ assets, version and attribution. It installs that actual tarball in a temporary
 consumer and tests public imports and shutdown without contacting Eufy.
 
 A library release does not change Home Assistant automatically. After publication,
-update its exact release URL and lockfile integrity in `keesmod/ha-eufy-cam`, run
-that repository's checks and release the bridge/integration separately. npm
-publication and cross-repository auto-merging are not part of this process.
+`scripts/bump_client.py VERSION` in `keesmod/ha-eufy-cam` verifies the release
+assets and pins the exact release URL and lockfile integrity. That repository's
+checks and releases follow separately. npm publication and cross-repository
+auto-merging are not part of this process.
 
 Actionlint and GitHub Actions are pinned to verified versions/checksums. Update
-the pins deliberately and run the workflow validator. The common `release.py`,
-`check_workflows.py` and `scripts/tests/test_release.py` are maintained in both
-repositories; apply common fixes to both. Project-specific metadata and package
-checks live in `release_project.py`.
+the pins deliberately and run the workflow validator. `scripts/release.py`,
+`scripts/check_workflows.py`, `scripts/tests/test_release.py` and
+`.github/workflows/release.yml` are byte-identical in both repositories. Apply
+common fixes to both. Project-specific metadata, version rules and package checks
+live in `release_project.py` and are tested in `scripts/tests/test_project.py`.

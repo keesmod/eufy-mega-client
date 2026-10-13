@@ -32,7 +32,9 @@ npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/do
 ```
 
 Commit your lockfile so `npm ci` verifies package integrity. Releases also publish `SHA256SUMS`
-and a `release-manifest.json` with file hashes.
+and a `release-manifest.json` with file hashes. Betas `X.Y.Z-beta.N` for opt-in testing are
+marked Pre-release on GitHub Releases and install the same way from their exact `.tgz` URL. See
+[betas](docs/RELEASING.md#betas).
 
 To upgrade:
 

@@ -91,11 +91,12 @@ checks for both consumers where affected. A release that changes map acquisition
 decoding, lifecycle or migration must retain its applicable map acceptance gates.
 
 For new protocol paths or major migrations, use willing testers and a recoverable
-candidate before making a stable claim. Clearly identify how to install it, what
-is experimental, which tests are requested and how to return to the previous
-version. The existing publishing workflows currently support stable versions.
-This policy does not add a beta channel or authorize treating an unvalidated
-candidate as stable. Dedicated beta tooling can be considered later.
+candidate before making a stable claim. Publish that candidate as a
+[beta](RELEASING.md#betas) `X.Y.Z-beta.N`, a GitHub prerelease that never becomes
+the latest release. Clearly identify how to install it, what is experimental,
+which tests are requested and how to return to the previous stable version. A
+result on a beta applies to that exact beta version. Publishing a beta does not
+make an unvalidated candidate stable.
 
 Document confirmed combinations, unconfirmed implemented features, known failures
 and missing support separately in release notes. A known regression requires an
@@ -122,4 +123,4 @@ or epic remain open until their own criteria pass. Never redefine an unfinished
 feature as delivered or create duplicate stories to clear a board.
 
 The minimal process uses the existing matrix, issues and report form. A feedback
-button in HA, automatic prefill and full beta tooling are outside this delivery.
+button in HA and automatic prefill are outside this delivery.
