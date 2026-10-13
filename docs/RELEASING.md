@@ -89,7 +89,8 @@ Stable releases happen on request, in one run together with ha-eufy-cam. One
 approval covers the whole run: this stable release, the camera release PR whose
 merge updates the stable Home Assistant app, and both GitHub releases.
 
-1. Start the merge freeze in both repositories with the approval.
+1. Start the merge freeze in both repositories with the approval. A hotfix has
+   already started it.
 2. Open the release PR. It sets the version to `X.Y.Z`, the stable part of the
    candidate, dates `## X.Y.Z - YYYY-MM-DD`, completes the upgrade and rollback
    text and points the README install URL at `X.Y.Z`. It normally changes
@@ -123,31 +124,33 @@ it from main with the Release workflow and the beta version as input.
 
 ## Hotfix lane
 
-A hotfix is a stable release of current main between batch runs. There are no
-release branches. Work that must not ship is reverted first, in an ordinary PR
-under the candidate rules. Land the fix as a beta candidate, or with a small fix
-directly in the release PR, then follow the batch release run. The revert and a
-separate fix PR merge before the run. Ask for the run approval once they are on
-main, because the merge freeze starts with that approval. When the camera needs
-the fix, its release PR pins the new stable version. When ha-eufy-cam main pins
-a client beta, every camera hotfix needs a client stable release at or above
-that beta, so revert client work that must not ship first. An advisory in a
-transitive dependency of the camera bridge can be fixed in the bridge lockfile
-without a client release.
+A hotfix is a stable release of current main between batch runs, with its own
+run approval. There are no release branches. The merge freeze starts at the
+hotfix approval, in both repositories. Work that must not ship is reverted
+first, in an ordinary PR under the candidate rules. Land the fix as a beta
+candidate, or with a small fix directly in the release PR. The revert and a
+separate fix PR merge during the freeze. Then continue with the batch release
+run from step 2. When the camera needs the fix, its release PR pins the new
+stable version. When ha-eufy-cam main pins a client beta, every camera hotfix
+needs a client stable release at or above that beta, so revert client work that
+must not ship first, as part of the same run. An advisory in a transitive
+dependency of the camera bridge can be fixed in the bridge lockfile without a
+client release.
 
 ## Merge freeze
 
-The freeze starts with the approval of a batch or hotfix run, in step 1 of the
-run. Until the run is complete, only the release PRs of that run merge to main.
-Publication uses only the commit that was rehearsed. When a run stops with
-`main advanced`, compare the rehearsed commit with current main and check
-whether the tag `v<version>` exists. If only documentation changed and the tag
-does not exist yet, rehearse and publish current main. A stop just before the
-draft becomes public comes after the tag was created, so that version is used
-up. A runtime change after the approval needs a new approval. Before the release
-PR merges, such a change joins the same `X.Y.Z` batch. It keeps the version
-while that beta is unpublished, raises `N` after a published beta, or goes
-directly into the release PR.
+The freeze starts with the approval of a batch or hotfix run. Until the run is
+complete, only the PRs of that run merge to main: its release PRs and, in a
+hotfix, its revert and fix candidate PRs. Publication uses only the commit that
+was rehearsed. When a run stops with `main advanced`, compare the rehearsed
+commit with current main and check whether the tag `v<version>` exists. If only
+documentation changed and the tag does not exist yet, rehearse and publish
+current main. A stop just before the draft becomes public comes after the tag
+was created, so that version is used up. A runtime change after the approval,
+other than the run's own revert and fix PRs, needs a new approval. Before the
+release PR merges, such a change joins the same `X.Y.Z` batch. It keeps the
+version while that beta is unpublished, raises `N` after a published beta, or
+goes directly into the release PR.
 
 A tag created at a superseded commit uses up its version, because tags never
 move. A runtime PR merged after a release PR has to raise the version, so the
