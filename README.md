@@ -78,3 +78,9 @@ and [decoded map geometry](docs/MAP_GEOMETRY.md).
 
 Independent of Eufy and Anker. The package includes MIT and Apache-2.0 components
 and uses Eufy's cloud services.
+
+## Support this project
+
+If this project is useful to you, consider
+[buying me a coffee](https://buymeacoffee.com/keesmod) to support its maintenance
+and development. Contributions are optional.
