@@ -101,7 +101,10 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    `scripts/bump_client.py X.Y.Z`. See the camera
    [release guide](https://github.com/keesmod/ha-eufy-cam/blob/main/docs/RELEASING.md).
 6. Lift the freeze once the camera run is complete, after its bench check and
-   reporter follow-ups.
+   reporter follow-ups. Those follow-ups also cover every issue referenced in
+   this repository since the previous stable tag, collected from `refs #N` and
+   `refs <repo>#N` in `git log --format=%B vPREVIOUS..vX.Y.Z` and from the
+   links in the `X.Y.Z` changelog section.
 
 ## Betas
 
