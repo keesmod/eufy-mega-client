@@ -362,8 +362,8 @@ and bridge 0.8.38-beta.1 with client 0.30.0-beta.1, gave the same result.
 Camera B's discovery connection again ended at stage `lookup` with
 `device_request_timeout` and `inventory_address: true`, and camera A connected.
 The reported record has none of the `lookup_*` fields that this bridge adds to a
-connect that failed at `lookup`, and the reported `assessment` was empty, which
-that integration never produces. So the bridge that wrote the record is
+connect that failed at `lookup`, and the reported `assessment` was `{}`, a shape
+that no integration version produces. So the versions behind that download are
 unconfirmed, and the lookup observation is still missing. The reporter also
 corrected the topology. Both cameras connect over 2.4 GHz Wi-Fi to the same
 FRITZ!Repeater 3000 mesh node, not to the router directly, and the HA host is
