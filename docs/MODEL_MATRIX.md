@@ -336,14 +336,29 @@ unconfirmed.
   `device_request_timeout` for its reference. On a standalone owner, that code
   with a camera reference comes only from the bridge's discovery connection. It
   points to a connection that set no command key within the 20-second connect
-  bound, so START was most likely never sent on the live attempts either. Which
-  connection stage the camera reached was not reported yet.
+  bound, so START was most likely never sent on the live attempts either. The
+  connection stage followed in the report below.
 
 These are reported results, not independently reproduced. The reporter sees the
 firmware as the only difference. Nothing on this route branches on the firmware,
 so a firmware cause is unproven. The type 31 rows below gain no H or P cells.
 
+A [follow-up on the same day][T8410-lookup] gave the installed versions:
+integration 0.8.46 and bridge 0.8.37 with client 0.29.2, on HA OS amd64 with
+Node 24.21.0. In a fresh run with the Eufy app closed and no other client
+connected, camera B's discovery connection ended at stage `lookup` with
+`inventory_address: true`, so no lookup reply with its own DID was accepted.
+Camera A connected in the same run. B's live attempt failed before its session
+was ready. The Eufy app's own live view of B works, B is on and out of privacy
+mode, both cameras use the same router access point, and the app offers B no
+firmware update. That download cannot show whether no reply arrived at all, a
+reply with another or differently formatted DID was dropped, or the inventory
+address belongs to another device. Client 0.30.0-beta.1 records that, as
+described in the
+[station lookup observation](API.md#station-lookup-observation-0300).
+
 [T8410-result]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6140901994
+[T8410-lookup]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6152282566
 
 ## Reported issue #149, 0.29.2
 
