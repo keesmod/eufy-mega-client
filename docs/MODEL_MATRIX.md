@@ -350,15 +350,30 @@ connected, camera B's discovery connection ended at stage `lookup` with
 `inventory_address: true`, so no lookup reply with its own DID was accepted.
 Camera A connected in the same run. B's live attempt failed before its session
 was ready. The Eufy app's own live view of B works, B is on and out of privacy
-mode, both cameras use the same router access point, and the app offers B no
+mode, both cameras use the same access point, and the app offers B no
 firmware update. That download cannot show whether no reply arrived at all, a
 reply with another or differently formatted DID was dropped, or the inventory
 address belongs to another device. Client 0.30.0-beta.1 records that, as
 described in the
 [station lookup observation](API.md#station-lookup-observation-0300).
 
+A [beta run on 2026-10-14][T8410-beta], reported with integration 0.8.47-beta.1
+and bridge 0.8.38-beta.1 with client 0.30.0-beta.1, gave the same result.
+Camera B's discovery connection again ended at stage `lookup` with
+`device_request_timeout` and `inventory_address: true`, and camera A connected.
+The reported record has none of the `lookup_*` fields that this bridge adds to a
+connect that failed at `lookup`, and the reported `assessment` was empty, which
+that integration never produces. So the bridge that wrote the record is
+unconfirmed, and the lookup observation is still missing. The reporter also
+corrected the topology. Both cameras connect over 2.4 GHz Wi-Fi to the same
+FRITZ!Repeater 3000 mesh node, not to the router directly, and the HA host is
+wired to the router. Every lookup round sends a direct request to the inventory
+address, and camera A answers through the same repeater. A repeater that drops
+broadcasts therefore does not explain B's result on its own.
+
 [T8410-result]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6140901994
 [T8410-lookup]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6152282566
+[T8410-beta]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6175148530
 
 ## Reported issue #149, 0.29.2
 
