@@ -981,7 +981,7 @@ test('an onObservation that throws changes neither result nor error', async () =
   }
 });
 
-test('a session result timeout of an earlier list never counts as the next ackCode', async (t) => {
+test('a session result timeout of an earlier list never counts, the next list's own result does', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const r = await rig('standalone');
   let sequence = 5000;
@@ -1013,6 +1013,22 @@ test('a session result timeout of an earlier list never counts as the next ackCo
       family: 'IPv4',
       size: message.length,
     });
+    return seqNo;
+  };
+  // The device's own command result for an acknowledged frame.
+  const deviceResult = (seqNo, returnCode) => {
+    const data = Buffer.alloc(4);
+    data.writeInt32LE(returnCode);
+    r.session.handleData({
+      dataType: P2PDataType.DATA,
+      type: 1,
+      seqNo,
+      commandId: CommandType.CMD_SET_PAYLOAD,
+      bytesToRead: 4,
+      signCode: 0,
+      channel: 0,
+      data,
+    });
   };
   try {
     const first = [];
@@ -1028,8 +1044,11 @@ test('a session result timeout of an earlier list never counts as the next ackCo
     t.mock.timers.tick(20000);
     const second = [];
     r.respond((entry) => {
-      transportAck(entry);
-      setTimeout(() => r.reply(byDate([record(r.owner, r.camera, 1)])), 12000);
+      const seqNo = transportAck(entry);
+      setTimeout(() => {
+        deviceResult(seqNo, -104);
+        r.reply(byDate([record(r.owner, r.camera, 1)]));
+      }, 12000);
     });
     const two = settled(
       r.transport.recordings.list(r.owner, DAY, undefined, {
@@ -1037,13 +1056,14 @@ test('a session result timeout of an earlier list never counts as the next ackCo
       }),
     );
     await turns();
-    // The first query's -133 arrives here, while the second page waits.
+    // The first query's -133 arrives here, while the second page waits. Then the
+    // second query's own result -104 and its answer.
     t.mock.timers.tick(12000);
     const outcome = await two;
     assert.equal(outcome.value.returned, 1);
     const [page] = only(second).pages;
     assert.equal(page.answered, true);
-    assert.equal(page.ackCode, null);
+    assert.equal(page.ackCode, -104);
     assert.equal(r.sent.length, 2);
     assert.equal(r.closes(), 0);
     r.released();

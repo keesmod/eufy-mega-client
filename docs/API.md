@@ -442,11 +442,12 @@ payload.
 
 Some readings. A list that ends with `device_request_timeout` at `query` and
 `answered: false` received no usable answer within 15 seconds. With
-`ackCode: null` and no unhandled reply no command result arrived for the query
-within the page bound, so the device stayed silent. A non-zero `ackCode` is a
-refusal. -133 is the session's own result: it reports a device that kept
-answering 503 (failed to request) until the session gave up, or 30 seconds
-after a send without a command result, which is longer than a page bound.
+`ackCode: null` and no unhandled reply, no command result arrived for the query
+within the page bound, so the device stayed silent. A non-zero `ackCode` other
+than -133 is the device's refusal. -133 is the session's own result. It reports
+a device that kept answering 503 (failed to request) until the session gave up,
+or a query without a command result 30 seconds after the device acknowledged
+it, which is longer than a page bound.
 `unknown_cmd` with an `unhandledResultCode` such as -6006 is an answer without
 an inner command, and `parse_error` an answer the session could not parse.
 Results of commands that were still pending when the operation began, such as

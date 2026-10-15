@@ -2725,15 +2725,10 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   }
 
   /**
-   * eufy-mega-client: reports a CMD_DATABASE reply that no handler took, with the
-   * reply's inner command and result code when they are safe integers. Numbers
-   * only, never payload text. A listener's error never alters reply handling.
-   */
-  /**
    * Client addition: the custom data of every sent command with this command name
-   * whose result the session has not reported yet. Each is reported later as one
-   * "command" event carrying the same object, with the device's result or the
-   * session's own timeout.
+   * whose result the session has not reported yet. Each is reported later as at
+   * most one "command" event carrying the same object, with the device's result or
+   * the session's own timeout. A close clears them without one.
    */
   public pendingCommandData(name: string): CustomData[] {
     const pending: CustomData[] = [];
@@ -2742,6 +2737,11 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     return pending;
   }
 
+  /**
+   * eufy-mega-client: reports a CMD_DATABASE reply that no handler took, with the
+   * reply's inner command and result code when they are safe integers. Numbers
+   * only, never payload text. A listener's error never alters reply handling.
+   */
   private emitDatabaseUnhandled(reply: unknown, reason: DatabaseUnhandled["reason"]): void {
     const field = (name: "cmd" | "mIntRet"): number | null => {
       const value = typeof reply === "object" && reply !== null ? (reply as Record<string, unknown>)[name] : undefined;
