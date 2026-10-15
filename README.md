@@ -29,7 +29,7 @@ from their exact `.tgz` URL. See [betas](docs/RELEASING.md#betas). Each package 
 compiled JavaScript and type declarations. Install a release with an exact version:
 
 ```sh
-npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.29.2/keesmod-eufy-mega-client-0.29.2.tgz
+npm install --save-exact https://github.com/keesmod/eufy-mega-client/releases/download/v0.30.0/keesmod-eufy-mega-client-0.30.0.tgz
 ```
 
 Commit your lockfile so `npm ci` verifies package integrity. Releases also publish `SHA256SUMS`

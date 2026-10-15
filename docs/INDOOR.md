@@ -289,8 +289,8 @@ the T8410C profile did not allow the opt-in route.
 
 With the client option `experimentalStandalone`, 0.30.0 admits exactly
 T8410C/type 31 with an empty or self parent as its own local owner, as described
-in [API.md](API.md#experimental-standalone-cameras). The profile flag is the
-only runtime change. The camera then uses the same local lookup, LAN-derived
+in [API.md](API.md#experimental-standalone-cameras). Admitting the T8410C
+changes only its profile flag. The camera then uses the same local lookup, LAN-derived
 command key from its own serial and P2P device ID, type 31 station and device
 tables and generic Indoor live branch as the standalone T8410. The vendored code
 selects the tables and the live branch by device type, and the camera's own

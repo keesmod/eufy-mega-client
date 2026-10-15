@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.30.0 - Unreleased
+## 0.30.0 - 2026-10-15
 
 ### Station lookup observation
 
@@ -65,8 +65,8 @@
   relationship, media and live branch, also with the option. Other models,
   suffixes such as `T8410C21` and other types stay unverified or unsupported.
   Guard mode, pushes, detection events and cipher downloads stay refused on the
-  route. The only runtime change is the T8410C profile flag, with no API, type
-  or vendor change.
+  route. Admitting the T8410C changes only its profile flag and adds no API,
+  type or vendor change of its own.
 - The standalone tests run the T8410 cases for the T8410C too, with synthetic
   rows. The HomeBase T8410C tests are unchanged. This is software coverage.
   Hardware results for the standalone T8410C are pending.
