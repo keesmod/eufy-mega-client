@@ -46,9 +46,10 @@
   reporter of ha-eufy-cam#152 has one on firmware 3.3.4.4 without a HomeBase.
   With 0.30.0-beta.1 and the option on, it was discovered with a complete
   descriptor but stayed `standalone_transport_unverified` with no session
-  attempt, because only the T84A1 and T8410 profiles allowed the route. Two
-  standalone `T8410` cameras of the same reporter stream live on that route, on
-  firmware 2.3.2.4 and 2.3.1.6.
+  attempt, because only the T84A1 and T8410 profiles allowed the route. The same
+  reporter reported both of their standalone `T8410` cameras streaming live on
+  that route, on firmware 2.3.2.4 and 2.3.1.6. This is not independently
+  reproduced.
 - With the option the T8410C becomes its own P2P owner on the existing local
   lookup and LAN-derived command key, with experimental snapshot, live and
   recordings on its own session, as for the T8410. Live uses the same generic
