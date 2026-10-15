@@ -371,9 +371,31 @@ wired to the router. Every lookup round sends a direct request to the inventory
 address, and camera A answers through the same repeater. A repeater that drops
 broadcasts therefore does not explain B's result on its own.
 
+On 2026-10-15 the [reporter confirmed][T8410-both] that those downloads came from
+the stable bridge, which still held the bridge port. With the stable app stopped,
+the beta app running and a new integration entry, the reported versions were
+integration 0.8.47-beta.1 and bridge 0.8.38-beta.1 with client 0.30.0-beta.1.
+Both standalone T8410/31 cameras then streamed live video. Camera B on firmware
+2.3.1.6 also received a fresh snapshot, and both cameras report snapshot, live
+and recordings as available and experimental. Recording playback was not
+reported. B's live video implies that firmware 2.3.1.6 also answers the gateway
+information request and accepts the LAN-derived key and the start command.
+
+The same comment gives the lookup fields of an earlier beta run in which B failed
+at `lookup`: 20 rounds with broadcasts enabled, 3 broadcast targets and no send
+errors, and 38 datagrams, all lookup replies with the DID of another device in
+the account. B sent no reply with its own DID, nothing answered from its
+inventory address, and that address was on the bridge's subnet and not shared.
+So the broadcasts reached other devices in the account, and B answered neither
+its direct requests nor the broadcasts in that run. The beta changes no lookup
+target, timing, retry or DID check, so B's later connection is not a beta fix.
+Why B stayed silent before is unknown. The type 31 table row covers an H3 owner
+only and is unchanged.
+
 [T8410-result]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6140901994
 [T8410-lookup]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6152282566
 [T8410-beta]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6175148530
+[T8410-both]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6188704752
 
 ## Reported issue #149, 0.29.2
 
