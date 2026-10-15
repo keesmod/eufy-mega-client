@@ -981,7 +981,7 @@ test('an onObservation that throws changes neither result nor error', async () =
   }
 });
 
-test('a session result timeout of an earlier list never counts, the next list's own result does', async (t) => {
+test('a session result timeout of an earlier list never counts, the result of the next list does', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const r = await rig('standalone');
   let sequence = 5000;
