@@ -1263,7 +1263,7 @@ test('account rows that discovery or load did not admit still classify replies a
     ]) {
       const inventory = discover([
         row('T8030_OWNER', 'T8030', 18, INVENTORY_IP),
-        // A standalone T8410C stays unverified, and an unknown model is unsupported.
+        // Without the opt-in a standalone T8410C stays unverified. An unknown model is unsupported.
         row('T8410C_CAM', 'T8410C', 31, standalone),
         row('UNKNOWN_CAM', 'T9999', 9999, unsupported),
       ]);

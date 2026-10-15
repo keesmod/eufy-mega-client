@@ -38,10 +38,46 @@
   accepts, the socket and the connection stages are unchanged, with and without
   `onLookup`.
 
+### Experimental standalone T8410C
+
+- The opt-in client option `experimentalStandalone` now also admits a standalone
+  Indoor Cam Pan&Tilt 2K `T8410C`/31 with an empty or self parent, for
+  [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168). The
+  reporter of ha-eufy-cam#152 has one on firmware 3.3.4.4 without a HomeBase.
+  With 0.30.0-beta.1 and the option on, it was discovered with a complete
+  descriptor but stayed `standalone_transport_unverified` with no session
+  attempt, because only the T84A1 and T8410 profiles allowed the route. Two
+  standalone `T8410` cameras of the same reporter stream live on that route, on
+  firmware 2.3.2.4 and 2.3.1.6.
+- With the option the T8410C becomes its own P2P owner on the existing local
+  lookup and LAN-derived command key, with experimental snapshot, live and
+  recordings on its own session, as for the T8410. Live uses the same generic
+  Indoor start envelope, because the camera's own station is not a HomeBase.
+  Whether the 3.3.x firmware line accepts the LAN-derived command key, answers
+  the gateway information request and accepts this start is not known. No
+  standalone T8410C has used the route yet.
+- With the option on, a consumer that connects experimental owners at
+  discovery, as the ha-eufy-cam bridge does, now also opens a local session to
+  each standalone T8410C there. A camera that does not answer adds up to the
+  20-second connect bound to that discovery.
+- Without the option nothing changes. A T8410C under a HomeBase keeps its H3
+  relationship, media and live branch, also with the option. Other models,
+  suffixes such as `T8410C21` and other types stay unverified or unsupported.
+  Guard mode, pushes, detection events and cipher downloads stay refused on the
+  route. The only runtime change is the T8410C profile flag, with no API, type
+  or vendor change.
+- The standalone tests run the T8410 cases for the T8410C too, with synthetic
+  rows. The HomeBase T8410C tests are unchanged. This is software coverage.
+  Hardware results for the standalone T8410C are pending.
+
 Upgrade: additive and optional. `StationConnectOptions` gains `onLookup`, and
 the type `StationLookupObservation` is exported. Consumers that do not pass it,
-older ones included, see no change, and `connectStation(id, signal?)` is
-unchanged. Rollback: 0.29.2, and drop `onLookup`.
+older ones included, see no change from it, and `connectStation(id, signal?)`
+is unchanged. With `experimentalStandalone` already set, a standalone T8410C now
+reports `transport: 'experimental'` instead of
+`reason: 'standalone_transport_unverified'`. Rollback: 0.29.2, and drop
+`onLookup`. To keep a standalone T8410C off the route without a rollback, turn
+the option off, which also takes the T84A1 and T8410 off it.
 
 ## 0.29.2 - 2026-10-12
 
