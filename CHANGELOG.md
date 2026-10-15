@@ -10,7 +10,9 @@
   its promise settles, on success, failure, refusal and cancellation: the
   operation, whether the owner is an experimental standalone camera, whether its
   session was open, the last stage reached, the error code and `remoteCode`, and
-  the elapsed time. For each query page it reports the rows requested, whether
+  the elapsed time. A call that fails before the client's device transport is
+  ready, such as with `authentication_required` or `client_closed`, reports
+  nothing. For each query page it reports the rows requested, whether
   the answer arrived, the return code of the session's command result for that
   query, the answer's database result code and its row count. It also counts the
   database replies the session could not dispatch, with the reason and result
@@ -23,7 +25,7 @@
 - This is for
   [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152). On
   2026-10-15 "Show recordings" failed for a standalone T8410 on firmware
-  2.3.2.4, the camera that streams live video, with bridge 0.8.38-beta.1 and
+  2.3.2.4, one of two T8410s that stream live video, with bridge 0.8.38-beta.1 and
   client 0.30.0-beta.1. The bridge reported only `recording_unavailable`. A
   silent camera, a refusal in its command result, a reply without an inner
   command such as `{"mIntRet": -6006}` and an unparsable reply all ended the
@@ -41,7 +43,9 @@
 - The observation carries no serial, DID, path, name or address, and every
   number is a bounded integer. A command result counts for a page only when its
   command name is that of the query, so the results of latest-info refreshes on
-  a HomeBase session are not attributed to a list. Without `onObservation` the
+  a HomeBase session are not attributed to a list. The session's own result
+  timeouts (-133 and -134) never count, because they can belong to an earlier
+  query on the same open session. Without `onObservation` the
   operation attaches no listener.
 - Observation only. Query payloads, page sizes, the 15-second page and
   20-second connect bounds, the 60-second operation bound, error codes and the

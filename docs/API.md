@@ -412,14 +412,14 @@ attaches no listener.
 
 Each entry of `pages`:
 
-| Field        | Meaning                                                                                                                                   |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | Rows requested: 100, 500, 2000 or 10000, and 0 for a calendar                                                                             |
-| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                          |
-| `answered`   | Whether the answer for this page arrived                                                                                                  |
-| `ackCode`    | The return code of the session's command result for this query, matched by the query's command name and in send order. `null` without one |
-| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                     |
-| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                  |
+| Field        | Meaning                                                                                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | Rows requested: 100, 500, 2000 or 10000, and 0 for a calendar                                                                                                                                             |
+| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                                                                                          |
+| `answered`   | Whether the answer for this page arrived                                                                                                                                                                  |
+| `ackCode`    | The return code of the device's command result for this query, matched by the query's command name and in send order. The session's own result timeouts -133 and -134 are not counted. `null` without one |
+| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                                                                                     |
+| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                                                                                  |
 
 `rowClasses` counts the rows the way the list checks them. `own`,
 `otherDevice` and `stationMismatch` divide the rows. The other three count
@@ -446,8 +446,10 @@ Some readings. A list that ends with `device_request_timeout` at `query` and
 `ackCode` is a refusal in the device's command result. `unknown_cmd` with an
 `unhandledResultCode` such as -6006 is an answer without an inner command, and
 `parse_error` an answer the session could not parse. The session's own command
-result timeouts, -133 and -134, take longer than the 15-second page bound, so
-an `ackCode` within it normally comes from the device. `history_rejected` at
+result timeouts, -133 and -134, never appear as an `ackCode`, so a non-null
+`ackCode` comes from a device. A device result that arrives after its own
+operation ended can still be counted for the next operation on the same open
+session. `history_rejected` at
 `validate` carries the database result in `remoteCode` and `resultCode`.
 `device_disconnected` at `query` is a session that closed while the query
 waited. None of these values proves a cause on its own.

@@ -401,8 +401,11 @@ export interface RecordingOperationOptions {
   signal?: AbortSignal;
   /**
    * Called synchronously exactly once, before the operation's promise settles,
-   * on success and on failure. Errors it throws are ignored, and it cannot change
-   * the operation. See docs/API.md, recording operation observation.
+   * on success and on failure, once the call reaches the client's device
+   * transport. A call that fails before that, such as with
+   * `authentication_required` or `client_closed`, reports nothing. Errors it
+   * throws are ignored, and it cannot change the operation. See docs/API.md,
+   * recording operation observation.
    */
   onObservation?: (observation: RecordingObservation) => void;
   /** Forwarded to the owner's connection when the operation has to connect. See StationConnectOptions. */

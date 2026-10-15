@@ -209,7 +209,7 @@ to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
 On 2026-10-15 the same reporter's recording list failed for the standalone
-T8410 on firmware 2.3.2.4, the camera that streams live video, with bridge
+T8410 on firmware 2.3.2.4, which streams live video, with bridge
 0.8.38-beta.1 and client 0.30.0-beta.1. The bridge returned only
 `recording_unavailable`, so the cause is unknown, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).

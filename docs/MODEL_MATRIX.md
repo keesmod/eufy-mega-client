@@ -392,9 +392,9 @@ broadcasts. The beta changes no lookup target, timing, retry or DID check, so
 B's later connection is not a beta fix. Why no reply from B arrived in that run
 is unknown. The type 31 table row covers an H3 owner only and is unchanged.
 
-Also on 2026-10-15, the [same reporter][T8410-report] opened the recordings of
-the standalone T8410/31 on firmware 2.3.2.4, the camera that streams live
-video, with bridge 0.8.38-beta.1 and client 0.30.0-beta.1. "Show recordings"
+Also on 2026-10-15, the [same reporter][T8410-recordings] opened the recordings
+of camera A, the standalone T8410/31 on firmware 2.3.2.4, which streams live
+video like camera B, with bridge 0.8.38-beta.1 and client 0.30.0-beta.1. "Show recordings"
 failed with the bridge code `recording_unavailable`, which the card showed as
 "The HomeBase connection is unavailable. Try again shortly." The bridge maps
 almost every client error of a recording operation to that code and records
@@ -416,6 +416,7 @@ is unconfirmed, and the type 31 table row is unchanged.
 [T8410-lookup]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6152282566
 [T8410-beta]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6175148530
 [T8410-both]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6188704752
+[T8410-recordings]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6195646642
 
 ## Reported issue #149, 0.29.2
 

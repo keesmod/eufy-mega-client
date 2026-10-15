@@ -8,6 +8,7 @@ import type {
 } from './vendor/p2p/interfaces.js';
 import type { CommandResult } from './vendor/p2p/models.js';
 import { CommandName } from './vendor/http/types.js';
+import { ErrorCode } from './vendor/p2p/types.js';
 import { awaitEvent } from './operations.js';
 import { downloadRecording } from './download.js';
 import {
@@ -182,9 +183,16 @@ class Observation {
   /** Listens on the owner's session until the operation ends. */
   watch(station: Station): void {
     if (!this.enabled) return;
-    // A session reports each sent command's result once, so results are matched in order.
+    // Results with the query's command name are matched to pages in send order.
     const result = (_station: Station, command: CommandResult) => {
       if (this.command === undefined || command?.customData?.command?.name !== this.command) return;
+      // The session's own timeouts come 30 s or more after a send, after any page of
+      // this operation could have ended, so they belong to an earlier operation.
+      if (
+        command.return_code === ErrorCode.ERROR_COMMAND_TIMEOUT ||
+        command.return_code === ErrorCode.ERROR_CONNECT_TIMEOUT
+      )
+        return;
       const page = this.pages.find((p) => !p.acked);
       if (!page) return;
       page.acked = true;

@@ -980,3 +980,75 @@ test('an onObservation that throws changes neither result nor error', async () =
     await r.done();
   }
 });
+
+test('a session result timeout of an earlier list never counts as the next ackCode', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const r = await rig('standalone');
+  let sequence = 5000;
+  // The device acknowledges the frame on the transport. The session then waits up to
+  // 30 s for the command result and reports -133 for that earlier query without one.
+  const transportAck = (entry) => {
+    const seqNo = sequence++;
+    r.session.messageStates.set(seqNo, {
+      sequence: seqNo,
+      commandType: entry.command.commandType,
+      nestedCommandType: entry.json.cmd,
+      channel: 0,
+      data: Buffer.alloc(0),
+      retries: 0,
+      acknowledged: false,
+      customData: entry.customData,
+    });
+    const message = Buffer.alloc(10);
+    message[0] = 0xf1;
+    message[1] = 0xd1;
+    message.writeUInt16BE(6, 2);
+    message[4] = 0xd1;
+    message[5] = P2PDataType.DATA;
+    message.writeUInt16BE(1, 6);
+    message.writeUInt16BE(seqNo, 8);
+    r.session.handleMsg(message, {
+      address: '192.0.2.1',
+      port: 32108,
+      family: 'IPv4',
+      size: message.length,
+    });
+  };
+  try {
+    const first = [];
+    r.respond((entry) => {
+      transportAck(entry);
+      r.reply(byDate([record(r.owner, r.camera, 1)]));
+    });
+    const one = await r.transport.recordings.list(r.owner, DAY, undefined, {
+      onObservation: (observation) => first.push(observation),
+    });
+    assert.equal(one.returned, 1);
+    assert.equal(only(first).pages[0].ackCode, null);
+    t.mock.timers.tick(20000);
+    const second = [];
+    r.respond((entry) => {
+      transportAck(entry);
+      setTimeout(() => r.reply(byDate([record(r.owner, r.camera, 1)])), 12000);
+    });
+    const two = settled(
+      r.transport.recordings.list(r.owner, DAY, undefined, {
+        onObservation: (observation) => second.push(observation),
+      }),
+    );
+    await turns();
+    // The first query's -133 arrives here, while the second page waits.
+    t.mock.timers.tick(12000);
+    const outcome = await two;
+    assert.equal(outcome.value.returned, 1);
+    const [page] = only(second).pages;
+    assert.equal(page.answered, true);
+    assert.equal(page.ackCode, null);
+    assert.equal(r.sent.length, 2);
+    assert.equal(r.closes(), 0);
+    r.released();
+  } finally {
+    t.mock.timers.reset();
+    await r.done();
+  }
+});
