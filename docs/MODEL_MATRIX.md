@@ -437,7 +437,7 @@ inventory field as this client is not verified. Plain T8410 firmware is on the
 3.3.4.4 fits T8410C. Their product name and their T8410 label do not decide it.
 The rows cannot carry exactly `T8410`, and the [Mega-7] owner uses Indoor Cam
 Pan&Tilt for both a T8410/31 and a T8410C/31. T8410C is not a confirmed received
-value. 0.29.2 also widens the diagnostic model bound to unhyphenated codes such
+value for these rows. 0.29.2 also widens the diagnostic model bound to unhyphenated codes such
 as `T8410C`, as described in [DIAGNOSTICS.md](DIAGNOSTICS.md#missing-devices).
 If these rows carry another catalogue-shaped code of at most eight characters,
 the next report shows it, provided the bridge and integration apply the same
@@ -449,6 +449,43 @@ The type 19 and type 31 feature rows below gain no H or P cells.
 [149-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
 [Mega-7]: https://github.com/mscodemonkey/eufy-mega-security/issues/7
 [bropat-722]: https://github.com/bropat/eufy-security-client/issues/722
+
+## Reported standalone T8410C and experimental route, 0.30.0
+
+On 2026-10-15 the reporter of ha-eufy-cam#152 [reported][T8410C-report] a third
+standalone camera, received as exactly `T8410C` with type 31 on firmware 3.3.4.4,
+without a HomeBase and on the same LAN as their two standalone T8410/31 above.
+They ran integration 0.8.47-beta.1, bridge 0.8.38-beta.1 and client
+0.30.0-beta.1 with `experimental_standalone` on. Discovery made it standalone
+with a complete descriptor: P2P device ID, license, administrator user and LAN
+address present. Snapshot, live and recordings stayed
+`standalone_transport_unverified` and no local session was attempted, because
+the T8410C profile did not allow the opt-in route. Discovery only creates a
+descriptor for an exact profile match, so the row is the exact pair `T8410C`/31.
+This is a reported inventory tuple and descriptor, not a media result, and not
+independently reproduced. It does not show which model rows 6 and 7 of the
+[#149 report][149-report] carry.
+
+0.30.0 admits exactly T8410C/31 with an empty or self parent to that route, as
+described in [API.md](API.md#experimental-standalone-cameras) and
+[INDOOR.md](INDOOR.md#experimental-standalone-t8410c-0300). Without the option a
+standalone T8410C keeps `standalone_transport_unverified`, and under a HomeBase
+it keeps its H3 relationship and media. For the standalone T8410C these states
+stay separate:
+
+- Recognition: the exact pair since 0.29.2, now also received from a standalone
+  row.
+- Experimental software coverage: the standalone route since 0.30.0, with
+  synthetic rows only.
+- Confirmed hardware support: none. No standalone T8410C has used the route, and
+  the reporter's result is pending.
+
+The T8410 results above come from firmware 2.3.2.4 and 2.3.1.6. T8410C firmware
+is on the 3.3.x line, so they do not transfer to it. A failed connection is also
+a valid result for this record. The type 31 rows below cover an H3 owner only
+and gain no H or P cells.
+
+[T8410C-report]: https://github.com/keesmod/ha-eufy-cam/issues/168#issuecomment-6189829101
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

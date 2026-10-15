@@ -868,20 +868,20 @@ Version 0.29.0 adds the client option `experimentalStandalone`. It is off by
 default. Without it, standalone results only gain the `descriptor` described
 below. With it, a standalone camera whose
 exact profile allows it becomes its own P2P owner on the existing local route.
-Two profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
+Three profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
 [ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66). `T8410`/31,
 the Indoor Cam E220, which Eufy's comparison page calls Indoor Cam 2K Pan & Tilt,
 has it since 0.29.1 for
 [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152).
-`T8410C`/31, the Indoor Cam Pan&Tilt 2K admitted in 0.29.2, does not have it. A
-standalone T8410C keeps `standalone_transport_unverified`.
+`T8410C`/31, the Indoor Cam Pan&Tilt 2K admitted in 0.29.2, has it since 0.30.0
+for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
 
 - Discovery returns `{ kind: 'standalone', ownerId, transport: 'experimental', descriptor }`
   without an issue. Every other standalone row keeps
   `reason: 'standalone_transport_unverified'` and its issue. Under a HomeBase
-  both models keep their H3 relationship and table media policy, blocked for the
-  T84A1 and H3 for the T8410.
+  all three models keep their H3 relationship and table media policy, blocked
+  for the T84A1 and H3 for the T8410 and T8410C.
 - The camera's `stationId` is its own ID. `connectStation(id, { onProgress })`
   connects to the camera itself with the same lookup, [stages](#station-connection-stages-0260)
   and LAN-derived command key as a HomeBase. No cloud DSK, cipher or legacy
@@ -904,6 +904,9 @@ No standalone result on this route has been independently reproduced. On
 2026-10-13 a T8410 on firmware 2.3.2.4 was reported with working live video, and
 on 2026-10-15 one on firmware 2.3.1.6, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
+A standalone T8410C has no reported result on this route yet, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8410c-and-experimental-route-0300).
+Its firmware is on the 3.3.x line, so the T8410 results do not transfer to it.
 A failure is still useful evidence for the next step, not a regression. The
 stage a failed connection reached says whether the camera answered the lookup
 with its own DID, completed the session handshake, or opened the session without

@@ -30,8 +30,8 @@ HomeBase merely because that HomeBase can store the camera's recordings.
 An empty or self parent retains a camera descriptor and
 `standalone_transport_unverified`. It creates no station or working event/media
 route. The [experimental standalone T8410](#experimental-standalone-t8410-0291)
-is the only opt-in exception. T8410C does not have that route. Other owners
-report `unsupported_station`. T8440, T8W11C, T8W11P, T8419 and T8419N remain
+and, since 0.30.0, the [standalone T8410C](#experimental-standalone-t8410c-0300)
+are the only opt-in exceptions. Other owners report `unsupported_station`. T8440, T8W11C, T8W11P, T8419 and T8419N remain
 unadmitted because their exact matrix association or relevant topology is
 unresolved. C210/C220 subtypes are not inferred. The T8410 and T8410C names
 follow Eufy's [HomeBase compatibility guide][HB-guide-EU], which names T8410
@@ -161,8 +161,9 @@ complete descriptor. Snapshot, live and recordings stayed
 
 With the client option `experimentalStandalone`, 0.29.1 admits exactly
 T8410/type 31 with an empty or self parent as its own local owner, as described
-in [API.md](API.md#experimental-standalone-cameras). No other Indoor model,
-`T8410C` or type-only match is admitted to this route. The camera is then the
+in [API.md](API.md#experimental-standalone-cameras). No other Indoor model or
+type-only match is admitted to this route, apart from the exact
+[T8410C](#experimental-standalone-t8410c-0300) since 0.30.0. The camera is then the
 station of the reused Station operations. Its type 31 station table declares
 `downloadImage`, `databaseQueryLatestInfo`, `databaseQueryByDate` and
 `databaseCountByDate`, and its device table declares live start and stop and
@@ -249,10 +250,10 @@ Limits of this evidence:
 - Only the exact pair is added. `T8410-C`, `T8410P`, lower case, trailing
   spaces and other types stay `unsupported_device`. No prefix or type-only
   admission exists.
-- An empty or self parent keeps `standalone_transport_unverified`. The
-  experimental standalone route that 0.29.1 opened for the
-  [standalone T8410](#experimental-standalone-t8410-0291) stays off for T8410C,
-  also with `experimentalStandalone`.
+- An empty or self parent keeps `standalone_transport_unverified` in 0.29.2,
+  also with `experimentalStandalone`. 0.30.0 opens the experimental standalone
+  route of the [standalone T8410](#experimental-standalone-t8410-0291) to the
+  T8410C, as described [below](#experimental-standalone-t8410c-0300).
 - Under a HomeBase the vendored live start selects the type 31 branch by device
   type and HomeBase control, so T8410C sends the T8410 envelope below. Branch
   selection does not read the camera serial, and the P2P session's serial-prefix
@@ -273,6 +274,52 @@ physical T8410C was used. Hardware results are pending.
 [bropat-722]: https://github.com/bropat/eufy-security-client/issues/722
 [ws-486]: https://github.com/bropat/eufy-security-ws/issues/486
 [ws-489]: https://github.com/bropat/eufy-security-ws/issues/489
+
+## Experimental standalone T8410C, 0.30.0
+
+[ha-eufy-cam#168][168-report] reports a camera received as exactly `T8410C` with
+type 31 on firmware 3.3.4.4, from the reporter of ha-eufy-cam#152. On 2026-10-15
+they ran integration 0.8.47-beta.1, bridge 0.8.38-beta.1 and client
+0.30.0-beta.1 on HA OS with `experimental_standalone` on. The camera is a
+standalone camera without a HomeBase, on the same LAN as their two
+[standalone T8410](#experimental-standalone-t8410-0291) cameras. Discovery
+passed with a complete descriptor. Snapshot, live and recordings stayed
+`standalone_transport_unverified` and no local session was attempted, because
+the T8410C profile did not allow the opt-in route.
+
+With the client option `experimentalStandalone`, 0.30.0 admits exactly
+T8410C/type 31 with an empty or self parent as its own local owner, as described
+in [API.md](API.md#experimental-standalone-cameras). The profile flag is the
+only runtime change. The camera then uses the same local lookup, LAN-derived
+command key from its own serial and P2P device ID, type 31 station and device
+tables and generic Indoor live branch as the standalone T8410. The vendored code
+selects the tables and the live branch by device type, and the camera's own
+station is not a HomeBase. On this route the P2P session's serial-prefix checks,
+which decide whether the codec and key frames are read from the packet header or
+from the video data, read the camera's own serial. A serial that starts with
+`T8410` takes the T8410 path there. Whether every T8410C serial does is not
+verified.
+
+The T8410 results on firmware 2.3.2.4 and 2.3.1.6 do not transfer to the T8410C,
+whose firmware is on the 3.3.x line. Whether a standalone T8410C accepts the
+LAN-derived key, answers the gateway information request and accepts the
+`CMD_DOORBELL_SET_PAYLOAD` start is unknown. So is whether it serves snapshot
+covers and recordings from its own storage. A recording download with a cipher
+ID would need a cloud cipher and is refused. Guard mode and events stay off. Pan
+and tilt and talkback are outside this change.
+
+The [standalone tests](../test/standalone-experimental.test.mjs) run the T8410
+cases for the T8410C too, with synthetic rows, a stubbed station and a real
+vendor Station and `IndoorCamera` without a socket. The HomeBase T8410C cases in
+the [Indoor tests](../test/indoor.test.mjs) are unchanged. Without the option a
+standalone T8410C keeps `standalone_transport_unverified`. Under a HomeBase it
+keeps its H3 relationship, media and HomeBase-controlled type 31 live branch,
+also with the option. No physical standalone T8410C has used the route. Its
+result is pending and belongs to
+[ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168) and
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142).
+
+[168-report]: https://github.com/keesmod/ha-eufy-cam/issues/168#issuecomment-6189829101
 
 ## Remaining obligations
 

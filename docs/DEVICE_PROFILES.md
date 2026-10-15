@@ -115,6 +115,10 @@ With the client option `experimentalStandalone`, a standalone T8410 becomes its 
 local owner with experimental snapshot, live and recordings. Its H3 cells above apply
 only under a HomeBase. See [API.md](API.md#experimental-standalone-cameras).
 
+With the client option `experimentalStandalone`, a standalone T8410C becomes its own
+local owner with experimental snapshot, live and recordings. Its H3 cells above apply
+only under a HomeBase. See [API.md](API.md#experimental-standalone-cameras).
+
 With the client option `experimentalStandalone`, a standalone T84A1 becomes its own
 local owner with experimental snapshot, live and recordings. Its blocked cells above apply
 without that option. See [API.md](API.md#experimental-standalone-cameras).

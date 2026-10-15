@@ -202,22 +202,17 @@ test('T8160-C has the T8160 type and adapter with the additional-H3 media policy
   );
 });
 
-test('T8410C has the T8410 H3 policy without the experimental standalone flag', () => {
+test('T8410C has the T8410 H3 policy and its experimental standalone flag', () => {
   const profile = deviceProfiles.T8410C;
   const indoor = { type: 31, kind: 'camera', family: 'indoor', topology: 'h3-or-standalone' };
-  assert.deepEqual(
-    { ...profile, features: { ...profile?.features } },
-    { ...indoor, features: h3Policy },
-  );
-  assert.equal(profile.experimentalStandalone, undefined);
-  // T8410 carries the experimentalStandalone flag since 0.29.1 (ha-eufy-cam#152). The rest of
-  // its profile is the H3 policy that T8410C shares.
-  const { experimentalStandalone, ...t8410H3 } = deviceProfiles.T8410;
-  assert.equal(experimentalStandalone, true);
-  assert.deepEqual(
-    { ...t8410H3, features: { ...t8410H3.features } },
-    { ...indoor, features: h3Policy },
-  );
+  // T8410 carries the experimentalStandalone flag since 0.29.1 (ha-eufy-cam#152), T8410C since
+  // 0.30.0 (ha-eufy-cam#168). The rest of both profiles is the same H3 policy.
+  for (const model of ['T8410', 'T8410C']) {
+    const { experimentalStandalone, ...h3 } = deviceProfiles[model];
+    assert.equal(experimentalStandalone, true, model);
+    assert.equal(Object.isFrozen(deviceProfiles[model]), true, model);
+    assert.deepEqual({ ...h3, features: { ...h3.features } }, { ...indoor, features: h3Policy });
+  }
   assert.equal(exactDeviceProfile({ device_model: 'T8410C', device_type: 31 }), profile);
   assert.equal(
     exactDeviceProfile({ device_model: 'T8410', device_type: 31 }),
@@ -254,22 +249,37 @@ test('T8410C has the T8410 H3 policy without the experimental standalone flag', 
   assert.equal(result.result.devices[1].model, 'T8410C');
   assert.deepEqual(result.result.issues, []);
   assertH3OwnerGates(camera, reportedOwner);
-  // An empty or self parent keeps the unverified descriptor, also with the opt-in.
-  for (const parent_sn of ['', 'CAM'])
-    for (const options of [{}, { experimentalStandalone: true }]) {
-      const standalone = discover([reportedOwner, { ...camera, parent_sn }], options);
-      assert.deepEqual(standalone.relationships.get('CAM'), {
-        kind: 'standalone',
-        ownerId: 'CAM',
-        reason: 'standalone_transport_unverified',
-        descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
-      });
-      assert.deepEqual(standalone.owners.get('CAM'), {
-        id: 'CAM',
-        kind: 'standalone',
-        transport: 'unsupported',
-      });
-    }
+  // An empty or self parent keeps the unverified descriptor without the opt-in and becomes
+  // its own experimental owner with it. Missing connection fields stay in the descriptor.
+  const descriptor = { did: false, license: false, adminUser: false, lanAddress: false };
+  for (const parent_sn of ['', 'CAM']) {
+    const standalone = discover([reportedOwner, { ...camera, parent_sn }]);
+    assert.deepEqual(standalone.relationships.get('CAM'), {
+      kind: 'standalone',
+      ownerId: 'CAM',
+      reason: 'standalone_transport_unverified',
+      descriptor,
+    });
+    assert.deepEqual(standalone.owners.get('CAM'), {
+      id: 'CAM',
+      kind: 'standalone',
+      transport: 'unsupported',
+    });
+    const optedIn = discover([reportedOwner, { ...camera, parent_sn }], {
+      experimentalStandalone: true,
+    });
+    assert.deepEqual(optedIn.relationships.get('CAM'), {
+      kind: 'standalone',
+      ownerId: 'CAM',
+      transport: 'experimental',
+      descriptor,
+    });
+    assert.deepEqual(optedIn.owners.get('CAM'), {
+      id: 'CAM',
+      kind: 'standalone',
+      transport: 'lan-experimental',
+    });
+  }
   assert.equal(
     discover([reportedOwner, { ...camera, parent_sn: 'HB\n' }]).result.issues[0].code,
     'invalid_device_relationship',

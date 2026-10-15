@@ -14,7 +14,8 @@ import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // keesmod/eufy-mega-client#142, ha-eufy-cam#66: a standalone T84A1 behind the
 // experimentalStandalone opt-in. ha-eufy-cam#152: a standalone T8410 behind the same
-// opt-in. All rows and observations are synthetic.
+// opt-in. ha-eufy-cam#168: a standalone T8410C as well. All rows and observations are
+// synthetic.
 const complete = { did: true, license: true, adminUser: true, lanAddress: true };
 const wallLight = (extra = {}) => ({
   category: 'eufy_security',
@@ -46,11 +47,23 @@ const indoorPanTilt = (extra = {}) => ({
   params: [{ param_type: 1176, param_value: '192.168.1.42' }],
   ...extra,
 });
-// The admitted profiles. Model-independent tests run for each of them.
-const admitted = [
-  ['T84A1', wallLight],
+const indoorPanTilt2K = (extra = {}) =>
+  indoorPanTilt({
+    device_sn: 'T8410C_FIXTURE',
+    device_model: 'T8410C',
+    device_name: 'Synthetic Indoor Pan Tilt 2K',
+    main_sw_version: '3.3.4.4',
+    p2p_did: 'SYNTHETIC-000004-ABCDE',
+    params: [{ param_type: 1176, param_value: '192.168.1.43' }],
+    ...extra,
+  });
+// The type 31 Indoor Pan&Tilt profiles. Their Indoor tests run for each of them.
+const panTilts = [
   ['T8410', indoorPanTilt],
+  ['T8410C', indoorPanTilt2K],
 ];
+// The admitted profiles. Model-independent tests run for each of them.
+const admitted = [['T84A1', wallLight], ...panTilts];
 const homeBase = {
   category: 'eufy_security',
   device_sn: 'T8030_OWNER',
@@ -129,20 +142,26 @@ async function fixture(t, rows, options, check, transportOptions) {
   }
 }
 
-test('only the T8410 and T84A1 profiles allow the experimental standalone route', () => {
+test('only the T8410, T8410C and T84A1 profiles allow the experimental standalone route', () => {
   const allowed = Object.entries(deviceProfiles)
     .filter(([, profile]) => profile.experimentalStandalone)
     .map(([model]) => model);
-  assert.deepEqual(allowed, ['T8410', 'T84A1']);
+  assert.deepEqual(allowed, ['T8410', 'T8410C', 'T84A1']);
   for (const model of allowed) assert.equal(Object.isFrozen(deviceProfiles[model]), true, model);
   assert.deepEqual(deviceProfiles.T84A1.features, {
     snapshot: 'blocked',
     live: 'blocked',
     recordings: 'blocked',
   });
-  // The T8410 keeps its H3 media policy for a HomeBase owner.
-  assert.equal(deviceProfiles.T8410.type, 31);
-  assert.deepEqual(deviceProfiles.T8410.features, { snapshot: 'h3', live: 'h3', recordings: 'h3' });
+  // The T8410 and T8410C keep their H3 media policy for a HomeBase owner.
+  for (const [model] of panTilts) {
+    assert.equal(deviceProfiles[model].type, 31, model);
+    assert.deepEqual(deviceProfiles[model].features, {
+      snapshot: 'h3',
+      live: 'h3',
+      recordings: 'h3',
+    });
+  }
 });
 
 for (const [model, row] of admitted)
@@ -171,7 +190,14 @@ for (const [model, row] of admitted)
       assert.equal(inventory.result.devices[0].kind, 'camera');
       // The public result carries presence booleans only, never connection values.
       const text = JSON.stringify(inventory.result);
-      for (const secret of ['SYNTHETIC', 'synthetic-admin', '192.168.1.40', '192.168.1.42', 'p2p'])
+      for (const secret of [
+        'SYNTHETIC',
+        'synthetic-admin',
+        '192.168.1.40',
+        '192.168.1.42',
+        '192.168.1.43',
+        'p2p',
+      ])
         assert.equal(text.includes(secret), false, secret);
     });
 
@@ -212,8 +238,6 @@ test('the opt-in admits no other standalone model, type or HomeBase topology', (
     ['T8411', 35],
     ['T8416', 104],
     ['T817L', 10031],
-    // ha-eufy-cam#149: admitted under a HomeBase since 0.29.2, without the standalone flag.
-    ['T8410C', 31],
   ];
   for (const [device_model, device_type] of others) {
     const inventory = discover([wallLight({ device_model, device_type })], {
@@ -227,6 +251,8 @@ test('the opt-in admits no other standalone model, type or HomeBase topology', (
     wallLight({ device_type: 150 }),
     indoorPanTilt({ device_type: 35 }),
     indoorPanTilt({ device_model: 'T8410-C' }),
+    indoorPanTilt2K({ device_type: 35 }),
+    indoorPanTilt2K({ device_model: 'T8410C21' }),
   ]) {
     const inventory = discover([wrong], { experimentalStandalone: true });
     const pair = `${wrong.device_model}/${wrong.device_type}`;
@@ -326,81 +352,85 @@ test('the transport makes the opted-in T84A1 its own local station with all thre
   );
 });
 
-test('under a HomeBase the opted-in T8410 keeps its H3 relationship, owner and media', async (t) => {
-  const camera = indoorPanTilt({ parent_sn: 'T8030_OWNER' });
-  const inventory = discover([homeBase, camera], { experimentalStandalone: true });
-  assert.deepEqual(inventory.relationships.get('T8410_FIXTURE'), {
-    kind: 'station',
-    ownerId: 'T8030_OWNER',
+for (const [model, row] of panTilts)
+  test(`under a HomeBase the opted-in ${model} keeps its H3 relationship, owner and media`, async (t) => {
+    const id = `${model}_FIXTURE`;
+    const camera = row({ parent_sn: 'T8030_OWNER' });
+    const inventory = discover([homeBase, camera], { experimentalStandalone: true });
+    assert.deepEqual(inventory.relationships.get(id), {
+      kind: 'station',
+      ownerId: 'T8030_OWNER',
+    });
+    assert.deepEqual(inventory.result.issues, []);
+    for (const feature of ['snapshot', 'live', 'recordings'])
+      assert.equal(hasCameraMedia(camera, homeBase, feature), true, feature);
+    await fixture(
+      t,
+      [homeBase, camera],
+      { experimentalStandalone: true },
+      async (transport, _i, created) => {
+        assert.deepEqual(
+          created.map((s) => s.wire.station_sn),
+          ['T8030_OWNER'],
+        );
+        const sdk = transport.cameras.get(id);
+        assert.equal(sdk.constructor, IndoorCamera);
+        assert.equal(sdk.getStationSerial(), 'T8030_OWNER');
+        assert.equal(transport.device(id).stationId, 'T8030_OWNER');
+        for (const feature of ['snapshot', 'live', 'recordings'])
+          assert.deepEqual(transport.cameraCapabilities(id)[feature], {
+            available: true,
+            status: 'experimental',
+            reason: null,
+          });
+      },
+    );
   });
-  assert.deepEqual(inventory.result.issues, []);
-  for (const feature of ['snapshot', 'live', 'recordings'])
-    assert.equal(hasCameraMedia(camera, homeBase, feature), true, feature);
-  await fixture(
-    t,
-    [homeBase, camera],
-    { experimentalStandalone: true },
-    async (transport, _i, created) => {
-      assert.deepEqual(
-        created.map((s) => s.wire.station_sn),
-        ['T8030_OWNER'],
-      );
-      const sdk = transport.cameras.get('T8410_FIXTURE');
-      assert.equal(sdk.constructor, IndoorCamera);
-      assert.equal(sdk.getStationSerial(), 'T8030_OWNER');
-      assert.equal(transport.device('T8410_FIXTURE').stationId, 'T8030_OWNER');
-      for (const feature of ['snapshot', 'live', 'recordings'])
-        assert.deepEqual(transport.cameraCapabilities('T8410_FIXTURE')[feature], {
-          available: true,
-          status: 'experimental',
-          reason: null,
-        });
-    },
-  );
-});
 
-test('the transport makes the opted-in T8410 its own local station with an IndoorCamera', async (t) => {
-  await fixture(
-    t,
-    [homeBase, eufyCam, indoorPanTilt()],
-    { experimentalStandalone: true },
-    async (transport, _inventory, created) => {
-      const standalone = created.find((s) => s.wire.station_sn === 'T8410_FIXTURE');
-      assert.ok(standalone);
-      assert.equal(standalone.wire.device_type, 31);
-      assert.equal(standalone.wire.station_model, 'T8410');
-      assert.equal(standalone.address, '192.168.1.42');
-      assert.equal(standalone.connectionType, P2PConnectionType.ONLY_LOCAL);
-      assert.deepEqual(
-        standalone.wire.devices.map((d) => [d.device_sn, d.station_sn]),
-        [['T8410_FIXTURE', 'T8410_FIXTURE']],
-      );
-      const camera = transport.cameras.get('T8410_FIXTURE');
-      assert.equal(camera.constructor, IndoorCamera);
-      assert.equal(camera.getStationSerial(), 'T8410_FIXTURE');
-      assert.equal(camera.getChannel(), 0);
-      for (const feature of ['snapshot', 'live', 'recordings'])
-        assert.deepEqual(transport.cameraCapabilities('T8410_FIXTURE')[feature], {
-          available: true,
-          status: 'experimental',
-          reason: null,
-        });
-      // The HomeBase and its camera keep their own owner and session.
-      const owner = created.find((s) => s.wire.station_sn === 'T8030_OWNER');
-      assert.deepEqual(
-        owner.wire.devices.map((d) => d.device_sn),
-        ['T8161_FIXTURE'],
-      );
-      assert.equal(transport.cameras.get('T8161_FIXTURE').getStationSerial(), 'T8030_OWNER');
-      const { knownCamera } = transport.recordings.connection;
-      assert.equal(knownCamera('T8410_FIXTURE', 'T8410_FIXTURE'), true);
-      assert.equal(knownCamera('T8410_FIXTURE', 'T8030_OWNER'), false);
-      assert.equal(knownCamera('T8161_FIXTURE', 'T8410_FIXTURE'), false);
-      assert.equal(transport.device('T8410_FIXTURE').stationId, 'T8410_FIXTURE');
-      assert.equal(transport.device('T8410_FIXTURE').kind, 'camera');
-    },
-  );
-});
+for (const [model, row] of panTilts)
+  test(`the transport makes the opted-in ${model} its own local station with an IndoorCamera`, async (t) => {
+    const id = `${model}_FIXTURE`;
+    await fixture(
+      t,
+      [homeBase, eufyCam, row()],
+      { experimentalStandalone: true },
+      async (transport, _inventory, created) => {
+        const standalone = created.find((s) => s.wire.station_sn === id);
+        assert.ok(standalone);
+        assert.equal(standalone.wire.device_type, 31);
+        assert.equal(standalone.wire.station_model, model);
+        assert.equal(standalone.address, row().params[0].param_value);
+        assert.equal(standalone.connectionType, P2PConnectionType.ONLY_LOCAL);
+        assert.deepEqual(
+          standalone.wire.devices.map((d) => [d.device_sn, d.station_sn]),
+          [[id, id]],
+        );
+        const camera = transport.cameras.get(id);
+        assert.equal(camera.constructor, IndoorCamera);
+        assert.equal(camera.getStationSerial(), id);
+        assert.equal(camera.getChannel(), 0);
+        for (const feature of ['snapshot', 'live', 'recordings'])
+          assert.deepEqual(transport.cameraCapabilities(id)[feature], {
+            available: true,
+            status: 'experimental',
+            reason: null,
+          });
+        // The HomeBase and its camera keep their own owner and session.
+        const owner = created.find((s) => s.wire.station_sn === 'T8030_OWNER');
+        assert.deepEqual(
+          owner.wire.devices.map((d) => d.device_sn),
+          ['T8161_FIXTURE'],
+        );
+        assert.equal(transport.cameras.get('T8161_FIXTURE').getStationSerial(), 'T8030_OWNER');
+        const { knownCamera } = transport.recordings.connection;
+        assert.equal(knownCamera(id, id), true);
+        assert.equal(knownCamera(id, 'T8030_OWNER'), false);
+        assert.equal(knownCamera('T8161_FIXTURE', id), false);
+        assert.equal(transport.device(id).stationId, id);
+        assert.equal(transport.device(id).kind, 'camera');
+      },
+    );
+  });
 
 for (const [model, row] of admitted)
   test(`without the opt-in the transport creates no standalone ${model} station`, async (t) => {
@@ -527,75 +557,77 @@ test('the real vendor station accepts the T84A1 as its own owner without opening
   }
 });
 
-test('a real vendor station sends the generic Indoor live envelope for a standalone T8410', async () => {
-  const transport = new DeviceTransport();
-  try {
-    const inventory = discover([indoorPanTilt()], { experimentalStandalone: true });
-    await transport.load(inventory.raw, inventory);
-    const station = transport.stations.get('T8410_FIXTURE');
-    const camera = transport.cameras.get('T8410_FIXTURE');
-    assert.ok(station instanceof Station);
-    assert.equal(station.getSerial(), 'T8410_FIXTURE');
-    assert.equal(station.getDeviceType(), 31);
-    // Its own station is not a HomeBase, so live skips the HomeBase-controlled type 31 branch.
-    assert.equal(station.isDeviceControlledByHomeBase(), false);
-    assert.equal(station.isConnected(), false);
-    assert.equal(camera.constructor, IndoorCamera);
-    assert.equal(camera.getStationSerial(), 'T8410_FIXTURE');
-    assert.equal(camera.getChannel(), 0);
-    for (const command of [
-      CommandName.StationDatabaseQueryLatestInfo,
-      CommandName.StationDownloadImage,
-      CommandName.StationDatabaseQueryByDate,
-      CommandName.StationDatabaseCountByDate,
-    ])
-      assert.equal(station.hasCommand(command), true, command);
-    for (const command of [
-      CommandName.DeviceStartLivestream,
-      CommandName.DeviceStopLivestream,
-      CommandName.DeviceStartDownload,
-      CommandName.DeviceCancelDownload,
-    ])
-      assert.equal(camera.hasCommand(command), true, command);
-    const credentials = transport.provider.getCommandCredentials;
-    assert.deepEqual(await credentials('T8410_FIXTURE', 0, 'synthetic-admin'), {
-      mode: 'lan-derived',
-    });
-    await assert.rejects(credentials('T8410_FIXTURE', 0, 'another-admin'), {
-      code: 'invalid_connection_credentials',
-    });
-    // Capture the commands without a socket. The public key modulus is synthetic.
-    const sent = [];
-    const session = station.p2pSession;
-    station.p2pSession = {
-      getRSAPrivateKey: () => ({ exportKey: () => ({ n: Buffer.from([0, 171, 205]) }) }),
-      isLiveStreaming: () => false,
-      sendCommandWithStringPayload: (command) => sent.push(command),
-      sendCommandWithInt: (command) => sent.push(command),
-    };
+for (const [model, row] of panTilts)
+  test(`a real vendor station sends the generic Indoor live envelope for a standalone ${model}`, async () => {
+    const id = `${model}_FIXTURE`;
+    const transport = new DeviceTransport();
     try {
-      for (const codec of [VideoCodec.H264, VideoCodec.H265]) {
-        station.startLivestream(camera, codec);
-        assert.equal(sent.length, 1);
-        const [command] = sent.splice(0);
-        assert.equal(command.commandType, CommandType.CMD_DOORBELL_SET_PAYLOAD);
-        assert.equal(command.channel, 0);
-        assert.deepEqual(JSON.parse(command.value), {
-          commandType: 1000,
-          data: { account_id: 'synthetic-admin', encryptkey: 'abcd', streamtype: codec },
-        });
+      const inventory = discover([row()], { experimentalStandalone: true });
+      await transport.load(inventory.raw, inventory);
+      const station = transport.stations.get(id);
+      const camera = transport.cameras.get(id);
+      assert.ok(station instanceof Station);
+      assert.equal(station.getSerial(), id);
+      assert.equal(station.getDeviceType(), 31);
+      // Its own station is not a HomeBase, so live skips the HomeBase-controlled type 31 branch.
+      assert.equal(station.isDeviceControlledByHomeBase(), false);
+      assert.equal(station.isConnected(), false);
+      assert.equal(camera.constructor, IndoorCamera);
+      assert.equal(camera.getStationSerial(), id);
+      assert.equal(camera.getChannel(), 0);
+      for (const command of [
+        CommandName.StationDatabaseQueryLatestInfo,
+        CommandName.StationDownloadImage,
+        CommandName.StationDatabaseQueryByDate,
+        CommandName.StationDatabaseCountByDate,
+      ])
+        assert.equal(station.hasCommand(command), true, command);
+      for (const command of [
+        CommandName.DeviceStartLivestream,
+        CommandName.DeviceStopLivestream,
+        CommandName.DeviceStartDownload,
+        CommandName.DeviceCancelDownload,
+      ])
+        assert.equal(camera.hasCommand(command), true, command);
+      const credentials = transport.provider.getCommandCredentials;
+      assert.deepEqual(await credentials(id, 0, 'synthetic-admin'), {
+        mode: 'lan-derived',
+      });
+      await assert.rejects(credentials(id, 0, 'another-admin'), {
+        code: 'invalid_connection_credentials',
+      });
+      // Capture the commands without a socket. The public key modulus is synthetic.
+      const sent = [];
+      const session = station.p2pSession;
+      station.p2pSession = {
+        getRSAPrivateKey: () => ({ exportKey: () => ({ n: Buffer.from([0, 171, 205]) }) }),
+        isLiveStreaming: () => false,
+        sendCommandWithStringPayload: (command) => sent.push(command),
+        sendCommandWithInt: (command) => sent.push(command),
+      };
+      try {
+        for (const codec of [VideoCodec.H264, VideoCodec.H265]) {
+          station.startLivestream(camera, codec);
+          assert.equal(sent.length, 1);
+          const [command] = sent.splice(0);
+          assert.equal(command.commandType, CommandType.CMD_DOORBELL_SET_PAYLOAD);
+          assert.equal(command.channel, 0);
+          assert.deepEqual(JSON.parse(command.value), {
+            commandType: 1000,
+            data: { account_id: 'synthetic-admin', encryptkey: 'abcd', streamtype: codec },
+          });
+        }
+        station.stopLivestream(camera, true);
+        assert.deepEqual(sent, [
+          { commandType: CommandType.CMD_STOP_REALTIME_MEDIA, value: 0, channel: 0 },
+        ]);
+      } finally {
+        station.p2pSession = session;
       }
-      station.stopLivestream(camera, true);
-      assert.deepEqual(sent, [
-        { commandType: CommandType.CMD_STOP_REALTIME_MEDIA, value: 0, channel: 0 },
-      ]);
     } finally {
-      station.p2pSession = session;
+      await transport.close();
     }
-  } finally {
-    await transport.close();
-  }
-});
+  });
 
 for (const [model, row] of admitted)
   for (const enabled of [true, false])
@@ -787,43 +819,42 @@ test('reloads move the T84A1 between its own owner, a HomeBase and no transport'
   }
 });
 
-test('reloads move the T8410 between its own owner, a HomeBase with H3 media and no transport', async (t) => {
-  const created = [];
-  t.mock.method(Station, 'getInstance', async (_provider, wire, address) =>
-    fakeStation(wire, address, created),
-  );
-  const transport = new DeviceTransport();
-  const load = async (rows, options) => {
-    const inventory = discover(rows, options);
-    await transport.load(inventory.raw, inventory);
-  };
-  try {
-    await load([homeBase, indoorPanTilt()], { experimentalStandalone: true });
-    assert.deepEqual([...transport.stations.keys()].sort(), ['T8030_OWNER', 'T8410_FIXTURE']);
-    assert.equal(transport.cameraCapabilities('T8410_FIXTURE').live.available, true);
-    await load([homeBase, indoorPanTilt({ parent_sn: 'T8030_OWNER' })], {
-      experimentalStandalone: true,
-    });
-    assert.deepEqual([...transport.stations.keys()], ['T8030_OWNER']);
-    assert.equal(transport.cameras.get('T8410_FIXTURE').getStationSerial(), 'T8030_OWNER');
-    // Under the HomeBase the H3 media policy applies again.
-    assert.deepEqual(transport.cameraCapabilities('T8410_FIXTURE').live, {
-      available: true,
-      status: 'experimental',
-      reason: null,
-    });
-    await load([homeBase, indoorPanTilt({ parent_sn: 'T8410_FIXTURE' })], {
-      experimentalStandalone: true,
-    });
-    assert.equal(transport.cameras.get('T8410_FIXTURE').getStationSerial(), 'T8410_FIXTURE');
-    assert.equal(transport.stations.has('T8410_FIXTURE'), true);
-    await load([homeBase, indoorPanTilt()], {});
-    assert.deepEqual([...transport.stations.keys()], ['T8030_OWNER']);
-    assert.equal(
-      transport.cameraCapabilities('T8410_FIXTURE').live.reason,
-      'standalone_transport_unverified',
+for (const [model, row] of panTilts)
+  test(`reloads move the ${model} between its own owner, a HomeBase with H3 media and no transport`, async (t) => {
+    const id = `${model}_FIXTURE`;
+    const created = [];
+    t.mock.method(Station, 'getInstance', async (_provider, wire, address) =>
+      fakeStation(wire, address, created),
     );
-  } finally {
-    await transport.close();
-  }
-});
+    const transport = new DeviceTransport();
+    const load = async (rows, options) => {
+      const inventory = discover(rows, options);
+      await transport.load(inventory.raw, inventory);
+    };
+    try {
+      await load([homeBase, row()], { experimentalStandalone: true });
+      assert.deepEqual([...transport.stations.keys()].sort(), ['T8030_OWNER', id]);
+      assert.equal(transport.cameraCapabilities(id).live.available, true);
+      await load([homeBase, row({ parent_sn: 'T8030_OWNER' })], {
+        experimentalStandalone: true,
+      });
+      assert.deepEqual([...transport.stations.keys()], ['T8030_OWNER']);
+      assert.equal(transport.cameras.get(id).getStationSerial(), 'T8030_OWNER');
+      // Under the HomeBase the H3 media policy applies again.
+      assert.deepEqual(transport.cameraCapabilities(id).live, {
+        available: true,
+        status: 'experimental',
+        reason: null,
+      });
+      await load([homeBase, row({ parent_sn: id })], {
+        experimentalStandalone: true,
+      });
+      assert.equal(transport.cameras.get(id).getStationSerial(), id);
+      assert.equal(transport.stations.has(id), true);
+      await load([homeBase, row()], {});
+      assert.deepEqual([...transport.stations.keys()], ['T8030_OWNER']);
+      assert.equal(transport.cameraCapabilities(id).live.reason, 'standalone_transport_unverified');
+    } finally {
+      await transport.close();
+    }
+  });

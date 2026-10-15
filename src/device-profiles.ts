@@ -72,7 +72,11 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
     experimentalStandalone: true,
   }),
   // ha-eufy-cam#149, 2026-10-12: public evidence of T8410C/type 31 under a HomeBase 3.
-  T8410C: camera(31, 'indoor', 'h3-or-standalone', h3Media),
+  // ha-eufy-cam#168: standalone T8410C behind experimentalStandalone. H3 media is unchanged.
+  T8410C: Object.freeze({
+    ...camera(31, 'indoor', 'h3-or-standalone', h3Media),
+    experimentalStandalone: true,
+  }),
   T8401: camera(34, 'indoor', 'h3-or-standalone', h3Media),
   T8411: camera(35, 'indoor', 'h3-or-standalone', h3Media),
   T8441: camera(45, 'indoor', 'h3-or-standalone', h3Media),
