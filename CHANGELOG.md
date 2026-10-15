@@ -18,11 +18,13 @@
   [station lookup observation](docs/API.md#station-lookup-observation-0300).
 - This is for
   [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152), where a
-  standalone T8410 on firmware 2.3.1.6 ends every connection at the `lookup`
-  stage with `inventoryAddress: true` while a T8410 on 2.3.2.4 connects. Until
+  standalone T8410 on firmware 2.3.1.6 ended its connections at the `lookup`
+  stage with `inventoryAddress: true` while a T8410 on 2.3.2.4 connected. Until
   now a reply with another DID was dropped without a trace, so a camera that
   sent nothing could not be told apart from one whose reply was not accepted.
-  The cause on that camera is not known.
+  With this observation a failed run showed only replies from other devices in
+  the account. On 2026-10-15 that camera was reported streaming. Why no reply
+  from it arrived in that run is not known.
 - The observation carries no DID, address, port, serial or interface name, and
   every count is bounded. Before an attempt starts its session, the client hands
   the P2P session the DIDs of the inventory's other devices and stations. The

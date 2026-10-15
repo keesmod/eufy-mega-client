@@ -901,8 +901,8 @@ standalone T8410C keeps `standalone_transport_unverified`.
   `invalid_connection_credentials` for every operation.
 
 No standalone result on this route has been independently reproduced. On
-2026-10-13 a T8410 on firmware 2.3.2.4 was reported with working live video, as
-recorded in the
+2026-10-13 a T8410 on firmware 2.3.2.4 was reported with working live video, and
+on 2026-10-15 one on firmware 2.3.1.6, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
 A failure is still useful evidence for the next step, not a regression. The
 stage a failed connection reached says whether the camera answered the lookup

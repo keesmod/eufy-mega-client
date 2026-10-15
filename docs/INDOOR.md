@@ -178,9 +178,9 @@ camera's channel. Stop is the plain `CMD_STOP_REALTIME_MEDIA`.
 
 Before the 2026-10-13 report it was unknown whether a standalone T8410 accepts
 that key and envelope, and whether it answers the gateway information request
-after the handshake. The reported live video on firmware 2.3.2.4 implies that
-this firmware does both. For other firmware, including 2.3.1.6, both remain
-unknown. Without that answer no command key is set and the connection ends at
+after the handshake. The reported live video on firmware 2.3.2.4 on 2026-10-13
+and on 2.3.1.6 on 2026-10-15 implies that both firmware versions do both. For
+other firmware both remain unknown. Without that answer no command key is set and the connection ends at
 the `session_open` stage. Whether it serves snapshot covers and recordings from its
 own storage, such as a microSD card, is unknown too. A recording download with a
 cipher ID would need a cloud cipher and is refused. Guard mode and events stay
@@ -198,9 +198,10 @@ complete H.264 and H.265 start envelopes and the stop.
 Without the option a standalone T8410 keeps `standalone_transport_unverified`.
 Under a HomeBase it keeps its H3 relationship, media and live branch, also with
 the option. On 2026-10-13 the reporter of ha-eufy-cam#152 reported live video
-working on a standalone T8410 with firmware 2.3.2.4. Live video failed on one
-with firmware 2.3.1.6, and its event log had `device_request_timeout`, as
-recorded in the
+working on a standalone T8410 with firmware 2.3.2.4. The one with firmware
+2.3.1.6 first ended its connection at the lookup without a reply from that
+camera, and on 2026-10-15 it was reported streaming live video too, as recorded
+in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
 The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
