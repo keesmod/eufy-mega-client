@@ -30,6 +30,12 @@ export type {
   StationConnectOptions,
   StationLookupObservation,
   Recording,
+  RecordingOperation,
+  RecordingOperationStage,
+  RecordingQueryPage,
+  RecordingRowClasses,
+  RecordingObservation,
+  RecordingOperationOptions,
   DetectionEvent,
   EventSession,
 } from './types.js';

@@ -46,7 +46,13 @@ the client reads at most once per connection attempt. The session classifies eac
 when it arrives, against the station's own DID and a copy of the other inventory
 DIDs that the client sets before the attempt, and stores no DID of a replying
 device. Its counters last, also across a close, until the session starts its
-next connection. The observation does not change the lookup.
+next connection. The observation does not change the lookup. Version 0.30.1
+makes the P2P session emit `database unhandled` for a CMD_DATABASE reply that
+it drops, either because no handler takes its inner command or because parsing
+it fails. The event carries the reply's inner command and result code when they
+are integers and the reason, never payload text, and the Station forwards it.
+The reply is still dropped. The session and Station also list the custom data of
+sent commands of one name whose result is still pending, read-only.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

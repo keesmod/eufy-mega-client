@@ -16,6 +16,7 @@ import {
   type Snapshot,
   type LiveStream,
   type LiveStartOptions,
+  type RecordingOperationOptions,
   type StationConnectOptions,
   type StreamStop,
 } from './types.js';
@@ -184,21 +185,34 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   async setGuardMode(id: string, mode: number, signal?: AbortSignal) {
     return (await this.deviceTransport()).setGuardMode(id, mode, signal);
   }
-  async listRecordings(stationId: string, day: string, cameraIds?: string[], signal?: AbortSignal) {
-    return (await this.deviceTransport()).recordings.list(stationId, day, cameraIds, signal);
+  /**
+   * `options` is an abort signal or {@link RecordingOperationOptions}, which can
+   * also observe the operation and its connection. The same holds for the
+   * calendar, thumbnail and download below. See docs/API.md, recordings.
+   */
+  async listRecordings(
+    stationId: string,
+    day: string,
+    cameraIds?: string[],
+    options?: AbortSignal | RecordingOperationOptions,
+  ) {
+    return (await this.deviceTransport()).recordings.list(stationId, day, cameraIds, options);
   }
   async recordingCalendar(
     stationId: string,
     month: string,
-    signal?: AbortSignal,
+    options?: AbortSignal | RecordingOperationOptions,
   ): Promise<string[]> {
-    return (await this.deviceTransport()).recordings.calendar(stationId, month, signal);
+    return (await this.deviceTransport()).recordings.calendar(stationId, month, options);
   }
-  async recordingThumbnail(id: string, signal?: AbortSignal): Promise<Buffer> {
-    return (await this.deviceTransport()).recordings.thumbnail(id, signal);
+  async recordingThumbnail(
+    id: string,
+    options?: AbortSignal | RecordingOperationOptions,
+  ): Promise<Buffer> {
+    return (await this.deviceTransport()).recordings.thumbnail(id, options);
   }
-  async downloadRecording(id: string, signal?: AbortSignal) {
-    return (await this.deviceTransport()).recordings.download(id, signal);
+  async downloadRecording(id: string, options?: AbortSignal | RecordingOperationOptions) {
+    return (await this.deviceTransport()).recordings.download(id, options);
   }
   async snapshot(id: string, signal?: AbortSignal): Promise<Snapshot> {
     return (await this.deviceTransport()).snapshot(id, signal);

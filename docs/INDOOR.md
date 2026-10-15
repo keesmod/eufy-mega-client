@@ -208,6 +208,22 @@ The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
+On 2026-10-15 the same reporter's recording list failed for the standalone
+T8410 on firmware 2.3.2.4, which streams live video, with bridge
+0.8.38-beta.1 and client 0.30.0-beta.1. The bridge returned only
+`recording_unavailable`, so the cause is unknown, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
+Live video uses another command and says nothing about the database query
+`databaseQueryByDate` (10006). That query is verified only on a HomeBase 3 so
+far, and in the public analog
+[bropat/eufy-security-client#963](https://github.com/bropat/eufy-security-client/issues/963)
+a standalone E30 never answered it. Since 0.30.1 the
+[recording operation observation](API.md#recording-operation-observation-0301)
+reports the device's command result for the query, its answer or the lack of
+one, database replies the session could not dispatch, and the classes of
+returned rows, including rows with a cipher ID, whose download a standalone
+owner refuses. Recording playback on the standalone route is unconfirmed.
+
 ## Indoor Cam Pan&Tilt 2K T8410C, 0.29.2
 
 The [2026-10-09 report on ha-eufy-cam#149][149-report] lists two cameras with

@@ -115,13 +115,20 @@ export class DeviceTransport extends EventEmitter {
   private readonly lifetime = new AbortController();
   readonly recordings = new RecordingAccess(
     {
-      station: async (id, signal) => {
-        await this.connect(id, signal);
+      station: async (id, signal, onProgress, onLookup) => {
+        await this.connect(id, signal, onProgress, onLookup);
         return this.station(id);
       },
       camera: (id) => this.camera(id, 'recordings'),
       knownCamera: (id, station) => this.ownerOf(this.raw.get(id)) === station,
       standalone: (id) => this.standalone.has(id),
+      connected: (id) => {
+        try {
+          return this.state(id).connected;
+        } catch {
+          return false;
+        }
+      },
       busy: (id) =>
         this.lives.has(id) || this.starting.has(id) || this.commands.has(id) || this.extraBusy(id),
     },

@@ -322,6 +322,98 @@ export interface Recording {
   bytes: number;
   thumbnail: boolean;
 }
+export type RecordingOperation = 'list' | 'calendar' | 'thumbnail' | 'download';
+/**
+ * `admission`: input, reference and busy checks before any connection.
+ * `connect`: the owner's connection was requested. `query`: the request was
+ * issued on the owner's session and awaits its answer. `validate`: an answer
+ * arrived and is checked. `transfer`: a download was started on the session.
+ */
+export type RecordingOperationStage = 'admission' | 'connect' | 'query' | 'validate' | 'transfer';
+/** One database query of a recording operation. No identifiers, every number an integer. */
+export interface RecordingQueryPage {
+  /** Rows requested: 100, 500, 2000 or 10000 for a list, 0 for a calendar. */
+  limit: number;
+  /** Milliseconds from sending this page until its answer, or until the operation ended without one, 0 to 3600000. */
+  elapsedMs: number;
+  /** Whether an answer event for this page arrived. */
+  answered: boolean;
+  /**
+   * Return code of the command result for this query command, clamped to
+   * -999999..999999. Results of commands that were still pending when the
+   * operation began are not counted. `null` without one.
+   */
+  ackCode: number | null;
+  /** The answer's database result code (mIntRet), clamped to -999999..999999. `null` without one. */
+  resultCode: number | null;
+  /** Rows in the answer, 0 to 10000. `null` without an answer. */
+  rows: number | null;
+}
+/**
+ * Counts over the rows of the latest answered page of a list, each 0 to 10000.
+ * `own`, `otherDevice` and `stationMismatch` divide the rows. `invalidTime`,
+ * `otherDay` and `cipherId` count across them.
+ */
+export interface RecordingRowClasses {
+  /** A camera of this owner, with the owner's station ID and a valid storage path. */
+  own: number;
+  /** A device that is not a known camera of this owner. */
+  otherDevice: number;
+  /** A camera of this owner with another station ID or an invalid storage path. */
+  stationMismatch: number;
+  /** A start or end time that is not a valid date. */
+  invalidTime: number;
+  /** A valid start time on another day than the requested one. */
+  otherDay: number;
+  /** A row with a cipher ID field of any value, `null` and 0 included. */
+  cipherId: number;
+}
+/**
+ * What one recording operation saw, reported once when it resolves, fails or is
+ * cancelled. No serial, DID, path, name or address, and every number is a
+ * bounded integer. See docs/API.md, recording operation observation.
+ */
+export interface RecordingObservation {
+  operation: RecordingOperation;
+  /** `standalone` for an experimental standalone owner, else `station`. */
+  owner: 'standalone' | 'station';
+  /** Whether the owner's session was connected when the operation started. */
+  sessionOpen: boolean;
+  /** The last stage reached. */
+  stage: RecordingOperationStage;
+  /** The `EufyError` code on failure, `unexpected_error` for any other error, `null` on success. */
+  code: string | null;
+  /** The error's numeric `remoteCode`, clamped to -999999..999999, else `null`. */
+  remoteCode: number | null;
+  /** Milliseconds since the operation started, 0 to 3600000. */
+  elapsedMs: number;
+  /** A list: one entry per page sent, at most 4. A calendar: one entry with limit 0. Otherwise empty. */
+  pages: RecordingQueryPage[];
+  /** Database replies the owner's session could not dispatch during this operation, 0 to 99. */
+  unhandledReplies: number;
+  /** Why the latest of those was not dispatched, `null` without one. */
+  unhandledReason: 'unknown_cmd' | 'parse_error' | null;
+  /** The numeric mIntRet of the latest of those, clamped to -999999..999999, else `null`. */
+  unhandledResultCode: number | null;
+  /** A list only, once an answer with a row array arrived. Otherwise `null`. */
+  rowClasses: RecordingRowClasses | null;
+}
+export interface RecordingOperationOptions {
+  signal?: AbortSignal;
+  /**
+   * Called synchronously exactly once, before the operation's promise settles,
+   * on success and on failure, once the call reaches the client's device
+   * transport. A call that fails before that, such as with
+   * `authentication_required` or `client_closed`, reports nothing. Errors it
+   * throws are ignored, and it cannot change the operation. See docs/API.md,
+   * recording operation observation.
+   */
+  onObservation?: (observation: RecordingObservation) => void;
+  /** Forwarded to the owner's connection when the operation has to connect. See StationConnectOptions. */
+  onProgress?: (progress: StationConnectionProgress) => void;
+  /** Forwarded to the owner's connection when the operation has to connect. See StationConnectOptions. */
+  onLookup?: (observation: StationLookupObservation) => void;
+}
 export type DownloadResult =
   | { complete: true; bytes: number }
   | {

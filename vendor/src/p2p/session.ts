@@ -122,6 +122,7 @@ import {
   P2PDatabaseQueryLocalRecordCropPictureInfo,
   CustomDataType,
   LookupObservation,
+  DatabaseUnhandled,
 } from "./interfaces";
 import { DskKeyResponse, ResultResponse, StationListResponse } from "../http/models";
 import { CloudProvider } from "../http/api";
@@ -2723,6 +2724,36 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     }
   }
 
+  /**
+   * Client addition: the custom data of every sent command with this command name
+   * whose result the session has not reported yet. Each is reported later as at
+   * most one "command" event carrying the same object, with the device's result or
+   * the session's own timeout. A close clears them without one.
+   */
+  public pendingCommandData(name: string): CustomData[] {
+    const pending: CustomData[] = [];
+    for (const state of this.messageStates.values())
+      if (state.customData !== undefined && state.customData.command?.name === name) pending.push(state.customData);
+    return pending;
+  }
+
+  /**
+   * eufy-mega-client: reports a CMD_DATABASE reply that no handler took, with the
+   * reply's inner command and result code when they are safe integers. Numbers
+   * only, never payload text. A listener's error never alters reply handling.
+   */
+  private emitDatabaseUnhandled(reply: unknown, reason: DatabaseUnhandled["reason"]): void {
+    const field = (name: "cmd" | "mIntRet"): number | null => {
+      const value = typeof reply === "object" && reply !== null ? (reply as Record<string, unknown>)[name] : undefined;
+      return typeof value === "number" && Number.isSafeInteger(value) ? value : null;
+    };
+    try {
+      this.emit("database unhandled", { innerCmd: field("cmd"), resultCode: field("mIntRet"), reason });
+    } catch {
+      // Observation only.
+    }
+  }
+
   private handleDataControl(message: P2PDataMessage): void {
     try {
       let data: Buffer = message.data;
@@ -4003,6 +4034,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           }
           break;
         case CommandType.CMD_DATABASE:
+          // eufy-mega-client: the parsed reply, read only for the numbers of a
+          // 'database unhandled' event when the reply cannot be dispatched.
+          let databaseReply: unknown = undefined;
           try {
             const str = getNullTerminatedString(data, "utf8");
             rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - CMD_DATABASE :`, {
@@ -4010,6 +4044,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               payload: str,
             });
             const databaseResponse = parseJSON(str, rootP2PLogger) as P2PDatabaseResponse;
+            databaseReply = databaseResponse;
             switch (databaseResponse.cmd) {
               case CommandType.CMD_DATABASE_QUERY_LATEST_INFO: {
                 let data: Array<P2PDatabaseQueryLatestInfoResponse> = [];
@@ -4197,10 +4232,12 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
                     databaseResponse: databaseResponse,
                   }
                 );
+                this.emitDatabaseUnhandled(databaseResponse, "unknown_cmd");
                 break;
             }
           } catch (err) {
             const error = ensureError(err);
+            this.emitDatabaseUnhandled(databaseReply, "parse_error");
             rootP2PLogger.error(`Handle DATA ${P2PDataType[message.dataType]} - CMD_DATABASE - Error`, {
               error: getError(error),
               stationSN: this.rawStation.station_sn,

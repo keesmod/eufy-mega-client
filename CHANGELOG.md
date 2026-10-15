@@ -1,5 +1,71 @@
 # Changelog
 
+## 0.30.1 - Unreleased
+
+### Recording operation observation
+
+- `listRecordings`, `recordingCalendar`, `recordingThumbnail` and
+  `downloadRecording` accept `{ signal?, onObservation?, onProgress?, onLookup? }`
+  in place of the signal. `onObservation` is called once per operation, before
+  its promise settles, on success, failure, refusal and cancellation: the
+  operation, whether the owner is an experimental standalone camera, whether its
+  session was open, the last stage reached, the error code and `remoteCode`, and
+  the elapsed time. A call that fails before the client's device transport is
+  ready, such as with `authentication_required` or `client_closed`, reports
+  nothing. For each query page it reports the rows requested, whether
+  the answer arrived, the return code of the session's command result for that
+  query, the answer's database result code and its row count. It also counts the
+  database replies the session could not dispatch, with the reason and result
+  code of the latest, and for a list the rows of the latest answer by class:
+  own, another device, a station or path mismatch, an invalid time, another day
+  and a cipher ID of any value. `onProgress` and `onLookup` report the owner's
+  connection when the operation has to connect, as with `connectStation`. See
+  the
+  [recording operation observation](docs/API.md#recording-operation-observation-0301).
+- This is for
+  [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152). On
+  2026-10-15 "Show recordings" failed for a standalone T8410 on firmware
+  2.3.2.4, one of two T8410s that stream live video, with bridge 0.8.38-beta.1 and
+  client 0.30.0-beta.1. The bridge reported only `recording_unavailable`. A
+  silent camera, a refusal in its command result, a reply without an inner
+  command such as `{"mIntRet": -6006}` and an unparsable reply all ended the
+  same way, as `device_request_timeout` after 15 seconds, because the client
+  waited only for the answer event and the vendored session dropped database
+  replies it could not dispatch without a trace. The query 10006 is verified
+  only on a HomeBase 3, and in
+  [bropat/eufy-security-client#963](https://github.com/bropat/eufy-security-client/issues/963)
+  a standalone E30 never answered it. The cause on the T8410 is unknown.
+- Vendored P2P session: a CMD_DATABASE reply with an inner command no handler
+  takes, or one whose parsing fails, now emits `database unhandled` with its
+  inner command and result code when they are integers, and the reason
+  `unknown_cmd` or `parse_error`. It carries numbers only, never payload text.
+  The Station forwards it. The reply is still dropped as before. The session
+  and Station also list, read-only, the sent commands of one name whose result
+  is still pending.
+- The observation carries no serial, DID, path, name or address, and every
+  number is a bounded integer. A command result counts for a page only when its
+  command name is that of the query, so the results of latest-info refreshes on
+  a HomeBase session are not attributed to a list. Results of commands that
+  were still pending when the operation began, such as a late result of an
+  earlier query on the same open session, are not counted either. Without
+  `onObservation` the
+  operation attaches no listener.
+- Observation only. Query payloads, page sizes, the 15-second page and
+  20-second connect bounds, the 60-second operation bound, error codes and the
+  session close after a failed or cancelled operation are unchanged, with and
+  without the new options. A HomeBase 3 test asserts the byte-identical 10006
+  payload and identical codes. The tests drive a real vendor Station for a
+  synthetic standalone T8410 and a HomeBase 3 owner and feed the answers
+  through the session's own parser. This is software coverage. Whether a
+  standalone T8410 answers the query is not known.
+
+Upgrade: additive and optional. The four recording calls take the new options
+object in place of the signal, a plain signal keeps working, and consumers that
+pass neither see no change. The types `RecordingOperation`,
+`RecordingOperationStage`, `RecordingQueryPage`, `RecordingRowClasses`,
+`RecordingObservation` and `RecordingOperationOptions` are exported. Rollback:
+0.30.0, and pass the signal alone again.
+
 ## 0.30.0 - 2026-10-15
 
 ### Station lookup observation
