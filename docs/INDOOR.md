@@ -199,8 +199,9 @@ Without the option a standalone T8410 keeps `standalone_transport_unverified`.
 Under a HomeBase it keeps its H3 relationship, media and live branch, also with
 the option. On 2026-10-13 the reporter of ha-eufy-cam#152 reported live video
 working on a standalone T8410 with firmware 2.3.2.4. The one with firmware
-2.3.1.6 first ended its connection at the lookup without a reply, and on
-2026-10-15 it streamed live video too, as recorded in the
+2.3.1.6 first ended its connection at the lookup without a reply from that
+camera, and on 2026-10-15 it was reported streaming live video too, as recorded
+in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
 The physical result belongs
 to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
