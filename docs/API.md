@@ -412,14 +412,14 @@ attaches no listener.
 
 Each entry of `pages`:
 
-| Field        | Meaning                                                                                                                                                                                                   |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | Rows requested: 100, 500, 2000 or 10000, and 0 for a calendar                                                                                                                                             |
-| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                                                                                          |
-| `answered`   | Whether the answer for this page arrived                                                                                                                                                                  |
-| `ackCode`    | The return code of the device's command result for this query, matched by the query's command name and in send order. The session's own result timeouts -133 and -134 are not counted. `null` without one |
-| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                                                                                     |
-| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                                                                                  |
+| Field        | Meaning                                                                                                                                                                                                               |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | Rows requested: 100, 500, 2000 or 10000, and 0 for a calendar                                                                                                                                                         |
+| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                                                                                                      |
+| `answered`   | Whether the answer for this page arrived                                                                                                                                                                              |
+| `ackCode`    | The return code of the command result for this query, matched by the query's command name and in send order. Results of commands that were still pending when the operation began are not counted. `null` without one |
+| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                                                                                                 |
+| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                                                                                              |
 
 `rowClasses` counts the rows the way the list checks them. `own`,
 `otherDevice` and `stationMismatch` divide the rows. The other three count
@@ -442,14 +442,17 @@ payload.
 
 Some readings. A list that ends with `device_request_timeout` at `query` and
 `answered: false` received no usable answer within 15 seconds. With
-`ackCode: null` and no unhandled reply the device stayed silent. A non-zero
-`ackCode` is a refusal in the device's command result. `unknown_cmd` with an
-`unhandledResultCode` such as -6006 is an answer without an inner command, and
-`parse_error` an answer the session could not parse. The session's own command
-result timeouts, -133 and -134, never appear as an `ackCode`, so a non-null
-`ackCode` comes from a device. A device result that arrives after its own
-operation ended can still be counted for the next operation on the same open
-session. `history_rejected` at
+`ackCode: null` and no unhandled reply no command result arrived for the query
+within the page bound, so the device stayed silent. A non-zero `ackCode` is a
+refusal. -133 is the session's own result: it reports a device that kept
+answering 503 (failed to request) until the session gave up, or 30 seconds
+after a send without a command result, which is longer than a page bound.
+`unknown_cmd` with an `unhandledResultCode` such as -6006 is an answer without
+an inner command, and `parse_error` an answer the session could not parse.
+Results of commands that were still pending when the operation began, such as
+a late result of an earlier query on the same open session, are not counted.
+Within one list, a page without a command result lets the next page's result
+count for it, because results are matched in send order. `history_rejected` at
 `validate` carries the database result in `remoteCode` and `resultCode`.
 `device_disconnected` at `query` is a session that closed while the query
 waited. None of these values proves a cause on its own.

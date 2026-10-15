@@ -2729,6 +2729,19 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
    * reply's inner command and result code when they are safe integers. Numbers
    * only, never payload text. A listener's error never alters reply handling.
    */
+  /**
+   * Client addition: the custom data of every sent command with this command name
+   * whose result the session has not reported yet. Each is reported later as one
+   * "command" event carrying the same object, with the device's result or the
+   * session's own timeout.
+   */
+  public pendingCommandData(name: string): CustomData[] {
+    const pending: CustomData[] = [];
+    for (const state of this.messageStates.values())
+      if (state.customData !== undefined && state.customData.command?.name === name) pending.push(state.customData);
+    return pending;
+  }
+
   private emitDatabaseUnhandled(reply: unknown, reason: DatabaseUnhandled["reason"]): void {
     const field = (name: "cmd" | "mIntRet"): number | null => {
       const value = typeof reply === "object" && reply !== null ? (reply as Record<string, unknown>)[name] : undefined;

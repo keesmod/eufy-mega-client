@@ -1052,3 +1052,56 @@ test('a session result timeout of an earlier list never counts as the next ackCo
     await r.done();
   }
 });
+
+test('a device that keeps answering 503 reports the session result -133 as its ackCode', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const r = await rig('standalone');
+  const observations = [];
+  // The session resends a command the device answers with 503 (failed to request)
+  // and gives up with its own -133 once its retries are used up.
+  r.respond((entry) => {
+    const seqNo = 7000;
+    r.session.messageStates.set(seqNo, {
+      sequence: seqNo,
+      commandType: entry.command.commandType,
+      nestedCommandType: entry.json.cmd,
+      channel: 0,
+      data: Buffer.alloc(4),
+      retries: 10,
+      acknowledged: true,
+      customData: entry.customData,
+    });
+    const data = Buffer.alloc(4);
+    data.writeInt32LE(503);
+    r.session.handleData({
+      dataType: P2PDataType.DATA,
+      type: 1,
+      seqNo,
+      commandId: entry.command.commandType,
+      bytesToRead: 4,
+      signCode: 0,
+      channel: 0,
+      data,
+    });
+  });
+  try {
+    const outcome = settled(
+      r.transport.recordings.list(r.owner, DAY, undefined, {
+        onObservation: (observation) => observations.push(observation),
+      }),
+    );
+    await turns();
+    t.mock.timers.tick(15000);
+    assert.equal((await outcome).code, 'device_request_timeout');
+    const observation = only(observations);
+    assert.equal(observation.stage, 'query');
+    assert.deepEqual(
+      observation.pages.map(({ answered, ackCode }) => [answered, ackCode]),
+      [[false, -133]],
+    );
+    r.released();
+  } finally {
+    t.mock.timers.reset();
+    await r.done();
+  }
+});

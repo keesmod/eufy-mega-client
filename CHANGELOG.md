@@ -39,13 +39,16 @@
   takes, or one whose parsing fails, now emits `database unhandled` with its
   inner command and result code when they are integers, and the reason
   `unknown_cmd` or `parse_error`. It carries numbers only, never payload text.
-  The Station forwards it. The reply is still dropped as before.
+  The Station forwards it. The reply is still dropped as before. The session
+  and Station also list, read-only, the sent commands of one name whose result
+  is still pending.
 - The observation carries no serial, DID, path, name or address, and every
   number is a bounded integer. A command result counts for a page only when its
   command name is that of the query, so the results of latest-info refreshes on
-  a HomeBase session are not attributed to a list. The session's own result
-  timeouts (-133 and -134) never count, because they can belong to an earlier
-  query on the same open session. Without `onObservation` the
+  a HomeBase session are not attributed to a list. Results of commands that
+  were still pending when the operation began, such as a late result of an
+  earlier query on the same open session, are not counted either. Without
+  `onObservation` the
   operation attaches no listener.
 - Observation only. Query payloads, page sizes, the 15-second page and
   20-second connect bounds, the 60-second operation bound, error codes and the

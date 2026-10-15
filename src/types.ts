@@ -339,8 +339,9 @@ export interface RecordingQueryPage {
   /** Whether an answer event for this page arrived. */
   answered: boolean;
   /**
-   * Return code of the session's command result for this query command, clamped
-   * to -999999..999999. `null` without one.
+   * Return code of the command result for this query command, clamped to
+   * -999999..999999. Results of commands that were still pending when the
+   * operation began are not counted. `null` without one.
    */
   ackCode: number | null;
   /** The answer's database result code (mIntRet), clamped to -999999..999999. `null` without one. */

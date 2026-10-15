@@ -1037,6 +1037,11 @@ export class Station extends TypedEmitter<StationEvents> {
     return this.p2pSession.getLookupObservation();
   }
 
+  /** Client addition: see P2PClientProtocol.pendingCommandData. */
+  public pendingCommandData(name: string): CustomData[] {
+    return this.p2pSession.pendingCommandData(name);
+  }
+
   public async close(): Promise<void> {
     this.terminating = true;
     if (this.reconnectTimeout) { clearTimeout(this.reconnectTimeout); this.reconnectTimeout = undefined; }
