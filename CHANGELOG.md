@@ -24,7 +24,7 @@
   sent nothing could not be told apart from one whose reply was not accepted.
   With this observation a failed run showed only replies from other devices in
   the account. On 2026-10-15 that camera was reported streaming. Why no reply
-  from it arrived before is not known.
+  from it arrived in that run is not known.
 - The observation carries no DID, address, port, serial or interface name, and
   every count is bounded. Before an attempt starts its session, the client hands
   the P2P session the DIDs of the inventory's other devices and stations. The

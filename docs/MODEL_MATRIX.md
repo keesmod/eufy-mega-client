@@ -389,8 +389,8 @@ inventory address, and that address was on the bridge's subnet and not shared.
 So the broadcasts reached other devices in the account, and no reply from B
 reached the bridge in that run, neither to its direct requests nor to the
 broadcasts. The beta changes no lookup target, timing, retry or DID check, so
-B's later connection is not a beta fix. Why no reply from B arrived before is
-unknown. The type 31 table row covers an H3 owner only and is unchanged.
+B's later connection is not a beta fix. Why no reply from B arrived in that run
+is unknown. The type 31 table row covers an H3 owner only and is unchanged.
 
 [T8410-result]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6140901994
 [T8410-lookup]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6152282566
