@@ -1042,6 +1042,18 @@ test('a session result timeout of an earlier list never counts, the result of th
     assert.equal(one.returned, 1);
     assert.equal(only(first).pages[0].ackCode, null);
     t.mock.timers.tick(20000);
+    // Another earlier query of the same name stays pending without any result, so
+    // the second list's own result must count while earlier commands still wait.
+    r.session.messageStates.set(4999, {
+      sequence: 4999,
+      commandType: CommandType.CMD_SET_PAYLOAD,
+      nestedCommandType: CommandType.CMD_DATABASE,
+      channel: 0,
+      data: Buffer.alloc(0),
+      retries: 0,
+      acknowledged: true,
+      customData: { command: { name: CommandName.StationDatabaseQueryByDate } },
+    });
     const second = [];
     r.respond((entry) => {
       const seqNo = transportAck(entry);
