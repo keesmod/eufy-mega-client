@@ -346,6 +346,10 @@ the station. An old stream handle cannot stop a newer stream.
 - `downloadRecording(recordingId, signal?)` returns a `RecordingDownload` with
   metadata, raw video/audio streams, `completed` and `cancel()`.
 
+Each of the four also accepts `{ signal?, onObservation?, onProgress?, onLookup? }`
+in place of the signal, to [observe the operation](#recording-operation-observation-0301)
+and its connection.
+
 Recording IDs are opaque, bound to this client and expire after 15 minutes.
 Refresh the list when they expire. Device paths and cipher identifiers are never
 public API inputs. Queries widen beyond 100 rows through 500, 2,000 and 10,000;
@@ -357,6 +361,99 @@ the HomeBase's finish message and drained source streams. Transfers are bounded
 to 32 MiB and 40 seconds, with a further five seconds for cancel acknowledgement.
 Failure results include a reason and `stopConfirmed`. Keep a failed transfer out
 of a playback cache. `cancel()` is idempotent and does not retry the download.
+
+A recording operation that fails or is cancelled after it reached the owner's
+connection closes the owner's session, as before. So does a download whose
+transfer ends incomplete. On a HomeBase that session is shared by all its
+cameras, and the next operation connects again.
+
+### Recording operation observation, 0.30.1
+
+`listRecordings`, `recordingCalendar`, `recordingThumbnail` and
+`downloadRecording` accept `RecordingOperationOptions` in place of the signal:
+`{ signal?, onObservation?, onProgress?, onLookup? }`. A plain signal works as
+before. When the operation has to connect the owner, `onProgress` and `onLookup`
+are passed to that connection and report its
+[stages](#station-connection-stages-0260) and its
+[lookup observation](#station-lookup-observation-0300) as with
+`connectStation`. An owner that is already connected reports neither.
+
+`onObservation` is called synchronously exactly once per operation, before its
+promise settles: on success, on failure, on a refusal before any connection and
+on cancellation. Errors it throws are ignored, and it cannot change the
+operation. A call that fails before the client's device transport is ready,
+such as with `authentication_required` or `client_closed`, reports nothing. A
+download reports the start of its transfer when the `RecordingDownload` is
+returned, not its `completed` result. Without `onObservation` the operation
+attaches no listener.
+
+| Field                 | Meaning                                                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `operation`           | `list`, `calendar`, `thumbnail` or `download`                                                                                                                                        |
+| `owner`               | `standalone` for an [experimental standalone](#experimental-standalone-cameras) owner, else `station`. Also `station` for an unknown or expired recording ID, whose owner is unknown |
+| `sessionOpen`         | Whether the owner's session was connected when the operation started. `false` for an unknown or expired recording ID                                                                 |
+| `stage`               | The last stage reached, see below                                                                                                                                                    |
+| `code`                | The `EufyError` code on failure, `unexpected_error` for any other error, `null` on success                                                                                           |
+| `remoteCode`          | The error's numeric `remoteCode`, such as the database result of `history_rejected`, else `null`                                                                                     |
+| `elapsedMs`           | Milliseconds since the operation started                                                                                                                                             |
+| `pages`               | A list: one entry per query page sent, at most 4. A calendar: one entry with `limit: 0`. A thumbnail or download: empty                                                              |
+| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99                                                                                                |
+| `unhandledReason`     | Of the latest such reply: `unknown_cmd` when it has no inner command the session handles, `parse_error` when the session could not parse it. `null` without one                      |
+| `unhandledResultCode` | The database result code (mIntRet) of the latest such reply, `null` when it has none                                                                                                 |
+| `rowClasses`          | A list only: counts over the rows of the latest answered page, once an answer with a row array arrived. Otherwise `null`                                                             |
+
+| Stage       | Meaning                                                                                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admission` | Input, recording reference and busy checks before any connection. `station_busy`, invalid input, an expired ID and a standalone `recording_cipher_unavailable` end here |
+| `connect`   | The owner's connection was requested. `connection_busy` and a failed connection end here                                                                                |
+| `query`     | The query or image request was sent on the owner's session and no answer arrived                                                                                        |
+| `validate`  | An answer arrived and was checked. `history_rejected`, `calendar_rejected`, the completeness codes and `invalid_recording` end here                                     |
+| `transfer`  | A download was started on the owner's session                                                                                                                           |
+
+Each entry of `pages`:
+
+| Field        | Meaning                                                                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | Rows requested: 100, 500, 2000 or 10000, and 0 for a calendar                                                                             |
+| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                          |
+| `answered`   | Whether the answer for this page arrived                                                                                                  |
+| `ackCode`    | The return code of the session's command result for this query, matched by the query's command name and in send order. `null` without one |
+| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                     |
+| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                  |
+
+`rowClasses` counts the rows the way the list checks them. `own`,
+`otherDevice` and `stationMismatch` divide the rows. The other three count
+across them.
+
+| Field             | Meaning                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `own`             | A camera of this owner, with the owner's station ID and a valid storage path                                                       |
+| `otherDevice`     | A device that is not a camera of this owner. The list skips it                                                                     |
+| `stationMismatch` | A camera of this owner with another station ID or an invalid storage path. The list fails with `invalid_recording`                 |
+| `invalidTime`     | A start or end time that is not a valid date. For a camera of this owner the list fails with `invalid_recording_date`              |
+| `otherDay`        | A valid start time on another day than the requested one. The list skips it                                                        |
+| `cipherId`        | A row with a cipher ID of any value, also 0 or `null`. A standalone owner refuses its download with `recording_cipher_unavailable` |
+
+Every number is an integer. Times are bounded to one hour, counts of rows to
+10000, and codes are clamped to -999999 to 999999. The observation carries no
+serial, DID, path, name or address. The vendored P2P session reports a database
+reply it cannot dispatch with its inner command and result code only, never the
+payload.
+
+Some readings. A list that ends with `device_request_timeout` at `query` and
+`answered: false` received no usable answer within 15 seconds. With
+`ackCode: null` and no unhandled reply the device stayed silent. A non-zero
+`ackCode` is a refusal in the device's command result. `unknown_cmd` with an
+`unhandledResultCode` such as -6006 is an answer without an inner command, and
+`parse_error` an answer the session could not parse. The session's own command
+result timeouts, -133 and -134, take longer than the 15-second page bound, so
+an `ackCode` within it normally comes from the device. `history_rejected` at
+`validate` carries the database result in `remoteCode` and `resultCode`.
+`device_disconnected` at `query` is a session that closed while the query
+waited. None of these values proves a cause on its own.
+
+Observation only. Query payloads, page sizes, timeouts, error codes and the
+session close after a failure are the same with and without these options.
 
 ## Events and Guard Mode
 

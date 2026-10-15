@@ -11,6 +11,7 @@ import {
   DatabaseQueryByDate,
   DatabaseQueryLatestInfo,
   DatabaseQueryLocal,
+  DatabaseUnhandled,
   StreamMetadata,
 } from "../p2p/interfaces";
 import { CommandResult, StorageInfoBodyHB3 } from "../p2p/models";
@@ -276,6 +277,7 @@ export interface StationEvents {
     data: Array<DatabaseCountByDate>
   ) => void;
   "database delete": (station: Station, returnCode: DatabaseReturnCode, failedIds: Array<unknown>) => void;
+  "database unhandled": (station: Station, info: DatabaseUnhandled) => void;
   "sensor status": (station: Station, channel: number, status: number) => void;
   "garage door status": (station: Station, channel: number, doorId: number, status: number) => void;
   "storage info hb3": (station: Station, channel: number, storageInfo: StorageInfoBodyHB3) => void;

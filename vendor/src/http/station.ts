@@ -291,6 +291,7 @@ export class Station extends TypedEmitter<StationEvents> {
     this.p2pSession.on("database query by date", (returnCode, data) => this.onDatabaseQueryByDate(returnCode, data));
     this.p2pSession.on("database count by date", (returnCode, data) => this.onDatabaseCountByDate(returnCode, data));
     this.p2pSession.on("database delete", (returnCode, failedIds) => this.onDatabaseDelete(returnCode, failedIds));
+    this.p2pSession.on("database unhandled", (info) => this.emit("database unhandled", this, info));
     this.p2pSession.on("sensor status", (channel: number, status: number) => this.onSensorStatus(channel, status));
     this.p2pSession.on("garage door status", (channel: number, doorId: number, status: number) =>
       this.onGarageDoorStatus(channel, doorId, status)

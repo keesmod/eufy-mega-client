@@ -71,6 +71,7 @@ export interface P2PClientProtocolEvents {
   "database query by date": (returnCode: DatabaseReturnCode, data: Array<DatabaseQueryByDate>) => void;
   "database count by date": (returnCode: DatabaseReturnCode, data: Array<DatabaseCountByDate>) => void;
   "database delete": (returnCode: DatabaseReturnCode, failedIds: Array<unknown>) => void;
+  "database unhandled": (info: DatabaseUnhandled) => void;
   "sensor status": (channel: number, status: number) => void;
   "garage door status": (channel: number, doorId: number, status: number) => void;
   "storage info hb3": (channel: number, storageInfo: StorageInfoBodyHB3) => void;
@@ -424,6 +425,17 @@ export interface DatabaseQueryLocal {
   device_sn?: string;
   history: HistoryRecordInfo;
   picture: Array<CropPictureInfo>;
+}
+
+/**
+ * eufy-mega-client: a CMD_DATABASE reply the session could not dispatch. Numbers
+ * only, never payload text. `innerCmd` and `resultCode` are the reply's `cmd` and
+ * `mIntRet` when they are safe integers, else null.
+ */
+export interface DatabaseUnhandled {
+  innerCmd: number | null;
+  resultCode: number | null;
+  reason: "unknown_cmd" | "parse_error";
 }
 
 export interface DatabaseQueryByDate {
