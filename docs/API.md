@@ -1007,9 +1007,14 @@ No standalone result on this route has been independently reproduced. On
 2026-10-13 a T8410 on firmware 2.3.2.4 was reported with working live video, and
 on 2026-10-15 one on firmware 2.3.1.6, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
-A standalone T8410C has no reported result on this route yet, as recorded in the
-[model matrix](MODEL_MATRIX.md#reported-standalone-t8410c-and-experimental-route-0300).
-Its firmware is on the 3.3.x line, so the T8410 results do not transfer to it.
+On 2026-10-16 a standalone T8410C on firmware 3.3.4.4 was
+[reported](https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6208097780)
+with working live video and snapshot. Its firmware is on the 3.3.x line, so the
+T8410 results do not transfer to it. In the same report no recording list worked
+on this route. Both T8410 cameras acknowledged the query with `ackCode: 0` and
+never answered it, and the T8410C, which has no microSD card, rejected it with
+`history_rejected` and database result -1100, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8410-and-t8410c-results-2026-10-16).
 A failure is still useful evidence for the next step, not a regression. The
 stage a failed connection reached says whether the camera answered the lookup
 with its own DID, completed the session handshake, or opened the session without

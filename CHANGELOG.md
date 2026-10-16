@@ -34,7 +34,15 @@
   replies it could not dispatch without a trace. The query 10006 is verified
   only on a HomeBase 3, and in
   [bropat/eufy-security-client#963](https://github.com/bropat/eufy-security-client/issues/963)
-  a standalone E30 never answered it. The cause on the T8410 is unknown.
+  a standalone E30 never answered it. The cause on the T8410 was unknown. With
+  0.30.1-beta.1 on 2026-10-16 both standalone T8410 cameras, on firmware 2.3.2.4
+  and 2.3.1.6, were
+  [reported](https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6208097780)
+  acknowledging the query with command result 0 and never answering it, and a
+  standalone T8410C without a microSD card rejecting it with the database
+  result -1100. Recording playback on the standalone T8410 route therefore does
+  not work with the current request, and standalone recordings move to a
+  follow-up issue.
 - Vendored P2P session: a CMD_DATABASE reply with an inner command no handler
   takes, or one whose parsing fails, now emits `database unhandled` with its
   inner command and result code when they are integers, and the reason
@@ -56,8 +64,8 @@
   without the new options. A HomeBase 3 test asserts the byte-identical 10006
   payload and identical codes. The tests drive a real vendor Station for a
   synthetic standalone T8410 and a HomeBase 3 owner and feed the answers
-  through the session's own parser. This is software coverage. Whether a
-  standalone T8410 answers the query is not known.
+  through the session's own parser. This is software coverage. The hardware
+  results reported on 2026-10-16 are in the ha-eufy-cam#152 entry above.
 
 Upgrade: additive and optional. The four recording calls take the new options
 object in place of the signal, a plain signal keeps working, and consumers that
