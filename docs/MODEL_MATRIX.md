@@ -612,11 +612,11 @@ T8410 and T8410C, with `{ available: false, status: 'unsupported', reason:
 [API.md](API.md#experimental-standalone-cameras). A thumbnail or download is
 refused at stage `admission` before any connection. Snapshot and live stay
 experimental. HomeBase owners, their payloads and code paths are unchanged, and
-no new device request is sent. The library list and calendar calls and the
-[recording operation observation](API.md#recording-operation-observation-0301)
-are unchanged, so a later probe can reuse them. This is a software decision on
-the reports above and the public sources below, not a new hardware result. The
-type 31 and 151 rows gain no cells.
+that decision sends no new device request. The library list and calendar calls
+and the [recording operation observation](API.md#recording-operation-observation-0301)
+are unchanged. The opt-in probe of candidate 1 below reuses the observation.
+This is a software decision on the reports above and the public sources below,
+not a new hardware result. The type 31 and 151 rows gain no cells.
 
 The candidates were ranked as follows. Each source is marked with its kind of
 claim: a reported hardware result, a hardware claim in code, an app declaration
@@ -651,7 +651,9 @@ camera.
      continuous footage is stored in `history_record_info`. A standalone owner
      also has no playback path, see below.
    - Verdict: the next request to probe, read-only and bounded to one page and
-     15 seconds, but not enough for list and play now.
+     15 seconds, but not enough for list and play now. Since 0.30.1-beta.3 the
+     client can send it, see the
+     [standalone recording probe](#standalone-recording-probe-ha-eufy-cam178).
 2. `CMD_DATABASE_COUNT_BY_DATE` 10008 through the existing calendar. Reported
    hardware result, public report only: [peakwell] got a day index from the
    standalone T86P2 whose dates ignored the requested range. A HomeBase 3
@@ -693,15 +695,45 @@ SoloCam S220 recording could not be decoded.
 
 Open: whether a standalone T8410 on firmware 2.3.x answers the app-shaped 10017
 at all, with an empty page, a database error such as -1100, -118 or -1008, or
-silence. That needs its own payload and a bounded opt-in trigger, and it is best
-run on a standalone camera with event recordings. On the current reporter's
-cameras it would be diagnostic only. A reply under another outer command, such
-as 1351, or as a DATA frame would not show in the observation. A dropped or
-unaligned 1306 CONTROL reply is ruled out, because it would count as an
-unhandled reply.
+silence. The probe below sends it. It is best run on a standalone camera with
+event recordings. On the current reporter's cameras it is diagnostic only. A
+reply under another outer command, such as 1351, or as a DATA frame would not
+show in the observation. A dropped or unaligned 1306 CONTROL reply is ruled out,
+because it would count as an unhandled reply.
+
+#### Standalone recording probe (ha-eufy-cam#178)
+
+For [ha-eufy-cam#178][178], client 0.30.1 adds `probeStandaloneRecordings`,
+first published in 0.30.1-beta.3. It sends candidate 1 once to an experimental standalone T84A1, T8410 or T8410C: command
+1350 with inner 1306 and 10017 on `history_record_info`, `mChannel` 0 and frame
+channel 0, at most 20 records of the host's local day, `start_time` `"0"`, no
+`device_info` and no `res_unzip`. The exact request, its bounds and its codes
+are in [API.md](API.md#standalone-recording-probe-0301). Only channel 0 is
+sent. The channel 255 of candidate 5 has HomeBase provenance only. The probe is
+read-only, creates no recording ID and leaves the recordings capability
+unavailable. HomeBase owners and their payloads are unchanged. A bridge sends
+it only on an explicit opt-in.
+
+Results are pending. No probe result has been reported for any model yet. Each
+model's result, a failure included, is recorded here with model, firmware,
+microSD and recording mode where known, bridge and client versions and the
+observation's code, stage, `ackCode`, `resultCode`, `rows`, `rowClasses` and
+unhandled replies. Readings for this matrix: an answer with database result 0
+shows that the model answers 10017 on this route, and `rows` with
+`rowClasses.own` above 0 shows that it lists records there. An empty page proves
+only the answer, not that no footage exists, because the probe asks for one day
+and nothing shows that continuous footage is stored in `history_record_info`.
+`history_rejected` carries the database result, for example -1100, which is
+[`ERROR_DB_NOT_READY`][DB-codes] by its vendored name. Silence with `ackCode` 0
+and no unhandled reply reads as for 10006 above: the camera accepts the request
+and does not answer it. A 10017 reply the session cannot parse counts as an
+unhandled reply with `parse_error`. None of these opens recordings for a model.
+That stays a separate decision, and a standalone owner still has no playback
+path.
 
 [standalone-results]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6208097780
 [175]: https://github.com/keesmod/ha-eufy-cam/issues/175
+[178]: https://github.com/keesmod/ha-eufy-cam/issues/178
 [DB-codes]: https://github.com/keesmod/eufy-mega-client/blob/497aed8a2ca40f3ff62727aea85ed2e0e1c92b75/vendor/src/p2p/types.ts#L1054-L1056
 [Record-commands]: https://github.com/keesmod/eufy-mega-client/blob/497aed8a2ca40f3ff62727aea85ed2e0e1c92b75/vendor/src/p2p/types.ts#L253-L259
 [peakwell]: https://github.com/peakwellnv/eufy-bridge/tree/4c2184930d4019203f21c61eb9b08746c236cc30

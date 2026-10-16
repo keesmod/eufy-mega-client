@@ -53,6 +53,9 @@ it fails. The event carries the reply's inner command and result code when they
 are integers and the reason, never payload text, and the Station forwards it.
 The reply is still dropped. The session and Station also list the custom data of
 sent commands of one name whose result is still pending, read-only.
+The Station also gains `databaseQueryLocalNewest`, a client-written builder for
+one read-only CMD_DATABASE_QUERY_LOCAL request for the newest 20 records of a
+day on channel 0, next to the unchanged upstream `databaseQueryLocal`.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

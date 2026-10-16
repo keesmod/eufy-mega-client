@@ -16,6 +16,7 @@ import {
   type Snapshot,
   type LiveStream,
   type LiveStartOptions,
+  type RecordingObservation,
   type RecordingOperationOptions,
   type StationConnectOptions,
   type StreamStop,
@@ -213,6 +214,20 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   }
   async downloadRecording(id: string, options?: AbortSignal | RecordingOperationOptions) {
     return (await this.deviceTransport()).recordings.download(id, options);
+  }
+  /**
+   * ha-eufy-cam#178, diagnostic only: sends one read-only 10017 request for the
+   * newest page of today's records to an experimental standalone camera and
+   * resolves with what it saw, for every outcome after admission. Any other ID
+   * fails with `operation_outside_hardware_scope` before any connection. It
+   * creates no recording ID and leaves the recordings capability unavailable.
+   * See docs/API.md, standalone recording probe.
+   */
+  async probeStandaloneRecordings(
+    id: string,
+    options?: Omit<RecordingOperationOptions, 'onObservation'>,
+  ): Promise<RecordingObservation> {
+    return (await this.deviceTransport()).recordings.probe(id, options);
   }
   async snapshot(id: string, signal?: AbortSignal): Promise<Snapshot> {
     return (await this.deviceTransport()).snapshot(id, signal);

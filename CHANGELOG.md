@@ -92,7 +92,8 @@
   unchanged. A consumer that ignores the capability and calls them on a
   standalone owner still sends 10006 or 10008 and gets the observation as
   before. HomeBase owners, their payloads, code paths and capabilities are
-  unchanged, no new device request is sent and the vendored code is unchanged.
+  unchanged. This change sends no new device request and leaves the vendored
+  code unchanged. The opt-in probe below is the only new request of 0.30.1.
 - The standalone tests assert the unavailable recordings for the T84A1, T8410
   and T8410C next to a HomeBase camera in the same transport that keeps them.
   The observation tests assert the standalone thumbnail and cipher-less download
@@ -100,18 +101,68 @@
   invalid thumbnail validation moves to a HomeBase 3 owner. The HomeBase 3 test
   of the byte-identical 10006 payload is unchanged. This is software coverage.
 
+### Standalone recording probe
+
+- For [ha-eufy-cam#178](https://github.com/keesmod/ha-eufy-cam/issues/178),
+  `probeStandaloneRecordings(id, { signal?, onProgress?, onLookup? })` sends one
+  read-only `CMD_DATABASE_QUERY_LOCAL` 10017 query on `history_record_info` to
+  an experimental standalone camera, the T84A1, T8410 or T8410C behind
+  `experimentalStandalone`, and resolves with a recording operation observation
+  with `operation: 'probe'`. It asks for the newest page of at most 20 records
+  of today, the process's local date, on `mChannel` 0 and frame channel 0, with
+  `start_time` `"0"` and without `device_info` or `res_unzip`. It is the
+  app-shaped candidate 1 in the
+  [model matrix](docs/MODEL_MATRIX.md#standalone-recordings-outcome-0301). See
+  the [standalone recording probe](docs/API.md#standalone-recording-probe-0301).
+- A HomeBase, a camera behind a HomeBase, an unknown ID and a standalone camera
+  without `experimentalStandalone` fail with `operation_outside_hardware_scope`
+  before any connection or request. After admission the promise resolves with
+  the observation for every outcome. One call sends exactly one request. The
+  busy check, the connection with `onProgress` and `onLookup`, the 15-second
+  answer bound and the 60-second operation bound are those of the other
+  recording operations. A failure closes the owner's session as before. An
+  answer keeps it open, also one with a non-zero database result, which is
+  reported as `history_rejected` with that result in `remoteCode`. A list closes
+  the session after `history_rejected`.
+- The observation counts the answer's records and their row classes, without
+  identifiers. It counts only unhandled database replies with inner command
+  10017 or without an inner command, so an unparsable reply to the latest-info
+  query 10013 that the Station sends at connect is not attributed to the probe.
+  The other operations count every unhandled reply as before.
+- The probe creates no recording ID and sends no 10006, 10008, image or
+  download request. The recordings capability of standalone cameras stays
+  unavailable with `standalone_recordings_unverified`.
+- Vendored Station: the client addition `databaseQueryLocalNewest` builds the
+  request. Like its siblings it throws `NotSupportedError` for a station whose
+  command set lacks the query, and the probe then reports
+  `device_request_failed` at stage `query` without a page. The vendored
+  `databaseQueryLocal` builder and the 10017 reply parser are unchanged.
+- HomeBase owners, their payloads, code paths and capabilities are unchanged.
+  The HomeBase 3 test of the byte-identical 10006 payload is unchanged. The new
+  tests drive a real vendor Station for a synthetic standalone T8410 and assert
+  the exact request and its key set, an empty page, rows by class, a non-zero
+  database result that keeps the session open, silence with ACK 0, a negative
+  ACK, an unparsable 10013 reply that is not counted, a failed connect with
+  progress and lookup, `station_busy`, cancellation, the `NotSupportedError`
+  path and the refusals before any request. This is software coverage. No probe
+  result has been reported on hardware yet.
+
 Upgrade: the observation is additive and optional. The four recording calls take
 the new options object in place of the signal, a plain signal keeps working, and
 consumers that pass neither see no change from it. The types
 `RecordingOperation`, `RecordingOperationStage`, `RecordingQueryPage`,
 `RecordingRowClasses`, `RecordingObservation` and `RecordingOperationOptions`
-are exported. With `experimentalStandalone` set, a standalone camera now reports
-recordings as unavailable with `standalone_recordings_unverified`, and its
-thumbnail and download fail with that code. A download of a record with a
-cipher ID fails with `recording_cipher_unavailable` first. HomeBase cameras see no change.
-Rollback: 0.30.0, and pass the signal alone again. That also restores the
-earlier recordings capability of standalone cameras, whose lists did not work on
-the reported cameras.
+are exported. `RecordingOperation` includes `'probe'`, so a consumer that
+handles every operation needs that case. `probeStandaloneRecordings` sends its
+request only when a consumer calls it. With `experimentalStandalone` set, a
+standalone camera now reports recordings as unavailable with
+`standalone_recordings_unverified`, and its thumbnail and download fail with
+that code. A download of a record with a cipher ID fails with
+`recording_cipher_unavailable` first. HomeBase cameras see no change.
+Rollback: 0.30.0, pass the signal alone again and remove calls to
+`probeStandaloneRecordings`. That also restores the earlier recordings
+capability of standalone cameras, whose lists did not work on the reported
+cameras.
 
 ## 0.30.0 - 2026-10-15
 

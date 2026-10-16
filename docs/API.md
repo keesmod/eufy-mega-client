@@ -389,18 +389,18 @@ attaches no listener.
 
 | Field                 | Meaning                                                                                                                                                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `operation`           | `list`, `calendar`, `thumbnail` or `download`                                                                                                                                                                                               |
+| `operation`           | `list`, `calendar`, `thumbnail`, `download` or `probe`, the [standalone recording probe](#standalone-recording-probe-0301)                                                                                                                  |
 | `owner`               | `standalone` for an [experimental standalone](#experimental-standalone-cameras) owner, whose recordings capability is unavailable, see below. Else `station`. Also `station` for an unknown or expired recording ID, whose owner is unknown |
 | `sessionOpen`         | Whether the owner's session was connected when the operation started. `false` for an unknown or expired recording ID                                                                                                                        |
 | `stage`               | The last stage reached, see below                                                                                                                                                                                                           |
 | `code`                | The `EufyError` code on failure, `unexpected_error` for any other error, `null` on success                                                                                                                                                  |
 | `remoteCode`          | The error's numeric `remoteCode`, such as the database result of `history_rejected`, else `null`                                                                                                                                            |
 | `elapsedMs`           | Milliseconds since the operation started                                                                                                                                                                                                    |
-| `pages`               | A list: one entry per query page sent, at most 4. A calendar: one entry with `limit: 0`. A thumbnail or download: empty                                                                                                                     |
-| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99                                                                                                                                                       |
+| `pages`               | A list: one entry per query page sent, at most 4. A calendar: one entry with `limit: 0`. A probe: one entry with `limit: 20`. A thumbnail or download: empty                                                                                |
+| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99. A probe counts only those with inner command 10017 or without an inner command                                                                       |
 | `unhandledReason`     | Of the latest such reply: `unknown_cmd` when it has no inner command the session handles, `parse_error` when the session could not parse it. `null` without one                                                                             |
 | `unhandledResultCode` | The database result code (mIntRet) of the latest such reply, `null` when it has none                                                                                                                                                        |
-| `rowClasses`          | A list only: counts over the rows of the latest answered page, once an answer with a row array arrived. Otherwise `null`                                                                                                                    |
+| `rowClasses`          | A list or probe: counts over the rows of the latest answered page, once an answer with a row array arrived. Otherwise `null`                                                                                                                |
 
 | Stage       | Meaning                                                                                                                                                                                                                   |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -414,7 +414,7 @@ Each entry of `pages`:
 
 | Field        | Meaning                                                                                                                                                                                                               |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `limit`      | Rows requested: 100, 500, 2000 or 10000, and 0 for a calendar                                                                                                                                                         |
+| `limit`      | Rows requested: 100, 500, 2000 or 10000 for a list, 0 for a calendar and 20 for a probe                                                                                                                               |
 | `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                                                                                                      |
 | `answered`   | Whether the answer for this page arrived                                                                                                                                                                              |
 | `ackCode`    | The return code of the command result for this query, matched by the query's command name and in send order. Results of commands that were still pending when the operation began are not counted. `null` without one |
@@ -423,7 +423,10 @@ Each entry of `pages`:
 
 `rowClasses` counts the rows the way the list checks them. `own`,
 `otherDevice` and `stationMismatch` divide the rows. The other three count
-across them.
+across them. A probe counts each merged 10017 record by its device and station
+IDs and its history row's storage path, cipher ID and times. A record with crop
+pictures only has none of those, so it counts as `stationMismatch` and
+`invalidTime`.
 
 | Field             | Meaning                                                                                                                                                                       |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1013,6 +1016,10 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   `admission`, before any connection or device command. A download of a record
   with a cipher ID fails with `recording_cipher_unavailable` first, because it
   would need a cloud cipher. HomeBase owners and their cameras are unchanged.
+- Since 0.30.1 `probeStandaloneRecordings` sends one diagnostic 10017 query to
+  the camera when a consumer calls it, see the
+  [standalone recording probe](#standalone-recording-probe-0301). It leaves the
+  recordings capability unavailable.
 - `listRecordings` and `recordingCalendar` stay owner-wide library calls, as the
   [capability contract](CAMERA_CAPABILITIES.md) allows for owner-wide metadata.
   They query the camera's own database with the unchanged 10006 and 10008
@@ -1054,6 +1061,101 @@ Every standalone relationship carries `descriptor`: whether the inventory row
 has a P2P device ID (`did`), a P2P license (`license`), an administrator user
 (`adminUser`) and a private IPv4 LAN address (`lanAddress`). The values never
 leave the library. A present field proves neither validity nor authentication.
+
+### Standalone recording probe, 0.30.1
+
+For [ha-eufy-cam#178](https://github.com/keesmod/ha-eufy-cam/issues/178),
+`probeStandaloneRecordings(id, options?)` sends one read-only recording query to
+an experimental standalone camera and resolves with a
+[recording operation observation](#recording-operation-observation-0301) with
+`operation: 'probe'`. It is a diagnostic. It shows whether the camera answers
+the app-shaped `CMD_DATABASE_QUERY_LOCAL` 10017 query, which is candidate 1 in
+the [model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301). It does
+not open recordings. Unverified on hardware.
+
+- `options` is `{ signal?, onProgress?, onLookup? }`, the recording operation
+  options without `onObservation`, because the observation is the result.
+- Only an experimental standalone owner is admitted. A HomeBase, a camera
+  behind a HomeBase, an unknown ID and a standalone camera without
+  `experimentalStandalone` fail with `operation_outside_hardware_scope` before
+  any connection, observation or request. `authentication_required` and
+  `client_closed` reject as for every device call.
+- After admission the promise resolves for every outcome, with the error code
+  in `code`.
+- One call sends exactly one request. The probe uses the bounds of the other
+  recording operations: the per-owner busy check, the owner's connection with
+  `onProgress` and `onLookup` when it is not connected, 15 seconds for the
+  answer and 60 seconds overall.
+- The day is today in the process's local timezone. The request asks for the
+  newest page of at most 20 records from that day to the next.
+- It creates no recording ID and sends no 10006, 10008, image or download
+  request. The recordings capability stays unavailable with
+  `standalone_recordings_unverified`.
+
+The request is command 1350 (`CMD_SET_PAYLOAD`) on frame channel 0, sealed like
+every other command on the camera's session, with this JSON. `account_id` is
+the row's administrator user, `transaction` the send time in milliseconds, and
+the dates are today and the next day. Key order carries no meaning.
+
+```json
+{
+  "account_id": "<administrator user>",
+  "cmd": 1306,
+  "mChannel": 0,
+  "mValue3": 0,
+  "payload": {
+    "cmd": 10017,
+    "payload": {
+      "ai_type": 0,
+      "count": 20,
+      "detection_type": 0,
+      "end_date": "20261017",
+      "event_type": 0,
+      "flag": 0,
+      "start_date": "20261016",
+      "start_time": "0",
+      "storage_cloud": -1,
+      "trigger_type": 0
+    },
+    "table": "history_record_info",
+    "transaction": "1792140000000"
+  }
+}
+```
+
+`start_time` `"0"` asks for the newest records. The request names no device and
+asks for no unzipped result. It is built by `databaseQueryLocalNewest`, a client
+addition to the vendored Station, see [NOTICE.md](../NOTICE.md). The vendored
+`databaseQueryLocal` builder is unchanged and unused. It sends `device_info`,
+`res_unzip: 1`, `start_time` as the day at midnight and no `trigger_type`, the
+shape a standalone E30 answered with an empty page in
+[bropat/eufy-security-client#963](https://github.com/bropat/eufy-security-client/issues/963).
+The answer is read by the vendored 10017 parser, unchanged. It merges the
+history and crop picture rows of each record. Each source of the request and its
+kind of claim is listed in the model matrix. Nothing is copied from the
+unlicensed public report.
+
+| `code`                             | `stage`     | Meaning                                                                                                                                                           |
+| ---------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `null`                             | `validate`  | Answered with database result 0. `pages[0].rows` is the number of records, 0 for an empty page, and `rowClasses` counts them                                      |
+| `history_rejected`                 | `validate`  | Answered with another database result or none. `remoteCode` and `pages[0].resultCode` carry it when it is an integer                                              |
+| `device_request_timeout`           | `query`     | No answer within 15 seconds. `ackCode` is the camera's command result for the request, and `unhandledReplies` counts 10017 replies the session could not dispatch |
+| `cancelled`, `device_disconnected` | `query`     | The signal or the client aborted the probe, or the session closed while it waited                                                                                 |
+| `device_request_failed`            | `query`     | The request could not be sent, for example a `NotSupportedError` from a station without the query command. No page                                                |
+| a connection code                  | `connect`   | The owner's connection failed, such as `device_request_timeout` or `connection_busy`. No request was sent                                                         |
+| `station_busy`                     | `admission` | A recording operation, live start or command holds the owner. No request was sent                                                                                 |
+
+A probe that fails after its connection was requested closes the owner's
+session, as the other recording operations do. An answer keeps the session open,
+also one with a non-zero database result. That differs from `listRecordings`,
+which closes the session after `history_rejected`. `unhandledReplies` counts
+only replies with inner command 10017 or without an inner command. The vendored
+Station sends the latest-info query 10013 at every connect, and an unparsable
+reply to it during the probe is not counted. Both admitted types, 31 and 151,
+list the query command in their vendored command set. How a bridge records and
+reads the outcome is described in its own documentation. Each model's result,
+a failure included, is recorded in the
+[model matrix](MODEL_MATRIX.md#standalone-recording-probe-ha-eufy-cam178).
 
 ## Observed camera state
 

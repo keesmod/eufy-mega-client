@@ -15485,6 +15485,58 @@ export class Station extends TypedEmitter<StationEvents> {
     );
   }
 
+  /**
+   * Client addition, not upstream behaviour (ha-eufy-cam#178): one read-only
+   * CMD_DATABASE_QUERY_LOCAL request for the newest page of at most 20 records
+   * between two calendar days, on mChannel 0 and frame channel 0. The start
+   * cursor "0" asks for the newest records. Unlike databaseQueryLocal it names no
+   * device and asks for no unzipped result. The answer arrives as the existing
+   * "database query local" event.
+   */
+  public databaseQueryLocalNewest(startDate: Date, endDate: Date): void {
+    const commandData: CommandData = {
+      name: CommandName.StationDatabaseQueryLocal,
+    };
+    if (!this.hasCommand(commandData.name)) {
+      throw new NotSupportedError("This functionality is not implemented or supported", {
+        context: { commandName: commandData.name, station: this.getSerial() },
+      });
+    }
+
+    this.p2pSession.sendCommandWithStringPayload(
+      {
+        commandType: CommandType.CMD_SET_PAYLOAD,
+        value: JSON.stringify({
+          account_id: this.rawStation.member.admin_user_id,
+          cmd: CommandType.CMD_DATABASE,
+          mChannel: 0,
+          mValue3: 0,
+          payload: {
+            cmd: CommandType.CMD_DATABASE_QUERY_LOCAL,
+            payload: {
+              ai_type: 0,
+              count: 20,
+              detection_type: 0,
+              end_date: format(endDate, "YYYYMMDD"),
+              event_type: 0,
+              flag: 0,
+              start_date: format(startDate, "YYYYMMDD"),
+              start_time: "0",
+              storage_cloud: -1,
+              trigger_type: 0,
+            },
+            table: "history_record_info",
+            transaction: `${new Date().getTime()}`,
+          },
+        }),
+        channel: 0,
+      },
+      {
+        command: commandData,
+      }
+    );
+  }
+
   public databaseQueryByDate(
     serialNumbers: Array<string>,
     startDate: Date,
