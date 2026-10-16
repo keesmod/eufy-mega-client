@@ -468,14 +468,31 @@ The rows cannot carry exactly `T8410`, and the [Mega-7] owner uses Indoor Cam
 Pan&Tilt for both a T8410/31 and a T8410C/31. T8410C is not a confirmed received
 value for these rows. 0.29.2 also widens the diagnostic model bound to unhyphenated codes such
 as `T8410C`, as described in [DIAGNOSTICS.md](DIAGNOSTICS.md#missing-devices).
-If these rows carry another catalogue-shaped code of at most eight characters,
-the next report shows it, provided the bridge and integration apply the same
-bound. A value of another shape is still omitted.
+If these rows had carried another catalogue-shaped code of at most eight
+characters, the next report would have shown it, provided the bridge and
+integration applied the same bound. A value of another shape is still omitted.
 
-Post-upgrade physical results for T8160-C and for rows 6 and 7 remain pending.
-The type 19 and type 31 feature rows below gain no H or P cells.
+On 2026-10-16 the reporter [reported][149-result] that after updating to
+integration 0.8.45 and bridge 0.8.36/client 0.29.2 all devices appeared right
+away and work with snapshots, live view, recordings and events. This includes
+the T8160-C and rows 6 and 7, although the comment names no device, firmware or
+event type separately. Audio, confirmed stop/cancel and restart recovery were
+not reported. This is a reported result, not independently reproduced. The
+type 19 and type 31 feature rows below gain no H or P cells.
+
+The comment shows no received model for rows 6 and 7. Client 0.29.2 admits type
+31 only as exactly `T8410` or `T8410C`, and 0.28.2 already admitted `T8410` when
+it rejected these rows. Their appearance on 0.29.2 therefore points to exactly
+`T8410C`, provided their inventory rows did not change in between.
+
+The reporter also sees snapshots that are often out of date and live start
+times that vary a lot, on all devices, and finds the Eufy app similar but a bit
+more stable. A stored snapshot in this client is a previously stored image, not
+a new exposure, as defined for the feature table below. The cause of the varying
+start times is not established.
 
 [149-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
+[149-result]: https://github.com/keesmod/ha-eufy-cam/issues/149#issuecomment-6214980737
 [Mega-7]: https://github.com/mscodemonkey/eufy-mega-security/issues/7
 [bropat-722]: https://github.com/bropat/eufy-security-client/issues/722
 
@@ -493,7 +510,8 @@ the T8410C profile did not allow the opt-in route. Discovery only creates a
 descriptor for an exact profile match, so the row is the exact pair `T8410C`/31.
 This is a reported inventory tuple and descriptor, not a media result, and not
 independently reproduced. It does not show which model rows 6 and 7 of the
-[#149 report][149-report] carry.
+[#149 report][149-report] carry. The #149 result of 2026-10-16
+[above](#reported-issue-149-0292) points to `T8410C` for them.
 
 0.30.0 admits exactly T8410C/31 with an empty or self parent to that route, as
 described in [API.md](API.md#experimental-standalone-cameras) and
@@ -1017,7 +1035,7 @@ battery lifetime claim is made.
 | 14    | T8140 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#100]                                          |
 | 15    | T8142 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [S1], [C0]                                          | [#101]                                          |
 | 16    | T8220 / T8221 / T8222 candidates / listed topologies | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#110], [#111], [#112]                          |
-| 19    | T8160 / H3 only. T8160-C software only, no H         | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55], [149-report]               |
+| 19    | T8160 / H3 only. T8160-C reported, no H              | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55], [149-report]               |
 | 23    | T8161 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#102]                                          |
 | 24    | T8600 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#103]                                          |
 | 26    | T8162 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#104]                                          |

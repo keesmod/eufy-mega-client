@@ -281,18 +281,19 @@ The admission rests on public evidence, not on a value received in this report:
   with firmware 3.3.3.2 and type 31 under a T8030. That issue reports live start
   failing with `return_code -104`. Upstream fixed it with a third-party change
   that later became the HomeBase-controlled type 31 live branch the vendored
-  code carries. No hardware has confirmed that branch here.
+  code carries. At 0.29.2 no T8410C had used that branch here. The result of
+  2026-10-16 below reports live view on two type 31 cameras under a T8030.
 - T8410C firmware is on the 3.3.x line and plain T8410 firmware on the 2.3.x
   line, as in [eufy-security-ws#486][ws-486] and [#489][ws-489]. The reporter's
   firmware 3.3.4.4 fits T8410C.
 
 Limits of this evidence:
 
-- It is not verified that the reporter's rows carry exactly `T8410C`. If they
-  carry another string, 0.29.2 still rejects them. The widened
-  [diagnostic bound](DIAGNOSTICS.md#missing-devices) then shows that string on
-  the next report if it is a catalogue-shaped code of at most eight
-  characters. A value of another shape is still omitted.
+- At 0.29.2 it was not verified that the reporter's rows carry exactly
+  `T8410C`. On 2026-10-16 both appeared on 0.29.2, which admits type 31 only as
+  exactly `T8410` or `T8410C`. `T8410` was already admitted when the rows were
+  rejected, so their appearance points to exactly `T8410C`. No received value
+  shows it.
 - The inventory and firmware sources above (the Mega log and the bropat
   reports) come from other clients. That they read the same inventory field as
   this client is not verified.
@@ -314,11 +315,20 @@ The [Indoor tests](../test/indoor.test.mjs), the
 T8030 with the `IndoorCamera` adapter, state and events, rejected variants, the
 owner and firmware gates, empty and self parents with and without the opt-in,
 the H.264 and H.265 start envelopes, stop, recordings and cancellation. No
-physical T8410C was used. Hardware results under a HomeBase are pending. The
+physical T8410C was used for the change.
+
+On 2026-10-16 the reporter of ha-eufy-cam#149 [reported][149-result] that after
+updating to integration 0.8.45 and bridge 0.8.36 with client 0.29.2 all
+devices, both type 31 cameras included, appeared right away and work with
+snapshots, live view, recordings and events. The comment names no device,
+firmware or event type separately. Audio, confirmed stop and cancellation were
+not reported. This is a reported result, not independently reproduced, as
+recorded in the [model matrix](MODEL_MATRIX.md#reported-issue-149-0292). The
 standalone result of 2026-10-16 is in
 [Experimental standalone T8410C, 0.30.0](#experimental-standalone-t8410c-0300).
 
 [149-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
+[149-result]: https://github.com/keesmod/ha-eufy-cam/issues/149#issuecomment-6214980737
 [HB-guide-EU]: https://service.eufy.com/eu/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 [Indoor]: https://service.eufy.com/article-description/Differences-Between-eufy-Indoor-Cams
 [Mega-7]: https://github.com/mscodemonkey/eufy-mega-security/issues/7
