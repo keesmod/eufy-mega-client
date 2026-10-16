@@ -37,8 +37,9 @@ export async function renderDeviceProfiles(text) {
         return [
           '',
           `With the client option \`experimentalStandalone\`, a standalone ${model} becomes its own`,
-          `local owner with experimental snapshot, live and recordings. Its ${cells} cells above apply`,
-          `${scope}. See [API.md](API.md#experimental-standalone-cameras).`,
+          `local owner with experimental snapshot and live, and recordings unavailable with`,
+          `\`standalone_recordings_unverified\`. Its ${cells} cells above apply ${scope}.`,
+          'See [API.md](API.md#experimental-standalone-cameras).',
         ];
       }),
   ].join('\n');

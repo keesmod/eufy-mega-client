@@ -41,8 +41,9 @@
   acknowledging the query with command result 0 and never answering it, and a
   standalone T8410C without a microSD card rejecting it with the database
   result -1100. Recording playback on the standalone T8410 route therefore does
-  not work with the current request, and standalone recordings move to a
-  follow-up issue.
+  not work with the current request, and standalone recordings move to
+  [ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175), see
+  below.
 - Vendored P2P session: a CMD_DATABASE reply with an inner command no handler
   takes, or one whose parsing fails, now emits `database unhandled` with its
   inner command and result code when they are integers, and the reason
@@ -67,12 +68,50 @@
   through the session's own parser. This is software coverage. The hardware
   results reported on 2026-10-16 are in the ha-eufy-cam#152 entry above.
 
-Upgrade: additive and optional. The four recording calls take the new options
-object in place of the signal, a plain signal keeps working, and consumers that
-pass neither see no change. The types `RecordingOperation`,
-`RecordingOperationStage`, `RecordingQueryPage`, `RecordingRowClasses`,
-`RecordingObservation` and `RecordingOperationOptions` are exported. Rollback:
-0.30.0, and pass the signal alone again.
+### Recordings on experimental standalone cameras
+
+- For [ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175), an
+  experimental standalone owner, the T84A1, T8410 or T8410C behind
+  `experimentalStandalone`, now reports `recordings` as
+  `{ available: false, status: 'unsupported', reason: 'standalone_recordings_unverified' }`.
+  Snapshot and live stay available with status `experimental`.
+  `recordingThumbnail` and `downloadRecording` for one of its records fail with
+  `standalone_recordings_unverified` at stage `admission`, before any
+  connection or device command. A download of a record with a cipher ID still
+  fails with `recording_cipher_unavailable` first. See
+  [experimental standalone cameras](docs/API.md#experimental-standalone-cameras).
+- No request has enough evidence to list and play recordings on a standalone
+  T84xx camera. On 2026-10-16 both standalone T8410 cameras acknowledged the
+  query 10006 and never answered it, and the T8410C without a card rejected it
+  with -1100. The best next candidate, the app-shaped query 10017, has a public
+  report on a standalone T86P2 and a code claim for the standalone T8171 and
+  T817L, but no T84xx result, and a standalone owner has no playback path. The
+  ranked candidates and their sources are in the
+  [model matrix](docs/MODEL_MATRIX.md#standalone-recordings-outcome-0301).
+- `listRecordings` and `recordingCalendar` stay owner-wide library calls and are
+  unchanged. A consumer that ignores the capability and calls them on a
+  standalone owner still sends 10006 or 10008 and gets the observation as
+  before. HomeBase owners, their payloads, code paths and capabilities are
+  unchanged, no new device request is sent and the vendored code is unchanged.
+- The standalone tests assert the unavailable recordings for the T84A1, T8410
+  and T8410C next to a HomeBase camera in the same transport that keeps them.
+  The observation tests assert the standalone thumbnail and cipher-less download
+  refusals at `admission` without an image or database request, and the
+  invalid thumbnail validation moves to a HomeBase 3 owner. The HomeBase 3 test
+  of the byte-identical 10006 payload is unchanged. This is software coverage.
+
+Upgrade: the observation is additive and optional. The four recording calls take
+the new options object in place of the signal, a plain signal keeps working, and
+consumers that pass neither see no change from it. The types
+`RecordingOperation`, `RecordingOperationStage`, `RecordingQueryPage`,
+`RecordingRowClasses`, `RecordingObservation` and `RecordingOperationOptions`
+are exported. With `experimentalStandalone` set, a standalone camera now reports
+recordings as unavailable with `standalone_recordings_unverified`, and its
+thumbnail and download fail with that code. A download of a record with a
+cipher ID fails with `recording_cipher_unavailable` first. HomeBase cameras see no change.
+Rollback: 0.30.0, and pass the signal alone again. That also restores the
+earlier recordings capability of standalone cameras, whose lists did not work on
+the reported cameras.
 
 ## 0.30.0 - 2026-10-15
 

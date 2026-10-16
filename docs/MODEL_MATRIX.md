@@ -539,8 +539,13 @@ T8410C/31 on firmware 3.3.4.4, without a microSD card:
   second. The camera acknowledged the query with command result 0
   and answered it with database result -1100 and 0 rows. The Eufy app shows no
   recordings for this camera. The reporter suspects that the missing
-  storage causes -1100. The vendored code names database result -1100 `ERROR_DB_NOT_READY`,
-  which fits that reading but does not prove it.
+  storage causes -1100. The vendored code names database result -1100
+  [`ERROR_DB_NOT_READY`][DB-codes], which fits that reading but does not prove
+  it. In [bropat-963] a standalone C37 with storage answered -1100 to the
+  vendored 10017 query with non-default filter parameters, so -1100 does not
+  only follow missing storage. For the 10017 listing the app declaration in
+  [alaraun] names -118 for no card and -1008 for removed storage. The cause of
+  -1100 here stays unproven.
 
 T8410/31 camera A on firmware 2.3.2.4, with a microSD card and continuous
 recording:
@@ -550,7 +555,8 @@ recording:
   connection. The camera acknowledged the query with command result 0 and never
   answered it. No database reply that the session could not dispatch arrived.
 
-T8410/31 camera B on firmware 2.3.1.6, with a microSD card:
+T8410/31 camera B on firmware 2.3.1.6, with a microSD card and continuous
+recording, which the reporter gave for both cameras [on 2026-10-15][T8410-recordings]:
 
 - B was unpowered at bridge start and during its first recordings test. Both
   connections ended at stage `lookup` with `device_request_timeout` after 20
@@ -574,8 +580,8 @@ Readings, not proven causes:
   `history_record_info` but does not answer it. That is consistent with the
   public analog [bropat-963], where a standalone E30 never answered 10006, and
   with recording that is continuous only. Which request the camera answers for its continuous timeline is unknown.
-- The standalone T8410C on firmware 3.3.4.4 answers 10006 and rejects it without
-  storage. Whether it returns rows with a microSD card is unknown.
+- The standalone T8410C on firmware 3.3.4.4 answers 10006 and rejects it with
+  -1100 without a card. Whether it returns rows with a microSD card is unknown.
 
 For these standalone cameras the states stay separate:
 
@@ -593,10 +599,119 @@ This gives ha-eufy-cam#168 its hardware result: the standalone T8410C route
 was reported working for live view and snapshot on firmware 3.3.4.4. For ha-eufy-cam#152 the
 standalone T8410 route was reported working for live view and snapshot on
 firmware 2.3.2.4 and 2.3.1.6. Standalone
-recordings move to a follow-up issue. The type 31 rows below cover an H3 owner
-only and gain no H or P cells.
+recordings moved to [ha-eufy-cam#175][175], with the outcome below. The type 31
+rows below cover an H3 owner only and gain no H or P cells.
+
+### Standalone recordings outcome, 0.30.1
+
+For [ha-eufy-cam#175][175] no request has enough evidence to list and play
+recordings on a standalone T84xx camera. Client 0.30.1 therefore reports
+recordings as unavailable for every experimental standalone owner, the T84A1,
+T8410 and T8410C, with `{ available: false, status: 'unsupported', reason:
+'standalone_recordings_unverified' }`, as described in
+[API.md](API.md#experimental-standalone-cameras). A thumbnail or download is
+refused at stage `admission` before any connection. Snapshot and live stay
+experimental. HomeBase owners, their payloads and code paths are unchanged, and
+no new device request is sent. The library list and calendar calls and the
+[recording operation observation](API.md#recording-operation-observation-0301)
+are unchanged, so a later probe can reuse them. This is a software decision on
+the reports above and the public sources below, not a new hardware result. The
+type 31 and 151 rows gain no cells.
+
+The candidates were ranked as follows. Each source is marked with its kind of
+claim: a reported hardware result, a hardware claim in code, an app declaration
+from decompiled app data, or a protocol name without a body. None covers a T84xx
+camera.
+
+1. The app-shaped `CMD_DATABASE_QUERY_LOCAL` 10017 on `history_record_info`:
+   level-1 command 1350 with inner 1306, `mChannel` 0, frame channel 0, one page
+   of 20 rows for one day, `start_time` `"0"` as the first-page cursor and no
+   `device_info`.
+   - Reported hardware result, public report only: [peakwell] captured the
+     iPhone app on a standalone T86P2 and got rows for this query, while the
+     same camera acknowledged 10006 with 0 and never answered it
+     (`docs/RECORDINGS_RESEARCH.md` section 2 and
+     `docs/fixtures/recordings-local-observations.json` at `4c21849`). That
+     repository has no licence. It is cited as a report, and nothing from it is
+     copied.
+   - Hardware claim in code, MIT: [mega-security] limits a variant with
+     `device_info` naming the camera and level-2 encryption to the standalone
+     T8171 and T817L as a verified route (`first-party-ppcs.ts` lines 2283 to
+     2296 at `603e668`).
+   - App declaration, MIT, not hardware: [alaraun] reads that the app sends
+     10017 for every model whose thing description lacks
+     `query_event_list_cmd`, and its T8410 description lacks it while the T8030
+     one has it (`docs/protocol/commands.md` at `a729675`).
+   - Reported hardware result: in [bropat-963] a standalone E30 answered the
+     vendored 10017 query with return code 0 and empty data while it never
+     answered 10006. That is the vendored shape, which the client's vendored
+     builder also sends, so a probe needs its own payload.
+   - Against it: no T84xx result, and the reporter's T8410 cameras keep no event
+     clips, so the realistic answer is an empty page. Nothing shows that
+     continuous footage is stored in `history_record_info`. A standalone owner
+     also has no playback path, see below.
+   - Verdict: the next request to probe, read-only and bounded to one page and
+     15 seconds, but not enough for list and play now.
+2. `CMD_DATABASE_COUNT_BY_DATE` 10008 through the existing calendar. Reported
+   hardware result, public report only: [peakwell] got a day index from the
+   standalone T86P2 whose dates ignored the requested range. A HomeBase 3
+   answers it too. Diagnostic only, because it lists nothing and cannot play.
+3. `CMD_DATABASE_QUERY_LATEST_INFO` 10013, which the vendored Station already
+   sends at every connect. Reported hardware results on a standalone E30 and C37
+   in [bropat-963] and on a standalone S340, a T8170, in [ws-545] and [alaraun].
+   Diagnostic only, one crop path and an event count per device. Not shown on
+   the T8410, because the reported snapshots may be live frames.
+4. The continuous range query, outer command 1700 with `commandType` 6000 and
+   the camera serial and a time range, answered on 1351, then 6001 for playback.
+   Reported hardware result only on a HomeBase 3 T8030 with a T8600, validated
+   on 2026-09-10 in [ferryhe] (MIT, `capabilities/recordings/CONTINUOUS_PLAYBACK.md`).
+   It fits the reporter's continuous timeline, but nothing covers a standalone
+   or T84xx camera, the meaning of 6000 there is unknown and the client has no
+   parser for its 1351 reply. Not now.
+5. Variants of 10006: `device_info` with the camera's own serial, channel 255,
+   or the extra fields `start_id`, `end_id`, `need_ai`, `update_time` and
+   `alarm_id`. Every source concerns a HomeBase. The channel 255 default in
+   [eufy-sdk] (`p2p-session.ts` line 1732 at `7d1f016`) is a code claim with
+   HomeBase provenance. The fields are what [alaraun] reports for 10000 on a
+   HomeBase 3. In a HomeBase 2 matrix in [ha-eufy-sdk-120] neither channel 0 nor
+   255 got an answer to the direct read 10000. 10006 stays silent on the
+   standalone T86P2 and E30, and the observation cannot tell the variants apart.
+   Low expected yield.
+6. `CMD_RECORDDATE_SEARCH` 1041, `CMD_RECORDLIST_SEARCH` 1042,
+   `CMD_RECORD_VIEW` 1025 and `CMD_RECORD_PLAY_CTRL` 1026. Protocol names
+   without a body: only the [vendored enum names][Record-commands] exist, with
+   no public request body, reply or capture. Their neighbours are destructive,
+   1027 deletes a record, 1029 formats the card and 1057 repairs it. Rejected,
+   because they fail both the evidence and the safety bar.
+
+Playback has no client path on a standalone owner. The client refuses a
+download of a record with any cipher ID, also 0. The vendored decrypt of
+encrypted recording frames needs an RSA private key, and the client has none
+for a standalone owner. A public report in [peakwell] describes another derived
+key, from an unlicensed source, so it is not used. In [eufy-sdk-385] the keyframes of a standalone
+SoloCam S220 recording could not be decoded.
+
+Open: whether a standalone T8410 on firmware 2.3.x answers the app-shaped 10017
+at all, with an empty page, a database error such as -1100, -118 or -1008, or
+silence. That needs its own payload and a bounded opt-in trigger, and it is best
+run on a standalone camera with event recordings. On the current reporter's
+cameras it would be diagnostic only. A reply under another outer command, such
+as 1351, or as a DATA frame would not show in the observation. A dropped or
+unaligned 1306 CONTROL reply is ruled out, because it would count as an
+unhandled reply.
 
 [standalone-results]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6208097780
+[175]: https://github.com/keesmod/ha-eufy-cam/issues/175
+[DB-codes]: https://github.com/keesmod/eufy-mega-client/blob/497aed8a2ca40f3ff62727aea85ed2e0e1c92b75/vendor/src/p2p/types.ts#L1054-L1056
+[Record-commands]: https://github.com/keesmod/eufy-mega-client/blob/497aed8a2ca40f3ff62727aea85ed2e0e1c92b75/vendor/src/p2p/types.ts#L253-L259
+[peakwell]: https://github.com/peakwellnv/eufy-bridge/tree/4c2184930d4019203f21c61eb9b08746c236cc30
+[mega-security]: https://github.com/mscodemonkey/eufy-mega-security/tree/603e66830cb57a4ff2394134e3ac89482f9bb54d
+[alaraun]: https://github.com/alaraun/python-eufy-home-security/tree/a729675dfb20153822422bd6c4b893723bce9093
+[ferryhe]: https://github.com/ferryhe/eufy-agent-hub
+[eufy-sdk]: https://github.com/mega-yfue/eufy-sdk/tree/7d1f016362465b0747405c5dc83124c86b2c630b
+[eufy-sdk-385]: https://github.com/mega-yfue/eufy-sdk/issues/385
+[ha-eufy-sdk-120]: https://github.com/mega-yfue/ha-eufy-sdk/issues/120
+[ws-545]: https://github.com/bropat/eufy-security-ws/issues/545
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

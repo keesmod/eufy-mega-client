@@ -184,15 +184,18 @@ and on 2.3.1.6 on 2026-10-15 implies that both firmware versions do both. For
 other firmware both remain unknown. Without that answer no command key is set and the connection ends at
 the `session_open` stage. Whether it serves snapshot covers from its own storage is unknown too. With a
 microSD card, firmware 2.3.2.4 and 2.3.1.6 acknowledged the recording query in
-the 2026-10-16 report below but never answered it. A recording download with a
-cipher ID would need a cloud cipher and is refused. Guard mode and events stay
-off.
+the 2026-10-16 report below but never answered it. Since 0.30.1 the camera's
+recordings report `standalone_recordings_unverified` on this route, and its
+thumbnail and download are refused before any connection. A download with a
+cipher ID is refused first with `recording_cipher_unavailable`, because it would
+need a cloud cipher. Guard mode and events stay off.
 
 The [standalone tests](../test/standalone-experimental.test.mjs) run the
 model-independent T84A1 cases for the T8410 too: discovery, credentials,
 connection stages, a live start and confirmed stop on the one session, snapshot
-assignment, and the refused guard mode, pushes and cipher downloads, with
-synthetic rows and a stubbed station. They also cover the `IndoorCamera` owner
+assignment, the unavailable recordings, and the refused guard mode, pushes and
+cipher downloads, with synthetic rows and a stubbed station. They also cover the
+`IndoorCamera` owner
 wiring, reloads between its own owner, a HomeBase and no transport, and a real
 vendor Station and `IndoorCamera` for the type 31 row without a socket, with the
 complete H.264 and H.265 start envelopes and the stop.
@@ -233,16 +236,26 @@ cameras, on firmware 2.3.2.4 and 2.3.1.6, acknowledged the query with command
 result 0 and never answered it. With power on, each list ended with
 `device_request_timeout` at stage `query` after about 16 seconds, twice per
 camera, without unhandled database replies. The camera on 2.3.1.6 was
-unpowered during its first list, which ended at stage `lookup`. Both cameras have a microSD card, the one on 2.3.2.4 records
-continuously, and the Eufy app shows only a continuous timeline for the T8410 cameras,
-without separate event clips. The
+unpowered during its first list, which ended at stage `lookup`. Both cameras
+have a microSD card and record continuously, as the reporter
+[wrote on 2026-10-15][continuous], and the Eufy app shows only a continuous
+timeline for the T8410 cameras, without separate event clips. The
 reading, not a proven cause, is that firmware 2.3.x accepts 10006 without
 answering it, consistent with the E30 above and with recording that is
 continuous only. With no answer from either camera, recording playback on the
 standalone T8410 route does not work with the current request. Which request the camera answers for its
-continuous timeline is unknown, and standalone recordings move to a follow-up
-issue. This is reported, not independently reproduced, as recorded in the
+continuous timeline is unknown. This is reported, not independently reproduced, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-and-t8410c-results-2026-10-16).
+
+Standalone recordings moved to
+[ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175). No other
+request had enough evidence for a standalone T84xx camera, so since 0.30.1 the
+client reports recordings on the experimental standalone route as unavailable
+with `standalone_recordings_unverified`, as described in
+[API.md](API.md#experimental-standalone-cameras). Snapshot and live are
+unchanged, and so is every Indoor camera under a HomeBase. The ranked candidates
+for a later probe are recorded in the
+[model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301).
 
 ## Indoor Cam Pan&Tilt 2K T8410C, 0.29.2
 
@@ -345,9 +358,11 @@ information request and accepts the `CMD_DOORBELL_SET_PAYLOAD` start. The
 reported live video on firmware 3.3.4.4 implies that this firmware does all
 three. For other firmware it remains unknown. Whether it serves snapshot covers
 from its own storage is still unknown. Without a microSD card it answered the
-recording query with database result -1100 and no rows. A recording download
-with a cipher ID would need a cloud cipher and is refused. Guard mode and events
-stay off. Pan and tilt and talkback are outside this change.
+recording query with database result -1100 and no rows. Since 0.30.1 its
+recordings report `standalone_recordings_unverified` on this route, as for the
+[T8410](#experimental-standalone-t8410-0291), and a download with a cipher ID is
+refused first with `recording_cipher_unavailable`. Guard mode and events stay
+off. Pan and tilt and talkback are outside this change.
 
 The [standalone tests](../test/standalone-experimental.test.mjs) run the T8410
 cases for the T8410C too, with synthetic rows, a stubbed station and a real
@@ -363,11 +378,14 @@ microSD card, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-and-t8410c-results-2026-10-16).
 This is reported, not independently reproduced. The result belongs to
 [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168) and
-[#142](https://github.com/keesmod/eufy-mega-client/issues/142), and standalone
-recordings move to a follow-up issue.
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142). Standalone
+recordings moved to
+[ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175) and are
+reported unavailable since 0.30.1.
 
 [168-report]: https://github.com/keesmod/ha-eufy-cam/issues/168#issuecomment-6189829101
 [standalone-results]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6208097780
+[continuous]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6195646642
 
 ## Remaining obligations
 

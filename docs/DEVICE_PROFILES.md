@@ -112,16 +112,19 @@ T8224 also admits the reported type 96 with the same policy.
 See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
 
 With the client option `experimentalStandalone`, a standalone T8410 becomes its own
-local owner with experimental snapshot, live and recordings. Its H3 cells above apply
-only under a HomeBase. See [API.md](API.md#experimental-standalone-cameras).
+local owner with experimental snapshot and live, and recordings unavailable with
+`standalone_recordings_unverified`. Its H3 cells above apply only under a HomeBase.
+See [API.md](API.md#experimental-standalone-cameras).
 
 With the client option `experimentalStandalone`, a standalone T8410C becomes its own
-local owner with experimental snapshot, live and recordings. Its H3 cells above apply
-only under a HomeBase. See [API.md](API.md#experimental-standalone-cameras).
+local owner with experimental snapshot and live, and recordings unavailable with
+`standalone_recordings_unverified`. Its H3 cells above apply only under a HomeBase.
+See [API.md](API.md#experimental-standalone-cameras).
 
 With the client option `experimentalStandalone`, a standalone T84A1 becomes its own
-local owner with experimental snapshot, live and recordings. Its blocked cells above apply
-without that option. See [API.md](API.md#experimental-standalone-cameras).
+local owner with experimental snapshot and live, and recordings unavailable with
+`standalone_recordings_unverified`. Its blocked cells above apply without that option.
+See [API.md](API.md#experimental-standalone-cameras).
 
 <!-- generated device profiles: end -->
 
