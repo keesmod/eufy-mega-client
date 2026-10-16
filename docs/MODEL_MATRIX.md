@@ -283,8 +283,8 @@ described in [API.md](API.md#experimental-standalone-cameras) and
 standalone T84A1 keeps `standalone_transport_unverified`. Every standalone
 relationship now reports which connection fields its row has, as presence
 booleans. This is software evidence with synthetic rows. At 0.29.0 no standalone camera
-had used the route. No T84A1 result is recorded, so the T84A1 row and its cells
-below are unchanged.
+had used the route. No T84A1 result on the route is recorded, so the T84A1 row
+and its cells below are unchanged.
 
 ## Reported standalone T8410 and experimental route, 0.29.1
 
