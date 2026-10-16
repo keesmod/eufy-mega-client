@@ -1084,14 +1084,16 @@ not open recordings. Unverified on hardware.
   in `code`.
 - One call sends exactly one 10017 request. When the owner is not connected,
   its connection first sends the vendored latest-info query 10013, as at every
-  connect. The probe uses the bounds of the other
+  connect. A latest-info answer that names a camera's crop picture then makes
+  that connection request the picture as a snapshot cover, unless it is already
+  the cached cover. The probe uses the bounds of the other
   recording operations: the per-owner busy check, the owner's connection with
   `onProgress` and `onLookup` when it is not connected, 15 seconds for the
   answer and 60 seconds overall.
 - The day is today in the process's local timezone. The request asks for the
   newest page of at most 20 records from that day to the next.
-- It creates no recording ID and sends no 10006, 10008, image or download
-  request. The recordings capability stays unavailable with
+- It creates no recording ID and itself sends no 10006, 10008, image or
+  download request. The recordings capability stays unavailable with
   `standalone_recordings_unverified`.
 
 The request is command 1350 (`CMD_SET_PAYLOAD`) on frame channel 0, sealed like

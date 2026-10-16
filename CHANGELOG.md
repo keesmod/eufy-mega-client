@@ -119,13 +119,16 @@
   before any connection or request. After admission the promise resolves with
   the observation for every outcome. One call sends exactly one 10017 request.
   When the owner is not connected, its connection first sends the vendored
-  latest-info query 10013, as at every connect. The
-  busy check, the connection with `onProgress` and `onLookup`, the 15-second
-  answer bound and the 60-second operation bound are those of the other
-  recording operations. A failure closes the owner's session as before. An
-  answer keeps it open, also one with a non-zero database result, which is
-  reported as `history_rejected` with that result in `remoteCode`. A list closes
-  the session after `history_rejected`.
+  latest-info query 10013, as at every connect. A latest-info answer that names
+  a camera's crop picture then makes that connection request the picture as a
+  snapshot cover, unless it is already the cached cover. The busy check, the
+  connection with `onProgress` and `onLookup`, the 15-second answer bound and
+  the 60-second operation bound are those of the other recording operations. A
+  failure after the connection was requested closes the owner's session as
+  before, except `connection_busy`, which leaves the other attempt's session
+  alone. An answer keeps it open, also one with a non-zero database result,
+  which is reported as `history_rejected` with that result in `remoteCode`. A
+  list closes the session after `history_rejected`.
 - The observation counts the answer's records and their row classes, without
   identifiers. It does not count unhandled database replies with inner command
   10013, so a reply that names the latest-info query the Station sends at
@@ -133,7 +136,7 @@
   other unhandled reply counts, as for the other operations, which are
   unchanged. That includes a reply without a readable inner command, whichever
   query it answers.
-- The probe creates no recording ID and sends no 10006, 10008, image or
+- The probe itself creates no recording ID and sends no 10006, 10008, image or
   download request. The recordings capability of standalone cameras stays
   unavailable with `standalone_recordings_unverified`.
 - Vendored Station: the client addition `databaseQueryLocalNewest` builds the
