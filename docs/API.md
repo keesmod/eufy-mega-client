@@ -1082,7 +1082,7 @@ not open recordings. Unverified on hardware.
   `client_closed` reject as for every device call.
 - After admission the promise resolves for every outcome, with the error code
   in `code`.
-- One call sends exactly one 10017 request. When the owner is not connected,
+- One call sends at most one 10017 request. When the owner is not connected,
   its connection first sends the vendored latest-info query 10013, as at every
   connect. A latest-info answer that names a camera's crop picture then makes
   that connection request the picture as a snapshot cover, unless it is already

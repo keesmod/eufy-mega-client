@@ -117,7 +117,7 @@
 - A HomeBase, a camera behind a HomeBase, an unknown ID and a standalone camera
   without `experimentalStandalone` fail with `operation_outside_hardware_scope`
   before any connection or request. After admission the promise resolves with
-  the observation for every outcome. One call sends exactly one 10017 request.
+  the observation for every outcome. One call sends at most one 10017 request.
   When the owner is not connected, its connection first sends the vendored
   latest-info query 10013, as at every connect. A latest-info answer that names
   a camera's crop picture then makes that connection request the picture as a
