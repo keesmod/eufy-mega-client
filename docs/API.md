@@ -406,7 +406,7 @@ attaches no listener.
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `admission` | Input, recording reference and busy checks before any connection. `station_busy`, invalid input, an expired ID and, on a standalone owner, `recording_cipher_unavailable` and `standalone_recordings_unverified` end here |
 | `connect`   | The owner's connection was requested. `connection_busy` and a failed connection end here                                                                                                                                  |
-| `query`     | The query or image request was sent on the owner's session and no answer arrived                                                                                                                                          |
+| `query`     | The query or image request was sent on the owner's session and no answer arrived. `device_request_failed` ends here without a page when the request could not be sent                                                     |
 | `validate`  | An answer arrived and was checked. `history_rejected`, `calendar_rejected`, the completeness codes and `invalid_recording` end here                                                                                       |
 | `transfer`  | A download was started on the owner's session                                                                                                                                                                             |
 
@@ -1145,10 +1145,11 @@ unlicensed public report.
 | `cancelled`, `device_disconnected` | `query`     | The signal or the client aborted the probe, or the session closed while it waited                                                                                                                      |
 | `device_request_failed`            | `query`     | The request could not be sent, for example a `NotSupportedError` from a station without the query command. No page                                                                                     |
 | a connection code                  | `connect`   | The owner's connection failed, such as `device_request_timeout` or `connection_busy`. No request was sent                                                                                              |
-| `station_busy`                     | `admission` | A recording operation, live start or command holds the owner. No request was sent                                                                                                                      |
+| `station_busy`                     | `admission` | A recording operation, a live stream or its start, or a command holds the owner. No request was sent                                                                                                   |
 
 A probe that fails after its connection was requested closes the owner's
-session, as the other recording operations do. An answer keeps the session open,
+session, as the other recording operations do, except with `connection_busy`,
+which leaves the other attempt's session as it is. An answer keeps the session open,
 also one with a non-zero database result. That differs from `listRecordings`,
 which closes the session after `history_rejected`. `unhandledReplies` counts
 every unhandled reply except one with inner command 10013. The vendored Station

@@ -541,8 +541,10 @@ export class RecordingAccess {
    * standalone owner, and resolves with its observation for every outcome after
    * admission. Anything but a standalone owner is refused before any connection.
    * It creates no recording reference and never changes a capability. A failure
-   * closes the owner's session as for the other operations. An answer, also one
-   * with a non-zero database result, keeps it open.
+   * after the connection was requested closes the owner's session as for the
+   * other operations, except `connection_busy`, which leaves the other attempt's
+   * session alone. An answer, also one with a non-zero database result, keeps it
+   * open.
    */
   async probe(
     id: string,
