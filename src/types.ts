@@ -399,8 +399,8 @@ export interface RecordingObservation {
   pages: RecordingQueryPage[];
   /**
    * Database replies the owner's session could not dispatch during this operation,
-   * 0 to 99. A probe counts only those with inner command 10017 or without an
-   * inner command.
+   * 0 to 99. A probe does not count those with inner command 10013, the
+   * latest-info query the vendored Station sends at every connect.
    */
   unhandledReplies: number;
   /** Why the latest of those was not dispatched, `null` without one. */

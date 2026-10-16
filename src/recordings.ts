@@ -193,11 +193,10 @@ class Observation {
     /** The vendor command whose session results belong to this operation's pages. */
     private readonly command?: CommandName,
     /**
-     * The inner command of this operation's database answer. When set, an
-     * unhandled database reply with another integer inner command belongs to
-     * something else and is not counted. One without an inner command still is.
+     * An inner command whose unhandled database replies belong to something else
+     * and are not counted. Every other unhandled reply is.
      */
-    private readonly replyCommand?: number,
+    private readonly ignoredReplyCommand?: number,
   ) {
     this.enabled = typeof callback === 'function';
   }
@@ -233,11 +232,7 @@ class Observation {
       page.ackCode = bounded(command.return_code);
     };
     const unhandled = (_station: Station, info: DatabaseUnhandled) => {
-      if (
-        this.replyCommand !== undefined &&
-        info?.innerCmd != null &&
-        info.innerCmd !== this.replyCommand
-      )
+      if (this.ignoredReplyCommand !== undefined && info?.innerCmd === this.ignoredReplyCommand)
         return;
       this.unhandled = Math.min(99, this.unhandled + 1);
       this.unhandledReason =
@@ -560,7 +555,8 @@ export class RecordingAccess {
       'probe',
       (reported) => (result = reported),
       CommandName.StationDatabaseQueryLocal,
-      CommandType.CMD_DATABASE_QUERY_LOCAL,
+      // The vendored Station sends the latest-info query 10013 at every connect.
+      CommandType.CMD_DATABASE_QUERY_LATEST_INFO,
     );
     observation.bind(this.connection, id);
     try {

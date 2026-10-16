@@ -1532,7 +1532,7 @@ test('a probe refused in its command result reports the negative ACK', async (t)
   }
 });
 
-test('a probe counts only unhandled replies of 10017 or without an inner command', async (t) => {
+test('a probe counts every unhandled reply but one to the latest-info query 10013', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: PROBE_DAY_NOON });
   const r = await rig('standalone');
   try {
@@ -1540,7 +1540,8 @@ test('a probe counts only unhandled replies of 10017 or without an inner command
       // A 10017 answer whose records the session cannot iterate.
       r.reply(local([{ table_name: 'history_record_info' }], 0));
       // A latest-info reply, such as the one sent at connect, that fails to parse,
-      // and a reply with an inner command no handler takes. Neither is the probe's.
+      // which is not the probe's, and a reply with an inner command no handler
+      // takes, which may be the camera's answer under another inner command.
       r.reply({ cmd: CommandType.CMD_DATABASE_QUERY_LATEST_INFO, mIntRet: -5, data: { x: 1 } });
       r.reply({ cmd: 10099, mIntRet: -7 });
     });
@@ -1573,7 +1574,7 @@ test('a probe counts only unhandled replies of 10017 or without an inner command
         code: 'device_request_timeout',
         stage: 'query',
         answered: false,
-        unhandledReplies: 2,
+        unhandledReplies: 3,
         unhandledReason: 'parse_error',
         unhandledResultCode: null,
       },
@@ -1618,6 +1619,71 @@ test('a probe connects a disconnected owner with progress and lookup and reports
     assert.deepEqual(progress, ['lookup', 'station_found']);
     assert.equal(lookups.length, 1);
     assert.equal(r.sent.length, 0);
+  } finally {
+    t.mock.timers.reset();
+    await r.done();
+  }
+});
+
+test('a probe that connects its owner sends after the connect-time 10013 and does not count its reply', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: PROBE_DAY_NOON });
+  const r = await rig('standalone', { connected: false });
+  try {
+    r.station.connect = async () => {
+      r.session.connected = true;
+      r.session.connectAddress = { host: '192.0.2.1', port: 32108 };
+      // The Station sends 10013 on the session's connect, before encryption is ready.
+      r.session.emit('connect', r.session.connectAddress);
+      r.session.emit('encryption ready', 'lan-derived');
+    };
+    r.respond((entry) => {
+      if (entry.json.payload.cmd === CommandType.CMD_DATABASE_QUERY_LATEST_INFO) {
+        r.reply({ cmd: CommandType.CMD_DATABASE_QUERY_LATEST_INFO, mIntRet: -5, data: { x: 1 } });
+        return;
+      }
+      r.ack(entry, 0);
+      r.reply(local('[]'));
+    });
+    const observation = timeless(only([await probe(r)]));
+    assert.deepEqual(
+      r.sent.map((entry) => [entry.command.commandType, entry.json.cmd, entry.json.payload.cmd]),
+      [
+        [
+          CommandType.CMD_SET_PAYLOAD,
+          CommandType.CMD_DATABASE,
+          CommandType.CMD_DATABASE_QUERY_LATEST_INFO,
+        ],
+        [
+          CommandType.CMD_SET_PAYLOAD,
+          CommandType.CMD_DATABASE,
+          CommandType.CMD_DATABASE_QUERY_LOCAL,
+        ],
+      ],
+    );
+    assert.deepEqual(r.unhandled, [
+      {
+        innerCmd: CommandType.CMD_DATABASE_QUERY_LATEST_INFO,
+        resultCode: -5,
+        reason: 'parse_error',
+      },
+    ]);
+    assert.deepEqual(
+      {
+        sessionOpen: observation.sessionOpen,
+        stage: observation.stage,
+        code: observation.code,
+        pages: observation.pages,
+        unhandledReplies: observation.unhandledReplies,
+      },
+      {
+        sessionOpen: false,
+        stage: 'validate',
+        code: null,
+        pages: [{ limit: 20, answered: true, ackCode: 0, resultCode: 0, rows: 0 }],
+        unhandledReplies: 0,
+      },
+    );
+    r.released();
   } finally {
     t.mock.timers.reset();
     await r.done();

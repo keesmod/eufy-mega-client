@@ -117,7 +117,9 @@
 - A HomeBase, a camera behind a HomeBase, an unknown ID and a standalone camera
   without `experimentalStandalone` fail with `operation_outside_hardware_scope`
   before any connection or request. After admission the promise resolves with
-  the observation for every outcome. One call sends exactly one request. The
+  the observation for every outcome. One call sends exactly one 10017 request.
+  When the owner is not connected, its connection first sends the vendored
+  latest-info query 10013, as at every connect. The
   busy check, the connection with `onProgress` and `onLookup`, the 15-second
   answer bound and the 60-second operation bound are those of the other
   recording operations. A failure closes the owner's session as before. An
@@ -125,10 +127,10 @@
   reported as `history_rejected` with that result in `remoteCode`. A list closes
   the session after `history_rejected`.
 - The observation counts the answer's records and their row classes, without
-  identifiers. It counts only unhandled database replies with inner command
-  10017 or without an inner command, so an unparsable reply to the latest-info
-  query 10013 that the Station sends at connect is not attributed to the probe.
-  The other operations count every unhandled reply as before.
+  identifiers. It does not count unhandled database replies with inner command
+  10013, so an unparsable reply to the latest-info query that the Station sends
+  at connect is not attributed to the probe. Every other unhandled reply
+  counts, as for the other operations, which are unchanged.
 - The probe creates no recording ID and sends no 10006, 10008, image or
   download request. The recordings capability of standalone cameras stays
   unavailable with `standalone_recordings_unverified`.
@@ -142,7 +144,8 @@
   tests drive a real vendor Station for a synthetic standalone T8410 and assert
   the exact request and its key set, an empty page, rows by class, a non-zero
   database result that keeps the session open, silence with ACK 0, a negative
-  ACK, an unparsable 10013 reply that is not counted, a failed connect with
+  ACK, an unparsable 10013 reply that is not counted, a connect whose 10013
+  precedes the probe's request, a failed connect with
   progress and lookup, `station_busy`, cancellation, the `NotSupportedError`
   path and the refusals before any request. This is software coverage. No probe
   result has been reported on hardware yet.

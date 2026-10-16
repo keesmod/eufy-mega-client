@@ -397,7 +397,7 @@ attaches no listener.
 | `remoteCode`          | The error's numeric `remoteCode`, such as the database result of `history_rejected`, else `null`                                                                                                                                            |
 | `elapsedMs`           | Milliseconds since the operation started                                                                                                                                                                                                    |
 | `pages`               | A list: one entry per query page sent, at most 4. A calendar: one entry with `limit: 0`. A probe: one entry with `limit: 20`. A thumbnail or download: empty                                                                                |
-| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99. A probe counts only those with inner command 10017 or without an inner command                                                                       |
+| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99. A probe does not count those with inner command 10013                                                                                                |
 | `unhandledReason`     | Of the latest such reply: `unknown_cmd` when it has no inner command the session handles, `parse_error` when the session could not parse it. `null` without one                                                                             |
 | `unhandledResultCode` | The database result code (mIntRet) of the latest such reply, `null` when it has none                                                                                                                                                        |
 | `rowClasses`          | A list or probe: counts over the rows of the latest answered page, once an answer with a row array arrived. Otherwise `null`                                                                                                                |
@@ -425,8 +425,8 @@ Each entry of `pages`:
 `otherDevice` and `stationMismatch` divide the rows. The other three count
 across them. A probe counts each merged 10017 record by its device and station
 IDs and its history row's storage path, cipher ID and times. A record with crop
-pictures only has none of those, so it counts as `stationMismatch` and
-`invalidTime`.
+pictures only has no history row, so one of the owner's cameras counts as
+`stationMismatch` and `invalidTime`.
 
 | Field             | Meaning                                                                                                                                                                       |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1082,7 +1082,9 @@ not open recordings. Unverified on hardware.
   `client_closed` reject as for every device call.
 - After admission the promise resolves for every outcome, with the error code
   in `code`.
-- One call sends exactly one request. The probe uses the bounds of the other
+- One call sends exactly one 10017 request. When the owner is not connected,
+  its connection first sends the vendored latest-info query 10013, as at every
+  connect. The probe uses the bounds of the other
   recording operations: the per-owner busy check, the owner's connection with
   `onProgress` and `onLookup` when it is not connected, 15 seconds for the
   answer and 60 seconds overall.
@@ -1149,9 +1151,9 @@ A probe that fails after its connection was requested closes the owner's
 session, as the other recording operations do. An answer keeps the session open,
 also one with a non-zero database result. That differs from `listRecordings`,
 which closes the session after `history_rejected`. `unhandledReplies` counts
-only replies with inner command 10017 or without an inner command. The vendored
-Station sends the latest-info query 10013 at every connect, and an unparsable
-reply to it during the probe is not counted. Both admitted types, 31 and 151,
+every unhandled reply except one with inner command 10013. The vendored Station
+sends the latest-info query 10013 at every connect, and an unparsable reply to
+it during the probe is not counted. Both admitted types, 31 and 151,
 list the query command in their vendored command set. How a bridge records and
 reads the outcome is described in its own documentation. Each model's result,
 a failure included, is recorded in the

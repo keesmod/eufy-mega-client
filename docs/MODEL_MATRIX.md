@@ -699,7 +699,8 @@ silence. The probe below sends it. It is best run on a standalone camera with
 event recordings. On the current reporter's cameras it is diagnostic only. A
 reply under another outer command, such as 1351, or as a DATA frame would not
 show in the observation. A dropped or unaligned 1306 CONTROL reply is ruled out,
-because it would count as an unhandled reply.
+because it would count as an unhandled reply. A probe does not count one that
+names the latest-info query 10013.
 
 #### Standalone recording probe (ha-eufy-cam#178)
 
