@@ -706,7 +706,7 @@ names the latest-info query 10013.
 
 For [ha-eufy-cam#178][178], client 0.30.1 adds `probeStandaloneRecordings`. It sends candidate 1 once to an experimental standalone T84A1, T8410 or T8410C: command
 1350 with inner 1306 and 10017 on `history_record_info`, `mChannel` 0 and frame
-channel 0, at most 20 records of the host's local day, `start_time` `"0"`, no
+channel 0, at most 20 records of the process's local day, `start_time` `"0"`, no
 `device_info` and no `res_unzip`. The exact request, its bounds and its codes
 are in [API.md](API.md#standalone-recording-probe-0301). Only channel 0 is
 sent. The channel 255 of candidate 5 has HomeBase provenance only. The probe is

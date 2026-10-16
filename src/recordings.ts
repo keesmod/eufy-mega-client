@@ -537,7 +537,7 @@ export class RecordingAccess {
   }
   /**
    * ha-eufy-cam#178: sends one read-only 10017 request for the newest page of at
-   * most 20 records of today, the host's local date, to an experimental
+   * most 20 records of today, the process's local date, to an experimental
    * standalone owner, and resolves with its observation for every outcome after
    * admission. Anything but a standalone owner is refused before any connection.
    * It creates no recording reference and never changes a capability. A failure
