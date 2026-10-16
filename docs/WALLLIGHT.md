@@ -120,12 +120,15 @@ declares `downloadImage`, `databaseQueryLatestInfo`, `databaseQueryByDate` and
 `databaseCountByDate`, and live uses the Wall-light branch above. The session
 uses the existing local lookup and LAN-derived command key. Whether a standalone
 S100 accepts that key, answers the database commands with its own storage or
-needs another credential is unknown. A recording download with a cipher ID
-would need a cloud cipher and is refused, and guard mode and events stay off. The [standalone tests](../test/standalone-experimental.test.mjs)
+needs another credential is unknown. Since 0.30.1 its recordings report
+`standalone_recordings_unverified`, as on every experimental standalone camera,
+because no recording request with evidence exists on that route. Its thumbnail
+and download are refused before any connection, a download with a cipher ID
+first with `recording_cipher_unavailable`. Guard mode and events stay off. The [standalone tests](../test/standalone-experimental.test.mjs)
 cover discovery, credentials, owner wiring, reloads, connection stages, a live
-start and confirmed stop on the one session, snapshot assignment, and the
-refused guard mode, pushes and cipher downloads, with synthetic rows and a
-stubbed station. A real vendor Station is created for the type 151 row without opening
+start and confirmed stop on the one session, snapshot assignment, the
+unavailable recordings, and the refused guard mode, pushes and cipher
+downloads, with synthetic rows and a stubbed station. A real vendor Station is created for the type 151 row without opening
 a socket. A T84A1 under a HomeBase keeps the blocked media above. The physical
 result belongs to [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 

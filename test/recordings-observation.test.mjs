@@ -755,18 +755,47 @@ test('download and thumbnail refusals are observed at their stage', async () => 
       rowClasses: null,
     });
     assert.equal(r.sent.length, sent);
-    // A thumbnail answer that is not a JPEG fails its validation.
-    observations.length = 0;
-    r.station.downloadImage = (path) =>
+    // ha-eufy-cam#175: a standalone thumbnail is refused before any image request.
+    // A record without a cipher ID reaches the same refusal in a download.
+    const images = [];
+    r.station.downloadImage = (path) => {
+      images.push(path);
       setImmediate(() => r.station.emit('image download', r.station, path, Buffer.from('text')));
-    const thumbnail = await settled(
-      r.transport.recordings.thumbnail(id, { onObservation: (o) => observations.push(o) }),
-    );
-    assert.deepEqual(thumbnail, { code: 'invalid_thumbnail', remoteCode: undefined });
-    const observation = only(observations);
-    assert.equal(observation.operation, 'thumbnail');
-    assert.equal(observation.stage, 'validate');
-    assert.deepEqual(observation.pages, []);
+    };
+    r.respond(() => r.reply(byDate([record(r.owner, r.camera, 2, { cipher_id: undefined })])));
+    const [{ id: plain }] = (await r.transport.recordings.list(r.owner, DAY)).recordings;
+    const listed = r.sent.length;
+    for (const [operation, recording] of [
+      ['thumbnail', id],
+      ['download', plain],
+    ]) {
+      observations.length = 0;
+      const refused = await settled(
+        r.transport.recordings[operation](recording, {
+          onObservation: (o) => observations.push(o),
+        }),
+      );
+      assert.deepEqual(
+        refused,
+        { code: 'standalone_recordings_unverified', remoteCode: undefined },
+        operation,
+      );
+      assert.deepEqual(timeless(only(observations)), {
+        operation,
+        owner: 'standalone',
+        sessionOpen: true,
+        stage: 'admission',
+        code: 'standalone_recordings_unverified',
+        remoteCode: null,
+        pages: [],
+        unhandledReplies: 0,
+        unhandledReason: null,
+        unhandledResultCode: null,
+        rowClasses: null,
+      });
+    }
+    assert.deepEqual(images, []);
+    assert.equal(r.sent.length, listed);
     // An unknown recording ID has no known owner.
     observations.length = 0;
     await settled(
@@ -777,6 +806,32 @@ test('download and thumbnail refusals are observed at their stage', async () => 
       [expired.code, expired.stage, expired.owner, expired.sessionOpen],
       ['recording_expired', 'admission', 'station', false],
     );
+    assert.equal(r.closes(), 0);
+    r.released();
+  } finally {
+    await r.done();
+  }
+});
+
+test('a HomeBase thumbnail answer that is not a JPEG fails its validation', async () => {
+  const r = await rig('station');
+  const observations = [];
+  try {
+    r.respond(() => r.reply(byDate([record(r.owner, r.camera, 1)])));
+    const { recordings } = await r.transport.recordings.list(r.owner, DAY);
+    const [{ id }] = recordings;
+    r.station.downloadImage = (path) =>
+      setImmediate(() => r.station.emit('image download', r.station, path, Buffer.from('text')));
+    const thumbnail = await settled(
+      r.transport.recordings.thumbnail(id, { onObservation: (o) => observations.push(o) }),
+    );
+    assert.deepEqual(thumbnail, { code: 'invalid_thumbnail', remoteCode: undefined });
+    const observation = only(observations);
+    assert.deepEqual(
+      [observation.operation, observation.owner, observation.stage, observation.code],
+      ['thumbnail', 'station', 'validate', 'invalid_thumbnail'],
+    );
+    assert.deepEqual(observation.pages, []);
     assert.equal(r.closes(), 1);
     r.released();
   } finally {

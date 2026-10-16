@@ -387,28 +387,28 @@ download reports the start of its transfer when the `RecordingDownload` is
 returned, not its `completed` result. Without `onObservation` the operation
 attaches no listener.
 
-| Field                 | Meaning                                                                                                                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `operation`           | `list`, `calendar`, `thumbnail` or `download`                                                                                                                                        |
-| `owner`               | `standalone` for an [experimental standalone](#experimental-standalone-cameras) owner, else `station`. Also `station` for an unknown or expired recording ID, whose owner is unknown |
-| `sessionOpen`         | Whether the owner's session was connected when the operation started. `false` for an unknown or expired recording ID                                                                 |
-| `stage`               | The last stage reached, see below                                                                                                                                                    |
-| `code`                | The `EufyError` code on failure, `unexpected_error` for any other error, `null` on success                                                                                           |
-| `remoteCode`          | The error's numeric `remoteCode`, such as the database result of `history_rejected`, else `null`                                                                                     |
-| `elapsedMs`           | Milliseconds since the operation started                                                                                                                                             |
-| `pages`               | A list: one entry per query page sent, at most 4. A calendar: one entry with `limit: 0`. A thumbnail or download: empty                                                              |
-| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99                                                                                                |
-| `unhandledReason`     | Of the latest such reply: `unknown_cmd` when it has no inner command the session handles, `parse_error` when the session could not parse it. `null` without one                      |
-| `unhandledResultCode` | The database result code (mIntRet) of the latest such reply, `null` when it has none                                                                                                 |
-| `rowClasses`          | A list only: counts over the rows of the latest answered page, once an answer with a row array arrived. Otherwise `null`                                                             |
+| Field                 | Meaning                                                                                                                                                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `operation`           | `list`, `calendar`, `thumbnail` or `download`                                                                                                                                                                                               |
+| `owner`               | `standalone` for an [experimental standalone](#experimental-standalone-cameras) owner, whose recordings capability is unavailable, see below. Else `station`. Also `station` for an unknown or expired recording ID, whose owner is unknown |
+| `sessionOpen`         | Whether the owner's session was connected when the operation started. `false` for an unknown or expired recording ID                                                                                                                        |
+| `stage`               | The last stage reached, see below                                                                                                                                                                                                           |
+| `code`                | The `EufyError` code on failure, `unexpected_error` for any other error, `null` on success                                                                                                                                                  |
+| `remoteCode`          | The error's numeric `remoteCode`, such as the database result of `history_rejected`, else `null`                                                                                                                                            |
+| `elapsedMs`           | Milliseconds since the operation started                                                                                                                                                                                                    |
+| `pages`               | A list: one entry per query page sent, at most 4. A calendar: one entry with `limit: 0`. A thumbnail or download: empty                                                                                                                     |
+| `unhandledReplies`    | Database replies the owner's session could not dispatch during the operation, 0 to 99                                                                                                                                                       |
+| `unhandledReason`     | Of the latest such reply: `unknown_cmd` when it has no inner command the session handles, `parse_error` when the session could not parse it. `null` without one                                                                             |
+| `unhandledResultCode` | The database result code (mIntRet) of the latest such reply, `null` when it has none                                                                                                                                                        |
+| `rowClasses`          | A list only: counts over the rows of the latest answered page, once an answer with a row array arrived. Otherwise `null`                                                                                                                    |
 
-| Stage       | Meaning                                                                                                                                                                 |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `admission` | Input, recording reference and busy checks before any connection. `station_busy`, invalid input, an expired ID and a standalone `recording_cipher_unavailable` end here |
-| `connect`   | The owner's connection was requested. `connection_busy` and a failed connection end here                                                                                |
-| `query`     | The query or image request was sent on the owner's session and no answer arrived                                                                                        |
-| `validate`  | An answer arrived and was checked. `history_rejected`, `calendar_rejected`, the completeness codes and `invalid_recording` end here                                     |
-| `transfer`  | A download was started on the owner's session                                                                                                                           |
+| Stage       | Meaning                                                                                                                                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admission` | Input, recording reference and busy checks before any connection. `station_busy`, invalid input, an expired ID and, on a standalone owner, `recording_cipher_unavailable` and `standalone_recordings_unverified` end here |
+| `connect`   | The owner's connection was requested. `connection_busy` and a failed connection end here                                                                                                                                  |
+| `query`     | The query or image request was sent on the owner's session and no answer arrived                                                                                                                                          |
+| `validate`  | An answer arrived and was checked. `history_rejected`, `calendar_rejected`, the completeness codes and `invalid_recording` end here                                                                                       |
+| `transfer`  | A download was started on the owner's session                                                                                                                                                                             |
 
 Each entry of `pages`:
 
@@ -425,14 +425,14 @@ Each entry of `pages`:
 `otherDevice` and `stationMismatch` divide the rows. The other three count
 across them.
 
-| Field             | Meaning                                                                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `own`             | A camera of this owner, with the owner's station ID and a valid storage path                                                       |
-| `otherDevice`     | A device that is not a camera of this owner. The list skips it                                                                     |
-| `stationMismatch` | A camera of this owner with another station ID or an invalid storage path. The list fails with `invalid_recording`                 |
-| `invalidTime`     | A start or end time that is not a valid date. For a camera of this owner the list fails with `invalid_recording_date`              |
-| `otherDay`        | A valid start time on another day than the requested one. The list skips it                                                        |
-| `cipherId`        | A row with a cipher ID of any value, also 0 or `null`. A standalone owner refuses its download with `recording_cipher_unavailable` |
+| Field             | Meaning                                                                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `own`             | A camera of this owner, with the owner's station ID and a valid storage path                                                                                                  |
+| `otherDevice`     | A device that is not a camera of this owner. The list skips it                                                                                                                |
+| `stationMismatch` | A camera of this owner with another station ID or an invalid storage path. The list fails with `invalid_recording`                                                            |
+| `invalidTime`     | A start or end time that is not a valid date. For a camera of this owner the list fails with `invalid_recording_date`                                                         |
+| `otherDay`        | A valid start time on another day than the requested one. The list skips it                                                                                                   |
+| `cipherId`        | A row with a cipher ID of any value, also 0 or `null`. A standalone owner refuses its download with `recording_cipher_unavailable`, before `standalone_recordings_unverified` |
 
 Every number is an integer. Times are bounded to one hour, counts of rows to
 10000, and codes are clamped to -999999 to 999999. The observation carries no
@@ -457,6 +457,17 @@ count for it, because results are matched in send order. `history_rejected` at
 `validate` carries the database result in `remoteCode` and `resultCode`.
 `device_disconnected` at `query` is a session that closed while the query
 waited. None of these values proves a cause on its own.
+
+On an [experimental standalone](#experimental-standalone-cameras) owner the
+recordings capability is unavailable with the reason
+`standalone_recordings_unverified`. A thumbnail or download of one of its
+records ends at `admission` with that code, with `owner: 'standalone'`, no pages
+and no connection or device command. A download of a record with a cipher ID
+ends with `recording_cipher_unavailable` first. `listRecordings` and
+`recordingCalendar` stay owner-wide library calls without that gate. A consumer
+that ignores the capability and calls them on a standalone owner still sends
+10006 or 10008 to the camera, can wait 15 seconds for each page, and gets the
+observation as before.
 
 Observation only. Query payloads, page sizes, timeouts, error codes and the
 session close after a failure are the same with and without these options.
@@ -989,13 +1000,26 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   connects to the camera itself with the same lookup, [stages](#station-connection-stages-0260)
   and LAN-derived command key as a HomeBase. No cloud DSK, cipher or legacy
   security-cloud call is made.
-- Snapshot, live and recordings report `available: true` with status
-  `experimental`. They use the camera's own session and the vendor command set
-  of its device type. Live always uses that one session, also when
-  `maxLiveStreamsPerStation` is above 1.
-- Recording lists and thumbnails query the camera's own database. A download
-  of a record with a cipher ID fails with `recording_cipher_unavailable` before
-  any connection or command, because it would need a cloud cipher.
+- Snapshot and live report `available: true` with status `experimental`. They
+  use the camera's own session and the vendor command set of its device type.
+  Live always uses that one session, also when `maxLiveStreamsPerStation` is
+  above 1.
+- Since 0.30.1 recordings report `available: false` with status `unsupported`
+  and the reason `standalone_recordings_unverified`, for
+  [ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175). No
+  recording request with evidence exists on this route, as recorded in the
+  [model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301).
+  `recordingThumbnail` and `downloadRecording` fail with that code at stage
+  `admission`, before any connection or device command. A download of a record
+  with a cipher ID fails with `recording_cipher_unavailable` first, because it
+  would need a cloud cipher. HomeBase owners and their cameras are unchanged.
+- `listRecordings` and `recordingCalendar` stay owner-wide library calls, as the
+  [capability contract](CAMERA_CAPABILITIES.md) allows for owner-wide metadata.
+  They query the camera's own database with the unchanged 10006 and 10008
+  requests. A consumer that ignores the capability and calls them still sends
+  those requests, can wait 15 seconds for an answer, and gets the
+  [recording operation observation](#recording-operation-observation-0301) as
+  before. Consumers should follow the capability and not start them.
 - Guard mode and `refreshStationState` fail with
   `operation_outside_hardware_scope`. `getStationState` and `station` events
   report its session only, with null modes and no alarm. Pushes for the camera
@@ -1015,6 +1039,8 @@ on this route. Both T8410 cameras acknowledged the query with `ackCode: 0` and
 never answered it, and the T8410C, which has no microSD card, rejected it with
 `history_rejected` and database result -1100, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-and-t8410c-results-2026-10-16).
+No other request had enough evidence, so 0.30.1 reports recordings as
+unavailable on this route.
 A failure is still useful evidence for the next step, not a regression. The
 stage a failed connection reached says whether the camera answered the lookup
 with its own DID, completed the session handshake, or opened the session without

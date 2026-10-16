@@ -398,6 +398,10 @@ export class DeviceTransport extends EventEmitter {
     if (failure) throw new EufyError(failure);
     const camera = this.cameras.get(id);
     if (!camera) throw new EufyError('unknown_camera');
+    // ha-eufy-cam#175: no recording request with evidence exists on the experimental
+    // standalone route.
+    if (feature === 'recordings' && this.standalone.has(id))
+      throw new EufyError('standalone_recordings_unverified');
     if (feature && !this.hasMedia(id, feature)) throw new EufyError('camera_media_unverified');
     return camera;
   }

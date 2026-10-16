@@ -301,7 +301,7 @@ test('the descriptor reports missing and malformed connection fields without fai
   assert.equal(descriptor({ p2p_did: 42 }).did, false);
 });
 
-test('the transport makes the opted-in T84A1 its own local station with all three media features', async (t) => {
+test('the transport makes the opted-in T84A1 its own local station with snapshot and live media', async (t) => {
   await fixture(
     t,
     [homeBase, eufyCam, wallLight()],
@@ -321,12 +321,24 @@ test('the transport makes the opted-in T84A1 its own local station with all thre
       assert.equal(camera.constructor, WallLightCam);
       assert.equal(camera.getStationSerial(), 'T84A1_FIXTURE');
       assert.equal(camera.getChannel(), 0);
-      for (const feature of ['snapshot', 'live', 'recordings'])
+      for (const feature of ['snapshot', 'live'])
         assert.deepEqual(transport.cameraCapabilities('T84A1_FIXTURE')[feature], {
           available: true,
           status: 'experimental',
           reason: null,
         });
+      // ha-eufy-cam#175: no recording request is evidenced on the standalone route.
+      assert.deepEqual(transport.cameraCapabilities('T84A1_FIXTURE').recordings, {
+        available: false,
+        status: 'unsupported',
+        reason: 'standalone_recordings_unverified',
+      });
+      // A HomeBase camera in the same transport keeps its recordings.
+      assert.deepEqual(transport.cameraCapabilities('T8161_FIXTURE').recordings, {
+        available: true,
+        status: 'experimental',
+        reason: null,
+      });
       // The HomeBase and its camera keep their own owner and session.
       const owner = created.find((s) => s.wire.station_sn === 'T8030_OWNER');
       assert.deepEqual(
@@ -409,12 +421,24 @@ for (const [model, row] of panTilts)
         assert.equal(camera.constructor, IndoorCamera);
         assert.equal(camera.getStationSerial(), id);
         assert.equal(camera.getChannel(), 0);
-        for (const feature of ['snapshot', 'live', 'recordings'])
+        for (const feature of ['snapshot', 'live'])
           assert.deepEqual(transport.cameraCapabilities(id)[feature], {
             available: true,
             status: 'experimental',
             reason: null,
           });
+        // ha-eufy-cam#175: no recording request is evidenced on the standalone route.
+        assert.deepEqual(transport.cameraCapabilities(id).recordings, {
+          available: false,
+          status: 'unsupported',
+          reason: 'standalone_recordings_unverified',
+        });
+        // A HomeBase camera in the same transport keeps its recordings.
+        assert.deepEqual(transport.cameraCapabilities('T8161_FIXTURE').recordings, {
+          available: true,
+          status: 'experimental',
+          reason: null,
+        });
         // The HomeBase and its camera keep their own owner and session.
         const owner = created.find((s) => s.wire.station_sn === 'T8030_OWNER');
         assert.deepEqual(

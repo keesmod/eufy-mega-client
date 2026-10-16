@@ -10,6 +10,15 @@ issues no media command. Unknown cameras, invalid relationships, standalone
 transport, initialization failures, missing credentials and unverified firmware
 profiles retain the same public error code as `reason`. It returns fresh objects.
 
+Since 0.30.1 an [experimental standalone](API.md#experimental-standalone-cameras)
+camera reports `recordings` as `{ available: false, status: 'unsupported',
+reason: 'standalone_recordings_unverified' }` for
+[ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175), because no
+recording request with evidence exists on that route. Its thumbnail and download
+fail with the same code before any connection. Its snapshot and live and every
+camera under a HomeBase are unchanged. List and calendar stay owner-wide
+metadata calls, as described below.
+
 An available operation has status `experimental` and reason null. This describes
 software admission, not reachability, idle ownership, fresh imagery or physical
 support. Runtime operations still enforce authentication, concurrency, connection,
