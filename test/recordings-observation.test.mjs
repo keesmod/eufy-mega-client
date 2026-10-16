@@ -1751,3 +1751,48 @@ test('the client passes the probe and its options through unchanged', async () =
     ['S', options],
   ]);
 });
+
+test('a list and a calendar count unhandled replies with any inner command', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    for (const run of [
+      (r, onObservation) => r.transport.recordings.list(r.owner, DAY, undefined, { onObservation }),
+      (r, onObservation) => r.transport.recordings.calendar(r.owner, '2026-10', { onObservation }),
+    ]) {
+      const r = await rig('standalone');
+      const observations = [];
+      try {
+        r.respond(() => {
+          r.reply({ cmd: CommandType.CMD_DATABASE_QUERY_LATEST_INFO, mIntRet: -5, data: { x: 1 } });
+          r.reply({ cmd: 10099, mIntRet: -7 });
+        });
+        const outcome = settled(run(r, (o) => observations.push(o)));
+        await turns();
+        assert.deepEqual(r.unhandled, [
+          {
+            innerCmd: CommandType.CMD_DATABASE_QUERY_LATEST_INFO,
+            resultCode: -5,
+            reason: 'parse_error',
+          },
+          { innerCmd: 10099, resultCode: -7, reason: 'unknown_cmd' },
+        ]);
+        t.mock.timers.tick(15000);
+        assert.deepEqual(await outcome, { code: 'device_request_timeout', remoteCode: undefined });
+        const observation = only(observations);
+        assert.deepEqual(
+          [
+            observation.unhandledReplies,
+            observation.unhandledReason,
+            observation.unhandledResultCode,
+          ],
+          [2, 'unknown_cmd', -7],
+        );
+        r.released();
+      } finally {
+        await r.done();
+      }
+    }
+  } finally {
+    t.mock.timers.reset();
+  }
+});

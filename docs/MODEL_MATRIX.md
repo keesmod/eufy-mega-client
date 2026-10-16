@@ -651,7 +651,7 @@ camera.
      continuous footage is stored in `history_record_info`. A standalone owner
      also has no playback path, see below.
    - Verdict: the next request to probe, read-only and bounded to one page and
-     15 seconds, but not enough for list and play now. Since 0.30.1-beta.3 the
+     15 seconds, but not enough for list and play now. Since 0.30.1 the
      client can send it, see the
      [standalone recording probe](#standalone-recording-probe-ha-eufy-cam178).
 2. `CMD_DATABASE_COUNT_BY_DATE` 10008 through the existing calendar. Reported
@@ -703,8 +703,7 @@ because it would count as an unhandled reply.
 
 #### Standalone recording probe (ha-eufy-cam#178)
 
-For [ha-eufy-cam#178][178], client 0.30.1 adds `probeStandaloneRecordings`,
-first published in 0.30.1-beta.3. It sends candidate 1 once to an experimental standalone T84A1, T8410 or T8410C: command
+For [ha-eufy-cam#178][178], client 0.30.1 adds `probeStandaloneRecordings`. It sends candidate 1 once to an experimental standalone T84A1, T8410 or T8410C: command
 1350 with inner 1306 and 10017 on `history_record_info`, `mChannel` 0 and frame
 channel 0, at most 20 records of the host's local day, `start_time` `"0"`, no
 `device_info` and no `res_unzip`. The exact request, its bounds and its codes
