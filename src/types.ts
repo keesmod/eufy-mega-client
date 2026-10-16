@@ -147,8 +147,10 @@ export interface ClientOptions {
   liveUpperBoundMs?: number;
   /**
    * Opt-in, default false. Standalone cameras whose exact profile allows it
-   * become their own P2P owner on the local LAN-derived route, with snapshot,
-   * live and recordings. Unverified on hardware. See docs/API.md.
+   * become their own P2P owner on the local LAN-derived route, with experimental
+   * snapshot and live. Since 0.30.1 their recordings report unavailable with
+   * `standalone_recordings_unverified`, see ha-eufy-cam#175. Unverified on
+   * hardware. See docs/API.md.
    */
   experimentalStandalone?: boolean;
   diagnostics?: (event: Diagnostic) => void;

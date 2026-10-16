@@ -107,7 +107,8 @@ consumers that pass neither see no change from it. The types
 `RecordingRowClasses`, `RecordingObservation` and `RecordingOperationOptions`
 are exported. With `experimentalStandalone` set, a standalone camera now reports
 recordings as unavailable with `standalone_recordings_unverified`, and its
-thumbnail and download fail with that code. HomeBase cameras see no change.
+thumbnail and download fail with that code. A download of a record with a
+cipher ID fails with `recording_cipher_unavailable` first. HomeBase cameras see no change.
 Rollback: 0.30.0, and pass the signal alone again. That also restores the
 earlier recordings capability of standalone cameras, whose lists did not work on
 the reported cameras.
