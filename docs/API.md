@@ -1137,23 +1137,24 @@ history and crop picture rows of each record. Each source of the request and its
 kind of claim is listed in the model matrix. Nothing is copied from the
 unlicensed public report.
 
-| `code`                             | `stage`     | Meaning                                                                                                                                                           |
-| ---------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `null`                             | `validate`  | Answered with database result 0. `pages[0].rows` is the number of records, 0 for an empty page, and `rowClasses` counts them                                      |
-| `history_rejected`                 | `validate`  | Answered with another database result or none. `remoteCode` and `pages[0].resultCode` carry it when it is an integer                                              |
-| `device_request_timeout`           | `query`     | No answer within 15 seconds. `ackCode` is the camera's command result for the request, and `unhandledReplies` counts 10017 replies the session could not dispatch |
-| `cancelled`, `device_disconnected` | `query`     | The signal or the client aborted the probe, or the session closed while it waited                                                                                 |
-| `device_request_failed`            | `query`     | The request could not be sent, for example a `NotSupportedError` from a station without the query command. No page                                                |
-| a connection code                  | `connect`   | The owner's connection failed, such as `device_request_timeout` or `connection_busy`. No request was sent                                                         |
-| `station_busy`                     | `admission` | A recording operation, live start or command holds the owner. No request was sent                                                                                 |
+| `code`                             | `stage`     | Meaning                                                                                                                                                                                                |
+| ---------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `null`                             | `validate`  | Answered with database result 0. `pages[0].rows` is the number of records, 0 for an empty page, and `rowClasses` counts them                                                                           |
+| `history_rejected`                 | `validate`  | Answered with another database result or none. `remoteCode` and `pages[0].resultCode` carry it when it is an integer                                                                                   |
+| `device_request_timeout`           | `query`     | No answer within 15 seconds. `ackCode` is the camera's command result for the request, and `unhandledReplies` counts the replies the session could not dispatch, except those with inner command 10013 |
+| `cancelled`, `device_disconnected` | `query`     | The signal or the client aborted the probe, or the session closed while it waited                                                                                                                      |
+| `device_request_failed`            | `query`     | The request could not be sent, for example a `NotSupportedError` from a station without the query command. No page                                                                                     |
+| a connection code                  | `connect`   | The owner's connection failed, such as `device_request_timeout` or `connection_busy`. No request was sent                                                                                              |
+| `station_busy`                     | `admission` | A recording operation, live start or command holds the owner. No request was sent                                                                                                                      |
 
 A probe that fails after its connection was requested closes the owner's
 session, as the other recording operations do. An answer keeps the session open,
 also one with a non-zero database result. That differs from `listRecordings`,
 which closes the session after `history_rejected`. `unhandledReplies` counts
 every unhandled reply except one with inner command 10013. The vendored Station
-sends the latest-info query 10013 at every connect, and an unparsable reply to
-it during the probe is not counted. Both admitted types, 31 and 151,
+sends the latest-info query 10013 at every connect, and a reply that names it is
+not counted during the probe, also when it fails to parse. A reply without a
+readable inner command counts, whichever query it answers. Both admitted types, 31 and 151,
 list the query command in their vendored command set. How a bridge records and
 reads the outcome is described in its own documentation. Each model's result,
 a failure included, is recorded in the

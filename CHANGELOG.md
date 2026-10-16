@@ -128,9 +128,11 @@
   the session after `history_rejected`.
 - The observation counts the answer's records and their row classes, without
   identifiers. It does not count unhandled database replies with inner command
-  10013, so an unparsable reply to the latest-info query that the Station sends
-  at connect is not attributed to the probe. Every other unhandled reply
-  counts, as for the other operations, which are unchanged.
+  10013, so a reply that names the latest-info query the Station sends at
+  connect is not attributed to the probe, also when it fails to parse. Every
+  other unhandled reply counts, as for the other operations, which are
+  unchanged. That includes a reply without a readable inner command, whichever
+  query it answers.
 - The probe creates no recording ID and sends no 10006, 10008, image or
   download request. The recordings capability of standalone cameras stays
   unavailable with `standalone_recordings_unverified`.
