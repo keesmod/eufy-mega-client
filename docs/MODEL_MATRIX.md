@@ -282,8 +282,9 @@ described in [API.md](API.md#experimental-standalone-cameras) and
 [WALLLIGHT.md](WALLLIGHT.md#experimental-standalone-s100-0290). Without it, the
 standalone T84A1 keeps `standalone_transport_unverified`. Every standalone
 relationship now reports which connection fields its row has, as presence
-booleans. This is software evidence with synthetic rows. No standalone camera
-has used the route, so the T84A1 row and its cells below are unchanged.
+booleans. This is software evidence with synthetic rows. At 0.29.0 no standalone camera
+had used the route. No T84A1 result is recorded, so the T84A1 row and its cells
+below are unchanged.
 
 ## Reported standalone T8410 and experimental route, 0.29.1
 
@@ -306,8 +307,8 @@ described in [API.md](API.md#experimental-standalone-cameras) and
 [INDOOR.md](INDOOR.md#experimental-standalone-t8410-0291). Without the option a
 standalone T8410 keeps `standalone_transport_unverified`, and under a HomeBase it
 keeps its H3 relationship and media. This is software evidence with synthetic
-rows only. No standalone T8410 has used the route yet, so the type 31 rows and
-their cells below are unchanged.
+rows only. At 0.29.1 no standalone T8410 had used the route. The type 31 rows and their
+cells below cover an H3 owner only and are unchanged.
 
 [T8410-report]: https://github.com/keesmod/ha-eufy-cam/issues/152
 
@@ -401,7 +402,7 @@ video like camera B, with bridge 0.8.38-beta.1 and client 0.30.0-beta.1. "Show r
 failed with the bridge code `recording_unavailable`, which the card showed as
 "The HomeBase connection is unavailable. Try again shortly." The bridge maps
 almost every client error of a recording operation to that code and records
-none of them, so the cause is unknown. The camera may not answer the database
+none of them, so that report does not show the cause. The camera may not answer the database
 query 10006, refuse it in its command result, send a reply the vendored session
 cannot dispatch, reject the query, drop the session, or the operation may have
 been refused before the query or failed to connect. Live video uses another
@@ -520,8 +521,7 @@ and gain no H or P cells.
 ## Reported standalone T8410 and T8410C results, 2026-10-16
 
 On 2026-10-16 the reporter of ha-eufy-cam#152 [reported][standalone-results] on
-all three standalone cameras above, with integration 0.8.48-beta.1, bridge
-0.8.39-beta.1 and client 0.30.1-beta.1 and `experimental_standalone` on. All
+all three standalone cameras above, with integration 0.8.48-beta.1, bridge 0.8.39-beta.1 and client 0.30.1-beta.1, with `experimental_standalone` on. All
 live views were closed before each recordings test. The evidence is app log
 lines from the bridge start on 2026-10-15 at 21:00 UTC to the recordings tests
 on 2026-10-16, shortened to the relevant fields with values unchanged. There is
@@ -565,16 +565,15 @@ T8410/31 camera B on firmware 2.3.1.6, with a microSD card:
   `query` after about 15.6 seconds, without unhandled database replies.
 
 In the Eufy app both T8410 cameras show only a continuous timeline, without
-separate event clips.
+separate event clips. Neither T8410 answered a recording list, so recording
+playback on the standalone T8410 route does not work with the current request.
 
 Readings, not proven causes:
 
 - On firmware 2.3.x a standalone T8410 accepts the `CMD_DATABASE` query 10006 on
   `history_record_info` but does not answer it. That is consistent with the
   public analog [bropat-963], where a standalone E30 never answered 10006, and
-  with recording that is continuous only. Recording playback on the standalone
-  T8410 route therefore does not work with the current request. Which request
-  the camera answers for its continuous timeline is unknown.
+  with recording that is continuous only. Which request the camera answers for its continuous timeline is unknown.
 - The standalone T8410C on firmware 3.3.4.4 answers 10006 and rejects it without
   storage. Whether it returns rows with a microSD card is unknown.
 
@@ -591,8 +590,9 @@ For these standalone cameras the states stay separate:
   recording list on any of them.
 
 This gives ha-eufy-cam#168 its hardware result: the standalone T8410C route
-was reported working for live view and snapshot on firmware 3.3.4.4. The standalone T8410
-transport of ha-eufy-cam#152 is complete for live view and snapshot. Standalone
+was reported working for live view and snapshot on firmware 3.3.4.4. For ha-eufy-cam#152 the
+standalone T8410 route was reported working for live view and snapshot on
+firmware 2.3.2.4 and 2.3.1.6. Standalone
 recordings move to a follow-up issue. The type 31 rows below cover an H3 owner
 only and gain no H or P cells.
 

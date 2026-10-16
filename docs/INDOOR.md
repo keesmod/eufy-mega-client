@@ -182,8 +182,9 @@ that key and envelope, and whether it answers the gateway information request
 after the handshake. The reported live video on firmware 2.3.2.4 on 2026-10-13
 and on 2.3.1.6 on 2026-10-15 implies that both firmware versions do both. For
 other firmware both remain unknown. Without that answer no command key is set and the connection ends at
-the `session_open` stage. Whether it serves snapshot covers and recordings from its
-own storage, such as a microSD card, is unknown too. A recording download with a
+the `session_open` stage. Whether it serves snapshot covers from its own storage is unknown too. With a
+microSD card, firmware 2.3.2.4 and 2.3.1.6 acknowledged the recording query in
+the 2026-10-16 report below but never answered it. A recording download with a
 cipher ID would need a cloud cipher and is refused. Guard mode and events stay
 off.
 
@@ -211,7 +212,8 @@ to [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152) and
 On 2026-10-15 the same reporter's recording list failed for the standalone
 T8410 on firmware 2.3.2.4, which streams live video, with bridge
 0.8.38-beta.1 and client 0.30.0-beta.1. The bridge returned only
-`recording_unavailable`, so the cause is unknown, as recorded in the
+`recording_unavailable`, so that report does not show the cause, as recorded in
+the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-result-2026-10-13).
 Live video uses another command and says nothing about the database query
 `databaseQueryByDate` (10006). That query is verified only on a HomeBase 3 so
@@ -222,8 +224,8 @@ a standalone E30 never answered it. Since 0.30.1 the
 reports the device's command result for the query, its answer or the lack of
 one, database replies the session could not dispatch, and the classes of
 returned rows, including rows with a cipher ID, whose download a standalone
-owner refuses. Until the 2026-10-16 report below, recording playback on the standalone route
-was unconfirmed.
+owner refuses. Recording playback on the standalone route is still unconfirmed for the T84A1
+and the T8410C. The 2026-10-16 report below covers the T8410.
 
 On 2026-10-16 the [same reporter][standalone-results] used that observation,
 with bridge 0.8.39-beta.1 and client 0.30.1-beta.1. Both standalone T8410
@@ -236,8 +238,8 @@ continuously, and the Eufy app shows only a continuous timeline for the T8410 ca
 without separate event clips. The
 reading, not a proven cause, is that firmware 2.3.x accepts 10006 without
 answering it, consistent with the E30 above and with recording that is
-continuous only. Recording playback on the standalone T8410 route therefore does
-not work with the current request. Which request the camera answers for its
+continuous only. With no answer from either camera, recording playback on the
+standalone T8410 route does not work with the current request. Which request the camera answers for its
 continuous timeline is unknown, and standalone recordings move to a follow-up
 issue. This is reported, not independently reproduced, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-and-t8410c-results-2026-10-16).
