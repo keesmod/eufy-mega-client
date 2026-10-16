@@ -80,10 +80,20 @@ the shared media/lifecycle fixtures. They cover stored snapshots, both live
 codecs, video/audio, confirmed stop, recording metadata/download, cancellation
 and the owner and firmware rejections. Discovery and the media/lifecycle
 fixtures use the reported camera and owner firmware. The state/events tests use
-synthetic firmware. Physical results on T8160-C are pending. See
+synthetic firmware.
+
+On 2026-10-16 the reporter [reported][C-result] that after updating to
+integration 0.8.45 and bridge 0.8.36 with client 0.29.2 all devices, the T8160-C
+included, appeared right away and work with snapshots, live view, recordings and
+events. The comment names no device, firmware or event type separately. Audio,
+confirmed stop and cancellation were not reported. Working snapshot, live view
+and recordings imply that the owner checks above passed, including the T8030
+serial prefix. This is a reported result, not independently reproduced, and the
+T8160 hardware evidence below still does not transfer to T8160-C. See
 [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-issue-149-0292).
 
 [C-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
+[C-result]: https://github.com/keesmod/ha-eufy-cam/issues/149#issuecomment-6214980737
 
 ## Exact hardware validation
 
