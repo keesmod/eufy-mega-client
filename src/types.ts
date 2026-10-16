@@ -149,8 +149,10 @@ export interface ClientOptions {
    * Opt-in, default false. Standalone cameras whose exact profile allows it
    * become their own P2P owner on the local LAN-derived route, with experimental
    * snapshot and live. Since 0.30.1 their recordings report unavailable with
-   * `standalone_recordings_unverified`, see ha-eufy-cam#175. Unverified on
-   * hardware. See docs/API.md.
+   * `standalone_recordings_unverified`, see ha-eufy-cam#175. Since 0.30.1 a
+   * standalone owner also accepts one read-only recording probe per call, see
+   * EufyMegaClient.probeStandaloneRecordings. Unverified on hardware. See
+   * docs/API.md.
    */
   experimentalStandalone?: boolean;
   diagnostics?: (event: Diagnostic) => void;
@@ -324,7 +326,8 @@ export interface Recording {
   bytes: number;
   thumbnail: boolean;
 }
-export type RecordingOperation = 'list' | 'calendar' | 'thumbnail' | 'download';
+/** `probe` is the standalone recording probe, see EufyMegaClient.probeStandaloneRecordings. */
+export type RecordingOperation = 'list' | 'calendar' | 'thumbnail' | 'download' | 'probe';
 /**
  * `admission`: input, reference and busy checks before any connection.
  * `connect`: the owner's connection was requested. `query`: the request was
@@ -334,7 +337,7 @@ export type RecordingOperation = 'list' | 'calendar' | 'thumbnail' | 'download';
 export type RecordingOperationStage = 'admission' | 'connect' | 'query' | 'validate' | 'transfer';
 /** One database query of a recording operation. No identifiers, every number an integer. */
 export interface RecordingQueryPage {
-  /** Rows requested: 100, 500, 2000 or 10000 for a list, 0 for a calendar. */
+  /** Rows requested: 100, 500, 2000 or 10000 for a list, 0 for a calendar, 20 for a probe. */
   limit: number;
   /** Milliseconds from sending this page until its answer, or until the operation ended without one, 0 to 3600000. */
   elapsedMs: number;
@@ -352,7 +355,7 @@ export interface RecordingQueryPage {
   rows: number | null;
 }
 /**
- * Counts over the rows of the latest answered page of a list, each 0 to 10000.
+ * Counts over the rows of the latest answered page of a list or probe, each 0 to 10000.
  * `own`, `otherDevice` and `stationMismatch` divide the rows. `invalidTime`,
  * `otherDay` and `cipherId` count across them.
  */
@@ -389,15 +392,22 @@ export interface RecordingObservation {
   remoteCode: number | null;
   /** Milliseconds since the operation started, 0 to 3600000. */
   elapsedMs: number;
-  /** A list: one entry per page sent, at most 4. A calendar: one entry with limit 0. Otherwise empty. */
+  /**
+   * A list: one entry per page sent, at most 4. A calendar: one entry with limit 0.
+   * A probe: one entry with limit 20. Otherwise empty.
+   */
   pages: RecordingQueryPage[];
-  /** Database replies the owner's session could not dispatch during this operation, 0 to 99. */
+  /**
+   * Database replies the owner's session could not dispatch during this operation,
+   * 0 to 99. A probe does not count those with inner command 10013, the
+   * latest-info query the vendored Station sends at every connect.
+   */
   unhandledReplies: number;
   /** Why the latest of those was not dispatched, `null` without one. */
   unhandledReason: 'unknown_cmd' | 'parse_error' | null;
   /** The numeric mIntRet of the latest of those, clamped to -999999..999999, else `null`. */
   unhandledResultCode: number | null;
-  /** A list only, once an answer with a row array arrived. Otherwise `null`. */
+  /** A list or probe, once an answer with a row array arrived. Otherwise `null`. */
   rowClasses: RecordingRowClasses | null;
 }
 export interface RecordingOperationOptions {

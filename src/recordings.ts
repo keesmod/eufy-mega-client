@@ -4,10 +4,12 @@ import type { Device } from './vendor/http/device.js';
 import type {
   DatabaseQueryByDate,
   DatabaseCountByDate,
+  DatabaseQueryLocal,
   DatabaseUnhandled,
 } from './vendor/p2p/interfaces.js';
 import type { CommandResult } from './vendor/p2p/models.js';
 import { CommandName } from './vendor/http/types.js';
+import { CommandType } from './vendor/p2p/types.js';
 import { awaitEvent } from './operations.js';
 import { downloadRecording } from './download.js';
 import {
@@ -105,8 +107,8 @@ interface Page {
   rows: number | null;
 }
 /**
- * Counts the rows of one list answer by the checks the list applies, without
- * throwing. A row that is not an object counts as another device.
+ * Counts the rows of one list or probe answer by the checks the list applies,
+ * without throwing. A row that is not an object counts as another device.
  */
 function rowClasses(
   rows: unknown[],
@@ -142,6 +144,30 @@ function rowClasses(
     classes[key] = Math.min(10000, classes[key]);
   return classes;
 }
+/**
+ * The records of a 10017 answer in the row shape rowClasses reads. The vendored
+ * session merges each record's history row and crop pictures by record ID. A
+ * record without a history row has no storage path and no valid time.
+ */
+function probeRows(records: unknown): unknown {
+  if (!Array.isArray(records)) return records;
+  return records.map((item) => {
+    const record = (
+      typeof item === 'object' && item !== null ? item : {}
+    ) as Partial<DatabaseQueryLocal>;
+    const history = (
+      typeof record.history === 'object' && record.history !== null ? record.history : {}
+    ) as Partial<DatabaseQueryLocal['history']>;
+    return {
+      device_sn: record.device_sn,
+      station_sn: record.station_sn,
+      storage_path: history.storage_path,
+      cipher_id: history.cipher_id,
+      start_time: history.start_time,
+      end_time: history.end_time,
+    };
+  });
+}
 
 /**
  * Records one recording operation for its consumer's onObservation. Without that
@@ -166,6 +192,11 @@ class Observation {
     private readonly callback: RecordingOperationOptions['onObservation'],
     /** The vendor command whose session results belong to this operation's pages. */
     private readonly command?: CommandName,
+    /**
+     * An inner command whose unhandled database replies belong to something else
+     * and are not counted. Every other unhandled reply is.
+     */
+    private readonly ignoredReplyCommand?: number,
   ) {
     this.enabled = typeof callback === 'function';
   }
@@ -201,6 +232,8 @@ class Observation {
       page.ackCode = bounded(command.return_code);
     };
     const unhandled = (_station: Station, info: DatabaseUnhandled) => {
+      if (this.ignoredReplyCommand !== undefined && info?.innerCmd === this.ignoredReplyCommand)
+        return;
       this.unhandled = Math.min(99, this.unhandled + 1);
       this.unhandledReason =
         info?.reason === 'unknown_cmd' || info?.reason === 'parse_error' ? info.reason : null;
@@ -245,7 +278,7 @@ class Observation {
     page.resultCode = bounded(resultCode);
     page.rows = Array.isArray(rows) ? Math.min(10000, rows.length) : null;
   }
-  /** Counts the rows of the latest list answer that carried a row array. */
+  /** Counts the rows of the latest list or probe answer that carried a row array. */
   classify(rows: unknown, known: (deviceId: string) => boolean, ownerId: string, day: string) {
     if (!this.enabled || !Array.isArray(rows)) return;
     try {
@@ -501,6 +534,70 @@ export class RecordingAccess {
         ),
       ].sort();
     });
+  }
+  /**
+   * ha-eufy-cam#178: sends one read-only 10017 request for the newest page of at
+   * most 20 records of today, the process's local date, to an experimental
+   * standalone owner, and resolves with its observation for every outcome after
+   * admission. Anything but a standalone owner is refused before any connection.
+   * It creates no recording reference and never changes a capability. A failure
+   * after the connection was requested closes the owner's session as for the
+   * other operations, except `connection_busy`, which leaves the other attempt's
+   * session alone. An answer, also one with a non-zero database result, keeps it
+   * open.
+   */
+  async probe(
+    id: string,
+    options?: Omit<RecordingOperationOptions, 'onObservation'>,
+  ): Promise<RecordingObservation> {
+    if (!this.connection.standalone?.(id)) throw new EufyError('operation_outside_hardware_scope');
+    const settings = operationOptions(options);
+    let result: RecordingObservation | undefined;
+    const observation = new Observation(
+      'probe',
+      (reported) => (result = reported),
+      CommandName.StationDatabaseQueryLocal,
+      // The vendored Station sends the latest-info query 10013 at every connect.
+      CommandType.CMD_DATABASE_QUERY_LATEST_INFO,
+    );
+    observation.bind(this.connection, id);
+    try {
+      const day = localTime(new Date()).slice(0, 10);
+      const start = calendarDate(day),
+        end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      const answer = await this.run(id, settings, observation, (station, abort) =>
+        awaitEvent(
+          station,
+          'database query local',
+          () => observation.send(20, () => station.databaseQueryLocalNewest(start, end)),
+          (_s, code: unknown, records: unknown) => {
+            observation.answer(code, records);
+            observation.classify(
+              probeRows(records),
+              (deviceId) => this.connection.knownCamera(deviceId, id),
+              id,
+              day,
+            );
+            return { code };
+          },
+          abort,
+        ),
+      );
+      observation.finish(
+        answer.code === 0
+          ? undefined
+          : {
+              error: new EufyError(
+                'history_rejected',
+                typeof answer.code === 'number' ? answer.code : undefined,
+              ),
+            },
+      );
+    } catch (error) {
+      observation.finish({ error });
+    }
+    return result!;
   }
   private reference(id: string): Reference {
     const ref = this.references.get(id);
