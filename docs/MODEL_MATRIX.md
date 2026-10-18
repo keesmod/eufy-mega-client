@@ -265,7 +265,8 @@ Standalone T84A1 firmware 1.1.0.4 is discovered, but snapshot/live/recordings
 remain `standalone_transport_unverified`. The 2026-10-09 update supplies no
 device type, authentication handshake or command lifecycle for this camera. Its
 catalogue pair T84A1/151 and the blocked [standalone route #142][142] stay
-unchanged.
+unchanged. A route result followed on 2026-10-17, see
+[Reported standalone T84A1 result, 2026-10-17](#reported-standalone-t84a1-result-2026-10-17).
 T8920/type 20 and T87B0/type 157 are non-camera sensor/tracker products in the
 pinned catalogue and remain outside camera discovery.
 
@@ -283,8 +284,9 @@ described in [API.md](API.md#experimental-standalone-cameras) and
 standalone T84A1 keeps `standalone_transport_unverified`. Every standalone
 relationship now reports which connection fields its row has, as presence
 booleans. This is software evidence with synthetic rows. At 0.29.0 no standalone camera
-had used the route. No T84A1 result on the route is recorded, so the T84A1 row
-and its cells below are unchanged.
+had used the route and no T84A1 result on it was recorded. The first one is in
+[Reported standalone T84A1 result, 2026-10-17](#reported-standalone-t84a1-result-2026-10-17).
+The T84A1 row and its cells below are unchanged.
 
 ## Reported standalone T8410 and experimental route, 0.29.1
 
@@ -762,6 +764,67 @@ path.
 [eufy-sdk-385]: https://github.com/mega-yfue/eufy-sdk/issues/385
 [ha-eufy-sdk-120]: https://github.com/mega-yfue/ha-eufy-sdk/issues/120
 [ws-545]: https://github.com/bropat/eufy-security-ws/issues/545
+
+## Reported standalone T84A1 result, 2026-10-17
+
+On 2026-10-17 the issue #66 reporter [reported][T84A1-result] on [#142][142] the
+first result of a standalone T84A1 on the experimental route. The setup was
+integration 0.8.47 and bridge 0.8.38 with client 0.30.0 on HA OS amd64, with
+`experimental_standalone` and `diagnostics` on and the app restarted after
+enabling the option. The camera is a Wall Light Cam S100 `T84A1` on firmware
+1.1.0.4 without a HomeBase. The comment mentions a diagnostics download, but
+none is attached. The evidence is the field values quoted in the comment. This
+is a reported result, not independently reproduced.
+
+- Discovery gave the camera the relationship `standalone` with the
+  `experimental` transport and a complete descriptor: P2P device ID, license,
+  administrator user and LAN address present. Discovery creates that
+  relationship only for an exact profile match, so the row is the exact pair
+  `T84A1`/151.
+- Its `station_connection` record of phase `connect` was `connected` after a
+  lookup reply with its own DID (`lookup_own_replies` 1,
+  `lookup_inventory_reply` `own`), and its inventory address was in the bridge's
+  subnet.
+- A snapshot worked. Whether it was a stored cover or the last live frame was
+  not reported.
+- Live view worked as H.264 with audio over several sessions on two days. This
+  is the first standalone report that names live audio.
+- Recordings were not tested. Since 0.30.1 they report
+  `standalone_recordings_unverified` on this route. The stop result was not
+  reported. The route admits no events.
+
+This client sends live START only after the camera's own session has set the
+LAN-derived command key. So firmware 1.1.0.4 answered the gateway information
+request and accepted that key and the Wall-light `CMD_DOORBELL_SET_PAYLOAD`
+start described in [WALLLIGHT.md](WALLLIGHT.md#experimental-standalone-s100-0290).
+
+By the same comment the camera never connected with bridge 0.8.37 and client
+0.29.2. No stage or download from those runs was posted. Client 0.30.0 changes
+the lookup only by observation, with counters, account DIDs and the subnet
+check. Its targets, timing, retries, accepted DID, handshake and key are
+unchanged. Bridge 0.8.38 releases a camera whose live start failed before START
+was issued ([ha-eufy-cam#164][164]), where 0.8.37 kept it blocked until a bridge
+restart. Whether that played a part is unknown. The later connection is not
+shown to come from a fix, and the cause of the earlier failure is unknown.
+
+For this camera the states stay separate:
+
+- Recognition: the exact pair `T84A1`/151, received from a standalone row with a
+  complete descriptor.
+- Experimental software coverage: the standalone route since 0.29.0, with
+  synthetic rows only.
+- Reported hardware results: connection, snapshot and live video with audio on
+  firmware 1.1.0.4. No recording, stop or event result.
+
+The type 151 rows below cover an H3 owner only and gain no H or P cells. The
+reporter stores event clips on the camera's built-in storage and offered to run
+the [standalone recording probe](#standalone-recording-probe-ha-eufy-cam178).
+Motion and person events for this camera are requested in
+[ha-eufy-cam#185][185].
+
+[T84A1-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6236984885
+[164]: https://github.com/keesmod/ha-eufy-cam/pull/164
+[185]: https://github.com/keesmod/ha-eufy-cam/issues/185
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

@@ -118,9 +118,13 @@ or self parent becomes its own local owner, as described in
 station of the reused Station operations above. Its type 151 command table
 declares `downloadImage`, `databaseQueryLatestInfo`, `databaseQueryByDate` and
 `databaseCountByDate`, and live uses the Wall-light branch above. The session
-uses the existing local lookup and LAN-derived command key. Whether a standalone
-S100 accepts that key, answers the database commands with its own storage or
-needs another credential is unknown. Since 0.30.1 its recordings report
+uses the existing local lookup and LAN-derived command key. On 2026-10-17 a
+standalone S100 on firmware 1.1.0.4 was reported with a working snapshot and
+live video with audio. Live START is sent only after the session has set that
+key, so this firmware accepted it. This is a reported result, not independently
+reproduced, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t84a1-result-2026-10-17).
+Whether it answers the database commands with its own storage is unknown. Since 0.30.1 its recordings report
 `standalone_recordings_unverified`, as on every experimental standalone camera,
 because no recording request with evidence exists on that route. Its thumbnail
 and download are refused before any connection, a download with a cipher ID
@@ -129,8 +133,8 @@ cover discovery, credentials, owner wiring, reloads, connection stages, a live
 start and confirmed stop on the one session, snapshot assignment, the
 unavailable recordings, and the refused guard mode, pushes and cipher
 downloads, with synthetic rows and a stubbed station. A real vendor Station is created for the type 151 row without opening
-a socket. A T84A1 under a HomeBase keeps the blocked media above. The physical
-result belongs to [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
+a socket. A T84A1 under a HomeBase keeps the blocked media above. Physical
+results belong to [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
 
 [HB-guide]: https://service.eufy.com/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 [Wall-FAQ]: https://service.eufy.com/article-description/FAQ-About-Wall-Light-Cam-Battery-Connection-to-Homebase3

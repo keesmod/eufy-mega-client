@@ -1047,7 +1047,10 @@ never answered it, and the T8410C, which has no microSD card, rejected it with
 `history_rejected` and database result -1100, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8410-and-t8410c-results-2026-10-16).
 No other request had enough evidence, so 0.30.1 reports recordings as
-unavailable on this route.
+unavailable on this route. On 2026-10-17 a standalone T84A1 on firmware 1.1.0.4
+was [reported](https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6236984885)
+with a working snapshot and live video with audio, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t84a1-result-2026-10-17).
 A failure is still useful evidence for the next step, not a regression. The
 stage a failed connection reached says whether the camera answered the lookup
 with its own DID, completed the session handshake, or opened the session without
