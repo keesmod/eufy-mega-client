@@ -449,6 +449,55 @@ export interface EventStatus {
   duplicates: number;
   lastReceivedAt: string | null;
 }
+/**
+ * Why a push that names an experimental standalone owner was refused, ha-eufy-cam#185.
+ * Each refused push counts once, under the first rule it failed, in this order.
+ */
+export type StandalonePushRefusal =
+  /** The exact profile has no standalone events, such as every T8410 and T8410C push. */
+  | 'events_not_enabled'
+  /** The camera is not initialised, or it or its session failed. */
+  | 'owner_unavailable'
+  /** `device_sn` or `station_sn` is not this camera, an empty value included. */
+  | 'serial_mismatch'
+  /**
+   * The push type is not the camera's inventory device type. On a local push
+   * the type is its `msg_type`.
+   */
+  | 'type_mismatch'
+  /** `event_type` is not the number 3101 or 3102, or the camera lacks that detection. */
+  | 'unsupported_event';
+/**
+ * `cloud`: the Eufy push service. `local`: a camera push notification over an
+ * already open session.
+ */
+export type StandalonePushSource = 'cloud' | 'local';
+/**
+ * Numbers-only observation of the pushes that name an experimental standalone
+ * owner, summed over all of them. It carries no serial, DID, address, name, URL,
+ * path, timestamp or image. `arrived` equals `admitted` plus every refusal, the
+ * sum of `sources`, the sum of `eventCodes` and the sum of `pushTypes`.
+ */
+export interface StandalonePushObservation {
+  /** Push deliveries naming an experimental standalone owner as `device_sn` or `station_sn`. */
+  arrived: number;
+  /** Of those, passed to detection handling as motion (3101) or person (3102). */
+  admitted: number;
+  /** Each refused delivery once, under the first rule it failed. All five keys are always present. */
+  refused: Record<StandalonePushRefusal, number>;
+  /** Deliveries by source. */
+  sources: Record<StandalonePushSource, number>;
+  /**
+   * Arrivals by `event_type`. Key: decimal 0..99999, `'none'` when absent, `'other'`
+   * for a non-integer or out-of-range value or once 16 numeric keys exist.
+   */
+  eventCodes: Record<string, number>;
+  /**
+   * Arrivals by the push `type` field: the device type on cloud pushes, the
+   * `msg_type` on local pushes. Same key rules as `eventCodes`.
+   */
+  pushTypes: Record<string, number>;
+}
 
 /** Private opaque FCM registration. This is secret session material. */
 export interface EventSession {

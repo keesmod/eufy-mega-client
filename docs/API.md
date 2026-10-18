@@ -480,6 +480,8 @@ session close after a failure are the same with and without these options.
 Call `startEvents(signal?)` after discovery. Events use Google FCM and Mega push
 registration, plus device messages. Reconnect restores the push registration and
 stored delivery IDs. `eventStatus` reports connectivity and delivery counters.
+`standalonePushStatus` counts the pushes for experimental standalone cameras,
+see [standalone events and push observation](#standalone-events-and-push-observation-0301).
 
 Typed events are `auth`, `device`, `station`, `snapshot`, `event`,
 `events-connection`, `live-stop` and `fault`. Detection events preserve supported
@@ -1029,8 +1031,13 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   before. Consumers should follow the capability and not start them.
 - Guard mode and `refreshStationState` fail with
   `operation_outside_hardware_scope`. `getStationState` and `station` events
-  report its session only, with null modes and no alarm. Pushes for the camera
-  are not admitted, so it has no detection events on this route.
+  report its session only, with null modes and no alarm.
+- Since 0.30.1 a standalone T84A1 delivers motion and person events from its
+  pushes, for [ha-eufy-cam#185](https://github.com/keesmod/ha-eufy-cam/issues/185).
+  T8410 and T8410C pushes are counted but refused. Guard mode, alarm and microSD
+  pushes stay out of the route, and no event opens or wakes a connection or
+  refreshes a snapshot. See
+  [standalone events and push observation](#standalone-events-and-push-observation-0301).
 - A row without a P2P device ID or administrator user fails with
   `invalid_connection_credentials` for every operation.
 
@@ -1165,6 +1172,94 @@ list the query command in their vendored command set. How a bridge records and
 reads the outcome is described in its own documentation. Each model's result,
 a failure included, is recorded in the
 [model matrix](MODEL_MATRIX.md#standalone-recording-probe-ha-eufy-cam178).
+
+### Standalone events and push observation, 0.30.1
+
+For [ha-eufy-cam#185](https://github.com/keesmod/ha-eufy-cam/issues/185), a
+push that names an experimental standalone owner as `device_sn` or `station_sn`
+is decided by five rules, in this order. The first rule that fails is the
+refusal reason.
+
+| Rule                                                                                      | Refusal reason       |
+| ----------------------------------------------------------------------------------------- | -------------------- |
+| The exact profile allows standalone events. Only `T84A1`/151 does                         | `events_not_enabled` |
+| The camera is initialised, and neither it nor its session failed                          | `owner_unavailable`  |
+| `device_sn` and `station_sn` both name this camera                                        | `serial_mismatch`    |
+| The push `type` is the number of the camera's inventory device type                       | `type_mismatch`      |
+| `event_type` is the number 3101 (motion) or 3102 (person), and the camera has that sensor | `unsupported_event`  |
+
+An admitted push becomes a `motion` or `person` detection event with `source:
+'push'`, as for a HomeBase camera, and `startEvents` must be running. Guard
+mode, alarm, microSD, undecoded and every other push stay refused, as does every
+T8410 and T8410C push. No standalone push reaches the vendored station or camera
+push handler, so the camera gets no guard mode, alarm or microSD state from it,
+and no event image is loaded. No event sends the latest-info query 10013, issues
+a command or opens or wakes a connection, also when the camera's session is
+already open. The event therefore carries no new image, and person recognition
+stays `unidentified` because the decoded push carries no name. A standalone
+camera emits no device-sourced detection, so its events are push-only. HomeBase
+pushes and cameras are unchanged and never counted.
+
+`standalonePushStatus` is a synchronous getter without I/O. It returns a fresh
+`StandalonePushObservation`, summed over all standalone owners:
+
+```ts
+interface StandalonePushObservation {
+  arrived: number; // deliveries naming a standalone owner
+  admitted: number; // passed on as motion or person
+  refused: Record<StandalonePushRefusal, number>; // all five keys, always present
+  sources: { cloud: number; local: number };
+  eventCodes: Record<string, number>; // by event_type
+  pushTypes: Record<string, number>; // by the push type field
+}
+```
+
+- `arrived` equals `admitted` plus every refusal, the sum of `sources`, the sum
+  of `eventCodes` and the sum of `pushTypes`. Every value is a non-negative
+  integer.
+- `cloud` is a push from the Eufy push service. `local` is a camera push
+  notification over an already open session, where `type` is the payload's
+  `msg_type`, so `pushTypes` holds that value for local pushes. The type rule
+  applies to both sources, so a local push is admitted only when its `msg_type`
+  is 151. HomeBase local pushes carry the station's device type 18 there. No
+  standalone local push has been captured, so whether a T84A1 sends 151 is
+  unknown.
+- A histogram key is the decimal value 0 to 99999, `none` when the field is
+  absent, and `other` for any other value or once 16 numeric keys exist.
+- It carries no serial, DID, address, name, URL, path, timestamp or image.
+- A push is counted only while events run, after `startEvents`. Without
+  running events a push over an open session, for example during live view, is
+  neither counted nor admitted. The counts are zero before the client's device
+  transport exists. They survive `startEvents` restarts and device reloads,
+  unlike `eventStatus.received` and `eventStatus.duplicates`. Admitted events
+  still count in `eventStatus` as well.
+- `arrived` counts deliveries, not detections. A detection that arrives over
+  both sources counts twice. If both copies are admitted, they become one event
+  only when both parts of the detection key match: the identity, which is the
+  `unique_id`, else the session, else none, and the valid event time or none.
+  Two copies with neither an identity nor a valid event time merge only while
+  the first is still pending. A shared `unique_id` where the event times differ
+  or only one copy carries a valid time gives two events. No capture has shown
+  which case applies.
+
+Reading the counts:
+
+- `arrived` stays 0 while events run: no delivery named the camera's serial in
+  its decoded `device_sn` or `station_sn`. Either Eufy sent no push for the
+  camera to the account, or the vendored parser did not map the serials of its
+  payload shape. Such a push is neither counted nor admitted, so 0 alone does
+  not show that Eufy sends nothing.
+- `serial_mismatch`: the payload names other serials than the camera's own.
+- `type_mismatch`: the push type differs from the inventory device type.
+  `pushTypes` shows the value, and with it the parser branch that decoded the
+  push. With `sources.local` above 0 the value may be the `msg_type` of local
+  pushes rather than a cloud push shape.
+- `eventCodes` with `none`: a push without a decoded event code.
+
+This is synthetic coverage only. No standalone T84A1 push has been captured on
+hardware yet, so the admission rule follows the vendored type 151 decoding. A
+result is recorded in the
+[model matrix](MODEL_MATRIX.md#standalone-t84a1-events-0301).
 
 ## Observed camera state
 

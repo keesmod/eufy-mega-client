@@ -25,6 +25,8 @@ export interface DeviceProfile {
   readonly features: MediaPolicy;
   // Standalone owner route behind the client's experimentalStandalone opt-in only.
   readonly experimentalStandalone?: true;
+  // ha-eufy-cam#185: motion and person pushes on the standalone route. Only with experimentalStandalone.
+  readonly standaloneEvents?: true;
 }
 
 // Each feature is explicit. Shared policies avoid repeating identical admission rules.
@@ -138,6 +140,7 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T84A1: Object.freeze({
     ...camera(151, 'walllight', 'h3-or-standalone', blockedMedia),
     experimentalStandalone: true,
+    standaloneEvents: true,
   }),
   T81A0: camera(10005, 'walllight', 'h3-or-standalone', h3Media),
   T8425: camera(47, 'floodlight', 'h3-or-standalone', h3Media),

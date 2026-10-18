@@ -89,6 +89,7 @@ export function cloudFixture({ verify = false, lock = false, inventory, malforme
               ],
             },
       );
+    if (u.pathname === '/app/push/register_push_token') return encrypted({});
     throw new Error('unexpected route');
   };
   const store = {

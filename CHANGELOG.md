@@ -155,6 +155,44 @@
   path and the refusals before any request. This is software coverage. No probe
   result has been reported on hardware yet.
 
+### Standalone T84A1 motion and person events
+
+- For [ha-eufy-cam#185](https://github.com/keesmod/ha-eufy-cam/issues/185), a
+  standalone T84A1 behind `experimentalStandalone` now delivers motion and
+  person detection events from its pushes. A push that names an experimental
+  standalone owner as `device_sn` or `station_sn` is admitted only when the
+  exact profile allows standalone events, which only `T84A1`/151 does, the
+  camera is available, `device_sn` and `station_sn` both name it, the push type
+  is its inventory device type 151 and `event_type` is the number 3101 (motion)
+  or 3102 (person). A push over the camera's open session carries its
+  `msg_type` as type, so it is admitted only if the camera sends 151 there,
+  which no capture has shown. See
+  [standalone events and push observation](docs/API.md#standalone-events-and-push-observation-0301).
+- Every other push for a standalone owner stays refused: guard mode, alarm,
+  microSD, undecoded notifications, other detections, other push types and
+  pushes that name another serial. T8410 and T8410C pushes are refused as
+  before, now counted.
+- No standalone push reaches the vendored station or camera push handler, so
+  the camera gets no guard mode, alarm or microSD state from a push, and no
+  event image is loaded. No event sends the latest-info query 10013, issues a
+  command or opens or wakes a connection, also when the camera's session is
+  already open. Events carry no new image, and person recognition stays
+  `unidentified`. A standalone camera emits no device-sourced detection.
+- The new getter `standalonePushStatus` counts these pushes with numbers only:
+  arrived, admitted, refused by reason, cloud or local source, and histograms of
+  the event code and push type, bounded to 16 numeric keys each. It carries no
+  serial, DID, address, name, URL, path, timestamp or image. The types
+  `StandalonePushObservation`, `StandalonePushRefusal` and
+  `StandalonePushSource` are exported.
+- HomeBase pushes, their events, handlers and snapshot refresh are unchanged and
+  never counted. The tests cover an admitted motion and person push with the
+  session closed and open, every refused push type, pushes naming another
+  serial, local pushes shaped as the vendored session emits them, the T8410
+  and T8410C refusals, unchanged HomeBase events
+  and the client-level wiring, with synthetic rows and a stubbed station. This
+  is software coverage. No standalone T84A1 push has been captured on hardware
+  yet.
+
 Upgrade: the observation is additive and optional. The four recording calls take
 the new options object in place of the signal, a plain signal keeps working, and
 consumers that pass neither see no change from it. The types
@@ -166,11 +204,15 @@ request only when a consumer calls it. With `experimentalStandalone` set, a
 standalone camera now reports recordings as unavailable with
 `standalone_recordings_unverified`, and its thumbnail and download fail with
 that code. A download of a record with a cipher ID fails with
-`recording_cipher_unavailable` first. HomeBase cameras see no change.
+`recording_cipher_unavailable` first. HomeBase cameras see no change. The
+`standalonePushStatus` getter and its three types are additive, with no new
+option. Standalone T84A1 events arrive only with `experimentalStandalone` and
+running events. A structural implementation of `SecurityModule` needs the new
+getter.
 Rollback: 0.30.0, pass the signal alone again and remove calls to
-`probeStandaloneRecordings`. That also restores the earlier recordings
-capability of standalone cameras, whose lists did not work on the reported
-cameras.
+`probeStandaloneRecordings` and reads of `standalonePushStatus`. That also
+restores the earlier recordings capability of standalone cameras, whose lists
+did not work on the reported cameras, and the refusal of every standalone push.
 
 ## 0.30.0 - 2026-10-15
 

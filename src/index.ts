@@ -38,6 +38,9 @@ export type {
   RecordingOperationOptions,
   DetectionEvent,
   EventSession,
+  StandalonePushRefusal,
+  StandalonePushSource,
+  StandalonePushObservation,
 } from './types.js';
 export { EufyClient } from './eufy-client.js';
 export type {

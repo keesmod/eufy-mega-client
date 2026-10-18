@@ -3,6 +3,7 @@ import { PushNotificationService } from './vendor/push/service.js';
 import type { PushMessage, Credentials as PushCredentials } from './vendor/push/models.js';
 import { Detections } from './detections.js';
 import { MegaCloud } from './cloud.js';
+import type { PushSource } from './standalone-events.js';
 import { EufyError, type DetectionEvent, type EventSession } from './types.js';
 
 export class EventTransport extends EventEmitter {
@@ -17,7 +18,7 @@ export class EventTransport extends EventEmitter {
     private readonly cloud: MegaCloud,
     known: (id: string) => boolean,
     private readonly devicePush: (message: PushMessage) => void,
-    private readonly acceptPush: (message: PushMessage) => boolean = () => true,
+    private readonly acceptPush: (message: PushMessage, source: PushSource) => boolean = () => true,
   ) {
     super();
     this.detections = new Detections(
@@ -58,10 +59,11 @@ export class EventTransport extends EventEmitter {
   device(id: string, type: string, name?: string, stranger = false): void {
     if (!this.closed) this.detections.device(id, type, name, stranger);
   }
-  push(message: PushMessage): void {
+  /** `source` tells the Eufy push service from a push over an open device session. */
+  push(message: PushMessage, source: PushSource = 'cloud'): void {
     if (this.closed) return;
     try {
-      if (!this.acceptPush(message)) return;
+      if (!this.acceptPush(message, source)) return;
       this.detections.push(message);
       this.devicePush(message);
     } catch {
@@ -146,7 +148,7 @@ export class EventTransport extends EventEmitter {
       this.emit('connection', false);
     });
     service.on('message', (message) => {
-      this.push(message);
+      this.push(message, 'cloud');
       void this.persist().catch(() =>
         this.emit('fault', new EufyError('event_session_write_failed')),
       );
