@@ -128,13 +128,28 @@ Whether it answers the database commands with its own storage is unknown. Since 
 `standalone_recordings_unverified`, as on every experimental standalone camera,
 because no recording request with evidence exists on that route. Its thumbnail
 and download are refused before any connection, a download with a cipher ID
-first with `recording_cipher_unavailable`. Guard mode and events stay off. The [standalone tests](../test/standalone-experimental.test.mjs)
+first with `recording_cipher_unavailable`. Guard mode stays off. Since 0.30.1
+its motion and person pushes become detection events, see
+[API.md](API.md#standalone-events-and-push-observation-0301). The [standalone tests](../test/standalone-experimental.test.mjs)
 cover discovery, credentials, owner wiring, reloads, connection stages, a live
 start and confirmed stop on the one session, snapshot assignment, the
-unavailable recordings, and the refused guard mode, pushes and cipher
-downloads, with synthetic rows and a stubbed station. A real vendor Station is created for the type 151 row without opening
+unavailable recordings, the admitted motion and person pushes, and the refused
+guard mode, other pushes and cipher downloads, with synthetic rows and a stubbed station. A real vendor Station is created for the type 151 row without opening
 a socket. A T84A1 under a HomeBase keeps the blocked media above. Physical
 results belong to [#142](https://github.com/keesmod/eufy-mega-client/issues/142).
+
+For [ha-eufy-cam#185](https://github.com/keesmod/ha-eufy-cam/issues/185) a
+standalone S100 push is admitted only as a numeric 3101 or 3102 with type 151
+that names the camera as both device and station. The vendored push parser
+decodes it in its type 151 IndoorPushEvent branch, and the client's detection
+intake turns it into an event. The `WallLightCam` class takes no part, so its
+detection state does not change. A push over the camera's open
+session carries its `msg_type` as type and is admitted only if that is 151,
+which no capture has shown. The
+vendored station and camera push handlers, `loadEventImage` and the latest-info
+query 10013 are never called on this route, so an event loads no image and
+opens no connection. Every refused push is counted in `standalonePushStatus`.
+The physical event result belongs to ha-eufy-cam#185.
 
 [HB-guide]: https://service.eufy.com/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 [Wall-FAQ]: https://service.eufy.com/article-description/FAQ-About-Wall-Light-Cam-Battery-Connection-to-Homebase3

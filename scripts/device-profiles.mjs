@@ -29,7 +29,7 @@ export async function renderDeviceProfiles(text) {
       ]),
     ...Object.entries(deviceProfiles)
       .filter(([, profile]) => profile.experimentalStandalone)
-      .flatMap(([model, { features }]) => {
+      .flatMap(([model, { features, standaloneEvents }]) => {
         // Blocked cells apply without the option. H3 cells apply only under a HomeBase.
         const [cells, scope] = Object.values(features).every((policy) => policy === 'blocked')
           ? ['blocked', 'without that option']
@@ -39,6 +39,12 @@ export async function renderDeviceProfiles(text) {
           `With the client option \`experimentalStandalone\`, a standalone ${model} becomes its own`,
           `local owner with experimental snapshot and live, and recordings unavailable with`,
           `\`standalone_recordings_unverified\`. Its ${cells} cells above apply ${scope}.`,
+          ...(standaloneEvents
+            ? [
+                'Its motion and person pushes become detection events. Guard mode, alarm and',
+                'other pushes stay refused.',
+              ]
+            : []),
           'See [API.md](API.md#experimental-standalone-cameras).',
         ];
       }),

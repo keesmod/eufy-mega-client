@@ -188,7 +188,8 @@ the 2026-10-16 report below but never answered it. Since 0.30.1 the camera's
 recordings report `standalone_recordings_unverified` on this route, and its
 thumbnail and download are refused before any connection. A download with a
 cipher ID is refused first with `recording_cipher_unavailable`, because it would
-need a cloud cipher. Guard mode and events stay off.
+need a cloud cipher. Guard mode and events stay off. Since 0.30.1 its pushes
+are counted in `standalonePushStatus` but refused.
 
 The [standalone tests](../test/standalone-experimental.test.mjs) run the
 model-independent T84A1 cases for the T8410 too: discovery, credentials,
@@ -372,7 +373,7 @@ recording query with database result -1100 and no rows. Since 0.30.1 its
 recordings report `standalone_recordings_unverified` on this route, as for the
 [T8410](#experimental-standalone-t8410-0291), and a download with a cipher ID is
 refused first with `recording_cipher_unavailable`. Guard mode and events stay
-off. Pan and tilt and talkback are outside this change.
+off, and since 0.30.1 its pushes are counted but refused. Pan and tilt and talkback are outside this change.
 
 The [standalone tests](../test/standalone-experimental.test.mjs) run the T8410
 cases for the T8410C too, with synthetic rows, a stubbed station and a real

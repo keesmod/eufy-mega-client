@@ -791,7 +791,8 @@ is a reported result, not independently reproduced.
   is the first standalone report that names live audio.
 - Recordings were not tested. Since 0.30.1 they report
   `standalone_recordings_unverified` on this route. The stop result was not
-  reported. The route admits no events.
+  reported. Client 0.30.0 admits no events on the route, see
+  [standalone T84A1 events](#standalone-t84a1-events-0301) below.
 
 This client sends live START only after the camera's own session has set the
 LAN-derived command key. So firmware 1.1.0.4 answered the gateway information
@@ -825,6 +826,29 @@ Motion and person events for this camera are requested in
 [T84A1-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6236984885
 [164]: https://github.com/keesmod/ha-eufy-cam/pull/164
 [185]: https://github.com/keesmod/ha-eufy-cam/issues/185
+
+### Standalone T84A1 events, 0.30.1
+
+The [2026-10-17 result](#reported-standalone-t84a1-result-2026-10-17) above
+showed connection, snapshot and live video with audio. It had no event result,
+because the route admitted no events then. By the same comment the camera logs
+motion and person events in the Eufy app with push enabled on the bridge
+account. Whether Eufy delivers those pushes to the bridge account is unknown.
+
+For [ha-eufy-cam#185][185], client 0.30.1 admits the numeric 3101 motion and
+3102 person pushes of a standalone T84A1 whose type is 151 and whose device and
+station serials both name the camera. Every other push and every T8410 and
+T8410C push stays refused. No standalone push reaches the vendored station push
+handler, loads an image, sends 10013 or opens a connection.
+`standalonePushStatus` counts the pushes by outcome, source, event code and
+push type, with numbers only, as described in
+[API.md](API.md#standalone-events-and-push-observation-0301).
+
+This is synthetic coverage only. No standalone T84A1 push has been captured,
+so the admitted shape follows the vendored type 151 decoding. No hardware event
+result is recorded yet, and the type 151 feature cells stay unchanged until the
+reporter's beta result is recorded here under ha-eufy-cam#185, with the
+observation counts.
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

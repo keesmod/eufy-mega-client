@@ -10,6 +10,9 @@ import { IndoorCamera, Station, WallLightCam } from '../dist/vendor/http/index.j
 import { CommandName } from '../dist/vendor/http/types.js';
 import { CommandType, P2PConnectionType, VideoCodec } from '../dist/vendor/p2p/types.js';
 import { PassThrough } from 'node:stream';
+import { setTimeout as delay } from 'node:timers/promises';
+import { EventTransport } from '../dist/event-transport.js';
+import { PushNotificationService } from '../dist/vendor/push/service.js';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // keesmod/eufy-mega-client#142, ha-eufy-cam#66: a standalone T84A1 behind the
@@ -153,6 +156,15 @@ test('only the T8410, T8410C and T84A1 profiles allow the experimental standalon
     live: 'blocked',
     recordings: 'blocked',
   });
+  // ha-eufy-cam#185: only the T84A1 delivers standalone push events so far.
+  const events = Object.entries(deviceProfiles)
+    .filter(([, profile]) => profile.standaloneEvents)
+    .map(([model]) => model);
+  assert.deepEqual(events, ['T84A1']);
+  for (const model of events) {
+    assert.equal(deviceProfiles[model].experimentalStandalone, true, model);
+    assert.equal(Object.isFrozen(deviceProfiles[model]), true, model);
+  }
   // The T8410 and T8410C keep their H3 media policy for a HomeBase owner.
   for (const [model] of panTilts) {
     assert.equal(deviceProfiles[model].type, 31, model);
@@ -742,7 +754,7 @@ for (const [model, row] of admitted)
   });
 
 for (const [model, row] of admitted)
-  test(`pushes for the standalone ${model} are not admitted`, async (t) => {
+  test(`pushes for the standalone ${model} never reach the vendored handlers`, async (t) => {
     const id = `${model}_FIXTURE`;
     await fixture(
       t,
@@ -766,6 +778,12 @@ for (const [model, row] of admitted)
           assert.equal(transport.acceptPush(push), false);
           transport.processPush(push);
         }
+        assert.equal(processed, 0);
+        // ha-eufy-cam#185: the event filter admits the native T84A1 detection only,
+        // for Detections. The T8410 and T8410C stay refused.
+        assert.equal(transport.filterPush(native, 'cloud'), model === 'T84A1');
+        assert.equal(transport.filterPush(message, 'cloud'), false);
+        assert.equal(transport.filterPush({ ...message, device_sn: '' }, 'cloud'), false);
         assert.equal(processed, 0);
         // The HomeBase keeps its own station pushes.
         assert.equal(
@@ -882,3 +900,422 @@ for (const [model, row] of panTilts)
       await transport.close();
     }
   });
+
+// ha-eufy-cam#185: motion and person pushes of a standalone T84A1 become events.
+// Everything else, and every T8410 and T8410C push, stays refused and counted. No
+// standalone push reaches the vendored handlers, issues a command or connects.
+const T84A1 = 'T84A1_FIXTURE';
+const zeroObservation = {
+  arrived: 0,
+  admitted: 0,
+  refused: {
+    events_not_enabled: 0,
+    owner_unavailable: 0,
+    serial_mismatch: 0,
+    type_mismatch: 0,
+    unsupported_event: 0,
+  },
+  sources: { cloud: 0, local: 0 },
+  eventCodes: {},
+  pushTypes: {},
+};
+// An event transport wired exactly as the client wires it.
+function wireEvents(transport, inventory) {
+  const events = new EventTransport(
+    {},
+    (id) => {
+      const relationship = inventory.relationships.get(id);
+      return (
+        ((relationship?.kind === 'station' &&
+          inventory.raw.get(id)?.parent_sn === relationship.ownerId) ||
+          transport.standaloneEvents(id)) &&
+        transport.supportsEvent(id, 'notification')
+      );
+    },
+    (message) => transport.processPush(message),
+    (message, source) => transport.filterPush(message, source),
+  );
+  const received = [];
+  events.on('event', (event) => received.push(event));
+  transport.on('detection', (d) => events.device(d.id, d.type, d.name, d.stranger));
+  transport.on('push', (message) => events.push(message, 'local'));
+  return { events, received };
+}
+// Counts every vendored handler call and connect of each fake station.
+function guard(transport, created, ids) {
+  const calls = { station: 0, camera: 0, connect: 0 };
+  for (const station of created) {
+    station.processPushNotification = () => calls.station++;
+    station.connect = async () => {
+      calls.connect++;
+    };
+  }
+  for (const id of ids) {
+    const camera = transport.cameras.get(id);
+    if (camera) camera.processPushNotification = () => calls.camera++;
+  }
+  return calls;
+}
+const detection = (event_type, extra = {}) => ({
+  device_sn: T84A1,
+  station_sn: T84A1,
+  type: 151,
+  event_type,
+  event_time: Date.now(),
+  ...extra,
+});
+
+for (const connected of [false, true])
+  test(`admitted T84A1 motion and person pushes become events without any device call, session ${connected ? 'open' : 'closed'}`, async (t) => {
+    await fixture(
+      t,
+      [homeBase, eufyCam, wallLight()],
+      { experimentalStandalone: true },
+      async (transport, inventory, created) => {
+        const standalone = created.find((s) => s.wire.station_sn === T84A1);
+        standalone.isConnected = () => connected;
+        const calls = guard(transport, created, [T84A1, 'T8161_FIXTURE']);
+        const { events, received } = wireEvents(transport, inventory);
+        try {
+          events.push(detection(3101, { unique_id: 'motion-1' }));
+          events.push(detection(3102, { unique_id: 'person-1' }));
+          await delay(550);
+          assert.deepEqual(
+            received.map((e) => [e.deviceId, e.type, e.source, e.recognition, e.vendorEventType]),
+            [
+              [T84A1, 'motion', 'push', 'not_applicable', 3101],
+              [T84A1, 'person', 'push', 'unidentified', 3102],
+            ],
+          );
+          assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+          for (const station of created) assert.deepEqual(station.issued, []);
+          assert.equal(transport.refreshTimers.size, 0);
+          assert.equal(transport.observedModes.size, 0);
+          const state = transport.state(T84A1);
+          assert.deepEqual([state.guardMode, state.currentMode, state.alarm], [null, null, false]);
+          assert.deepEqual(transport.standalonePushStatus(), {
+            ...zeroObservation,
+            arrived: 2,
+            admitted: 2,
+            sources: { cloud: 2, local: 0 },
+            eventCodes: { 3101: 1, 3102: 1 },
+            pushTypes: { 151: 2 },
+          });
+        } finally {
+          await events.close();
+        }
+      },
+    );
+  });
+
+test('every other T84A1 push is refused, counted and leaves no trace', async (t) => {
+  await fixture(
+    t,
+    [homeBase, eufyCam, wallLight()],
+    { experimentalStandalone: true },
+    async (transport, inventory, created) => {
+      const calls = guard(transport, created, [T84A1, 'T8161_FIXTURE']);
+      const { events, received } = wireEvents(transport, inventory);
+      const before = transport.state(T84A1);
+      const cases = [
+        [
+          'unsupported_event',
+          detection(9, { station_guard_mode: 1, station_current_mode: 1, unique_id: 'g' }),
+        ],
+        ['unsupported_event', detection(10, { alarm_type: 3, unique_id: 'a' })],
+        [
+          'unsupported_event',
+          { device_sn: T84A1, station_sn: T84A1, type: 151, msg_type: 2, tfcard_status: 1 },
+        ],
+        ['unsupported_event', { device_sn: T84A1, station_sn: T84A1, type: 151 }],
+        ['unsupported_event', detection(3103, { unique_id: 'r' })],
+        ['unsupported_event', detection(3107, { unique_id: 'v' })],
+        ['unsupported_event', detection('3101', { unique_id: 's' })],
+        ['type_mismatch', { device_sn: T84A1, station_sn: T84A1, type: 10900 }],
+        ['type_mismatch', detection(3101, { type: 18, unique_id: 't' })],
+      ];
+      try {
+        for (const [reason, message] of cases) {
+          const refused = transport.standalonePushStatus().refused[reason];
+          events.push(message);
+          assert.equal(transport.standalonePushStatus().refused[reason], refused + 1, reason);
+        }
+        await delay(550);
+        assert.deepEqual(received, []);
+        assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+        for (const station of created) assert.deepEqual(station.issued, []);
+        assert.equal(transport.refreshTimers.size, 0);
+        assert.equal(transport.observedModes.size, 0);
+        assert.deepEqual(transport.state(T84A1), before);
+        // An unavailable camera refuses even a valid detection.
+        transport.failures.set(T84A1, 'device_initialization_failed');
+        events.push(detection(3101, { unique_id: 'u' }));
+        await delay(550);
+        assert.deepEqual(received, []);
+        assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+        assert.deepEqual(transport.standalonePushStatus(), {
+          ...zeroObservation,
+          arrived: 10,
+          refused: {
+            ...zeroObservation.refused,
+            unsupported_event: 7,
+            type_mismatch: 2,
+            owner_unavailable: 1,
+          },
+          sources: { cloud: 10, local: 0 },
+          eventCodes: { 9: 1, 10: 1, none: 3, 3103: 1, 3107: 1, other: 1, 3101: 2 },
+          pushTypes: { 151: 8, 10900: 1, 18: 1 },
+        });
+      } finally {
+        await events.close();
+      }
+    },
+  );
+});
+
+test('a T84A1 push naming another serial is refused and fires no camera', async (t) => {
+  await fixture(
+    t,
+    [homeBase, eufyCam, wallLight()],
+    { experimentalStandalone: true },
+    async (transport, inventory, created) => {
+      const calls = guard(transport, created, [T84A1, 'T8161_FIXTURE']);
+      const { events, received } = wireEvents(transport, inventory);
+      try {
+        for (const [device_sn, station_sn] of [
+          ['T8161_FIXTURE', T84A1],
+          [T84A1, 'T8030_OWNER'],
+          ['', T84A1],
+        ])
+          events.push(
+            detection(3101, { device_sn, station_sn, unique_id: device_sn + station_sn }),
+          );
+        await delay(550);
+        assert.deepEqual(received, []);
+        assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+        assert.equal(transport.refreshTimers.size, 0);
+        assert.equal(transport.standalonePushStatus().refused.serial_mismatch, 3);
+        assert.equal(transport.standalonePushStatus().arrived, 3);
+      } finally {
+        await events.close();
+      }
+    },
+  );
+});
+
+for (const [model, row] of panTilts)
+  test(`standalone ${model} motion and person pushes stay refused`, async (t) => {
+    const id = `${model}_FIXTURE`;
+    await fixture(
+      t,
+      [homeBase, eufyCam, row()],
+      { experimentalStandalone: true },
+      async (transport, inventory, created) => {
+        const calls = guard(transport, created, [id, 'T8161_FIXTURE']);
+        const { events, received } = wireEvents(transport, inventory);
+        try {
+          assert.equal(transport.standaloneEvents(id), false);
+          for (const event_type of [3101, 3102])
+            events.push(
+              detection(event_type, {
+                device_sn: id,
+                station_sn: id,
+                type: 31,
+                unique_id: `${event_type}`,
+              }),
+            );
+          await delay(550);
+          assert.deepEqual(received, []);
+          assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+          for (const station of created) assert.deepEqual(station.issued, []);
+          assert.deepEqual(transport.standalonePushStatus(), {
+            ...zeroObservation,
+            arrived: 2,
+            refused: { ...zeroObservation.refused, events_not_enabled: 2 },
+            sources: { cloud: 2, local: 0 },
+            eventCodes: { 3101: 1, 3102: 1 },
+            pushTypes: { 31: 2 },
+          });
+        } finally {
+          await events.close();
+        }
+      },
+    );
+  });
+
+test('HomeBase camera events are unchanged next to a standalone T84A1', async (t) => {
+  await fixture(
+    t,
+    [homeBase, eufyCam, wallLight()],
+    { experimentalStandalone: true },
+    async (transport, inventory, created) => {
+      const calls = guard(transport, created, [T84A1, 'T8161_FIXTURE']);
+      const { events, received } = wireEvents(transport, inventory);
+      try {
+        events.push({
+          device_sn: 'T8161_FIXTURE',
+          station_sn: 'T8030_OWNER',
+          type: 23,
+          event_type: 3101,
+          event_time: Date.now(),
+          unique_id: 'homebase-1',
+        });
+        await delay(550);
+        assert.deepEqual(
+          received.map((e) => [e.deviceId, e.type]),
+          [['T8161_FIXTURE', 'motion']],
+        );
+        assert.deepEqual(calls, { station: 1, camera: 1, connect: 0 });
+        assert.deepEqual([...transport.refreshTimers.keys()], ['T8030_OWNER']);
+        assert.deepEqual(transport.standalonePushStatus(), zeroObservation);
+      } finally {
+        await events.close();
+      }
+    },
+  );
+});
+
+// A push over the camera's own open session, shaped as the vendored session emits
+// it: type set to the payload's msg_type and station_sn to the session owner.
+const localPush = (event_type, msg_type, extra = {}) => ({
+  ...detection(event_type, extra),
+  msg_type,
+  type: msg_type,
+});
+
+test('a local T84A1 push is admitted only when its msg_type is 151, and counted as local', async (t) => {
+  await fixture(
+    t,
+    [homeBase, eufyCam, wallLight()],
+    { experimentalStandalone: true },
+    async (transport, inventory, created) => {
+      const standalone = created.find((s) => s.wire.station_sn === T84A1);
+      standalone.isConnected = () => true;
+      const calls = guard(transport, created, [T84A1, 'T8161_FIXTURE']);
+      const { events, received } = wireEvents(transport, inventory);
+      try {
+        // No standalone local push has been captured, so its msg_type is unknown.
+        // HomeBase local pushes carry the station's device type (18) there.
+        standalone.emit('push notification', standalone, localPush(3101, 151, { unique_id: 'l1' }));
+        standalone.emit('push notification', standalone, localPush(3102, 18, { unique_id: 'l2' }));
+        await delay(550);
+        assert.deepEqual(
+          received.map((e) => [e.deviceId, e.type]),
+          [[T84A1, 'motion']],
+        );
+        assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+        assert.deepEqual(standalone.issued, []);
+        assert.deepEqual(transport.standalonePushStatus(), {
+          ...zeroObservation,
+          arrived: 2,
+          admitted: 1,
+          refused: { ...zeroObservation.refused, type_mismatch: 1 },
+          sources: { cloud: 0, local: 2 },
+          eventCodes: { 3101: 1, 3102: 1 },
+          pushTypes: { 151: 1, 18: 1 },
+        });
+      } finally {
+        await events.close();
+      }
+    },
+  );
+});
+
+test('a standalone T84A1 emits no device-sourced detection', async (t) => {
+  await fixture(
+    t,
+    [homeBase, eufyCam, wallLight()],
+    { experimentalStandalone: true },
+    async (transport) => {
+      const detections = [];
+      transport.on('detection', (d) => detections.push(d.id));
+      const camera = transport.cameras.get(T84A1);
+      camera.emit('motion detected', camera, true);
+      camera.emit('person detected', camera, true, 'Synthetic person');
+      assert.deepEqual(detections, []);
+      const homeBaseCamera = transport.cameras.get('T8161_FIXTURE');
+      homeBaseCamera.emit('motion detected', homeBaseCamera, true);
+      assert.deepEqual(detections, ['T8161_FIXTURE']);
+    },
+  );
+});
+
+test('without experimentalStandalone a T84A1 push gives no event and no count', async (t) => {
+  await fixture(t, [homeBase, eufyCam, wallLight()], {}, async (transport, inventory, created) => {
+    const calls = guard(transport, created, ['T8161_FIXTURE']);
+    const { events, received } = wireEvents(transport, inventory);
+    try {
+      events.push(detection(3101, { unique_id: 'off' }));
+      await delay(550);
+      assert.deepEqual(received, []);
+      assert.deepEqual(calls, { station: 0, camera: 0, connect: 0 });
+      assert.deepEqual(transport.standalonePushStatus(), zeroObservation);
+    } finally {
+      await events.close();
+    }
+  });
+});
+
+test('the client delivers standalone T84A1 events and reports its push observation', async (t) => {
+  const created = [];
+  t.mock.method(Station, 'getInstance', async (_provider, wire, address) =>
+    fakeStation(wire, address, created),
+  );
+  const service = Object.assign(new EventEmitter(), {
+    open: async () => {
+      setImmediate(() => service.emit('connect', 'synthetic-token'));
+      return { synthetic: true };
+    },
+    close() {},
+    getPersistentIds: () => [],
+    setCredentials() {},
+    setPersistentIds() {},
+  });
+  t.mock.method(PushNotificationService, 'initialize', async () => service);
+  const fixture = cloudFixture({ inventory: [homeBase, eufyCam, wallLight()] });
+  const client = new EufyMegaClient({ ...fixture.options, experimentalStandalone: true });
+  const received = [];
+  client.on('event', (event) => received.push(event));
+  try {
+    assert.deepEqual(client.standalonePushStatus, zeroObservation);
+    await client.connect();
+    await client.discoverDevices();
+    await client.startEvents();
+    let connects = 0;
+    for (const station of created)
+      station.connect = async () => {
+        connects++;
+      };
+    const standalone = created.find((s) => s.wire.station_sn === T84A1);
+    service.emit('message', detection(3101, { unique_id: 'c1' }));
+    standalone.emit('push notification', standalone, localPush(3102, 151, { unique_id: 'c2' }));
+    service.emit('message', detection(9, { station_guard_mode: 1, unique_id: 'c3' }));
+    service.emit('message', {
+      device_sn: 'T8161_FIXTURE',
+      station_sn: 'T8030_OWNER',
+      type: 23,
+      event_type: 3101,
+      event_time: Date.now(),
+      unique_id: 'c4',
+    });
+    await delay(550);
+    assert.deepEqual(received.map((e) => [e.deviceId, e.type]).sort(), [
+      ['T8161_FIXTURE', 'motion'],
+      [T84A1, 'motion'],
+      [T84A1, 'person'],
+    ]);
+    assert.deepEqual(client.standalonePushStatus, {
+      ...zeroObservation,
+      arrived: 3,
+      admitted: 2,
+      refused: { ...zeroObservation.refused, unsupported_event: 1 },
+      sources: { cloud: 2, local: 1 },
+      eventCodes: { 3101: 1, 3102: 1, 9: 1 },
+      pushTypes: { 151: 3 },
+    });
+    assert.equal(connects, 0);
+    assert.deepEqual(standalone.issued, []);
+  } finally {
+    await client.close();
+  }
+});

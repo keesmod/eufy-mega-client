@@ -124,6 +124,8 @@ See [API.md](API.md#experimental-standalone-cameras).
 With the client option `experimentalStandalone`, a standalone T84A1 becomes its own
 local owner with experimental snapshot and live, and recordings unavailable with
 `standalone_recordings_unverified`. Its blocked cells above apply without that option.
+Its motion and person pushes become detection events. Guard mode, alarm and
+other pushes stay refused.
 See [API.md](API.md#experimental-standalone-cameras).
 
 <!-- generated device profiles: end -->

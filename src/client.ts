@@ -2,6 +2,7 @@ import { discover, type Inventory } from './discovery.js';
 import { EventEmitter } from 'node:events';
 import { EventTransport } from './event-transport.js';
 import { DeviceTransport } from './device-transport.js';
+import { StandalonePushCounter } from './standalone-events.js';
 import { MegaCloud, responseObject } from './cloud.js';
 import {
   EufyError,
@@ -20,6 +21,7 @@ import {
   type RecordingOperationOptions,
   type StationConnectOptions,
   type StreamStop,
+  type StandalonePushObservation,
 } from './types.js';
 
 export class EufyMegaClient extends EventEmitter<ClientEvents> {
@@ -57,6 +59,15 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     return (
       this.events?.status ?? { connected: false, received: 0, duplicates: 0, lastReceivedAt: null }
     );
+  }
+  /**
+   * ha-eufy-cam#185: numbers-only counts of the pushes that name an experimental
+   * standalone owner. Synchronous, no I/O. Counts only pushes that reach running
+   * events, kept across startEvents restarts, and zero before the device
+   * transport exists. See docs/API.md, standalone events.
+   */
+  get standalonePushStatus(): StandalonePushObservation {
+    return this.transport?.standalonePushStatus() ?? new StandalonePushCounter().snapshot();
   }
   connect(answer?: AuthAnswer, signal?: AbortSignal): Promise<AuthState> {
     if (this.closed) return Promise.reject(new EufyError('client_closed'));
@@ -115,7 +126,8 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
         liveUpperBoundMs: this.liveUpperBound,
       });
       this.transport.on('detection', (d) => this.events?.device(d.id, d.type, d.name, d.stranger));
-      this.transport.on('push', (message) => this.events?.push(message));
+      // Camera push notifications over an open device session.
+      this.transport.on('push', (message) => this.events?.push(message, 'local'));
       for (const event of ['device', 'station', 'snapshot', 'live-stop', 'fault'] as const)
         this.transport.on(event, (value) => this.emit(event, value));
     }
@@ -146,14 +158,16 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
       this.cloud,
       (id) => {
         const relationship = this.inventory?.relationships.get(id);
+        // ha-eufy-cam#185: a standalone owner whose exact profile allows events.
         return (
-          relationship?.kind === 'station' &&
-          this.devices.get(id)?.parent_sn === relationship.ownerId &&
+          ((relationship?.kind === 'station' &&
+            this.devices.get(id)?.parent_sn === relationship.ownerId) ||
+            transport.standaloneEvents(id)) &&
           transport.supportsEvent(id, 'notification')
         );
       },
       (message) => transport.processPush(message),
-      (message) => transport.acceptPush(message),
+      (message, source) => transport.filterPush(message, source),
     ));
     for (const name of ['event', 'fault'] as const)
       events.on(name, (value) => this.emit(name, value));

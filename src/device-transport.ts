@@ -1,5 +1,5 @@
 import { hasCameraMedia } from './camera-media.js';
-import type { CameraMediaFeature } from './device-profiles.js';
+import { exactDeviceProfile, type CameraMediaFeature } from './device-profiles.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
 import {
   isIndoorCamera,
@@ -37,6 +37,12 @@ import type { CommandResult } from './vendor/p2p/models.js';
 import type { PushMessage } from './vendor/push/models.js';
 import { detectionEvents, pushEventType } from './detections.js';
 import {
+  decideStandalonePush,
+  StandalonePushCounter,
+  type PushSource,
+  type StandaloneOwner,
+} from './standalone-events.js';
+import {
   EufyError,
   type Device,
   type WireDevice,
@@ -49,6 +55,7 @@ import {
   type StationLookupObservation,
   type StreamStop,
   type MediaMetadata,
+  type StandalonePushObservation,
 } from './types.js';
 import { LiveStartObserver } from './live-start.js';
 
@@ -112,6 +119,8 @@ export class DeviceTransport extends EventEmitter {
   private readonly liveUpperBound: number;
   private observedModes = new Map<string, { guard?: number; current?: number }>();
   private refreshTimers = new Map<string, NodeJS.Timeout>();
+  /** ha-eufy-cam#185: numbers-only counts of pushes naming a standalone owner. */
+  private readonly standalonePushes = new StandalonePushCounter();
   private readonly lifetime = new AbortController();
   readonly recordings = new RecordingAccess(
     {
@@ -285,7 +294,12 @@ export class DeviceTransport extends EventEmitter {
           this.cameras.set(device.device_sn, camera);
           for (const [key, type] of Object.entries(detectionEvents)) {
             camera.on(key.replace(/^device /, '') as 'person detected', (_device, active, name) => {
-              if (active && this.supportsEvent(device.device_sn, type))
+              // A standalone camera's events are push-only, see filterPush.
+              if (
+                active &&
+                !this.standalone.has(device.device_sn) &&
+                this.supportsEvent(device.device_sn, type)
+              )
                 this.emit('detection', {
                   id: device.device_sn,
                   type,
@@ -454,8 +468,50 @@ export class DeviceTransport extends EventEmitter {
     const property = properties[type];
     return property !== undefined && camera.hasProperty(property);
   }
+  /** ha-eufy-cam#185: the exact profile of this standalone owner allows push events. */
+  standaloneEvents(id: string): boolean {
+    const raw = this.raw.get(id);
+    return (
+      this.standalone.has(id) &&
+      raw !== undefined &&
+      exactDeviceProfile(raw)?.standaloneEvents === true
+    );
+  }
+  private standaloneOwner(message: PushMessage): StandaloneOwner | undefined {
+    const id = [message.device_sn, message.station_sn].find(
+      (sn) => typeof sn === 'string' && this.standalone.has(sn),
+    );
+    const raw = id === undefined ? undefined : this.raw.get(id);
+    if (id === undefined || !raw) return undefined;
+    return {
+      id,
+      type: raw.device_type,
+      events: this.standaloneEvents(id),
+      available: this.supportsEvent(id, 'notification'),
+      detects: (type) => this.supportsEvent(id, type),
+    };
+  }
+  /**
+   * The event filter. A push naming an experimental standalone owner is decided
+   * and counted here, and only its motion and person detections pass, to
+   * Detections. Every other push gets acceptPush, uncounted.
+   */
+  filterPush(message: PushMessage, source: PushSource): boolean {
+    const owner = this.standaloneOwner(message);
+    if (!owner) return this.acceptPush(message);
+    const decision = decideStandalonePush(owner, message);
+    this.standalonePushes.record(decision, message, source);
+    return decision.admitted;
+  }
+  /** Synchronous and without I/O. Counts since this transport was created. */
+  standalonePushStatus(): StandalonePushObservation {
+    return this.standalonePushes.snapshot();
+  }
   acceptPush(message: PushMessage): boolean {
-    // Events are not admitted on the experimental standalone route.
+    // Standalone owners never pass here. filterPush admits their motion and person
+    // pushes for Detections only, and this refusal keeps processPush away from the
+    // vendored Station and camera handlers (guard mode, alarm, microSD,
+    // loadEventImage, 10013) and refreshSnapshots.
     if (this.standalone.has(message.station_sn) || this.standalone.has(message.device_sn))
       return false;
     const raw = this.raw.get(message.device_sn);
@@ -1167,6 +1223,7 @@ export class DeviceTransport extends EventEmitter {
     if (!live.stop) setImmediate(() => void live.station.dispose().catch(() => {}));
   }
   processPush(message: PushMessage): void {
+    // acceptPush refuses every standalone owner, see its comment.
     const station = this.stations.get(message.station_sn);
     if (!station || !this.acceptPush(message)) return;
     station.processPushNotification(message);
