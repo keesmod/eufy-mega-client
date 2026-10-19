@@ -193,6 +193,29 @@
   is software coverage. No standalone T84A1 push has been captured on hardware
   yet.
 
+### Dependency maintenance
+
+- The runtime dependency `protobufjs` moves from `^8.0.0` to `^8.8.1`, locked
+  at 8.8.1 instead of 8.8.0. The vendored push client uses it for the FCM
+  checkin and the MCS messages of its push connection. 8.8.1 rejects a length
+  prefix of a string, bytes, embedded message or packed field that does not fit
+  a signed 32-bit integer with `invalid length encoding`, where 8.8.0 kept its
+  low 32 bits. Messages from a standard encoder decode as before. A push message
+  that fails to decode closes the push connection, as other malformed messages
+  already did. The other fixes of 8.8.1 concern string escapes and enum JSON
+  names in `.proto` files, which the client's two `.proto` files do not use.
+- The lockfile moves the transitive `strtok3` from 10.3.5 to 10.4.0. It is a
+  dependency of `file-type`, which `image-type` uses when `getImage` detects the
+  type of an event image loaded from a cloud URL. 10.4.0 adds an opt-in buffer
+  size limit that is off by default, validates token lengths and positions and
+  fixes abort signal handling. The client passes the downloaded image as a
+  buffer, without a limit or abort signal.
+- Development only: `@types/node` 24.19.2 and `prettier` 3.9.10.
+- These are maintenance updates, not a security fix. No published advisory
+  covers protobufjs 8.8.0 or strtok3 10.3.5. `src`, `vendor` and the public API
+  are unchanged. No hardware run is needed for them, because well-formed push
+  messages and images take the same code paths.
+
 Upgrade: the observation is additive and optional. The four recording calls take
 the new options object in place of the signal, a plain signal keeps working, and
 consumers that pass neither see no change from it. The types
@@ -208,11 +231,15 @@ that code. A download of a record with a cipher ID fails with
 `standalonePushStatus` getter and its three types are additive, with no new
 option. Standalone T84A1 events arrive only with `experimentalStandalone` and
 running events. A structural implementation of `SecurityModule` needs the new
-getter.
+getter. The dependency updates need no code change. The published package
+carries no lockfile. This candidate requires `protobufjs` 8.8.1 or a later 8.x,
+and a consumer gets `strtok3` 10.4.0 by updating its own lockfile.
 Rollback: 0.30.0, pass the signal alone again and remove calls to
 `probeStandaloneRecordings` and reads of `standalonePushStatus`. That also
 restores the earlier recordings capability of standalone cameras, whose lists
 did not work on the reported cameras, and the refusal of every standalone push.
+0.30.0 declares `protobufjs` `^8.0.0`, so a consumer can keep the updated
+lockfile with it or restore its previous one.
 
 ## 0.30.0 - 2026-10-15
 
