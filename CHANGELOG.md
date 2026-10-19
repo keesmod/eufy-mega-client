@@ -232,8 +232,9 @@ that code. A download of a record with a cipher ID fails with
 option. Standalone T84A1 events arrive only with `experimentalStandalone` and
 running events. A structural implementation of `SecurityModule` needs the new
 getter. The dependency updates need no code change. The published package
-carries no lockfile. This candidate requires `protobufjs` 8.8.1 or a later 8.x,
-and a consumer gets `strtok3` 10.4.0 by updating its own lockfile.
+carries no lockfile. 0.30.1 requires `protobufjs` 8.8.1 or a later 8.x. A
+consumer resolves `strtok3` through its own lockfile within the `^10.3.4` range
+of `file-type`, also with 0.30.0.
 Rollback: 0.30.0, pass the signal alone again and remove calls to
 `probeStandaloneRecordings` and reads of `standalonePushStatus`. That also
 restores the earlier recordings capability of standalone cameras, whose lists
