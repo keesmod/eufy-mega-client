@@ -81,9 +81,9 @@
   fails with `recording_cipher_unavailable` first. See
   [experimental standalone cameras](docs/API.md#experimental-standalone-cameras).
 - No request has enough evidence to list and play recordings on a standalone
-  T84xx camera. On 2026-10-16 both standalone T8410 cameras acknowledged the
-  query 10006 and never answered it, and the T8410C without a card rejected it
-  with -1100. The best next candidate, the app-shaped query 10017, has a public
+  T84xx camera. On 2026-10-16 both standalone T8410 cameras were reported to
+  acknowledge the query 10006 and never answer it, and the T8410C without a
+  card to reject it with -1100. The best next candidate, the app-shaped query 10017, has a public
   report on a standalone T86P2 and a code claim for the standalone T8171 and
   T817L, but no T84xx result, and a standalone owner has no playback path. The
   ranked candidates and their sources are in the
@@ -254,8 +254,8 @@ the new options object in place of the signal, a plain signal keeps working, and
 consumers that pass neither see no change from it. The types
 `RecordingOperation`, `RecordingOperationStage`, `RecordingQueryPage`,
 `RecordingRowClasses`, `RecordingObservation` and `RecordingOperationOptions`
-are exported. `RecordingOperation` includes `'probe'`, so a consumer that
-handles every operation needs that case. `probeStandaloneRecordings` sends its
+are exported. `RecordingOperation` names the four recording calls and
+`'probe'`, the operation of `probeStandaloneRecordings`, which sends its
 request only when a consumer calls it. With `experimentalStandalone` set, a
 standalone camera now reports recordings as unavailable with
 `standalone_recordings_unverified`, and its thumbnail and download fail with
@@ -265,9 +265,10 @@ capability. The
 `standalonePushStatus` getter and its three types are additive, with no new
 option. Standalone T84A1 events arrive only with `experimentalStandalone` and
 running events. A structural implementation of `SecurityModule` needs the new
-`probeStandaloneRecordings` method and `standalonePushStatus` getter. A `T8210`/7 or `T8210C`/7 row that was `unsupported_device` now
-becomes a battery doorbell camera. Under a HomeBase 3 it gets experimental H3
-media. Under another parent, such as a HomeBase 2, it is listed without media
+`probeStandaloneRecordings` method and `standalonePushStatus` getter. A
+`T8210`/7 or `T8210C`/7 row that was `unsupported_device` now becomes a battery
+doorbell camera. Under a HomeBase 3 on firmware 2.0.9.7 or later it gets
+experimental H3 media. Under another parent, such as a HomeBase 2, it is listed without media
 as `unsupported_station`, and an empty or self parent gives
 `invalid_device_relationship`. The dependency updates need no code change. The
 published package carries no lockfile. 0.30.1 requires `protobufjs` 8.8.1 or a

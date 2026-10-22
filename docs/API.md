@@ -470,7 +470,7 @@ ends with `recording_cipher_unavailable` first. `listRecordings` and
 `recordingCalendar` stay owner-wide library calls without that gate. A consumer
 that ignores the capability and calls them on a standalone owner still sends
 10006 or 10008 to the camera, can wait 15 seconds for each page, and gets the
-observation as before.
+observation as for any other owner.
 
 Observation only. Query payloads, page sizes, timeouts, error codes and the
 session close after a failure are the same with and without these options.
