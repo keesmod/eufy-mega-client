@@ -64,6 +64,7 @@ export const profileBaseline = [
   ['T8160-C', 19, 'camera', '', false, true, 'h3'],
   // Added on 2026-10-12 for ha-eufy-cam#149 from public T8410C type 31 evidence.
   ['T8410C', 31, 'camera', 'indoor', true, true, 'h3'],
-  // Added on 2026-10-22 for ha-eufy-cam#198 from public T8210 type 7 evidence.
+  // Added on 2026-10-22 for ha-eufy-cam#198 from public T8210 and T8210C type 7 evidence.
   ['T8210', 7, 'camera', '', false, true, 'h3'],
+  ['T8210C', 7, 'camera', '', false, true, 'h3'],
 ];

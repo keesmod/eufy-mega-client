@@ -202,50 +202,58 @@ test('T8160-C has the T8160 type and adapter with the additional-H3 media policy
   );
 });
 
-// ha-eufy-cam#198: T8210/7 rests on public evidence, not on the reporter's inventory row.
-test('T8210 is admitted only as type 7 with the additional-H3 battery doorbell policy', () => {
-  const profile = deviceProfiles.T8210;
-  assert.deepEqual(
-    { ...profile, features: { ...profile?.features } },
-    { type: 7, kind: 'camera', family: 'battery-doorbell', topology: 'h3', features: h3Policy },
-  );
-  assert.equal(exactDeviceProfile({ device_model: 'T8210', device_type: 7 }), profile);
-  // T8212 shares the catalogue type but stays a candidate. No suffix or type-only admission.
+// ha-eufy-cam#198: T8210/7 and T8210C/7 rest on public evidence, not on the reporter's row.
+test('T8210 and T8210C are admitted only as type 7 with the additional-H3 doorbell policy', () => {
+  // Separate profiles with the same policy, not a prefix match.
+  assert.notEqual(deviceProfiles.T8210, deviceProfiles.T8210C);
+  // T8212 stays a type 7 candidate. No other suffix or type-only admission.
   for (const [device_model, device_type] of [
     ['T8210', 16],
     ['T8210', 91],
     ['T8210', '7'],
+    ['T8210C', 16],
+    ['T8210C', '7'],
     ['T8212', 7],
-    ['T8210C', 7],
+    ['T8210P', 7],
     ['T8210-C', 7],
+    ['T8210CC', 7],
     ['t8210', 7],
+    ['T8210c', 7],
     ['T8210 ', 7],
-    [' T8210', 7],
+    [' T8210C', 7],
   ])
     assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
-  const camera = {
-    category: 'eufy_security',
-    device_sn: 'CAM',
-    device_model: 'T8210',
-    device_type: 7,
-    parent_sn: reportedOwner.device_sn,
-    main_sw_version: '1.2.3',
-  };
-  const result = discover([reportedOwner, camera]);
-  assert.deepEqual(result.relationships.get('CAM'), {
-    kind: 'station',
-    ownerId: reportedOwner.device_sn,
-  });
-  assert.equal(result.result.devices[1].model, 'T8210');
-  assert.deepEqual(result.result.issues, []);
-  assertH3OwnerGates(camera, reportedOwner);
-  for (const feature of ['snapshot', 'live', 'recordings'])
-    assert.equal(hasCameraMedia(camera, undefined, feature), false);
-  for (const parent_sn of ['', 'CAM'])
-    assert.deepEqual(discover([reportedOwner, { ...camera, parent_sn }]).relationships.get('CAM'), {
-      kind: 'unsupported',
-      reason: 'invalid_device_relationship',
+  for (const model of ['T8210', 'T8210C']) {
+    const profile = deviceProfiles[model];
+    assert.deepEqual(
+      { ...profile, features: { ...profile?.features } },
+      { type: 7, kind: 'camera', family: 'battery-doorbell', topology: 'h3', features: h3Policy },
+    );
+    assert.equal(exactDeviceProfile({ device_model: model, device_type: 7 }), profile);
+    const camera = {
+      category: 'eufy_security',
+      device_sn: 'CAM',
+      device_model: model,
+      device_type: 7,
+      parent_sn: reportedOwner.device_sn,
+      main_sw_version: '1.2.3',
+    };
+    const result = discover([reportedOwner, camera]);
+    assert.deepEqual(result.relationships.get('CAM'), {
+      kind: 'station',
+      ownerId: reportedOwner.device_sn,
     });
+    assert.equal(result.result.devices[1].model, model);
+    assert.deepEqual(result.result.issues, []);
+    assertH3OwnerGates(camera, reportedOwner);
+    for (const feature of ['snapshot', 'live', 'recordings'])
+      assert.equal(hasCameraMedia(camera, undefined, feature), false);
+    for (const parent_sn of ['', 'CAM'])
+      assert.deepEqual(
+        discover([reportedOwner, { ...camera, parent_sn }]).relationships.get('CAM'),
+        { kind: 'unsupported', reason: 'invalid_device_relationship' },
+      );
+  }
 });
 
 test('T8410C has the T8410 H3 policy and its experimental standalone flag', () => {

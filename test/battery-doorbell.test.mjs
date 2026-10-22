@@ -12,8 +12,8 @@ import { EufyMegaClient } from '../dist/index.js';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // Independently authored tuples from the pinned catalogue and MODEL_MATRIX.md.
-// T8224/96 is the reported C30 pair from ha-eufy-cam#40. T8210/7 rests on the
-// public evidence for ha-eufy-cam#198.
+// T8224/96 is the reported C30 pair from ha-eufy-cam#40. T8210/7 and T8210C/7 rest
+// on the public evidence for ha-eufy-cam#198.
 const models = [
   ['T8213', 91],
   ['T8214', 94],
@@ -21,6 +21,7 @@ const models = [
   ['T8223', 96],
   ['T8224', 96],
   ['T8210', 7],
+  ['T8210C', 7],
 ];
 const owner = (id = 'T8030_OWNER') => ({
   category: 'eufy_security',

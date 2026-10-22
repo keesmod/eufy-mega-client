@@ -216,32 +216,37 @@
   are unchanged. No hardware run is needed for them, because well-formed push
   messages and images take the same code paths.
 
-### Video Doorbell 2K T8210
+### Video Doorbell 2K T8210 and T8210C
 
-- Admit exactly `T8210` with device type 7, the battery-powered Video Doorbell
-  2K that Eufy now also sells as Video Doorbell S220, under a HomeBase 3. It uses
-  the `BatteryDoorbellCamera` adapter, H3 topology and the additional-H3 media
+- Admit exactly `T8210` and `T8210C`, each with device type 7, under a
+  HomeBase 3. Both are the battery-powered Video Doorbell 2K that Eufy now also
+  sells as Video Doorbell S220. `T8210C` is a variant of `T8210`. They use the
+  `BatteryDoorbellCamera` adapter, H3 topology and the additional-H3 media
   policy of the T8214, T8224 and T8223 doorbells. Media needs the actual T8030
   owner on firmware 2.0.9.7 or later. Live start sends the same generic
   `CMD_SET_PAYLOAD` envelope as T8224 and T8223. Stored snapshots, recordings,
   download and cancellation use the same HomeBase commands as the other H3
   doorbells. Battery, availability and motion, person and ring events use the
-  existing observed properties and pushes. The vendored adapter is unchanged.
-- This rests on public evidence. Eufy's HomeBase 3 compatibility page lists
-  T8210 as compatible. A 2023 inventory from another client shows T8210 with
-  type 7 under a T8030, and a public Mega inventory shows T8210/7 with category
-  `eufy_security` under a HomeBase 2.
+  existing observed properties and pushes. The vendored adapter selects all of
+  this from type 7 and is unchanged.
+- This rests on public evidence from other clients. Eufy's HomeBase 3
+  compatibility page lists T8210 as compatible. A 2023 inventory shows `T8210`
+  with type 7 under a T8030, and a public Mega inventory shows `T8210`/7 with
+  category `eufy_security` under a HomeBase 2. Public diagnostics show a
+  doorbell received as `T8210C` with type 7 under a HomeBase 2, and two public
+  reports describe a T8210C under a T8030 without its received model.
   [ha-eufy-cam#198](https://github.com/keesmod/ha-eufy-cam/issues/198) reports a
   T8210 under a HomeBase 3 that the integration does not list, without its
-  received model and type. It is not verified that this row carries exactly
-  `T8210` with type 7.
-- `T8212`, which shares type 7 in the catalogue, the type 16 doorbells,
-  suffixes such as `T8210C` and other types for `T8210` remain
-  `unsupported_device`. No prefix or type-only admission is added.
+  received model and type. It is not verified which of the two pairs that row
+  carries, or that it carries either.
+- `T8212`, which stays a type 7 candidate in the model matrix, the type 16
+  candidates `T8220`, `T8221` and `T8222`, other suffixes such as `T8210P` and
+  other types for `T8210` or `T8210C` remain `unsupported_device`. No prefix or
+  type-only admission is added.
 - Synthetic tests cover discovery, state, events, the media commands, confirmed
-  live stop, recording cancellation and the owner and firmware rejections, as
-  for the other H3 battery doorbells. This is software coverage. No T8210
-  hardware result exists for this client.
+  live stop, recording cancellation and the owner and firmware rejections for
+  both pairs, as for the other H3 battery doorbells. This is software coverage.
+  No T8210 or T8210C hardware result exists for this client.
 
 Upgrade: the observation is additive and optional. The four recording calls take
 the new options object in place of the signal, a plain signal keeps working, and
@@ -258,17 +263,20 @@ that code. A download of a record with a cipher ID fails with
 `standalonePushStatus` getter and its three types are additive, with no new
 option. Standalone T84A1 events arrive only with `experimentalStandalone` and
 running events. A structural implementation of `SecurityModule` needs the new
-getter. A `T8210`/7 row under a HomeBase 3, rejected before as
-`unsupported_device`, now becomes a battery doorbell camera with experimental
-H3 media. The dependency updates need no code change. The published package
-carries no lockfile. 0.30.1 requires `protobufjs` 8.8.1 or a later 8.x. A
-consumer resolves `strtok3` through its own lockfile within the `^10.3.4` range
-of `file-type`, also with 0.30.0.
+getter. A `T8210`/7 or `T8210C`/7 row that was `unsupported_device` now
+becomes a battery doorbell camera. Under a HomeBase 3 it gets experimental H3
+media. Under another parent, such as a HomeBase 2, it is listed without media
+as `unsupported_station`, and an empty or self parent gives
+`invalid_device_relationship`. The dependency updates need no code change. The
+published package carries no lockfile. 0.30.1 requires `protobufjs` 8.8.1 or a
+later 8.x. A consumer resolves `strtok3` through its own lockfile within the
+`^10.3.4` range of `file-type`, also with 0.30.0.
 Rollback: 0.30.0, pass the signal alone again and remove calls to
 `probeStandaloneRecordings` and reads of `standalonePushStatus`. That also
 restores the earlier recordings capability of standalone cameras, whose lists
 did not work on the reported cameras, and the refusal of every standalone push.
-It also rejects `T8210`/7 again as `unsupported_device`. 0.30.0 declares `protobufjs` `^8.0.0`, so a consumer can keep the updated
+It also rejects `T8210`/7 and `T8210C`/7 again as `unsupported_device`.
+0.30.0 declares `protobufjs` `^8.0.0`, so a consumer can keep the updated
 lockfile with it or restore its previous one.
 
 ## 0.30.0 - 2026-10-15
