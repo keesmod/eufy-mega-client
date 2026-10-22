@@ -82,6 +82,8 @@ owner firmware at or above 2.0.9.7.
 | T8201   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
 | T8202   | 5     | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
 | T8203   | 93    | camera  | wired-doorbell   | standalone         | blocked     | blocked     | blocked     | [Evidence](WIRED_DOORBELLS.md)    |
+| T8210   | 7     | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
+| T8210C  | 7     | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
 | T8213   | 91    | camera  | battery-doorbell | h3                 | established | established | established | [Evidence](BATTERY_DOORBELLS.md)  |
 | T8214   | 94    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
 | T8224   | 95    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
