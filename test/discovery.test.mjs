@@ -307,9 +307,12 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
   assert.equal(issue('T8160-C', 19).devices.length, 3);
   assert.equal(issue('T8410C', 31).devices.length, 3);
   assert.equal(issue('T8410', 31).devices.length, 3);
+  assert.equal(issue('T8210', 7).devices.length, 3);
   for (const [model, type] of [
     ['T8160-C', 23],
     ['T8410C', 30],
+    ['T8210', 16],
+    ['T8212', 7],
   ])
     assert.deepEqual(issue(model, type).issues[0], {
       index: 2,

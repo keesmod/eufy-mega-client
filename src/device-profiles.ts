@@ -118,6 +118,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8201: camera(5, 'wired-doorbell', 'standalone', blockedMedia),
   T8202: camera(5, 'wired-doorbell', 'standalone', blockedMedia),
   T8203: camera(93, 'wired-doorbell', 'standalone', blockedMedia),
+  // ha-eufy-cam#198: public evidence of T8210/type 7 under a HomeBase 3. Only this exact pair.
+  T8210: camera(7, 'battery-doorbell', 'h3', h3Media),
   T8213: camera(91, 'battery-doorbell', 'h3', establishedMedia),
   T8214: camera(94, 'battery-doorbell', 'h3', h3Media),
   // ha-eufy-cam#40: an inventory reports a C30 with the C31 type. Only this exact pair.

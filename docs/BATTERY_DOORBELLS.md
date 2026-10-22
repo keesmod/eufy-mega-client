@@ -10,6 +10,7 @@ bounded discovery and state/event slice in 0.8.0.
 | T8224/95   | BatteryDoorbellCamera | Software                    | Observed only        | Software           | Unverified               |
 | T8223/96   | BatteryDoorbellCamera | Software                    | Observed only        | Software           | Unverified               |
 | T8224/96   | BatteryDoorbellCamera | Software, reported tuple    | Observed only        | Software           | Unverified               |
+| T8210/7    | BatteryDoorbellCamera | Software, public evidence   | Observed only        | Software           | Unverified               |
 
 All rows require the actual admitted T8030/type 18 HomeBase owner. Transport is
 the existing local LAN-derived credential path. Model/type associations use the
@@ -57,9 +58,10 @@ PTZ, talkback, non-camera actuation or legacy-cloud fallback is added.
 
 ## Unsupported paths and remaining obligations
 
-Unknown tuples and suffixes return `unsupported_device`. T8210/T8212 type 7 and
+Unknown tuples and suffixes return `unsupported_device`. T8212 type 7 and
 T8220/T8221/T8222 type 16 remain candidate associations. They need sanitized exact
-model/type inventory evidence before admission. Unsupported parents remain
+model/type inventory evidence before admission. 0.30.1 admits T8210/7 on public
+evidence, as described [below](#public-t8210-type-7-evidence-0301). Unsupported parents remain
 `unsupported_station`, and empty/self parents retain `invalid_device_relationship`.
 No standalone owner or older HomeBase protocol is enabled. Invalid initialization
 is isolated as `device_initialization_failed` without raw protocol data. Other
@@ -107,6 +109,7 @@ MIT adapter at `e968376f176cfb91f1dc4a74d43fe82a40c2d190`, specifically
 | T8224/95   | Generic payload          | Software        | Software                | Software            |
 | T8223/96   | Generic payload          | Software        | Software                | Software            |
 | T8224/96   | Generic payload          | Software        | Software                | Software            |
+| T8210/7    | Generic payload          | Software        | Software                | Software            |
 
 New media requires the actual matching T8030/type 18 parent with a T8030 serial
 prefix and a four-part numeric owner firmware at or above 2.0.9.7. Unknown,
@@ -186,3 +189,46 @@ The per-model [adapter tests](../test/battery-doorbell.test.mjs), the
 [profile tests](../test/device-profiles.test.mjs) cover T8224/96 like the other
 rows. Discovery, state, events and media of the reported C30 on hardware remain
 unverified until the reporter tests a release with this change.
+
+## Public T8210 type 7 evidence, 0.30.1
+
+[ha-eufy-cam#198](https://github.com/keesmod/ha-eufy-cam/issues/198) reports a
+Video Doorbell T8210 under a HomeBase 3 (T8030) that the integration does not
+list. It works in the Eufy app and in another integration. The report gives no
+received model, type or firmware, and 0.30.0 has no T8210 profile, so a T8210
+row is `unsupported_device` there.
+
+0.30.1 admits exactly T8210/7 with the H3 topology and media policy of
+T8224/95. The evidence is public, as for T8410C in 0.29.2:
+
+- Eufy's [HomeBase 3 compatibility page](https://service.eufy.com/article-description/S380-HomeBase-HomeBase-3-Compatibility)
+  lists the T8210 Video Doorbell 2K as compatible.
+- A [2023 inventory](https://github.com/fuatakgun/eufy_security/issues/958#issuecomment-1799501814)
+  from another client shows model T8210 with type 7 and firmware 5.7.5 under
+  a T8030.
+- A [public Mega inventory](https://github.com/mscodemonkey/eufy-mega-security/issues/134)
+  shows `model="T8210" device_type=7 category=eufy_security` with a parent,
+  under a HomeBase 2.
+
+No source shows another type for T8210. Both inventories come from other
+clients. That they read the same inventory field as this client is not
+verified, and neither is the received model of the #198 row.
+
+The vendored adapter selects the T8210 behavior from type 7. It is
+`BatteryDoorbellCamera`, like the other admitted doorbells. Battery
+(`CMD_GET_BATTERY`), availability (`CMD_GET_DEV_STATUS`) and the motion, person
+and ring properties are the same keys as for types 91, 94, 95 and 96. Under the
+H3 media gate type 7 matches no special live branch and sends the generic
+`CMD_SET_PAYLOAD` envelope of C30/C31. Stored snapshots, calendar, lists and
+downloads use HomeBase station commands. The only type 7 specific items in the
+vendored adapter are writable settings this client does not expose and a
+keyframe TODO that applies only when a T8210 is its own P2P station, which the
+H3 topology excludes. The video codec is read from the stream, as for every
+HomeBase camera.
+
+The per-model [adapter tests](../test/battery-doorbell.test.mjs), the
+[shared media fixtures](../test/fixtures/battery-doorbell-media.mjs) and the
+[profile tests](../test/device-profiles.test.mjs) cover T8210/7 like the other
+rows. T8212/7, `T8210C` and T8210 with any other type stay `unsupported_device`.
+Discovery, state, events and media of a T8210 on hardware remain unverified
+until a tester reports a release with this change.

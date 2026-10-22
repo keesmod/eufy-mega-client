@@ -222,6 +222,25 @@ received pair with the T8224/95 policy, as described in
 [BATTERY_DOORBELLS.md](BATTERY_DOORBELLS.md#reported-c30-type-96-0181). This is a
 reported inventory tuple, not a hardware observation. No H or P cell changes.
 
+## Public T8210 type 7 evidence, 0.30.1
+
+[198-report] reports a Video Doorbell T8210 under a HomeBase 3 that the
+integration does not list, without its received model, type or firmware. 0.30.1
+admits exactly T8210/7 with the T8224/95 H3 policy on public evidence, as
+described in [BATTERY_DOORBELLS.md](BATTERY_DOORBELLS.md#public-t8210-type-7-evidence-0301).
+[HB3] lists T8210 as compatible with HomeBase 3. [T8210-legacy] is a 2023
+inventory of another client with T8210/7 on firmware 5.7.5 under a T8030.
+[Mega-134] is a Mega inventory row with T8210/7 and category `eufy_security`
+under a HomeBase 2. Both come from other clients. That they read the same
+inventory field as this client is not verified, and neither is the received
+model of the reported row. The type 7 rows below record T8210 as an
+experimental H3 software path. T8212 stays a B1/U candidate. No H or P cell
+changes.
+
+[198-report]: https://github.com/keesmod/ha-eufy-cam/issues/198
+[T8210-legacy]: https://github.com/fuatakgun/eufy_security/issues/958#issuecomment-1799501814
+[Mega-134]: https://github.com/mscodemonkey/eufy-mega-security/issues/134
+
 ## Reported T8113-Z and T8424, 0.26.0
 
 A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
@@ -1013,7 +1032,7 @@ evidence section. Every row also has a separate feature row below.
 | 3             | `FLOODLIGHT`                           | T8420 / T8420X                               | Floodlight Cam 1080p                                                          | flood      | W, H3 only for X variant                    | [Flood], [HB3]                                              | C           |
 | 4             | `CAMERA_E`                             | T8112                                        | eufyCam E                                                                     | cam        | H3, H1/E/2                                  | [Cam], [HB-old]                                             | C           |
 | 5             | `DOORBELL`                             | T8200 / T8201 / T8202                        | Video Doorbell 2K / 1080p / 2K Pro, wired                                     | wired      | W. H3 excluded                              | [HB3]                                                       | C           |
-| 7             | `BATTERY_DOORBELL`                     | T8210 / T8212 candidates                     | Video Doorbell 2K / S220 / S210                                               | battery    | H3, H1/E/2, chime variant unresolved        | [HB3], [HB-old], [HB-guide]                                 | C           |
+| 7             | `BATTERY_DOORBELL`                     | T8210 admitted in 0.30.1. T8212 candidate    | Video Doorbell 2K / S220 / S210                                               | battery    | H3, H1/E/2, chime variant unresolved        | [HB3], [HB-old], [HB-guide], [T8210-legacy], [Mega-134]     | R           |
 | 8             | `CAMERA2C`                             | T8113                                        | eufyCam 2C                                                                    | cam        | H3, H1/E/2, HM candidate                    | [Cam], [HB-old], [HB-guide]                                 | C           |
 | 9             | `CAMERA2`                              | T8114                                        | eufyCam 2                                                                     | cam        | H3, H1/E/2                                  | [Cam], [HB-old]                                             | C           |
 | 14            | `CAMERA2_PRO`                          | T8140                                        | eufyCam 2 Pro                                                                 | cam        | H3, H1/E/2, HM candidate                    | [Cam], [HB-old], [HB-guide]                                 | C           |
@@ -1116,7 +1135,7 @@ battery lifetime claim is made.
 | 3     | T8420 / T8420X / listed topologies                   | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#29], [#30], [E2], [#60]                       |
 | 4     | T8112 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#97]                                           |
 | 5     | T8200 / T8201 / T8202 / standalone inventory only    | X         | X inventory         | N/A       | B2/U            | B2/U       | B2/U       | B2/U            | B2/U          | [Wired-software], [Catalogue]                       | [#27], [#28], [#36], [#59]                      |
-| 7     | T8210 / T8212 candidates / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#108], [#109]                                  |
+| 7     | T8210 / actual H3 owner only. T8212 B1/U             | X         | X                   | X         | X               | X          | X          | X               | X             | [Battery-software], [T8210-legacy], [Mega-134]      | [198-report], [#108], [#109]                    |
 | 8     | T8113 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#98]                                           |
 | 9     | T8114 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#99]                                           |
 | 14    | T8140 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#100]                                          |
@@ -1470,6 +1489,7 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [Floodlight-software]: FLOODLIGHT.md
 [LTE0]: LTE.md
 [Indoor-software]: INDOOR.md
+[Battery-software]: BATTERY_DOORBELLS.md
 [C31]: https://www.eufy.com/products/t817l121
 [C31-report]: https://github.com/keesmod/ha-eufy-cam/issues/136
 [C31-standalone]: https://github.com/homebridge-plugins/homebridge-eufy/issues/1027
