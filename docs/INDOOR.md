@@ -254,9 +254,11 @@ request had enough evidence for a standalone T84xx camera, so since 0.30.1 the
 client reports recordings on the experimental standalone route as unavailable
 with `standalone_recordings_unverified`, as described in
 [API.md](API.md#experimental-standalone-cameras). Snapshot and live are
-unchanged, and so is every Indoor camera under a HomeBase. The ranked candidates
-for a later probe are recorded in the
-[model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301).
+unchanged, and Indoor cameras under a HomeBase keep their recordings
+capability. The ranked candidates are recorded in the
+[model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301). Since
+0.30.1 `probeStandaloneRecordings` sends candidate 1 on request, as described
+in [API.md](API.md#standalone-recording-probe-0301).
 
 ## Indoor Cam Pan&Tilt 2K T8410C, 0.29.2
 

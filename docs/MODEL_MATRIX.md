@@ -658,10 +658,12 @@ T8410 and T8410C, with `{ available: false, status: 'unsupported', reason:
 'standalone_recordings_unverified' }`, as described in
 [API.md](API.md#experimental-standalone-cameras). A thumbnail or download is
 refused at stage `admission` before any connection. Snapshot and live stay
-experimental. HomeBase owners, their payloads and code paths are unchanged, and
-that decision sends no new device request. The library list and calendar calls
-and the [recording operation observation](API.md#recording-operation-observation-0301)
-are unchanged. The opt-in probe of candidate 1 below reuses the observation.
+experimental. That decision leaves HomeBase owners, their payloads and code
+paths as they are and sends no new device request. The library list and
+calendar calls stay without that gate and still send 10006 or 10008 on a
+standalone owner, as with 0.30.0. Both report the
+[recording operation observation](API.md#recording-operation-observation-0301),
+also new in 0.30.1. The opt-in probe of candidate 1 below reuses the observation.
 This is a software decision on the reports above and the public sources below,
 not a new hardware result. The type 31 and 151 rows gain no cells.
 
@@ -758,7 +760,8 @@ channel 0, at most 20 records of the process's local day, `start_time` `"0"`, no
 are in [API.md](API.md#standalone-recording-probe-0301). Only channel 0 is
 sent. The channel 255 of candidate 5 has HomeBase provenance only. The probe is
 read-only, creates no recording ID and leaves the recordings capability
-unavailable. HomeBase owners and their payloads are unchanged. A bridge sends
+unavailable. The probe leaves HomeBase owners and their payloads as they are.
+A bridge sends
 it only on an explicit opt-in.
 
 Results are pending. No probe result has been reported for any model yet. Each

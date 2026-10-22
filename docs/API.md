@@ -470,7 +470,7 @@ ends with `recording_cipher_unavailable` first. `listRecordings` and
 `recordingCalendar` stay owner-wide library calls without that gate. A consumer
 that ignores the capability and calls them on a standalone owner still sends
 10006 or 10008 to the camera, can wait 15 seconds for each page, and gets the
-observation as before.
+observation as for any other owner.
 
 Observation only. Query payloads, page sizes, timeouts, error codes and the
 session close after a failure are the same with and without these options.
@@ -1017,7 +1017,8 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   `recordingThumbnail` and `downloadRecording` fail with that code at stage
   `admission`, before any connection or device command. A download of a record
   with a cipher ID fails with `recording_cipher_unavailable` first, because it
-  would need a cloud cipher. HomeBase owners and their cameras are unchanged.
+  would need a cloud cipher. This decision leaves HomeBase owners and their
+  cameras as they are.
 - Since 0.30.1 `probeStandaloneRecordings` sends one diagnostic 10017 query to
   the camera when a consumer calls it, see the
   [standalone recording probe](#standalone-recording-probe-0301). It leaves the
@@ -1028,7 +1029,7 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   requests. A consumer that ignores the capability and calls them still sends
   those requests, can wait 15 seconds for an answer, and gets the
   [recording operation observation](#recording-operation-observation-0301) as
-  before. Consumers should follow the capability and not start them.
+  for any other owner. Consumers should follow the capability and not start them.
 - Guard mode and `refreshStationState` fail with
   `operation_outside_hardware_scope`. `getStationState` and `station` events
   report its session only, with null modes and no alarm.
@@ -1197,8 +1198,9 @@ and no event image is loaded. No event sends the latest-info query 10013, issues
 a command or opens or wakes a connection, also when the camera's session is
 already open. The event therefore carries no new image, and person recognition
 stays `unidentified` because the decoded push carries no name. A standalone
-camera emits no device-sourced detection, so its events are push-only. HomeBase
-pushes and cameras are unchanged and never counted.
+camera emits no device-sourced detection, so its events are push-only. The
+standalone push filter leaves HomeBase pushes and cameras unchanged and never
+counts them.
 
 `standalonePushStatus` is a synchronous getter without I/O. It returns a fresh
 `StandalonePushObservation`, summed over all standalone owners:
