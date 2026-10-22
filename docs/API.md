@@ -1028,7 +1028,7 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   requests. A consumer that ignores the capability and calls them still sends
   those requests, can wait 15 seconds for an answer, and gets the
   [recording operation observation](#recording-operation-observation-0301) as
-  before. Consumers should follow the capability and not start them.
+  for any other owner. Consumers should follow the capability and not start them.
 - Guard mode and `refreshStationState` fail with
   `operation_outside_hardware_scope`. `getStationState` and `station` events
   report its session only, with null modes and no alarm.

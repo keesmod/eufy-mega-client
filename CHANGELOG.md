@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.30.1 - Unreleased
+## 0.30.1 - 2026-10-22
 
 ### Recording operation observation
 
@@ -59,10 +59,10 @@
   earlier query on the same open session, are not counted either. Without
   `onObservation` the
   operation attaches no listener.
-- Observation only. Query payloads, page sizes, the 15-second page and
-  20-second connect bounds, the 60-second operation bound, error codes and the
-  session close after a failed or cancelled operation are unchanged, with and
-  without the new options. A HomeBase 3 test asserts the byte-identical 10006
+- Observation only. The new options change no query payload, page size,
+  bound (the 15-second page, 20-second connect and 60-second operation bounds),
+  error code or session close after a failed or cancelled operation. The
+  standalone refusals below are a separate change. A HomeBase 3 test asserts the byte-identical 10006
   payload and identical codes. The tests drive a real vendor Station for a
   synthetic standalone T8410 and a HomeBase 3 owner and feed the answers
   through the session's own parser. This is software coverage. The hardware
@@ -88,17 +88,19 @@
   T817L, but no T84xx result, and a standalone owner has no playback path. The
   ranked candidates and their sources are in the
   [model matrix](docs/MODEL_MATRIX.md#standalone-recordings-outcome-0301).
-- `listRecordings` and `recordingCalendar` stay owner-wide library calls and are
-  unchanged. A consumer that ignores the capability and calls them on a
-  standalone owner still sends 10006 or 10008 and gets the observation as
-  before. HomeBase owners, their payloads, code paths and capabilities are
-  unchanged. This change sends no new device request and leaves the vendored
-  code unchanged. The opt-in probe below is the only new request of 0.30.1.
+- `listRecordings` and `recordingCalendar` stay owner-wide library calls
+  without the standalone gate. A consumer that ignores the capability and calls
+  them on a standalone owner still sends 10006 or 10008, as with 0.30.0, and
+  gets the recording operation observation as for any other owner. HomeBase
+  owners, their payloads, code paths and capabilities are unchanged by this
+  change. It sends no new device request and leaves the vendored code
+  unchanged. On a standalone camera, the opt-in probe below is the only new
+  request of 0.30.1.
 - The standalone tests assert the unavailable recordings for the T84A1, T8410
   and T8410C next to a HomeBase camera in the same transport that keeps them.
   The observation tests assert the standalone thumbnail and cipher-less download
   refusals at `admission` without an image or database request, and the
-  invalid thumbnail validation moves to a HomeBase 3 owner. The HomeBase 3 test
+  invalid thumbnail validation is tested on a HomeBase 3 owner. The HomeBase 3 test
   of the byte-identical 10006 payload is unchanged. This is software coverage.
 
 ### Standalone recording probe
@@ -124,17 +126,16 @@
   snapshot cover, unless it is already the cached cover. The busy check, the
   connection with `onProgress` and `onLookup`, the 15-second answer bound and
   the 60-second operation bound are those of the other recording operations. A
-  failure after the connection was requested closes the owner's session as
-  before, except `connection_busy`, which leaves the other attempt's session
-  alone. An answer keeps it open, also one with a non-zero database result,
+  failure after the connection was requested closes the owner's session, as
+  for the other operations, except `connection_busy`, which leaves the other
+  attempt's session alone. An answer keeps it open, also one with a non-zero database result,
   which is reported as `history_rejected` with that result in `remoteCode`. A
   list closes the session after `history_rejected`.
 - The observation counts the answer's records and their row classes, without
   identifiers. It does not count unhandled database replies with inner command
   10013, so a reply that names the latest-info query the Station sends at
   connect is not attributed to the probe, also when it fails to parse. Every
-  other unhandled reply counts, as for the other operations, which are
-  unchanged. That includes a reply without a readable inner command, whichever
+  other unhandled reply counts, as for the other operations. That includes a reply without a readable inner command, whichever
   query it answers.
 - The probe itself creates no recording ID and sends no 10006, 10008, image or
   download request. The recordings capability of standalone cameras stays
@@ -144,8 +145,8 @@
   command set lacks the query, and the probe then reports
   `device_request_failed` at stage `query` without a page. The vendored
   `databaseQueryLocal` builder and the 10017 reply parser are unchanged.
-- HomeBase owners, their payloads, code paths and capabilities are unchanged.
-  The HomeBase 3 test of the byte-identical 10006 payload is unchanged. The new
+- The probe leaves HomeBase owners, their payloads, code paths and
+  capabilities unchanged. The HomeBase 3 test of the byte-identical 10006 payload is unchanged. The new
   tests drive a real vendor Station for a synthetic standalone T8410 and assert
   the exact request and its key set, an empty page, rows by class, a non-zero
   database result that keeps the session open, silence with ACK 0, a negative
@@ -184,8 +185,8 @@
   serial, DID, address, name, URL, path, timestamp or image. The types
   `StandalonePushObservation`, `StandalonePushRefusal` and
   `StandalonePushSource` are exported.
-- HomeBase pushes, their events, handlers and snapshot refresh are unchanged and
-  never counted. The tests cover an admitted motion and person push with the
+- This change leaves HomeBase pushes, their events, handlers and snapshot
+  refresh unchanged, and never counts them. The tests cover an admitted motion and person push with the
   session closed and open, every refused push type, pushes naming another
   serial, local pushes shaped as the vendored session emits them, the T8410
   and T8410C refusals, unchanged HomeBase events
@@ -212,8 +213,8 @@
   buffer, without a limit or abort signal.
 - Development only: `@types/node` 24.19.2 and `prettier` 3.9.10.
 - These are maintenance updates, not a security fix. No published advisory
-  covers protobufjs 8.8.0 or strtok3 10.3.5. `src`, `vendor` and the public API
-  are unchanged. No hardware run is needed for them, because well-formed push
+  covers protobufjs 8.8.0 or strtok3 10.3.5. These updates need no change in
+  `src`, `vendor` or the public API. No hardware run is needed for them, because well-formed push
   messages and images take the same code paths.
 
 ### Video Doorbell 2K T8210 and T8210C
@@ -259,11 +260,12 @@ request only when a consumer calls it. With `experimentalStandalone` set, a
 standalone camera now reports recordings as unavailable with
 `standalone_recordings_unverified`, and its thumbnail and download fail with
 that code. A download of a record with a cipher ID fails with
-`recording_cipher_unavailable` first. HomeBase cameras see no change. The
+`recording_cipher_unavailable` first. HomeBase cameras keep their recordings
+capability. The
 `standalonePushStatus` getter and its three types are additive, with no new
 option. Standalone T84A1 events arrive only with `experimentalStandalone` and
 running events. A structural implementation of `SecurityModule` needs the new
-getter. A `T8210`/7 or `T8210C`/7 row that was `unsupported_device` now
+`probeStandaloneRecordings` method and `standalonePushStatus` getter. A `T8210`/7 or `T8210C`/7 row that was `unsupported_device` now
 becomes a battery doorbell camera. Under a HomeBase 3 it gets experimental H3
 media. Under another parent, such as a HomeBase 2, it is listed without media
 as `unsupported_station`, and an empty or self parent gives
