@@ -224,12 +224,16 @@ evidence is public and comes from other clients, as for T8410C in 0.29.2:
   [mega-yfue/eufy-sdk#302](https://github.com/mega-yfue/eufy-sdk/issues/302)
   describes a T8210C under a T8030. Neither shows the received model or type.
 
-No source shows a type other than 7 for either code. That the other clients read
-the same inventory field as this client is verified only for the
-alaraun diagnostics. Which code the #198 row carries is not known. Its owner
-calls it T8210, which does not decide it, as for T8410 and T8410C in
-[INDOOR.md](INDOOR.md). The bounded `unsupported_device` diagnostic of a
-release before 0.30.1 shows the received pair.
+No source shows a type other than 7 for either code. The property metadata of
+the 2023 inventory maps its model to `device_model`, and the alaraun client
+documents its field as the entry's own `device_model`. Both are the inventory
+field this client matches. For the Mega inventory this is not shown, and the two
+T8210C reports under a T8030 show no received model. Which code the #198 row
+carries is not known. Its owner calls it T8210, which does not decide it, as for
+T8410 and T8410C in [INDOOR.md](INDOOR.md). From 0.29.2 until this change, the
+bounded `unsupported_device` diagnostic shows the received pair, provided the
+bridge and integration apply the same model bound. Older releases omit an
+unhyphenated code such as `T8210C`, and releases before 0.12.1 omit the pair.
 
 The vendored adapter selects the behavior of both codes from type 7. It is
 `BatteryDoorbellCamera`, like the other admitted doorbells. Battery

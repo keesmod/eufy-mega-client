@@ -234,9 +234,10 @@ inventory with T8210/7 on firmware 5.7.5 under a T8030. [Mega-134] is a Mega
 inventory row with T8210/7 and category `eufy_security` under a HomeBase 2.
 [T8210C-107] holds diagnostics with a received `device_model` of T8210C, type 7
 and firmware 3.0.8.6 under a HomeBase 2. [T8210C-763] and [T8210C-302] describe
-a T8210C under a T8030 without its received model or type. Only the
-[T8210C-107] client documents its field as the inventory entry's own
-`device_model`. The received model of the reported row is not verified. Its
+a T8210C under a T8030 without its received model or type. The [T8210-legacy]
+property metadata maps its model to `device_model`, and the [T8210C-107] client
+documents its field as the inventory entry's own `device_model`. This is not
+shown for [Mega-134]. The received model of the reported row is not verified. Its
 owner's T8210 label does not decide between the two codes. The type 7 rows
 below record both codes as an experimental H3 software path. T8212 stays a B1/U
 candidate. No H or P cell changes.
