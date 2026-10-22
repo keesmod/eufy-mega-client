@@ -1017,7 +1017,8 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   `recordingThumbnail` and `downloadRecording` fail with that code at stage
   `admission`, before any connection or device command. A download of a record
   with a cipher ID fails with `recording_cipher_unavailable` first, because it
-  would need a cloud cipher. HomeBase owners and their cameras are unchanged.
+  would need a cloud cipher. This decision leaves HomeBase owners and their
+  cameras as they are.
 - Since 0.30.1 `probeStandaloneRecordings` sends one diagnostic 10017 query to
   the camera when a consumer calls it, see the
   [standalone recording probe](#standalone-recording-probe-0301). It leaves the
@@ -1197,8 +1198,9 @@ and no event image is loaded. No event sends the latest-info query 10013, issues
 a command or opens or wakes a connection, also when the camera's session is
 already open. The event therefore carries no new image, and person recognition
 stays `unidentified` because the decoded push carries no name. A standalone
-camera emits no device-sourced detection, so its events are push-only. HomeBase
-pushes and cameras are unchanged and never counted.
+camera emits no device-sourced detection, so its events are push-only. The
+standalone push filter leaves HomeBase pushes and cameras unchanged and never
+counts them.
 
 `standalonePushStatus` is a synchronous getter without I/O. It returns a fresh
 `StandalonePushObservation`, summed over all standalone owners:

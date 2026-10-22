@@ -17,8 +17,8 @@ reason: 'standalone_recordings_unverified' }` for
 recording request with evidence exists on that route. Its thumbnail and download
 fail with the same code before any connection. A download of a record with a
 cipher ID fails with `recording_cipher_unavailable` first, because it would need
-a cloud cipher. Its snapshot and live and every
-camera under a HomeBase are unchanged. List and calendar stay owner-wide
+a cloud cipher. Its snapshot and live are unchanged, and cameras under a
+HomeBase keep their recordings capability. List and calendar stay owner-wide
 metadata calls, as described below.
 
 An available operation has status `experimental` and reason null. This describes

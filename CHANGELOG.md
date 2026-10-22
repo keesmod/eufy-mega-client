@@ -206,16 +206,18 @@
   already did. The other fixes of 8.8.1 concern string escapes and enum JSON
   names in `.proto` files, which the client's two `.proto` files do not use.
 - The lockfile moves the transitive `strtok3` from 10.3.5 to 10.4.0. It is a
-  dependency of `file-type`, which `image-type` uses when `getImage` detects the
-  type of an event image loaded from a cloud URL. 10.4.0 adds an opt-in buffer
-  size limit that is off by default, validates token lengths and positions and
-  fixes abort signal handling. The client passes the downloaded image as a
-  buffer, without a limit or abort signal.
+  dependency of `file-type`, which `image-type` uses in the vendored
+  `getImage`. The client's cloud provider refuses that image download with
+  `operation_outside_hardware_scope` before `image-type` reads any byte, so no
+  image reaches `file-type` or `strtok3` in this client. 10.4.0 adds an opt-in
+  buffer size limit that is off by default, validates token lengths and
+  positions and fixes abort signal handling.
 - Development only: `@types/node` 24.19.2 and `prettier` 3.9.10.
 - These are maintenance updates, not a security fix. No published advisory
   covers protobufjs 8.8.0 or strtok3 10.3.5. These updates need no change in
-  `src`, `vendor` or the public API. No hardware run is needed for them, because well-formed push
-  messages and images take the same code paths.
+  `src`, `vendor` or the public API. No hardware run is needed for them,
+  because well-formed push messages take the same code path and no image
+  reaches `strtok3`.
 
 ### Video Doorbell 2K T8210 and T8210C
 
@@ -256,10 +258,10 @@ consumers that pass neither see no change from it. The types
 `RecordingRowClasses`, `RecordingObservation` and `RecordingOperationOptions`
 are exported. `RecordingOperation` names the four recording calls and
 `'probe'`, the operation of `probeStandaloneRecordings`, which sends its
-request only when a consumer calls it. With `experimentalStandalone` set, a
-standalone camera now reports recordings as unavailable with
-`standalone_recordings_unverified`, and its thumbnail and download fail with
-that code. A download of a record with a cipher ID fails with
+request only when a consumer calls it. With `experimentalStandalone` set, an
+experimental standalone camera, the T84A1, T8410 or T8410C, now reports
+recordings as unavailable with `standalone_recordings_unverified`, and its
+thumbnail and download fail with that code. A download of a record with a cipher ID fails with
 `recording_cipher_unavailable` first. HomeBase cameras keep their recordings
 capability. The
 `standalonePushStatus` getter and its three types are additive, with no new
