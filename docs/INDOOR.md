@@ -259,6 +259,12 @@ capability. The ranked candidates are recorded in the
 [model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301). Since
 0.30.1 `probeStandaloneRecordings` sends candidate 1 on request, as described
 in [API.md](API.md#standalone-recording-probe-0301).
+On 2026-10-23 the same reporter reported that both T8410 cameras answered it,
+on firmware 2.3.2.4 with an empty page and on 2.3.1.6 with database result
+-1100. In an earlier run on 2026-10-19 one of them listed one record of its
+own. These are reported results, not independently reproduced. Recordings stay
+unavailable, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-recording-probe-results-2026-10-23).
 
 ## Indoor Cam Pan&Tilt 2K T8410C, 0.29.2
 
@@ -371,7 +377,9 @@ information request and accepts the `CMD_DOORBELL_SET_PAYLOAD` start. The
 reported live video on firmware 3.3.4.4 implies that this firmware does all
 three. For other firmware it remains unknown. Whether it serves snapshot covers
 from its own storage is still unknown. Without a microSD card it answered the
-recording query with database result -1100 and no rows. Since 0.30.1 its
+recording query with database result -1100 and no rows. On 2026-10-19 and
+2026-10-23 it was reported to answer the 10017 probe the same way, not
+independently reproduced, see the [probe results](MODEL_MATRIX.md#reported-standalone-recording-probe-results-2026-10-23). Since 0.30.1 its
 recordings report `standalone_recordings_unverified` on this route, as for the
 [T8410](#experimental-standalone-t8410-0291), and a download with a cipher ID is
 refused first with `recording_cipher_unavailable`. Guard mode and events stay

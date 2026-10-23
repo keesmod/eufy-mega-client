@@ -126,7 +126,8 @@ reproduced, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t84a1-result-2026-10-17).
 Whether it answers the database commands with its own storage is unknown. Since 0.30.1 its recordings report
 `standalone_recordings_unverified`, as on every experimental standalone camera,
-because no recording request with evidence exists on that route. Its thumbnail
+because no request has enough evidence to list and play recordings on that
+route. Its thumbnail
 and download are refused before any connection, a download with a cipher ID
 first with `recording_cipher_unavailable`. Guard mode stays off. Since 0.30.1
 its motion and person pushes become detection events, see
