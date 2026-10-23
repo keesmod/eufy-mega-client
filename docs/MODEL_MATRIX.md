@@ -920,12 +920,11 @@ On 2026-10-23:
 - T8410C/31 on firmware 3.3.4.4, without a microSD card: `history_rejected` at
   `validate` after 155 ms, with `ackCode` 0, database result -1100 and 0 rows,
   as for its 10006 list on 2026-10-16.
-- T8410/31 camera A on firmware 2.3.2.4, with a microSD card and continuous
-  recording: answered after 362 ms with database result 0 and an empty page,
-  with `ackCode` null.
-- T8410/31 camera B on firmware 2.3.1.6, with a microSD card and continuous
-  recording: `history_rejected` at `validate` after 396 ms, with `ackCode`
-  null, database result -1100 and 0 rows.
+- T8410/31 camera A on firmware 2.3.2.4, with a microSD card: answered after
+  362 ms with database result 0 and an empty page, with `ackCode` null.
+- T8410/31 camera B on firmware 2.3.1.6, with a microSD card:
+  `history_rejected` at `validate` after 396 ms, with `ackCode` null, database
+  result -1100 and 0 rows.
 
 By the reporter's summary, with no `station_connection` record quoted, camera
 B's connection ended once at stage `lookup` at the first start after the beta
@@ -958,9 +957,9 @@ Readings, not proven causes:
   [candidate 1](#standalone-recordings-outcome-0301) expected for cameras
   without event clips. Whether the record is an event clip or part of the
   continuous recording is not known.
-- Camera A's empty page shows only that it answered. By the reporter it records
-  continuously to its microSD card, so the one-day bound alone does not explain
-  the empty page. Nothing shows that 10017 lists continuous footage from
+- Camera A's empty page shows only that it answered. By the reporter
+  [on 2026-10-15][T8410-recordings] both T8410 cameras record continuously to
+  their own storage, so the one-day bound alone does not explain the empty page. Nothing shows that 10017 lists continuous footage from
   `history_record_info`.
 - Camera B answered -1100 with a microSD card, so on this route -1100 does not
   follow only from missing storage. Its vendored name is
