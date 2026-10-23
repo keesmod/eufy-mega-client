@@ -67,6 +67,28 @@ Update the candidate's `CHANGELOG.md` section with the user-visible behavior,
 upgrade steps, compatibility limits and rollback instructions. Rollback names the
 previous stable version.
 
+Keep the section short, because it becomes the release notes of every beta and of
+the stable release:
+
+- Use a flat bullet list without `###` subheadings, one bullet per user-visible
+  change. Each bullet starts with the feature name in bold and takes at most two
+  sentences, with the issue link, or the PR link when there is no issue.
+- Leave out root-cause analysis, reporter evidence, diagnostic field lists,
+  test-coverage detail and lists of what stays unchanged. They belong in the
+  issue, the PR or the documentation, which the bullet can link.
+- Give the hardware status in a short phrase, such as "confirmed on hardware",
+  "reported, not reproduced" or "experimental, not yet confirmed on hardware".
+  A known problem or missing support gets its own bullet. This keeps the
+  statuses separate, as the
+  [hardware coverage rules](#hardware-coverage-and-release-scope) require.
+- Combine dependency and other maintenance updates into one bullet.
+- A later PR in the same batch edits the existing bullet. It adds no correction
+  or reference to another entry.
+- The upgrade and rollback text at the end takes at most three sentences. It
+  names a compatibility limit only when a supported combination breaks or loses
+  a feature.
+- A stable batch stays under about 300 words.
+
 All Validate checks must pass on the current PR commit. The final **ci** check
 fails if any prerequisite failed, timed out, was cancelled or skipped. Protect
 `main` by requiring a pull request, up-to-date branches, resolved conversations
@@ -93,7 +115,8 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    already started it.
 2. Open the release PR. It sets the version to `X.Y.Z`, the stable part of the
    candidate, dates `## X.Y.Z - YYYY-MM-DD`, completes the upgrade and rollback
-   text and points the README install URL at `X.Y.Z`. It normally changes
+   text, condenses the section to the changelog rules above and points the
+   README install URL at `X.Y.Z`. It normally changes
    nothing else. CI runs the release checks on it.
 3. Merge it and wait for `ci` on the resulting main commit.
 4. Rehearse and publish that commit as described below.
@@ -104,7 +127,10 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    reporter follow-ups. Those follow-ups also cover every issue referenced in
    this repository since the previous stable tag, collected from `refs #N` and
    `refs <repo>#N` in `git log --format=%B vPREVIOUS..vX.Y.Z` and from the
-   links in the `X.Y.Z` changelog section.
+   `keesmod` issue links in the `X.Y.Z` changelog section as it stood before
+   the release PR condensed it, in `git show <release PR commit>^:CHANGELOG.md`.
+   Links that the release PR adds, also in a section it adds itself, are read
+   from the release PR.
 
 ## Betas
 
@@ -114,7 +140,7 @@ it from main with the Release workflow and the beta version as input.
 - A beta may be published on its first run without a separate rehearsal. That run
   still validates, builds and verifies the package before it creates the tag.
 - An acceptance text without hardware results is enough, for example
-  `Prerelease for opt-in testing of ha-eufy-cam#149. CI only, no hardware result yet.`
+  `CI only, no hardware result yet for keesmod/ha-eufy-cam#149.`
 - The notes open with a sentence that this is a prerelease of `X.Y.Z` for opt-in
   testing, followed by the current `X.Y.Z` section.
 - The asset is `keesmod-eufy-mega-client-X.Y.Z-beta.N.tgz`. Consumers pin it by
@@ -181,9 +207,10 @@ Its rollback names the last published stable version.
    CI cannot prove physical sound, battery life or a live migration. Changes that
    do not affect hardware need no new physical tests. Record that rationale.
 5. Run **Release** again on the same `main` commit and version, tick **publish**,
-   and supply a sanitized acceptance summary or evidence link. The summary is
-   included in the public release notes. Never include credentials, serials,
-   recognized names, private footage or raw diagnostic logs.
+   and supply a sanitized acceptance summary of one sentence or an evidence link.
+   The summary is included in the public release notes. Never include
+   credentials, serials, recognized names, private footage or raw diagnostic
+   logs.
 6. The pipeline repeats validation, checks the requested version and current
    `main`, creates the exact tag and a draft, uploads the tested files, downloads
    and verifies them, then publishes. It downloads and verifies the public assets
