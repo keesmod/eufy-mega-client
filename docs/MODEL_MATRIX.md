@@ -592,7 +592,9 @@ T8410C/31 on firmware 3.3.4.4, without a microSD card:
   vendored 10017 query with non-default filter parameters, so -1100 does not
   only follow missing storage. For the 10017 listing the app declaration in
   [alaraun] names -118 for no card and -1008 for removed storage. The cause of
-  -1100 here stays unproven.
+  -1100 here stays unproven. On 2026-10-23 a T8410 with a microSD card answered
+  the 10017 probe with -1100 too, see the
+  [probe results](#reported-standalone-recording-probe-results-2026-10-23).
 
 T8410/31 camera A on firmware 2.3.2.4, with a microSD card and continuous
 recording:
@@ -749,7 +751,9 @@ event recordings. On the current reporter's cameras it is diagnostic only. A
 reply under another outer command, such as 1351, or as a DATA frame would not
 show in the observation. A dropped or unaligned 1306 CONTROL reply is ruled out,
 because it would count as an unhandled reply. A probe does not count one that
-names the latest-info query 10013.
+names the latest-info query 10013. The
+[probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23)
+answer this for the reporter's T8410 and T8410C cameras.
 
 #### Standalone recording probe (ha-eufy-cam#178)
 
@@ -764,8 +768,10 @@ unavailable. The probe leaves HomeBase owners and their payloads as they are.
 A bridge sends
 it only on an explicit opt-in.
 
-Results are pending. No probe result has been reported for any model yet. Each
-model's result, a failure included, is recorded here with model, firmware,
+The first results, for the T8410 and the T8410C, are recorded in
+[the probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23).
+No T84A1 result has been reported. Each model's result, a failure included, is
+recorded with model, firmware,
 microSD and recording mode where known, bridge and client versions and the
 observation's code, stage, `ackCode`, `resultCode`, `rows`, `rowClasses` and
 unhandled replies. Readings for this matrix: an answer with database result 0
@@ -879,6 +885,95 @@ so the admitted shape follows the vendored type 151 decoding. No hardware event
 result is recorded yet, and the type 151 feature cells stay unchanged until the
 reporter's beta result is recorded here under ha-eufy-cam#185, with the
 observation counts.
+
+## Reported standalone recording probe results, 2026-10-23
+
+On 2026-10-23 the reporter of ha-eufy-cam#152 [reported][probe-results] on
+[ha-eufy-cam#178][178] the
+[standalone recording probe](#standalone-recording-probe-ha-eufy-cam178) of
+the three standalone cameras recorded
+[above](#reported-standalone-t8410-and-t8410c-results-2026-10-16). The run used
+integration 0.8.48 and bridge 0.8.39 with client 0.30.1, in the beta app, which
+then carried the stable bridge, with `experimental_standalone` and
+`standalone_recording_probe` on and no other bridge app running. The comment
+also quotes two probe records of an earlier run on 2026-10-19 in the beta app.
+Those records carry no version. The newest beta then was bridge 0.8.39-beta.5
+with client 0.30.1-beta.4. The evidence is the bridge's `recording_query`
+records with `query=probe`, quoted verbatim, and the reporter's statement of
+model, firmware and microSD card per camera. These are reported results, not
+independently reproduced.
+
+Every quoted probe was answered within 400 ms on the session of the login
+discovery, with one page of at most 20 records and no unhandled reply.
+
+On 2026-10-23:
+
+- T8410C/31 on firmware 3.3.4.4, without a microSD card: `history_rejected` at
+  `validate` after 155 ms, with `ackCode` 0, database result -1100 and 0 rows,
+  as for its 10006 list on 2026-10-16.
+- T8410/31 camera A on firmware 2.3.2.4, with a microSD card and continuous
+  recording: answered after 362 ms with database result 0 and an empty page,
+  with `ackCode` null.
+- T8410/31 camera B on firmware 2.3.1.6, with a microSD card and continuous
+  recording: `history_rejected` at `validate` after 396 ms, with `ackCode`
+  null, database result -1100 and 0 rows.
+- At the first start after the update, with the probe off, camera B's
+  connection ended once at stage `lookup` with `device_request_timeout` after
+  20 rounds, with no reply with its own DID and 37 replies with the DID of
+  another device in the account. It connected at the next start, which probed
+  it. Its power state at the failed start was not reported.
+
+On 2026-10-19:
+
+- The T8410C: `history_rejected` with `ackCode` 0, database result -1100 and 0
+  rows, as on 2026-10-23.
+- One T8410: answered after 249 ms with database result 0 and one record, with
+  `ackCode` 0. `rowClasses` counts it as `own`, with a valid start on the
+  requested day, a valid end time and a cipher ID field. Which of the two T8410
+  cameras it was is not known, because `device_ref` follows the inventory order
+  of each report and that order changed between the runs. The comment has no
+  record of the third camera from that run.
+
+Readings, not proven causes:
+
+- Both T8410 cameras and the T8410C answer the app-shaped 10017 on this route.
+  Neither T8410 answered the 10006 list on 2026-10-16, so 10017 is the first
+  recording query a standalone T8410 has answered.
+- A standalone T8410 lists records through 10017: one of its own on
+  2026-10-19. That is the first record listed on the standalone T84xx route,
+  against the empty page that
+  [candidate 1](#standalone-recordings-outcome-0301) expected for cameras
+  without event clips. Whether the record is an event clip or part of the
+  continuous recording is not known. An empty page shows only the answer,
+  because the probe asks for one day of the bridge's local date.
+- Camera B answered -1100 with a microSD card, so on this route -1100 does not
+  follow only from missing storage. Its vendored name is
+  [`ERROR_DB_NOT_READY`][DB-codes], and its cause stays unproven.
+- `ackCode` null on an answered probe says only that no command result arrived
+  before the answer. The command result and the database answer arrive as
+  separate messages in no fixed order, and the observation ends with the
+  answer. It shows neither a refusal nor silence.
+
+Recordings stay unavailable with `standalone_recordings_unverified` on the
+T8410 and the T8410C. ha-eufy-cam#178 left opening them for a model whose
+10017 lists rows to a separate decision. This record does not support opening
+them:
+
+- The recordings capability means the complete media workflow, see
+  [CAMERA_CAPABILITIES.md](CAMERA_CAPABILITIES.md), and a standalone owner has
+  no playback path, see the
+  [recordings outcome](#standalone-recordings-outcome-0301). A download of a
+  record with a cipher ID would need a cloud cipher, which the client does not
+  fetch, and the listed record's history row carries a cipher ID field.
+- One record in one of the three T8410 probes, with an empty page and a
+  rejection in the others, is not a stable list.
+
+Opening recordings on this route would first need a playback path for
+standalone records, which was outside ha-eufy-cam#178. No T84A1 probe result
+has been reported. The type 31 rows below cover an H3 owner only and gain no H
+or P cells.
+
+[probe-results]: https://github.com/keesmod/ha-eufy-cam/issues/178#issuecomment-6372936541
 
 ## Reported T817L Wired Cam C31, 0.28.0
 
