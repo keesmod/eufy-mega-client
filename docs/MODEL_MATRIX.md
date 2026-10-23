@@ -592,8 +592,9 @@ T8410C/31 on firmware 3.3.4.4, without a microSD card:
   vendored 10017 query with non-default filter parameters, so -1100 does not
   only follow missing storage. For the 10017 listing the app declaration in
   [alaraun] names -118 for no card and -1008 for removed storage. The cause of
-  -1100 here stays unproven. On 2026-10-23 a T8410 with a microSD card answered
-  the 10017 probe with -1100 too, see the
+  -1100 here stays unproven. On 2026-10-23 a T8410 with a microSD card was
+  reported to answer the 10017 probe with -1100 too, not independently
+  reproduced, see the
   [probe results](#reported-standalone-recording-probe-results-2026-10-23).
 
 T8410/31 camera A on firmware 2.3.2.4, with a microSD card and continuous
@@ -748,11 +749,13 @@ SoloCam S220 recording could not be decoded.
 
 Open at 0.30.1: whether a standalone T8410 on firmware 2.3.x answers the
 app-shaped 10017 at all, with an empty page, a database error such as -1100,
--118 or -1008, or silence. By the
-[probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23),
-both of the reporter's T8410 cameras, on 2.3.2.4 and 2.3.1.6, answered it, one
-with an empty page and one with -1100. The probe below sends it. It is best run on a standalone camera with
-event recordings. On the current reporter's cameras it is diagnostic only. A
+-118 or -1008, or silence. On 2026-10-23 the reporter of ha-eufy-cam#152
+reported that both T8410 cameras, on 2.3.2.4 and 2.3.1.6, answered it, one with
+an empty page and one with -1100. These are reported results, not independently
+reproduced, recorded in the
+[probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23).
+The probe below sends it. It is best run on a standalone camera with event
+recordings. On the current reporter's cameras it is diagnostic only. A
 reply under another outer command, such as 1351, or as a DATA frame would not
 show in the observation. A dropped or unaligned 1306 CONTROL reply is ruled out,
 because it would count as an unhandled reply. A probe does not count one that
@@ -920,12 +923,14 @@ On 2026-10-23:
 - T8410/31 camera B on firmware 2.3.1.6, with a microSD card and continuous
   recording: `history_rejected` at `validate` after 396 ms, with `ackCode`
   null, database result -1100 and 0 rows.
-- At the first start after the update, with the probe off, camera B's
-  connection ended once at stage `lookup` with `device_request_timeout` after
-  20 rounds, with no reply with its own DID and 37 replies with the DID of
-  another device in the account. It connected at the next start, and all three
-  cameras connected in the probe run. Its power state at the failed start was
-  not reported.
+
+Before the probe run, at the first start after the update to bridge 0.8.39,
+with the probe off, camera B's connection ended once at stage `lookup` with
+`device_request_timeout` after 20 rounds, with no reply with its own DID and 37
+replies with the DID of another device in the account. The comment gives no
+date for that start. Camera B connected at the next start, and all three
+cameras connected in the probe run. Its power state at the failed start was not
+reported.
 
 On 2026-10-19:
 
@@ -942,7 +947,7 @@ Readings, not proven causes:
 
 - Both T8410 cameras and the T8410C answer the app-shaped 10017 on this route.
   Neither T8410 answered the 10006 list on 2026-10-16, so 10017 is the first
-  recording query a standalone T8410 has answered.
+  recording list a standalone T8410 is known to have answered.
 - A standalone T8410 lists records through 10017: one of its own on
   2026-10-19. That is the first record listed on the standalone T84xx route,
   against the empty page that
