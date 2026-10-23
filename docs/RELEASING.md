@@ -70,13 +70,17 @@ previous stable version.
 Keep the section short, because it becomes the release notes of every beta and of
 the stable release:
 
-- One bullet per user-visible change, in at most two sentences, with the issue
-  link. Start with the feature name in bold.
+- Use a flat bullet list without `###` subheadings, one bullet per user-visible
+  change. Each bullet starts with the feature name in bold and takes at most two
+  sentences, with the issue link, or the PR link when there is no issue.
 - Leave out root-cause analysis, reporter evidence, diagnostic field lists,
   test-coverage detail and lists of what stays unchanged. They belong in the
   issue, the PR or the documentation, which the bullet can link.
-- Mark unconfirmed hardware with a short phrase, such as "experimental, not yet
-  confirmed on hardware".
+- Give the hardware status in a short phrase, such as "confirmed on hardware",
+  "reported, not reproduced" or "experimental, not yet confirmed on hardware".
+  A known problem or missing support gets its own bullet. This keeps the
+  statuses separate, as the
+  [hardware coverage rules](#hardware-coverage-and-release-scope) require.
 - Combine dependency and other maintenance updates into one bullet.
 - A later PR in the same batch edits the existing bullet. It adds no correction
   or reference to another entry.
@@ -123,7 +127,8 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    reporter follow-ups. Those follow-ups also cover every issue referenced in
    this repository since the previous stable tag, collected from `refs #N` and
    `refs <repo>#N` in `git log --format=%B vPREVIOUS..vX.Y.Z` and from the
-   links in the `X.Y.Z` changelog section.
+   changelog links in `git log -p vPREVIOUS..vX.Y.Z -- CHANGELOG.md`, which
+   also shows links that the release PR condensed away.
 
 ## Betas
 
@@ -133,7 +138,7 @@ it from main with the Release workflow and the beta version as input.
 - A beta may be published on its first run without a separate rehearsal. That run
   still validates, builds and verifies the package before it creates the tag.
 - An acceptance text without hardware results is enough, for example
-  `Prerelease for opt-in testing of ha-eufy-cam#149. CI only, no hardware result yet.`
+  `CI only, no hardware result yet for ha-eufy-cam#149.`
 - The notes open with a sentence that this is a prerelease of `X.Y.Z` for opt-in
   testing, followed by the current `X.Y.Z` section.
 - The asset is `keesmod-eufy-mega-client-X.Y.Z-beta.N.tgz`. Consumers pin it by
