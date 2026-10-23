@@ -746,16 +746,17 @@ for a standalone owner. A public report in [peakwell] describes another derived
 key, from an unlicensed source, so it is not used. In [eufy-sdk-385] the keyframes of a standalone
 SoloCam S220 recording could not be decoded.
 
-Open: whether a standalone T8410 on firmware 2.3.x answers the app-shaped 10017
-at all, with an empty page, a database error such as -1100, -118 or -1008, or
-silence. The probe below sends it. It is best run on a standalone camera with
+Open at 0.30.1: whether a standalone T8410 on firmware 2.3.x answers the
+app-shaped 10017 at all, with an empty page, a database error such as -1100,
+-118 or -1008, or silence. By the
+[probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23),
+both of the reporter's T8410 cameras, on 2.3.2.4 and 2.3.1.6, answered it, one
+with an empty page and one with -1100. The probe below sends it. It is best run on a standalone camera with
 event recordings. On the current reporter's cameras it is diagnostic only. A
 reply under another outer command, such as 1351, or as a DATA frame would not
 show in the observation. A dropped or unaligned 1306 CONTROL reply is ruled out,
 because it would count as an unhandled reply. A probe does not count one that
-names the latest-info query 10013. The
-[probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23)
-answer this for the reporter's T8410 and T8410C cameras.
+names the latest-info query 10013.
 
 #### Standalone recording probe (ha-eufy-cam#178)
 
@@ -971,8 +972,9 @@ them:
   [recordings outcome](#standalone-recordings-outcome-0301). A download of a
   record with a cipher ID would need a cloud cipher, which the client does not
   fetch, and the listed record's history row carries a cipher ID field.
-- One record in three T8410 probes, each for its own day, with an empty page
-  and a rejection in the others, is too little evidence to open recordings.
+- One record in three quoted T8410 probes over two runs, each limited to the
+  day of its run, with an empty page and a rejection in the others, is too
+  little evidence to open recordings.
 
 Opening recordings on this route would first need a playback path for
 standalone records, which was outside ha-eufy-cam#178. No T84A1 probe result
