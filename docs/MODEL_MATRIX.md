@@ -702,8 +702,9 @@ camera.
      keep no event clips, so the realistic answer was an empty page. Nothing
      shows that continuous footage is stored in `history_record_info`. A
      standalone owner also has no playback path, see below. The first T84xx
-     results, with one listed record on a T8410, are in the
-     [probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23).
+     results, with one listed record on a T8410, were reported on 2026-10-23,
+     not independently reproduced, see the
+     [probe results](#reported-standalone-recording-probe-results-2026-10-23).
    - Verdict: the next request to probe, read-only and bounded to one page and
      15 seconds, but not enough for list and play now. Since 0.30.1 the
      client can send it, see the
@@ -905,8 +906,9 @@ then carried the stable bridge, with `experimental_standalone` and
 also quotes two probe records of an earlier run on 2026-10-19 in the beta app.
 Those records carry no version. The newest beta then was bridge 0.8.39-beta.5
 with client 0.30.1-beta.4. The evidence is the bridge's `recording_query`
-records with `query=probe`, quoted verbatim, and the reporter's statement of
-model, firmware and microSD card per camera. These are reported results, not
+records with `query=probe`, quoted verbatim, the reporter's statement of model,
+firmware and microSD card per camera, and the reporter's summary of one failed
+connection, for which no record is quoted. These are reported results, not
 independently reproduced.
 
 Every quoted probe was answered within 400 ms on the session of the login
@@ -924,11 +926,12 @@ On 2026-10-23:
   recording: `history_rejected` at `validate` after 396 ms, with `ackCode`
   null, database result -1100 and 0 rows.
 
-Before the probe run, at the first start after the update to bridge 0.8.39,
-with the probe off, camera B's connection ended once at stage `lookup` with
-`device_request_timeout` after 20 rounds, with no reply with its own DID and 37
-replies with the DID of another device in the account. The comment gives no
-date for that start. Camera B connected at the next start, and all three
+By the reporter's summary, with no `station_connection` record quoted, camera
+B's connection ended once at stage `lookup` at the first start after the beta
+app updated to bridge 0.8.39, before the probe run and with the probe off. It
+timed out with `device_request_timeout` after 20 rounds, with no reply with its
+own DID and 37 replies with the DID of another device in the account. The
+comment gives no date for that start. Camera B connected at the next start, and all three
 cameras connected in the probe run. Its power state at the failed start was not
 reported.
 
