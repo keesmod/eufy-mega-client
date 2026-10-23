@@ -127,9 +127,9 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    reporter follow-ups. Those follow-ups also cover every issue referenced in
    this repository since the previous stable tag, collected from `refs #N` and
    `refs <repo>#N` in `git log --format=%B vPREVIOUS..vX.Y.Z` and from the
-   links on the added (`+`) lines of
-   `git log -p -U0 vPREVIOUS..vX.Y.Z -- CHANGELOG.md`. These include links that
-   the release PR condensed away.
+   `keesmod` issue links in the `X.Y.Z` changelog section as it stood before
+   the release PR condensed it, in `git show <release PR commit>^:CHANGELOG.md`.
+   A section that the release PR adds itself is read from the release PR.
 
 ## Betas
 
