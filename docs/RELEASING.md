@@ -129,7 +129,8 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    `refs <repo>#N` in `git log --format=%B vPREVIOUS..vX.Y.Z` and from the
    `keesmod` issue links in the `X.Y.Z` changelog section as it stood before
    the release PR condensed it, in `git show <release PR commit>^:CHANGELOG.md`.
-   A section that the release PR adds itself is read from the release PR.
+   Links that the release PR adds, also in a section it adds itself, are read
+   from the release PR.
 
 ## Betas
 
