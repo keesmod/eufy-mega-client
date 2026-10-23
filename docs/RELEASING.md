@@ -67,6 +67,24 @@ Update the candidate's `CHANGELOG.md` section with the user-visible behavior,
 upgrade steps, compatibility limits and rollback instructions. Rollback names the
 previous stable version.
 
+Keep the section short, because it becomes the release notes of every beta and of
+the stable release:
+
+- One bullet per user-visible change, in at most two sentences, with the issue
+  link. Start with the feature name in bold.
+- Leave out root-cause analysis, reporter evidence, diagnostic field lists,
+  test-coverage detail and lists of what stays unchanged. They belong in the
+  issue, the PR or the documentation, which the bullet can link.
+- Mark unconfirmed hardware with a short phrase, such as "experimental, not yet
+  confirmed on hardware".
+- Combine dependency and other maintenance updates into one bullet.
+- A later PR in the same batch edits the existing bullet. It adds no correction
+  or reference to another entry.
+- The upgrade and rollback text at the end takes at most three sentences. It
+  names a compatibility limit only when a supported combination breaks or loses
+  a feature.
+- A stable batch stays under about 300 words.
+
 All Validate checks must pass on the current PR commit. The final **ci** check
 fails if any prerequisite failed, timed out, was cancelled or skipped. Protect
 `main` by requiring a pull request, up-to-date branches, resolved conversations
@@ -93,7 +111,8 @@ merge updates the stable Home Assistant app, and both GitHub releases.
    already started it.
 2. Open the release PR. It sets the version to `X.Y.Z`, the stable part of the
    candidate, dates `## X.Y.Z - YYYY-MM-DD`, completes the upgrade and rollback
-   text and points the README install URL at `X.Y.Z`. It normally changes
+   text, condenses the section to the changelog rules above and points the
+   README install URL at `X.Y.Z`. It normally changes
    nothing else. CI runs the release checks on it.
 3. Merge it and wait for `ci` on the resulting main commit.
 4. Rehearse and publish that commit as described below.
@@ -181,9 +200,10 @@ Its rollback names the last published stable version.
    CI cannot prove physical sound, battery life or a live migration. Changes that
    do not affect hardware need no new physical tests. Record that rationale.
 5. Run **Release** again on the same `main` commit and version, tick **publish**,
-   and supply a sanitized acceptance summary or evidence link. The summary is
-   included in the public release notes. Never include credentials, serials,
-   recognized names, private footage or raw diagnostic logs.
+   and supply a sanitized acceptance summary of one sentence or an evidence link.
+   The summary is included in the public release notes. Never include
+   credentials, serials, recognized names, private footage or raw diagnostic
+   logs.
 6. The pipeline repeats validation, checks the requested version and current
    `main`, creates the exact tag and a draft, uploads the tested files, downloads
    and verifies them, then publishes. It downloads and verifies the public assets
