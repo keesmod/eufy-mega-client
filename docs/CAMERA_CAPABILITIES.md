@@ -14,7 +14,8 @@ Since 0.30.1 an [experimental standalone](API.md#experimental-standalone-cameras
 camera reports `recordings` as `{ available: false, status: 'unsupported',
 reason: 'standalone_recordings_unverified' }` for
 [ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175), because no
-recording request with evidence exists on that route. Its thumbnail and download
+request has enough evidence to list and play recordings on that route. Its
+thumbnail and download
 fail with the same code before any connection. A download of a record with a
 cipher ID fails with `recording_cipher_unavailable` first, because it would need
 a cloud cipher. Its snapshot and live are unchanged, and cameras under a

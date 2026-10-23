@@ -697,10 +697,12 @@ camera.
      vendored 10017 query with return code 0 and empty data while it never
      answered 10006. That is the vendored shape, which the client's vendored
      builder also sends, so a probe needs its own payload.
-   - Against it: no T84xx result, and the reporter's T8410 cameras keep no event
-     clips, so the realistic answer is an empty page. Nothing shows that
-     continuous footage is stored in `history_record_info`. A standalone owner
-     also has no playback path, see below.
+   - Against it at 0.30.1: no T84xx result, and the reporter's T8410 cameras
+     keep no event clips, so the realistic answer was an empty page. Nothing
+     shows that continuous footage is stored in `history_record_info`. A
+     standalone owner also has no playback path, see below. The first T84xx
+     results, with one listed record on a T8410, are in the
+     [probe results of 2026-10-23](#reported-standalone-recording-probe-results-2026-10-23).
    - Verdict: the next request to probe, read-only and bounded to one page and
      15 seconds, but not enough for list and play now. Since 0.30.1 the
      client can send it, see the
@@ -920,8 +922,9 @@ On 2026-10-23:
 - At the first start after the update, with the probe off, camera B's
   connection ended once at stage `lookup` with `device_request_timeout` after
   20 rounds, with no reply with its own DID and 37 replies with the DID of
-  another device in the account. It connected at the next start, which probed
-  it. Its power state at the failed start was not reported.
+  another device in the account. It connected at the next start, and all three
+  cameras connected in the probe run. Its power state at the failed start was
+  not reported.
 
 On 2026-10-19:
 
@@ -944,15 +947,18 @@ Readings, not proven causes:
   against the empty page that
   [candidate 1](#standalone-recordings-outcome-0301) expected for cameras
   without event clips. Whether the record is an event clip or part of the
-  continuous recording is not known. An empty page shows only the answer,
-  because the probe asks for one day of the bridge's local date.
+  continuous recording is not known.
+- Camera A's empty page shows only that it answered. By the reporter it records
+  continuously to its microSD card, so the one-day bound alone does not explain
+  the empty page. Nothing shows that 10017 lists continuous footage from
+  `history_record_info`.
 - Camera B answered -1100 with a microSD card, so on this route -1100 does not
   follow only from missing storage. Its vendored name is
   [`ERROR_DB_NOT_READY`][DB-codes], and its cause stays unproven.
-- `ackCode` null on an answered probe says only that no command result arrived
-  before the answer. The command result and the database answer arrive as
-  separate messages in no fixed order, and the observation ends with the
-  answer. It shows neither a refusal nor silence.
+- `ackCode` null on an answered probe says only that the session reported no
+  command result before the answer. The command result and the database answer
+  arrive as separate messages in no fixed order, and the observation ends with
+  the answer. It shows neither a refusal nor silence.
 
 Recordings stay unavailable with `standalone_recordings_unverified` on the
 T8410 and the T8410C. ha-eufy-cam#178 left opening them for a model whose
@@ -965,8 +971,8 @@ them:
   [recordings outcome](#standalone-recordings-outcome-0301). A download of a
   record with a cipher ID would need a cloud cipher, which the client does not
   fetch, and the listed record's history row carries a cipher ID field.
-- One record in one of the three T8410 probes, with an empty page and a
-  rejection in the others, is not a stable list.
+- One record in three T8410 probes, each for its own day, with an empty page
+  and a rejection in the others, is too little evidence to open recordings.
 
 Opening recordings on this route would first need a playback path for
 standalone records, which was outside ha-eufy-cam#178. No T84A1 probe result

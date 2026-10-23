@@ -412,14 +412,14 @@ attaches no listener.
 
 Each entry of `pages`:
 
-| Field        | Meaning                                                                                                                                                                                                                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `limit`      | Rows requested: 100, 500, 2000 or 10000 for a list, 0 for a calendar and 20 for a probe                                                                                                                                                                                                                                  |
-| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                                                                                                                                                                                                         |
-| `answered`   | Whether the answer for this page arrived                                                                                                                                                                                                                                                                                 |
-| `ackCode`    | The return code of the command result for this query, matched by the query's command name and in send order. Results of commands that were still pending when the operation began are not counted. The observation ends with the operation, so a result that arrives after the answer is not counted. `null` without one |
-| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                                                                                                                                                                                                    |
-| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                                                                                                                                                                                                 |
+| Field        | Meaning                                                                                                                                                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `limit`      | Rows requested: 100, 500, 2000 or 10000 for a list, 0 for a calendar and 20 for a probe                                                                                                                                                                                                                             |
+| `elapsedMs`  | From sending the page until its answer, or until the operation ended without one                                                                                                                                                                                                                                    |
+| `answered`   | Whether the answer for this page arrived                                                                                                                                                                                                                                                                            |
+| `ackCode`    | The return code of the command result for this query, matched by the query's command name and in send order. Results of commands that were still pending when the operation began are not counted. A result that arrives after the operation ended is not counted. A probe ends with its answer. `null` without one |
+| `resultCode` | The answer's database result code (mIntRet). `null` without an answer                                                                                                                                                                                                                                               |
+| `rows`       | Rows in the answer, 0 to 10000. `null` without an answer                                                                                                                                                                                                                                                            |
 
 `rowClasses` counts the rows the way the list checks them. `own`,
 `otherDevice` and `stationMismatch` divide the rows. The other three count
@@ -446,10 +446,10 @@ payload.
 Some readings. A list that ends with `device_request_timeout` at `query` and
 `answered: false` received no usable answer within 15 seconds. With
 `ackCode: null` and no unhandled reply, no command result arrived for the query
-within the page bound, so the device stayed silent. On an answered page
-`ackCode: null` says only that no command result arrived before the answer.
-The command result and the answer arrive as separate messages in no fixed
-order. A non-zero `ackCode` other
+within the page bound, so the device stayed silent. On a probe's answered page
+`ackCode: null` says only that the session reported no command result before
+the answer, which ends the probe. The command result and the answer arrive as
+separate messages in no fixed order. A non-zero `ackCode` other
 than -133 is the device's refusal. -133 is the session's own result. It reports
 a device that kept answering 503 (failed to request) until the session gave up,
 or a query without a command result 30 seconds after the device acknowledged
@@ -1015,8 +1015,8 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
 - Since 0.30.1 recordings report `available: false` with status `unsupported`
   and the reason `standalone_recordings_unverified`, for
   [ha-eufy-cam#175](https://github.com/keesmod/ha-eufy-cam/issues/175). No
-  recording request with evidence exists on this route, as recorded in the
-  [model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301).
+  request has enough evidence to list and play recordings on this route, as
+  recorded in the [model matrix](MODEL_MATRIX.md#standalone-recordings-outcome-0301).
   `recordingThumbnail` and `downloadRecording` fail with that code at stage
   `admission`, before any connection or device command. A download of a record
   with a cipher ID fails with `recording_cipher_unavailable` first, because it
