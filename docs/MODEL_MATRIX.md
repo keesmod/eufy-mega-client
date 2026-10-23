@@ -906,10 +906,11 @@ then carried the stable bridge, with `experimental_standalone` and
 also quotes two probe records of an earlier run on 2026-10-19 in the beta app.
 Those records carry no version. The newest beta then was bridge 0.8.39-beta.5
 with client 0.30.1-beta.4. The evidence is the bridge's `recording_query`
-records with `query=probe`, quoted verbatim, the reporter's statement of model,
-firmware and microSD card per camera, and the reporter's summary of one failed
-connection, for which no record is quoted. These are reported results, not
-independently reproduced.
+records with `query=probe` and its `connection` and `summary` records of
+2026-10-23, quoted verbatim, the reporter's statement of versions and app setup
+and of model, firmware and microSD card per camera, and the reporter's summary
+of one failed connection, for which no record is quoted. These are reported
+results, not independently reproduced.
 
 Every quoted probe was answered within 400 ms on the session of the login
 discovery, with one page of at most 20 records and no unhandled reply.
