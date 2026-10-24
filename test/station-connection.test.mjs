@@ -1763,6 +1763,7 @@ test('an answer that sets no key stays counted after the session closes', async 
   protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
   await new Promise((resolve) => setImmediate(resolve));
   assert.deepEqual(errors, ['credential']);
+  assert.equal(protocol.isConnected(), false);
   const answered = {
     ...emptyKeySetup,
     requestSends: 1,
