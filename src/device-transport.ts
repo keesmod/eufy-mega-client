@@ -53,6 +53,7 @@ import {
   type StationConnectionProgress,
   type StationConnectionStage,
   type StationLookupObservation,
+  type StationKeySetupObservation,
   type StreamStop,
   type MediaMetadata,
   type StandalonePushObservation,
@@ -641,6 +642,7 @@ export class DeviceTransport extends EventEmitter {
     signal?: AbortSignal,
     onProgress?: (progress: StationConnectionProgress) => void,
     onLookup?: (observation: StationLookupObservation) => void,
+    onKeySetup?: (observation: StationKeySetupObservation) => void,
   ): Promise<void> {
     if (this.state(id).connected) return;
     if (this.connecting.has(id)) throw new EufyError('connection_busy');
@@ -678,8 +680,23 @@ export class DeviceTransport extends EventEmitter {
         // Ignored by contract. The observation never alters the connection.
       }
     };
+    // An attempt whose session opened reads the session's key setup observation
+    // once, when it ends and before a failed attempt closes the session.
+    let sessionOpened = false;
+    const keySetup = () => {
+      if (!sessionOpened || !onKeySetup) return;
+      try {
+        const observed = station.getKeySetupObservation();
+        if (observed) onKeySetup({ ...observed });
+      } catch {
+        // Ignored by contract. The observation never alters the connection.
+      }
+    };
     const found = () => mark('station_found');
-    const opened = () => mark('session_open');
+    const opened = () => {
+      sessionOpened = true;
+      mark('session_open');
+    };
     try {
       station.on('station found', found);
       station.on('connect', opened);
@@ -719,10 +736,12 @@ export class DeviceTransport extends EventEmitter {
         await operation;
       } catch (error) {
         observe();
+        keySetup();
         await station.close();
         throw error;
       }
       observe();
+      keySetup();
     } finally {
       station.off('station found', found);
       station.off('connect', opened);

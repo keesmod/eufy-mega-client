@@ -178,10 +178,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     id: string,
     options?: AbortSignal | StationConnectOptions,
   ): Promise<StationState> {
-    const { signal, onProgress, onLookup } =
+    const { signal, onProgress, onLookup, onKeySetup } =
       options instanceof AbortSignal ? { signal: options } : (options ?? {});
     const t = await this.deviceTransport();
-    await t.connect(id, signal, onProgress, onLookup);
+    await t.connect(id, signal, onProgress, onLookup, onKeySetup);
     return t.state(id);
   }
   async getDeviceState(id: string): Promise<Device> {

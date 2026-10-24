@@ -535,3 +535,19 @@ export interface LookupObservation {
   nearReplies: number;
   inventoryReply: "none" | "own" | "account" | "foreign" | "near";
 }
+
+/**
+ * Client addition: counters of a session between its handshake and its command
+ * key, for diagnostics only. No identifier, address, port or payload. Counts
+ * saturate at 999.
+ */
+export interface KeySetupObservation {
+  requestSends: number;
+  requestAcknowledged: boolean;
+  resultWaitExpired: boolean;
+  answers: number;
+  dataDatagrams: number;
+  otherMessages: number;
+  heartbeats: number;
+  ended: boolean;
+}

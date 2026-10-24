@@ -29,6 +29,7 @@ export type {
   StationConnectionProgress,
   StationConnectOptions,
   StationLookupObservation,
+  StationKeySetupObservation,
   Recording,
   RecordingOperation,
   RecordingOperationStage,
