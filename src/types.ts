@@ -307,7 +307,7 @@ export interface StationLookupObservation {
  * See docs/API.md, station key setup observation.
  */
 export interface StationKeySetupObservation {
-  /** Command key requests sent, the first send and every resend. */
+  /** Command key requests sent, the first send and every resend. Counted for camera and HomeBase sessions. */
   requestSends: number;
   /** Whether the station acknowledged a key request. */
   requestAcknowledged: boolean;

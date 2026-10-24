@@ -1015,15 +1015,16 @@ a reported result, not independently reproduced.
   lookup. The bridge made no further attempt, and no snapshot or live view was
   tried.
 
-So the camera completed the handshake, and the attempt ended within the
-20-second connection deadline without the command key. The T84A1, T8410 and
-T8410C on this route answered the same gateway information request and accepted
-the LAN-derived key. Client 0.30.1 cannot tell a request the camera never
-acknowledged from one it acknowledged without an answer, or from a handshake
-late in the deadline. A credential failure after an answer would have ended
-with `device_disconnected`. The
+So the camera completed the handshake, and the attempt ran out the 20-second
+connection deadline without the command key. The T84A1, T8410 and T8410C on this
+route answered the same gateway information request and accepted the LAN-derived
+key. A credential failure after an answer would have ended with
+`device_disconnected`. The bridge 0.8.39 record does not carry the time of the
+`session_open` stage, which the stage's `elapsedMs` provides, so a handshake late
+in the deadline is not ruled out. Client 0.30.1 also cannot tell a request the
+camera never acknowledged from one it acknowledged without an answer. The
 [key setup observation](API.md#station-key-setup-observation-0302) in 0.30.2
-reports these counts for the next attempt.
+separates those two for the next attempt.
 
 For this camera the states stay separate:
 

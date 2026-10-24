@@ -1521,7 +1521,7 @@ const GATEWAYINFO = 1100;
 const keyAnswer = (seq) => dataMessage(CONTROL, seq, GATEWAYINFO, Buffer.from([0, 0, 0, 0, 0]));
 
 // A real session that sends into a recorder instead of a UDP socket.
-function keySession(t) {
+function keySession(t, credentials = async () => ({ mode: 'lan-derived' })) {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const protocol = new P2PClientProtocol(
     {
@@ -1532,7 +1532,7 @@ function keySession(t) {
       app_conn: '',
       member: { admin_user_id: 'U' },
     },
-    { getCommandCredentials: async () => ({ mode: 'lan-derived' }) },
+    { getCommandCredentials: credentials },
     INVENTORY_IP,
   );
   const sent = [];
@@ -1747,6 +1747,122 @@ test('a failing key setup consumer or session read never alters the connection',
     assert.equal(failing.state('HB').connected, true);
     assert.deepEqual(observations, []);
   } finally {
+    await failing.close();
+  }
+});
+
+test('an answer that sets no key stays counted after the session closes', async (t) => {
+  // The credentials are refused, so the session reports a credential error and closes.
+  const { protocol } = keySession(t, async () => {
+    throw new Error('refused');
+  });
+  const errors = [];
+  protocol.on('credential error', () => errors.push('credential'));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(errors, ['credential']);
+  const answered = {
+    ...emptyKeySetup,
+    requestSends: 1,
+    requestAcknowledged: true,
+    answers: 1,
+    dataDatagrams: 1,
+  };
+  assert.deepEqual(protocol.getKeySetupObservation(), answered);
+});
+
+test('an answer too short to read counts as an answer and sets no key', async (t) => {
+  const { protocol: short } = keySession(t);
+  short.handleMsg(camId, from(INVENTORY_IP));
+  short.handleMsg(dataMessage(CONTROL, 0, GATEWAYINFO, Buffer.from([1])), from(INVENTORY_IP));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(short.getKeySetupObservation(), {
+    ...emptyKeySetup,
+    requestSends: 1,
+    answers: 1,
+    dataDatagrams: 1,
+  });
+  assert.equal(short.isConnected(), true);
+});
+
+test('onKeySetup reports a cancelled attempt once, before the session closes', async () => {
+  const {
+    t: transport,
+    station,
+    calls,
+    keyReads,
+  } = connectionFixture({ answer: ['station found', 'connect'], keySetup: keyCounts });
+  const controller = new AbortController();
+  const observations = [];
+  station.on('connect', () => queueMicrotask(() => controller.abort()));
+  try {
+    await assert.rejects(
+      transport.connect('HB', controller.signal, undefined, undefined, (observation) =>
+        observations.push({ observation, closes: calls.close }),
+      ),
+      { code: 'cancelled' },
+    );
+    assert.deepEqual(observations, [{ observation: keyCounts, closes: 0 }]);
+    assert.deepEqual(keyReads, [{ closes: 0 }]);
+    assert.equal(calls.close, 1);
+  } finally {
+    await transport.close();
+  }
+});
+
+test('onKeySetup reports an attempt whose session the station ended, before the attempt closes it', async () => {
+  const ended = { ...keyCounts, ended: true };
+  const {
+    t: transport,
+    station,
+    calls,
+    keyReads,
+  } = connectionFixture({ answer: ['station found', 'connect'], keySetup: ended });
+  const observations = [];
+  station.on('connect', () => queueMicrotask(() => station.emit('close', station)));
+  try {
+    await assert.rejects(
+      transport.connect('HB', undefined, undefined, undefined, (observation) =>
+        observations.push({ observation, closes: calls.close }),
+      ),
+      { code: 'device_disconnected' },
+    );
+    assert.deepEqual(observations, [{ observation: ended, closes: 0 }]);
+    assert.deepEqual(keyReads, [{ closes: 0 }]);
+  } finally {
+    await transport.close();
+  }
+});
+
+test('without onKeySetup the session observation is never read', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { t: transport, keyReads } = connectionFixture({ keySetup: keyCounts });
+  const { t: failing, keyReads: failedReads } = connectionFixture({
+    answer: ['station found', 'connect'],
+    keySetup: keyCounts,
+  });
+  try {
+    await transport.connect(
+      'HB',
+      undefined,
+      () => {},
+      () => {},
+    );
+    const connecting = failing.connect(
+      'HB',
+      undefined,
+      () => {},
+      () => {},
+    );
+    t.mock.timers.tick(20000);
+    await assert.rejects(connecting, { code: 'device_request_timeout' });
+    assert.deepEqual(keyReads, []);
+    assert.deepEqual(failedReads, []);
+  } finally {
+    t.mock.timers.reset();
+    await transport.close();
     await failing.close();
   }
 });

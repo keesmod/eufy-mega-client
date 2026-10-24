@@ -293,7 +293,9 @@ with and without `onKeySetup`. Only `connectStation` reports it.
 | `heartbeats`          | PING and PONG datagrams the session received                                                           |
 | `ended`               | Whether the station ended the session                                                                  |
 
-Counts saturate at 999. Counting starts with the handshake and stops once the
+Counts saturate at 999. `requestSends` covers the key request of camera and
+HomeBase sessions. Smart safe and lock sessions send it another way and count
+only some or none of those sends. Counting starts with the handshake and stops once the
 command key is in place or the session closes. A later answer still sets the key
 after the 5-second wait. The counters stay until the session starts its next
 connection. The observation carries no identifier, address, port, cipher ID,
