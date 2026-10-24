@@ -991,6 +991,51 @@ or P cells.
 
 [probe-results]: https://github.com/keesmod/ha-eufy-cam/issues/178#issuecomment-6372936541
 
+## Reported standalone T8424 attempt, 2026-10-24
+
+On 2026-10-24 the [ha-eufy-cam#129][129] reporter [reported][T8424-result] on
+[#142][142] a standalone Floodlight Cam 2K `T8424`/39 on firmware 2.1.1.5, mains
+powered, on the experimental route. The setup was integration 0.8.48 and bridge
+0.8.39 with client 0.30.1 in Docker with host networking, with
+`EUFY_EXPERIMENTAL_STANDALONE` and `EUFY_DIAGNOSTICS` on. The same bridge serves
+the reporter's HomeBase 3 on firmware 3.8.7.4 with three `T8113-Z`, which kept
+working. Client 0.30.1 does not admit `T8424` on the route. The reporter added
+the pair locally with the floodlight profile and `experimentalStandalone`. The
+evidence is the field values quoted in the comment, without a download. This is
+a reported result, not independently reproduced.
+
+- Discovery gave the camera the relationship `standalone` with the
+  `experimental` transport and a complete descriptor. Its parent status was
+  `self`. Whether the camera was assigned to the HomeBase 3 as its storage
+  target during this test was not stated.
+- The lookup got one reply with the camera's own DID from its inventory
+  address, which was in the bridge's subnet, without send errors.
+- The startup `station_connection` record of phase `connect` was `error` with
+  `device_request_timeout` at stage `session_open`, about 20 seconds after the
+  lookup. The bridge made no further attempt, and no snapshot or live view was
+  tried.
+
+So the camera completed the handshake, and the attempt ended within the
+20-second connection deadline without the command key. The T84A1, T8410 and
+T8410C on this route answered the same gateway information request and accepted
+the LAN-derived key. Client 0.30.1 cannot tell a request the camera never
+acknowledged from one it acknowledged without an answer, or from a handshake
+late in the deadline. A credential failure after an answer would have ended
+with `device_disconnected`. The
+[key setup observation](API.md#station-key-setup-observation-0302) in 0.30.2
+reports these counts for the next attempt.
+
+For this camera the states stay separate:
+
+- Recognition: the exact pair `T8424`/39 as a standalone floodlight descriptor
+  without media since 0.26.0.
+- Experimental software coverage: none. The pair is not admitted on the route.
+- Reported hardware result: lookup and handshake on firmware 2.1.1.5, no command
+  key. No media, recording or event result.
+
+[129]: https://github.com/keesmod/ha-eufy-cam/issues/129
+[T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
+
 ## Reported T817L Wired Cam C31, 0.28.0
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and

@@ -150,6 +150,7 @@ function connectionFixture({
   address = false,
   answer = ['station found', 'connect', 'encryption ready'],
   lookup,
+  keySetup,
 } = {}) {
   const t = new DeviceTransport();
   let connected = false;
@@ -158,6 +159,8 @@ function connectionFixture({
   // DIDs handed to the session, with the connects that came before it.
   const reads = [];
   const accountDids = [];
+  // Each read of the session's key setup observation, with the closes before it.
+  const keyReads = [];
   const station = Object.assign(new EventEmitter(), {
     getSerial: () => 'HB',
     hasProperty: () => false,
@@ -182,12 +185,16 @@ function connectionFixture({
       reads.push({ closes: calls.close });
       return typeof lookup === 'function' ? lookup() : lookup;
     },
+    getKeySetupObservation: () => {
+      keyReads.push({ closes: calls.close });
+      return typeof keySetup === 'function' ? keySetup() : keySetup;
+    },
   });
   t.stations.set('HB', station);
   t.stationAddresses.set('HB', address);
   t.raw.set('HB', { device_sn: 'HB', device_model: 'T8030', device_type: 18, parent_sn: '' });
   t.bind(station);
-  return { t, station, calls, reads, accountDids };
+  return { t, station, calls, reads, accountDids, keyReads };
 }
 
 test('a station connection reports each stage once, in order, without identifiers', async () => {
@@ -466,15 +473,18 @@ test('connectStation accepts a signal or options with a progress callback', asyn
   const signal = new AbortController().signal;
   const onProgress = () => {};
   const onLookup = () => {};
+  const onKeySetup = () => {};
   await EufyMegaClient.prototype.connectStation.call(client, 'HB');
   await EufyMegaClient.prototype.connectStation.call(client, 'HB', signal);
   await EufyMegaClient.prototype.connectStation.call(client, 'HB', { signal, onProgress });
   await EufyMegaClient.prototype.connectStation.call(client, 'HB', { onLookup });
+  await EufyMegaClient.prototype.connectStation.call(client, 'HB', { onKeySetup });
   assert.deepEqual(calls, [
-    ['HB', undefined, undefined, undefined],
-    ['HB', signal, undefined, undefined],
-    ['HB', signal, onProgress, undefined],
-    ['HB', undefined, undefined, onLookup],
+    ['HB', undefined, undefined, undefined, undefined],
+    ['HB', signal, undefined, undefined, undefined],
+    ['HB', signal, onProgress, undefined, undefined],
+    ['HB', undefined, undefined, onLookup, undefined],
+    ['HB', undefined, undefined, undefined, onKeySetup],
   ]);
 });
 
@@ -505,6 +515,17 @@ const emptyLookup = {
   foreignReplies: 0,
   nearReplies: 0,
   inventoryReply: 'none',
+};
+
+const emptyKeySetup = {
+  requestSends: 0,
+  requestAcknowledged: false,
+  resultWaitExpired: false,
+  answers: 0,
+  dataDatagrams: 0,
+  otherMessages: 0,
+  heartbeats: 0,
+  ended: false,
 };
 
 // A running lookup on a bare session with an inventory address.
@@ -905,10 +926,15 @@ test('the station passes the account DIDs and the lookup observation through to 
       seen.push(args);
       return emptyLookup;
     },
+    getKeySetupObservation: (...args) => {
+      seen.push(args);
+      return emptyKeySetup;
+    },
   };
   station.setLookupAccountDids(dids);
   assert.equal(station.getLookupObservation(), emptyLookup);
-  assert.deepEqual(seen, [dids, []]);
+  assert.equal(station.getKeySetupObservation(), emptyKeySetup);
+  assert.deepEqual(seen, [dids, [], []]);
 });
 
 test('the host subnet check uses every external IPv4 interface and is undefined on errors', (t) => {
@@ -1462,5 +1488,265 @@ test('a close the attempt did not make still lets onLookup report the counts', a
     assert.deepEqual(reads, [{ closes: 0 }, { closes: 2 }]);
   } finally {
     await transport.close();
+  }
+});
+
+// Datagrams as a station sends them on an open session.
+const camId = Buffer.from([0xf1, 0x42, 0, 0]);
+const pong = Buffer.from([0xf1, 0xe1, 0, 0]);
+const ping = Buffer.from([0xf1, 0xe0, 0, 0]);
+const end = Buffer.from([0xf1, 0xf0, 0, 0]);
+const ackData = (seq) => {
+  const packet = Buffer.from([0xf1, 0xd1, 0, 6, 0xd1, 0, 0, 1, 0, 0]);
+  packet.writeUInt16BE(seq, 8);
+  return packet;
+};
+// One complete message of the given P2P data type and command in one DATA datagram.
+const dataMessage = (dataType, seq, commandId, payload) => {
+  const header = Buffer.alloc(16);
+  header.write('XZYH', 0, 'utf8');
+  header.writeUInt16LE(commandId, 4);
+  header.writeUInt32LE(payload.length, 6);
+  const body = Buffer.concat([header, payload]);
+  const packet = Buffer.alloc(8);
+  packet.set([0xf1, 0xd0], 0);
+  packet.writeUInt16BE(body.length + 4, 2);
+  packet.set([0xd1, dataType], 4);
+  packet.writeUInt16BE(seq, 6);
+  return Buffer.concat([packet, body]);
+};
+const CONTROL = 2;
+const GATEWAYINFO = 1100;
+// A key answer: cipher ID, two unknown bytes and an empty encrypted key.
+const keyAnswer = (seq) => dataMessage(CONTROL, seq, GATEWAYINFO, Buffer.from([0, 0, 0, 0, 0]));
+
+// A real session that sends into a recorder instead of a UDP socket.
+function keySession(t) {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const protocol = new P2PClientProtocol(
+    {
+      // The LAN-derived key takes seven serial characters.
+      station_sn: 'T0000000000000HB',
+      p2p_did: OWN_DID,
+      device_type: 18,
+      app_conn: '',
+      member: { admin_user_id: 'U' },
+    },
+    { getCommandCredentials: async () => ({ mode: 'lan-derived' }) },
+    INVENTORY_IP,
+  );
+  const sent = [];
+  const socket = protocol.socket;
+  protocol.socket = {
+    send: (message, _port, _host, callback) => {
+      sent.push(Buffer.from(message));
+      callback(null, message.length);
+    },
+    removeAllListeners: () => {},
+  };
+  protocol.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+  t.after(async () => {
+    await protocol.dispose();
+    socket.close();
+    t.mock.timers.reset();
+  });
+  // The key request is the DATA datagram with command 1100 after its XZYH magic.
+  const keyRequests = () =>
+    sent.filter((m) => m[0] === 0xf1 && m[1] === 0xd0 && m.readUInt16LE(12) === GATEWAYINFO).length;
+  // A timer that a timer callback schedules fires only when time passes after
+  // it, so time advances in resend steps.
+  const advance = (ms) => {
+    for (let step = 0; step < ms; step += 100) t.mock.timers.tick(100);
+  };
+  return { protocol, keyRequests, advance };
+}
+
+test('the key setup observation counts the key request, its acknowledgement and answer until the key is in place', async (t) => {
+  const { protocol, keyRequests, advance } = keySession(t);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  assert.equal(protocol.getKeySetupObservation(), undefined);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  assert.deepEqual(protocol.getKeySetupObservation(), { ...emptyKeySetup, requestSends: 1 });
+  // A resend of the unacknowledged request, 200 ms after the first send, counts as a send.
+  advance(200);
+  assert.equal(protocol.getKeySetupObservation().requestSends, 2);
+  assert.equal(keyRequests(), 2);
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(pong, from(INVENTORY_IP));
+  protocol.handleMsg(ping, from(INVENTORY_IP));
+  advance(1000);
+  // An acknowledged request is not sent again.
+  assert.equal(keyRequests(), 2);
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  const answered = {
+    ...emptyKeySetup,
+    requestSends: 2,
+    requestAcknowledged: true,
+    answers: 1,
+    dataDatagrams: 1,
+    heartbeats: 2,
+  };
+  assert.deepEqual(protocol.getKeySetupObservation(), answered);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(ready, ['lan-derived']);
+  // With the key in place nothing counts any more.
+  protocol.handleMsg(pong, from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(CONTROL, 1, 1101, Buffer.from([1])), from(INVENTORY_IP));
+  assert.deepEqual(protocol.getKeySetupObservation(), answered);
+  // A read is a copy.
+  protocol.getKeySetupObservation().answers = 99;
+  assert.equal(protocol.getKeySetupObservation().answers, 1);
+});
+
+test('an acknowledged key request without an answer, other messages and an END are told apart', (t) => {
+  const { protocol, advance } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  advance(4900);
+  assert.equal(protocol.getKeySetupObservation().resultWaitExpired, false);
+  advance(100);
+  assert.equal(protocol.getKeySetupObservation().resultWaitExpired, true);
+  // A complete CONTROL message with another command is not a key answer.
+  protocol.handleMsg(dataMessage(CONTROL, 0, 1101, Buffer.from([1, 2])), from(INVENTORY_IP));
+  protocol.handleMsg(end, from(INVENTORY_IP));
+  assert.deepEqual(protocol.getKeySetupObservation(), {
+    ...emptyKeySetup,
+    requestSends: 1,
+    requestAcknowledged: true,
+    resultWaitExpired: true,
+    dataDatagrams: 1,
+    otherMessages: 1,
+    ended: true,
+  });
+});
+
+test('a silent station leaves the key request unacknowledged and its resends counted', (t) => {
+  const { protocol, keyRequests, advance } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  advance(20000);
+  const observed = protocol.getKeySetupObservation();
+  assert.equal(observed.requestSends, keyRequests());
+  assert.ok(observed.requestSends > 100);
+  assert.deepEqual({ ...observed, requestSends: 0 }, emptyKeySetup);
+});
+
+test('a session close keeps the key setup counters until the session starts a new connection', async (t) => {
+  const { protocol } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(pong, from(INVENTORY_IP));
+  await protocol.close();
+  const counted = { ...emptyKeySetup, requestSends: 1, heartbeats: 1 };
+  assert.deepEqual(protocol.getKeySetupObservation(), counted);
+  // After the close nothing counts.
+  protocol.handleMsg(pong, from(INVENTORY_IP));
+  assert.deepEqual(protocol.getKeySetupObservation(), counted);
+  // A new connection reports none of the earlier counts before its handshake.
+  protocol.socket.bind = () => {};
+  await protocol.connect();
+  assert.equal(protocol.getKeySetupObservation(), undefined);
+  protocol._clearLookupTimeout();
+  protocol._clearLocalLookupRetryTimeout();
+});
+
+const keyCounts = { ...emptyKeySetup, requestSends: 3, requestAcknowledged: true, heartbeats: 1 };
+
+test('onKeySetup reports once when the connection resolves, after the lookup observation', async () => {
+  const { t: transport, keyReads } = connectionFixture({
+    lookup: emptyLookup,
+    keySetup: { ...keyCounts, answers: 1 },
+  });
+  const events = [];
+  try {
+    await transport.connect(
+      'HB',
+      undefined,
+      ({ stage }) => events.push(stage),
+      () => events.push('lookup observation'),
+      (observation) => events.push(observation),
+    );
+    assert.deepEqual(events, [
+      'lookup',
+      'station_found',
+      'session_open',
+      'encryption_ready',
+      'lookup observation',
+      { ...keyCounts, answers: 1 },
+    ]);
+    assert.deepEqual(keyReads, [{ closes: 0 }]);
+    // An already connected station reports nothing.
+    await transport.connect('HB', undefined, undefined, undefined, (o) => events.push(o));
+    assert.equal(events.length, 6);
+  } finally {
+    await transport.close();
+  }
+});
+
+test('onKeySetup reports a timed-out attempt once, before the session closes', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const {
+    t: transport,
+    calls,
+    keyReads,
+  } = connectionFixture({ answer: ['station found', 'connect'], keySetup: keyCounts });
+  const observations = [];
+  try {
+    const connecting = transport.connect('HB', undefined, undefined, undefined, (observation) =>
+      observations.push({ observation, closes: calls.close }),
+    );
+    t.mock.timers.tick(20000);
+    await assert.rejects(connecting, { code: 'device_request_timeout' });
+    assert.deepEqual(observations, [{ observation: keyCounts, closes: 0 }]);
+    assert.deepEqual(keyReads, [{ closes: 0 }]);
+    assert.equal(calls.close, 1);
+  } finally {
+    t.mock.timers.reset();
+    await transport.close();
+  }
+});
+
+test('an attempt whose session never opened reports no key setup', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { t: transport, keyReads } = connectionFixture({
+    answer: ['station found'],
+    keySetup: keyCounts,
+  });
+  const observations = [];
+  try {
+    const connecting = transport.connect('HB', undefined, undefined, undefined, (o) =>
+      observations.push(o),
+    );
+    t.mock.timers.tick(20000);
+    await assert.rejects(connecting, { code: 'device_request_timeout' });
+    assert.deepEqual(observations, []);
+    assert.deepEqual(keyReads, []);
+  } finally {
+    t.mock.timers.reset();
+    await transport.close();
+  }
+});
+
+test('a failing key setup consumer or session read never alters the connection', async () => {
+  const { t: transport } = connectionFixture({ keySetup: keyCounts });
+  try {
+    await transport.connect('HB', undefined, undefined, undefined, () => {
+      throw new Error('consumer');
+    });
+    assert.equal(transport.state('HB').connected, true);
+  } finally {
+    await transport.close();
+  }
+  const { t: failing } = connectionFixture({
+    keySetup: () => {
+      throw new Error('session');
+    },
+  });
+  const observations = [];
+  try {
+    await failing.connect('HB', undefined, undefined, undefined, (o) => observations.push(o));
+    assert.equal(failing.state('HB').connected, true);
+    assert.deepEqual(observations, []);
+  } finally {
+    await failing.close();
   }
 });

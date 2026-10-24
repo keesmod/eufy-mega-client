@@ -301,6 +301,29 @@ export interface StationLookupObservation {
   /** Only with an inventory address: whether another inventory row has the same LAN address. */
   inventoryAddressShared?: boolean;
 }
+/**
+ * What the session of one connection attempt saw between `session_open` and its
+ * command key. No identifier, address, port or payload. Counts saturate at 999.
+ * See docs/API.md, station key setup observation.
+ */
+export interface StationKeySetupObservation {
+  /** Command key requests sent, the first send and every resend. */
+  requestSends: number;
+  /** Whether the station acknowledged a key request. */
+  requestAcknowledged: boolean;
+  /** Whether an acknowledged key request waited 5 seconds without an answer. */
+  resultWaitExpired: boolean;
+  /** Key answers the session received. */
+  answers: number;
+  /** DATA datagrams the session received. */
+  dataDatagrams: number;
+  /** Complete messages the session received that are not a key answer. */
+  otherMessages: number;
+  /** PING and PONG datagrams the session received. */
+  heartbeats: number;
+  /** Whether the station ended the session. */
+  ended: boolean;
+}
 export interface StationConnectOptions {
   signal?: AbortSignal;
   /**
@@ -316,6 +339,12 @@ export interface StationConnectOptions {
    * change the connection. See docs/API.md, station lookup observation.
    */
   onLookup?: (observation: StationLookupObservation) => void;
+  /**
+   * Called synchronously at most once per attempt that reached `session_open`,
+   * when it resolves, fails or is cancelled. Errors it throws are ignored. It
+   * cannot change the connection. See docs/API.md, station key setup observation.
+   */
+  onKeySetup?: (observation: StationKeySetupObservation) => void;
 }
 export interface Recording {
   id: string;

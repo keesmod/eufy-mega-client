@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.30.2 - Unreleased
+
+- **Key setup observation**: `connectStation(id, { onKeySetup })` reports what
+  the session saw between `session_open` and the command key, as counts without
+  identifiers or payload. It helps diagnose a standalone T8424 that stops at
+  `session_open` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)),
+  see the [API](docs/API.md#station-key-setup-observation-0302). Diagnostics only,
+  not yet confirmed on hardware.
+
+Upgrade: `onKeySetup` is optional and additive, no code change is needed.
+Rollback: 0.30.1.
+
 ## 0.30.1 - 2026-10-22
 
 ### Recording operation observation

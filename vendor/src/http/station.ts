@@ -94,6 +94,7 @@ import {
   InternalColoredLighting,
   InternalDynamicLighting,
   LookupObservation,
+  KeySetupObservation,
   MotionZone,
   P2PCommand,
   RGBColor,
@@ -1035,6 +1036,11 @@ export class Station extends TypedEmitter<StationEvents> {
   /** Client addition: the session's lookup observation, see P2PClientProtocol. */
   public getLookupObservation(): LookupObservation | undefined {
     return this.p2pSession.getLookupObservation();
+  }
+
+  /** Client addition: the session's key setup observation, see P2PClientProtocol. */
+  public getKeySetupObservation(): KeySetupObservation | undefined {
+    return this.p2pSession.getKeySetupObservation();
   }
 
   /** Client addition: see P2PClientProtocol.pendingCommandData. */

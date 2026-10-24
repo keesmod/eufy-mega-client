@@ -122,6 +122,7 @@ import {
   P2PDatabaseQueryLocalRecordCropPictureInfo,
   CustomDataType,
   LookupObservation,
+  KeySetupObservation,
   DatabaseUnhandled,
 } from "./interfaces";
 import { DskKeyResponse, ResultResponse, StationListResponse } from "../http/models";
@@ -246,6 +247,11 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private lookupAccountDids?: ReadonlySet<string>;
   /** Client addition: whether setBroadcast(true) succeeded on the bound socket. */
   private broadcastEnabled = false;
+  /**
+   * Client addition: the counters of the latest session between its handshake
+   * and its command key, for diagnostics only. No identifier, address or payload.
+   */
+  private keySetupObservation?: KeySetupObservation;
   private heartbeatTimeout?: NodeJS.Timeout;
   private keepaliveTimeout?: NodeJS.Timeout;
   private esdDisconnectTimeout?: NodeJS.Timeout;
@@ -510,6 +516,12 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     });
   }
 
+  /** Client addition: the key setup observation while the session is open and has no command key. */
+  private runningKeySetup(): KeySetupObservation | undefined {
+    if (!this.connected || this.p2pKey !== undefined) return undefined;
+    return this.keySetupObservation;
+  }
+
   /** Client addition: the lookup observation while its lookup runs, before the session connects. */
   private runningLookup(): LookupObservation | undefined {
     if (this.connected || (this.lookupTimeout === undefined && this.localLookupRetryTimeout === undefined))
@@ -744,8 +756,10 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     if (!this.connected && !this.connecting && this.rawStation.p2p_did !== undefined) {
       this.connecting = true;
       this.terminating = false;
-      // Client addition: a new connection never reports an earlier lookup as its own.
+      // Client addition: a new connection never reports an earlier lookup or
+      // key setup as its own.
       this.lookupObservation = undefined;
+      this.keySetupObservation = undefined;
       if (this.connectionType !== P2PConnectionType.ONLY_LOCAL) await this.renewDSKKey();
       if (!this.binded)
         this.socket.bind(this.listeningPort, () => {
@@ -982,6 +996,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
       this._clearTimeout(messageState.retryTimeout);
       messageState.retryTimeout = setTimeout(() => {
         if (this.connectAddress) {
+          // Client addition: a resent key request counts in the key setup observation.
+          const state = messageState.commandType === CommandType.CMD_GATEWAYINFO ? this.runningKeySetup() : undefined;
+          if (state !== undefined) state.requestSends = lookupCount(state.requestSends);
           sendMessage(this.socket, this.connectAddress, RequestMessageType.DATA, messageState.data).catch((err) => {
             const error = ensureError(err);
             rootP2PLogger.error(`resendNotAcknowledgedCommand - Error`, {
@@ -1185,6 +1202,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
       retries: messageState.retries,
       messageStatesSize: this.messageStates.size,
     });
+    // Client addition: a sent key request counts in the key setup observation.
+    const keySetup = messageState.commandType === CommandType.CMD_GATEWAYINFO ? this.runningKeySetup() : undefined;
+    if (keySetup !== undefined) keySetup.requestSends = lookupCount(keySetup.requestSends);
     await this.sendMessage(`Send p2p command`, this.connectAddress!, RequestMessageType.DATA, messageState.data);
 
     if (messageState.retries === 0) {
@@ -1288,6 +1308,23 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   public getLookupObservation(): LookupObservation | undefined {
     const state = this.lookupObservation;
     return state === undefined ? undefined : { ...state, rounds: Math.min(99, state.rounds) };
+  }
+
+  /** Client addition: one PING or PONG from the station before the command key. */
+  private observeKeySetupHeartbeat(): void {
+    const state = this.runningKeySetup();
+    if (state !== undefined) state.heartbeats = lookupCount(state.heartbeats);
+  }
+
+  /**
+   * Client addition: the counters of the latest session between its handshake
+   * and its command key, undefined when no handshake completed since the session
+   * last started a connection. Counting stops once the key is in place or the
+   * session closes. Reading leaves them in place.
+   */
+  public getKeySetupObservation(): KeySetupObservation | undefined {
+    const state = this.keySetupObservation;
+    return state === undefined ? undefined : { ...state };
   }
 
   /**
@@ -1400,6 +1437,17 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         this.connectTime = new Date().getTime();
         this.lastPong = null;
         this.lastPongData = undefined;
+        // Client addition: every handshake starts a new key setup observation.
+        this.keySetupObservation = {
+          requestSends: 0,
+          requestAcknowledged: false,
+          resultWaitExpired: false,
+          answers: 0,
+          dataDatagrams: 0,
+          otherMessages: 0,
+          heartbeats: 0,
+          ended: false,
+        };
 
         this.connectAddress = { host: rinfo.address, port: rinfo.port };
         if (isPrivateIp(rinfo.address)) this.localIPAddress = rinfo.address;
@@ -1525,6 +1573,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     } else if (hasHeader(msg, ResponseMessageType.PONG)) {
       // Response to a ping from our side
       this.lastPong = new Date().getTime();
+      this.observeKeySetupHeartbeat();
 
       if (msg.length > 4) this.lastPongData = msg.subarray(4);
       else this.lastPongData = undefined;
@@ -1532,10 +1581,14 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
       return;
     } else if (hasHeader(msg, ResponseMessageType.PING)) {
       // Response with PONG to keep alive
+      this.observeKeySetupHeartbeat();
       this.sendMessage(`Send pong`, { host: rinfo.address, port: rinfo.port }, RequestMessageType.PONG);
       return;
     } else if (hasHeader(msg, ResponseMessageType.END)) {
       // Connection is closed by device
+      // Client addition: an END before the command key is recorded for diagnostics.
+      const keySetup = this.runningKeySetup();
+      if (keySetup !== undefined) keySetup.ended = true;
       rootP2PLogger.debug(`Received message - END`, {
         stationSN: this.rawStation.station_sn,
         remoteAddress: rinfo.address,
@@ -1581,6 +1634,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               this.sendQueuedMessage();
             } else {
               msg_state.acknowledged = true;
+              // Client addition: an acknowledged key request is recorded for diagnostics.
+              const keySetup = msg_state.commandType === CommandType.CMD_GATEWAYINFO ? this.runningKeySetup() : undefined;
+              if (keySetup !== undefined) keySetup.requestAcknowledged = true;
               msg_state.timeout = setTimeout(
                 () => {
                   //TODO: Retry command in these case?
@@ -1612,6 +1668,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
                       }
                     });
                     this.p2pDataSeqNumber--;
+                    // Client addition: the key request's result wait ended without an answer.
+                    const keySetup = this.runningKeySetup();
+                    if (keySetup !== undefined) keySetup.resultWaitExpired = true;
                     rootP2PLogger.debug(`Result data for command CMD_GATEWAYINFO not received`, {
                       stationSN: this.rawStation.station_sn,
                       message: {
@@ -1647,6 +1706,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
       }
     } else if (hasHeader(msg, ResponseMessageType.DATA)) {
       if (this.connected) {
+        // Client addition: a DATA datagram before the command key counts for diagnostics.
+        const keySetup = this.runningKeySetup();
+        if (keySetup !== undefined) keySetup.dataDatagrams = lookupCount(keySetup.dataDatagrams);
         const seqNo = msg.subarray(6, 8).readUInt16BE();
         const dataTypeBuffer = msg.subarray(4, 6);
         const dataType = this.getDataType(dataTypeBuffer);
@@ -2024,6 +2086,14 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   }
 
   private handleData(message: P2PDataMessage): void {
+    // Client addition: a parsed message before the command key that is not a key
+    // answer counts for diagnostics. The key answers count where they are handled.
+    const keySetup = this.runningKeySetup();
+    if (
+      keySetup !== undefined &&
+      !(message.dataType === P2PDataType.CONTROL && message.commandId === CommandType.CMD_GATEWAYINFO)
+    )
+      keySetup.otherMessages = lookupCount(keySetup.otherMessages);
     if (message.dataType === P2PDataType.CONTROL) {
       this.handleDataControl(message);
     } else if (message.dataType === P2PDataType.DATA) {
@@ -4254,6 +4324,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           }
           break;
         case CommandType.CMD_GATEWAYINFO:
+          // Client addition: a key answer counts in the key setup observation.
+          const keySetup = this.runningKeySetup();
+          if (keySetup !== undefined) keySetup.answers = lookupCount(keySetup.answers);
           const cipherID = data.subarray(0, 2).readUInt16LE();
           //const unknownNumber = data.subarray(2, 2).readUInt16LE();
           rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - CMD_GATEWAYINFO - cipherID`, {

@@ -163,9 +163,10 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
   Unknown hardware is excluded; a supported camera with an unsupported parent
   causes an error. Inventory at the server's 100-device boundary is unconfirmed.
 - `connectStation(id, signal?)` establishes the explicit LAN connection.
-  `connectStation(id, { signal?, onProgress?, onLookup? })` also reports its
-  [stages](#station-connection-stages-0260) and its
-  [lookup observation](#station-lookup-observation-0300).
+  `connectStation(id, { signal?, onProgress?, onLookup?, onKeySetup? })` also
+  reports its [stages](#station-connection-stages-0260), its
+  [lookup observation](#station-lookup-observation-0300) and its
+  [key setup observation](#station-key-setup-observation-0302).
 - `getStationState(id)` returns the last observed state. Mode values can be
   `null` before device telemetry arrives.
 - `refreshStationState(id, signal?)` requests a fresh device observation.
@@ -206,7 +207,9 @@ carries no identifiers or addresses. A failure after `lookup` alone means no
 reply with the station's own DID arrived, after `station_found` the station did
 not complete the handshake, and after `session_open` the command key was not
 established. The [lookup observation](#station-lookup-observation-0300) shows
-whether anything else answered the lookup.
+whether anything else answered the lookup. The
+[key setup observation](#station-key-setup-observation-0302) shows how far the
+command key got after `session_open`.
 
 ### Station lookup observation, 0.30.0
 
@@ -262,6 +265,46 @@ or foreign replies without an own reply show that other devices answered.
 `nearReplies` points to a reply that the exact DID comparison rejects.
 `inventoryAddressOnSubnet: false` says the inventory address is outside every
 local subnet of the host. None of these values proves a cause on its own.
+
+### Station key setup observation, 0.30.2
+
+After the handshake the session asks the station for its command key, resends
+that request about every 100 ms until the station acknowledges it, and waits 5 seconds
+for the answer after the acknowledgement. `connectStation(id, { onKeySetup })`
+reports what the session saw in that phase, so a failure at the `session_open`
+stage can tell a station that never acknowledged the request from one that
+acknowledged it and never answered, and from one whose answer did not arrive as
+a key answer. It is called synchronously at most once per attempt whose session
+opened, when that attempt resolves, fails or is cancelled, after `onLookup` and
+before a failed attempt closes its session. An already connected station, an
+attempt refused with `connection_busy` and an attempt that ended before
+`session_open` report nothing. Errors it throws are ignored, and it cannot
+change the connection. The request, its resends, timing and key are the same
+with and without `onKeySetup`. Only `connectStation` reports it.
+
+| Field                 | Meaning                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `requestSends`        | Command key requests sent, the first send and every resend                                             |
+| `requestAcknowledged` | Whether the station acknowledged a key request                                                         |
+| `resultWaitExpired`   | Whether an acknowledged key request waited 5 seconds without an answer. The session does not ask again |
+| `answers`             | Key answers the session received                                                                       |
+| `dataDatagrams`       | DATA datagrams the session received                                                                    |
+| `otherMessages`       | Complete messages the session received that are not a key answer                                       |
+| `heartbeats`          | PING and PONG datagrams the session received                                                           |
+| `ended`               | Whether the station ended the session                                                                  |
+
+Counts saturate at 999. Counting starts with the handshake and stops once the
+command key is in place or the session closes. A later answer still sets the key
+after the 5-second wait. The counters stay until the session starts its next
+connection. The observation carries no identifier, address, port, cipher ID,
+key or payload.
+
+`requestAcknowledged: false` with `heartbeats` above zero means the station keeps
+the session alive but does not take the request. `resultWaitExpired: true` with
+`answers: 0` means it took the request and did not answer. `answers` above zero
+on a failed attempt means the answer arrived and the key could not be set, which
+normally fails with `device_disconnected`. `otherMessages` above zero means the
+station sent something else instead. None of these values proves a cause on its own.
 
 ## Live media
 
