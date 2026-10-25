@@ -299,16 +299,18 @@ with and without `onKeySetup`. Only `connectStation` reports it.
 | `otherCommands`       | The first three distinct command IDs among `otherMessages`, in arrival order                                                                                                                      |
 | `mediaDatagrams`      | VIDEO and BINARY datagrams, which are not parsed before a stream starts                                                                                                                           |
 | `repeatedDatagrams`   | DATA datagrams already processed, resent by the station                                                                                                                                           |
+| `signedMessages`      | Messages of `otherMessages` that arrived signed, which means encrypted                                                                                                                            |
+| `keyWithoutAnswer`    | Whether the session set the LAN-derived key itself after a successful result without a key answer, see below                                                                                      |
 
 Counts saturate at 999. `requestSends` covers the key request of camera and
 HomeBase sessions. Smart safe and lock sessions send it another way and count
 only some or none of those sends. `otherCommands` holds protocol command
 numbers. `resultCode` is the result's protocol return code. The fields from
-`results` on are in 0.30.2-beta.2 and later. A repeated VIDEO or BINARY datagram
+`results` on are in 0.30.2-beta.2 and later, `signedMessages` and
+`keyWithoutAnswer` in 0.30.2-beta.3 and later. A repeated VIDEO or BINARY datagram
 counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a datagram that still waits for an earlier one does not count in `repeatedDatagrams`.
 Counting starts with the handshake and stops once the
-command key is in place or the session closes. A later answer still sets the key
-after the 5-second wait. The counters stay until the session starts its next
+command key is in place or the session closes. A later answer still sets the key after the 5-second wait, unless the session already set it without an answer. The counters stay until the session starts its next
 connection. The observation carries no identifier, address, port, cipher ID,
 key or payload.
 
@@ -321,6 +323,18 @@ station sent something else instead. `results` above zero with
 `resultWaitExpired: false` means the station answered the key request as a
 command result instead of a key answer. `resultCode` then shows what it
 returned, unless `resultEncrypted` is true. None of these values proves a cause on its own.
+
+An experimental standalone camera may answer the key request with a successful
+command result and no key answer, as a standalone T8424 on firmware 2.1.1.5 was
+[reported](MODEL_MATRIX.md#reported-standalone-t8424-attempt-2026-10-24) to do.
+Since 0.30.2-beta.3 its session then waits the usual 5 seconds for a key answer.
+Without one it asks the caller's credentials again, with cipher ID -1 because no
+cipher was offered. Only when they are LAN-derived on local transport does it
+set that key itself, reports `encryption_ready` and sets `keyWithoutAnswer`. The
+LAN-derived key does not depend on the answer, and the commands stay encrypted.
+A HomeBase session and every other result keep waiting for the key answer as
+before, and a cipher always needs the answer. Whether the camera accepts the key
+shows only in its first answered command or media result.
 
 ## Live media
 

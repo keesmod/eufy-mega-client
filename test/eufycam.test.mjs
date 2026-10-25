@@ -61,6 +61,7 @@ async function fixture(rows, check) {
   Station.getInstance = async (_provider, wire) =>
     Object.assign(new EventEmitter(), {
       setConnectionType() {},
+      setKeyWithoutAnswer() {},
       initialize() {},
       update() {},
       dispose: async () => {},

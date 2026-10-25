@@ -10196,6 +10196,11 @@ export class Station extends TypedEmitter<StationEvents> {
     this.p2pConnectionType = type;
   }
 
+  /** Client addition: see P2PClientProtocol.setKeyWithoutAnswer. */
+  public setKeyWithoutAnswer(allowed: boolean): void {
+    this.p2pSession.setKeyWithoutAnswer(allowed);
+  }
+
   public getConnectionType(): P2PConnectionType {
     return this.p2pConnectionType;
   }

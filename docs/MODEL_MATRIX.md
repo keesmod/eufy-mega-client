@@ -1049,17 +1049,36 @@ in the 0.30.2-beta.1 observation. The [key setup
 observation](API.md#station-key-setup-observation-0302) of 0.30.2-beta.2 adds
 them.
 
+On 2026-10-25 the reporter [repeated][T8424-result-code] the attempt with bridge
+0.8.40-beta.2 and client 0.30.2-beta.2 under the same conditions. The attempt
+again ended with `device_request_timeout` at `session_open`, 12 ms after the
+attempt started.
+
+- The camera answered the key request with one unencrypted command result with
+  return code 0 and sent no key answer.
+- The other messages were that result, command 1350 (`CMD_SET_PAYLOAD`) and
+  command 1306 (`CMD_DATABASE`), two of them on the CONTROL channel. No media
+  datagram arrived, and one DATA datagram was a resend.
+
+So the camera accepts the key request and offers no key or cipher. In LAN-derived
+mode the key does not depend on the answer. 0.30.2-beta.3 lets an experimental
+standalone camera set that key itself after such a result, see
+[the key setup observation](API.md#station-key-setup-observation-0302). Whether
+the T8424 accepts commands with it is not yet known.
+
 For this camera the states stay separate:
 
 - Recognition: the exact pair `T8424`/39 as a standalone floodlight descriptor
   without media since 0.26.0.
 - Experimental software coverage: none. The pair is not admitted on the route.
 - Reported hardware result: lookup and handshake on firmware 2.1.1.5, the key
-  request acknowledged, no command key. No media, recording or event result.
+  request acknowledged and answered with a successful result without a key, no
+  command key. No media, recording or event result.
 
 [129]: https://github.com/keesmod/ha-eufy-cam/issues/129
 [T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
 [T8424-key-setup]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6397104597
+[T8424-result-code]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6400175091
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

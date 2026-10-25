@@ -175,6 +175,7 @@ test('one owner with missing credentials does not block another owner or valid c
     created.push(wire.station_sn);
     return Object.assign(new EventEmitter(), {
       setConnectionType() {},
+      setKeyWithoutAnswer() {},
       initialize() {},
       getSerial: () => wire.station_sn,
       hasProperty: () => false,

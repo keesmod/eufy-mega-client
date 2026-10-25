@@ -53,6 +53,7 @@ async function fixture(rows, check) {
     Object.assign(new EventEmitter(), {
       getSerial: () => wire.station_sn,
       setConnectionType() {},
+      setKeyWithoutAnswer() {},
       initialize() {},
       update() {},
       dispose: async () => {},

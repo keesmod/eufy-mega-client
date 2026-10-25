@@ -330,13 +330,17 @@ export class DeviceTransport extends EventEmitter {
             throw new EufyError('invalid_connection_credentials');
           const stationWire = this.stationWire(device);
           const existing = this.stations.get(device.device_sn);
+          // #142: only an experimental standalone camera may get its LAN-derived
+          // key without a key answer, after a successful key request result.
           if (existing) {
             existing.update(stationWire);
+            existing.setKeyWithoutAnswer(standalone.has(device.device_sn));
             continue;
           }
           const address = lanAddress(device);
           const station = await Station.getInstance(this.provider, stationWire, address);
           station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+          station.setKeyWithoutAnswer(standalone.has(device.device_sn));
           this.stations.set(device.device_sn, station);
           this.stationAddresses.set(device.device_sn, address !== undefined);
           if (address !== undefined) this.sessionAddresses.set(device.device_sn, address);
@@ -1051,6 +1055,7 @@ export class DeviceTransport extends EventEmitter {
       lanAddress(device),
     );
     station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+    station.setKeyWithoutAnswer(this.standalone.has(stationId));
     station.initialize();
     return station;
   }
