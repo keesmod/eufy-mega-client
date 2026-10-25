@@ -307,12 +307,14 @@ HomeBase sessions. Smart safe and lock sessions send it another way and count
 only some or none of those sends. `otherCommands` holds protocol command
 numbers. `resultCode` is the result's protocol return code. The fields from
 `results` on are in 0.30.2-beta.2 and later, `signedMessages` and
-`keyWithoutAnswer` in 0.30.2-beta.3 and later. A repeated VIDEO or BINARY datagram
-counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a datagram that still waits for an earlier one does not count in `repeatedDatagrams`.
-Counting starts with the handshake and stops once the
-command key is in place or the session closes. A later answer still sets the key after the 5-second wait, unless the session already set it without an answer. The counters stay until the session starts its next
-connection. The observation carries no identifier, address, port, cipher ID,
-key or payload.
+`keyWithoutAnswer` in 0.30.2-beta.3 and later. A repeated VIDEO or BINARY
+datagram counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a
+datagram that still waits for an earlier one does not count in
+`repeatedDatagrams`. Counting starts with the handshake and stops once the
+command key is in place or the session closes. A later answer still sets the key
+after the 5-second wait, unless the session already set it without an answer.
+The counters stay until the session starts its next connection. The observation
+carries no identifier, address, port, cipher ID, key or payload.
 
 `requestAcknowledged: false` with `heartbeats` above zero means the station keeps
 the session alive but does not take the request. `resultWaitExpired: true` with

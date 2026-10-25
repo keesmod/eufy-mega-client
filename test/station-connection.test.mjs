@@ -1901,6 +1901,24 @@ test('a key answer before the result rules out the local key and keeps the queue
   assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
 });
 
+test('an unreadable key answer during the hold leaves the decision to the local key', async (t) => {
+  const { protocol, commandsSent } = keySession(t);
+  protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  // One byte cannot hold a cipher ID.
+  protocol.handleMsg(dataMessage(CONTROL, 0, GATEWAYINFO, Buffer.from([0])), from(INVENTORY_IP));
+  protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(5000);
+  await settle();
+  assert.deepEqual(ready, ['lan-derived']);
+  assert.ok(commandsSent(1101) >= 1);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, true);
+});
+
 test('a throwing encryption ready listener does not hold the queue after the local key', async (t) => {
   const { protocol, commandsSent } = keySession(t);
   protocol.setKeyWithoutAnswer(true);

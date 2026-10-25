@@ -4441,11 +4441,6 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           // Client addition: a key answer counts in the key setup observation.
           const keySetup = this.runningKeySetup();
           if (keySetup !== undefined) keySetup.answers = lookupCount(keySetup.answers);
-          // Client addition: a key answer replaces a pending local key and rules out a later one (#142).
-          // A hold on queued commands stays until the answer's own key is decided.
-          this._clearTimeout(this.keyWithoutAnswerTimeout);
-          this.keyWithoutAnswerTimeout = undefined;
-          this.keyAnswerReceived = true;
           const cipherID = data.subarray(0, 2).readUInt16LE();
           //const unknownNumber = data.subarray(2, 2).readUInt16LE();
           rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - CMD_GATEWAYINFO - cipherID`, {
@@ -4455,7 +4450,12 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
             cipherID: cipherID,
           });
           const encryptedKey = readNullTerminatedBuffer(data.subarray(4));
-          // Client addition: a key the session already set without an answer stays (#142).
+          // Client addition: a readable key answer replaces a pending local key and rules
+          // out a later one (#142). A hold on queued commands stays until the answer's
+          // own key is decided. A key the session already set without an answer stays.
+          this._clearTimeout(this.keyWithoutAnswerTimeout);
+          this.keyWithoutAnswerTimeout = undefined;
+          this.keyAnswerReceived = true;
           if (this.keySetWithoutAnswer) break;
           // Credential selection belongs to the caller. Never fetch a legacy API
           // or silently downgrade when a supplied cipher fails.
