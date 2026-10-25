@@ -328,8 +328,8 @@ An experimental standalone camera may answer the key request with a successful
 command result and no key answer, as a standalone T8424 on firmware 2.1.1.5 was
 [reported](MODEL_MATRIX.md#reported-standalone-t8424-attempt-2026-10-24) to do.
 Since 0.30.2-beta.3 its session then waits the usual 5 seconds for a key answer
-and holds its queued commands meanwhile. Without an answer it asks the caller's
-credentials again, with cipher ID -1 because no cipher was offered. Only when
+and holds its queued commands meanwhile. Without an answer it asks the caller for
+credentials, with cipher ID -1 because no cipher was offered. Only when
 they are LAN-derived on local transport does it set that key itself, report
 `encryption_ready` and set `keyWithoutAnswer`. The LAN-derived key does not
 depend on the answer, and the held commands leave encrypted with it. Otherwise

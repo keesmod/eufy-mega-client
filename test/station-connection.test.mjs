@@ -1910,10 +1910,31 @@ test('a throwing encryption ready listener does not hold the queue after the loc
   protocol.handleMsg(camId, from(INVENTORY_IP));
   protocol.handleMsg(ackData(0), from(INVENTORY_IP));
   protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  // Queued during the hold, so only the end of the hold can send it.
+  protocol.sendCommandWithoutData(1101, 0);
   t.mock.timers.tick(5000);
   await settle();
-  protocol.sendCommandWithoutData(1101, 0);
   assert.equal(commandsSent(1101), 1);
+});
+
+test('a key answer during the hold keeps queued commands until its own key is set', async (t) => {
+  const { calls, credentials } = deferredCredentials();
+  const { protocol, commandsSent } = keySession(t, credentials);
+  protocol.setKeyWithoutAnswer(true);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(6000);
+  await settle();
+  assert.equal(commandsSent(1101), 0);
+  // Only the answer asked for credentials, and its key releases the queue.
+  assert.equal(calls.length, 1);
+  calls[0].resolve();
+  await settle();
+  assert.ok(commandsSent(1101) >= 1);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
 });
 
 test('a close while the credentials are requested, a refused request, other transport and a signed result set no local key', async (t) => {

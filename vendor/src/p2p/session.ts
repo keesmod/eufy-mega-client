@@ -1354,6 +1354,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     // The same connection, still without a key, and the decision not yet taken elsewhere.
     const current = () =>
       this.keyWithoutAnswerPending &&
+      !this.keyAnswerReceived &&
       generation === this.connectionGeneration &&
       !this.terminating &&
       this.runningKeySetup() !== undefined;
@@ -1377,10 +1378,13 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           this.keySetWithoutAnswer = true;
           this.encryption = EncryptionType.LEVEL_1;
           this.p2pKey = Buffer.from(getP2PCommandEncryptionKey(this.rawStation.station_sn, this.rawStation.p2p_did));
-          // The hold ends with the key, even if a listener throws.
+          // The hold ends with the key, and the held commands leave even if a listener throws.
           this.keyWithoutAnswerPending = false;
-          this.emit('encryption ready', credentials.mode);
-          this.sendQueuedMessage();
+          try {
+            this.emit('encryption ready', credentials.mode);
+          } finally {
+            this.sendQueuedMessage();
+          }
         })
         .catch(() => {
           if (!current()) return;
@@ -4438,9 +4442,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           const keySetup = this.runningKeySetup();
           if (keySetup !== undefined) keySetup.answers = lookupCount(keySetup.answers);
           // Client addition: a key answer replaces a pending local key and rules out a later one (#142).
+          // A hold on queued commands stays until the answer's own key is decided.
           this._clearTimeout(this.keyWithoutAnswerTimeout);
           this.keyWithoutAnswerTimeout = undefined;
-          this.keyWithoutAnswerPending = false;
           this.keyAnswerReceived = true;
           const cipherID = data.subarray(0, 2).readUInt16LE();
           //const unknownNumber = data.subarray(2, 2).readUInt16LE();
@@ -4474,10 +4478,11 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               this.p2pSeqMapping.forEach((value, key) => { if (value === message.seqNo) this.p2pSeqMapping.delete(key); });
               this.p2pDataSeqNumber--;
               this.messageStates.delete(message.seqNo);
+              this.keyWithoutAnswerPending = false;
               this.emit('encryption ready', credentials.mode);
               this.sendQueuedMessage();
             })
-            .catch(() => { this.emit('credential error'); void this.close(); });
+            .catch(() => { this.keyWithoutAnswerPending = false; this.emit('credential error'); void this.close(); });
           break;
         default:
           rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - Not implemented`, {
