@@ -1324,7 +1324,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
    */
   public getKeySetupObservation(): KeySetupObservation | undefined {
     const state = this.keySetupObservation;
-    return state === undefined ? undefined : { ...state };
+    return state === undefined ? undefined : { ...state, otherCommands: [...state.otherCommands] };
   }
 
   /**
@@ -1447,6 +1447,12 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           otherMessages: 0,
           heartbeats: 0,
           ended: false,
+          results: 0,
+          resultEncrypted: false,
+          controlMessages: 0,
+          otherCommands: [],
+          mediaDatagrams: 0,
+          repeatedDatagrams: 0,
         };
 
         this.connectAddress = { host: rinfo.address, port: rinfo.port };
@@ -1712,6 +1718,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         const seqNo = msg.subarray(6, 8).readUInt16BE();
         const dataTypeBuffer = msg.subarray(4, 6);
         const dataType = this.getDataType(dataTypeBuffer);
+        // Client addition: VIDEO and BINARY datagrams are not parsed before a stream starts.
+        if (keySetup !== undefined && (dataType === P2PDataType.VIDEO || dataType === P2PDataType.BINARY))
+          keySetup.mediaDatagrams = lookupCount(keySetup.mediaDatagrams);
 
         const message: P2PMessage = {
           bytesToRead: msg.subarray(2, 4).readUInt16BE(),
@@ -1774,6 +1783,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           // We have already seen this message, skip!
           // This can happen because the device is sending the message till it gets a ACK
           // which can take some time.
+          // Client addition: a repeated datagram before the command key counts for diagnostics.
+          if (keySetup !== undefined) keySetup.repeatedDatagrams = lookupCount(keySetup.repeatedDatagrams);
           rootP2PLogger.trace(
             `Received message - DATA ${P2PDataType[message.type]} - Received already processed sequence`,
             {
@@ -2092,8 +2103,12 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     if (
       keySetup !== undefined &&
       !(message.dataType === P2PDataType.CONTROL && message.commandId === CommandType.CMD_GATEWAYINFO)
-    )
+    ) {
       keySetup.otherMessages = lookupCount(keySetup.otherMessages);
+      if (message.dataType === P2PDataType.CONTROL) keySetup.controlMessages = lookupCount(keySetup.controlMessages);
+      if (keySetup.otherCommands.length < 3 && !keySetup.otherCommands.includes(message.commandId))
+        keySetup.otherCommands.push(message.commandId);
+    }
     if (message.dataType === P2PDataType.CONTROL) {
       this.handleDataControl(message);
     } else if (message.dataType === P2PDataType.DATA) {
@@ -2178,6 +2193,13 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         if (msg_state) {
           if (msg_state.commandType === message.commandId) {
             this._clearTimeout(msg_state.timeout);
+            // Client addition: a result matched to the key request is recorded for
+            // diagnostics. Its return code is readable only when it is not encrypted.
+            if (keySetup !== undefined && msg_state.commandType === CommandType.CMD_GATEWAYINFO) {
+              keySetup.results = lookupCount(keySetup.results);
+              if (message.signCode > 0) keySetup.resultEncrypted = true;
+              else if (message.data.length >= 4) keySetup.resultCode = return_code;
+            }
             const command_type =
               msg_state.nestedCommandType !== undefined ? msg_state.nestedCommandType : msg_state.commandType;
             rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - Result data for command received`, {

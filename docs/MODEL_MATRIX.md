@@ -1026,16 +1026,40 @@ camera never acknowledged from one it acknowledged without an answer. The
 [key setup observation](API.md#station-key-setup-observation-0302) in 0.30.2
 separates those two for the next attempt.
 
+On 2026-10-25 the reporter [repeated][T8424-key-setup] the attempt with bridge
+0.8.40-beta.1 and client 0.30.2-beta.1, integration 0.8.48, the same local
+profile entry and settings. The camera was assigned to the HomeBase 3 as its
+storage target, and the Eufy app was closed. The evidence is one quoted
+`station_connection` record of counts and booleans.
+
+- The attempt again ended with `device_request_timeout` at stage
+  `session_open`. The session opened 10 ms after the attempt started.
+- The camera acknowledged the key request, which was sent twice, and sent no
+  key answer. The 5-second answer wait did not expire.
+- Before the deadline the session received 32 DATA datagrams, 5 complete
+  messages that were not a key answer and 22 heartbeats. The camera did not end
+  the session.
+
+While the session stays open, only a command result on the DATA channel with
+the key request's command and sequence stops that answer wait in this client
+without a key. A test shows that such a result produces this combination of an
+acknowledged request, no answer and no expired wait. This is a reading of the
+code, not a decoded message. Its return code and the commands of the other messages are not
+in the 0.30.2-beta.1 observation. The [key setup
+observation](API.md#station-key-setup-observation-0302) of 0.30.2-beta.2 adds
+them.
+
 For this camera the states stay separate:
 
 - Recognition: the exact pair `T8424`/39 as a standalone floodlight descriptor
   without media since 0.26.0.
 - Experimental software coverage: none. The pair is not admitted on the route.
-- Reported hardware result: lookup and handshake on firmware 2.1.1.5, no command
-  key. No media, recording or event result.
+- Reported hardware result: lookup and handshake on firmware 2.1.1.5, the key
+  request acknowledged, no command key. No media, recording or event result.
 
 [129]: https://github.com/keesmod/ha-eufy-cam/issues/129
 [T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
+[T8424-key-setup]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6397104597
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

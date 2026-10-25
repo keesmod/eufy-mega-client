@@ -526,6 +526,12 @@ const emptyKeySetup = {
   otherMessages: 0,
   heartbeats: 0,
   ended: false,
+  results: 0,
+  resultEncrypted: false,
+  controlMessages: 0,
+  otherCommands: [],
+  mediaDatagrams: 0,
+  repeatedDatagrams: 0,
 };
 
 // A running lookup on a bare session with an inventory address.
@@ -1501,12 +1507,15 @@ const ackData = (seq) => {
   packet.writeUInt16BE(seq, 8);
   return packet;
 };
-// One complete message of the given P2P data type and command in one DATA datagram.
-const dataMessage = (dataType, seq, commandId, payload) => {
+// One complete message of the given P2P data type and command in one DATA datagram,
+// optionally encrypted (sign code) or marked as a command result.
+const dataMessage = (dataType, seq, commandId, payload, { signCode = 0, result = false } = {}) => {
   const header = Buffer.alloc(16);
   header.write('XZYH', 0, 'utf8');
   header.writeUInt16LE(commandId, 4);
   header.writeUInt32LE(payload.length, 6);
+  header.writeUInt8(signCode, 13);
+  header.writeUInt8(result ? 1 : 0, 14);
   const body = Buffer.concat([header, payload]);
   const packet = Buffer.alloc(8);
   packet.set([0xf1, 0xd0], 0);
@@ -1515,6 +1524,8 @@ const dataMessage = (dataType, seq, commandId, payload) => {
   packet.writeUInt16BE(seq, 6);
   return Buffer.concat([packet, body]);
 };
+const DATA = 0;
+const VIDEO = 1;
 const CONTROL = 2;
 const GATEWAYINFO = 1100;
 // A key answer: cipher ID, two unknown bytes and an empty encrypted key.
@@ -1593,6 +1604,11 @@ test('the key setup observation counts the key request, its acknowledgement and 
   // With the key in place nothing counts any more.
   protocol.handleMsg(pong, from(INVENTORY_IP));
   protocol.handleMsg(dataMessage(CONTROL, 1, 1101, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(VIDEO, 0, 1300, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(-103);
+  protocol.handleMsg(dataMessage(DATA, 0, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
   assert.deepEqual(protocol.getKeySetupObservation(), answered);
   // A read is a copy.
   protocol.getKeySetupObservation().answers = 99;
@@ -1617,8 +1633,119 @@ test('an acknowledged key request without an answer, other messages and an END a
     resultWaitExpired: true,
     dataDatagrams: 1,
     otherMessages: 1,
+    controlMessages: 1,
+    otherCommands: [1101],
     ended: true,
   });
+});
+
+test('a key request result on the DATA channel ends the answer wait without a key and keeps its return code', async (t) => {
+  const { protocol, keyRequests, advance } = keySession(t);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(-103);
+  protocol.handleMsg(dataMessage(DATA, 0, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
+  // The result stopped the answer wait, so it never expires, and nothing asks again.
+  advance(6000);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(ready, []);
+  assert.equal(keyRequests(), 1);
+  assert.deepEqual(protocol.getKeySetupObservation(), {
+    ...emptyKeySetup,
+    requestSends: 1,
+    requestAcknowledged: true,
+    dataDatagrams: 1,
+    otherMessages: 1,
+    otherCommands: [GATEWAYINFO],
+    results: 1,
+    resultCode: -103,
+  });
+});
+
+test('a result with the key command that does not match the key request is not its result', (t) => {
+  const { protocol, advance } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(DATA, 0, 1102, Buffer.from([1])), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(-103);
+  protocol.handleMsg(dataMessage(DATA, 1, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
+  advance(5000);
+  const observed = protocol.getKeySetupObservation();
+  assert.deepEqual(
+    [
+      observed.results,
+      'resultCode' in observed,
+      observed.resultWaitExpired,
+      observed.otherCommands,
+    ],
+    [0, false, true, [1102, GATEWAYINFO]],
+  );
+});
+
+test('a key request result with return code 503 counts as a result with its code and resends the request', (t) => {
+  const { protocol, keyRequests, advance } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(503);
+  protocol.handleMsg(dataMessage(DATA, 0, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
+  const observed = protocol.getKeySetupObservation();
+  assert.deepEqual(
+    [observed.results, observed.resultCode, observed.resultEncrypted],
+    [1, 503, false],
+  );
+  // The session sends the request again instead of waiting for an answer.
+  advance(300);
+  assert.ok(keyRequests() > 1);
+  assert.equal(protocol.getKeySetupObservation().requestSends, keyRequests());
+  assert.equal(protocol.getKeySetupObservation().resultWaitExpired, false);
+});
+
+test('an encrypted key request result is counted without a return code', (t) => {
+  const { protocol } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(
+    dataMessage(DATA, 0, GATEWAYINFO, Buffer.alloc(16, 7), { signCode: 1, result: true }),
+    from(INVENTORY_IP),
+  );
+  const observed = protocol.getKeySetupObservation();
+  assert.equal(observed.results, 1);
+  assert.equal(observed.resultEncrypted, true);
+  assert.equal('resultCode' in observed, false);
+});
+
+test('media and repeated datagrams and the first three other commands are told apart', (t) => {
+  const { protocol } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  // A VIDEO datagram before a stream is not parsed into a message.
+  protocol.handleMsg(dataMessage(VIDEO, 0, 1300, Buffer.from([1])), from(INVENTORY_IP));
+  const first = dataMessage(CONTROL, 0, 1101, Buffer.from([1]));
+  protocol.handleMsg(first, from(INVENTORY_IP));
+  // The station resends a datagram it saw no acknowledgement for.
+  protocol.handleMsg(first, from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(CONTROL, 1, 1101, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(DATA, 0, 1102, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(CONTROL, 2, 1103, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(CONTROL, 3, 1104, Buffer.from([1])), from(INVENTORY_IP));
+  const observed = protocol.getKeySetupObservation();
+  assert.deepEqual(observed, {
+    ...emptyKeySetup,
+    requestSends: 1,
+    dataDatagrams: 7,
+    otherMessages: 5,
+    controlMessages: 4,
+    otherCommands: [1101, 1102, 1103],
+    mediaDatagrams: 1,
+    repeatedDatagrams: 1,
+  });
+  // A read is a copy, its command list included.
+  observed.otherCommands.push(1);
+  assert.deepEqual(protocol.getKeySetupObservation().otherCommands, [1101, 1102, 1103]);
 });
 
 test('a silent station leaves the key request unacknowledged and its resends counted', (t) => {
