@@ -8,6 +8,10 @@
   `session_open` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
   [API](docs/API.md#station-key-setup-observation-0302)), diagnostics only and
   not yet confirmed on hardware.
+- **Key setup result detail**: the observation also reports a result to the key
+  request on the DATA channel with its return code, the commands of the other
+  messages and the media and repeated datagrams ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
+  Diagnostics only, not yet confirmed on hardware.
 
 Upgrade: `onKeySetup` is optional and additive, no code change is needed.
 Rollback: 0.30.1.

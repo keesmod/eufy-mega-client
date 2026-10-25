@@ -550,4 +550,11 @@ export interface KeySetupObservation {
   otherMessages: number;
   heartbeats: number;
   ended: boolean;
+  results: number;
+  resultCode?: number;
+  resultEncrypted: boolean;
+  controlMessages: number;
+  otherCommands: number[];
+  mediaDatagrams: number;
+  repeatedDatagrams: number;
 }

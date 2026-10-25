@@ -282,20 +282,28 @@ attempt refused with `connection_busy` and an attempt that ended before
 change the connection. The request, its resends, timing and key are the same
 with and without `onKeySetup`. Only `connectStation` reports it.
 
-| Field                 | Meaning                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------------------ |
-| `requestSends`        | Command key requests sent, the first send and every resend                                             |
-| `requestAcknowledged` | Whether the station acknowledged a key request                                                         |
-| `resultWaitExpired`   | Whether an acknowledged key request waited 5 seconds without an answer. The session does not ask again |
-| `answers`             | Key answers the session received                                                                       |
-| `dataDatagrams`       | DATA datagrams the session received                                                                    |
-| `otherMessages`       | Complete messages the session received that are not a key answer                                       |
-| `heartbeats`          | PING and PONG datagrams the session received                                                           |
-| `ended`               | Whether the station ended the session                                                                  |
+| Field                 | Meaning                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| `requestSends`        | Command key requests sent, the first send and every resend                                               |
+| `requestAcknowledged` | Whether the station acknowledged a key request                                                           |
+| `resultWaitExpired`   | Whether an acknowledged key request waited 5 seconds without an answer. The session does not ask again   |
+| `answers`             | Key answers the session received                                                                         |
+| `dataDatagrams`       | DATA datagrams the session received                                                                      |
+| `otherMessages`       | Complete messages the session received that are not a key answer                                         |
+| `heartbeats`          | PING and PONG datagrams the session received                                                             |
+| `ended`               | Whether the station ended the session                                                                    |
+| `results`             | Results to the key request on the DATA channel. They stop the answer wait and carry no key, since beta.2 |
+| `resultCode`          | Return code of the latest unencrypted result, absent when none arrived, since beta.2                     |
+| `resultEncrypted`     | Whether a result arrived encrypted, so its return code was not readable, since beta.2                    |
+| `controlMessages`     | Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel, since beta.2      |
+| `otherCommands`       | Command IDs of the first three different messages of `otherMessages`, in arrival order, since beta.2     |
+| `mediaDatagrams`      | VIDEO and BINARY datagrams, which are not parsed before a stream starts, since beta.2                    |
+| `repeatedDatagrams`   | DATA datagrams already processed, resent by the station, since beta.2                                    |
 
 Counts saturate at 999. `requestSends` covers the key request of camera and
 HomeBase sessions. Smart safe and lock sessions send it another way and count
-only some or none of those sends. Counting starts with the handshake and stops once the
+only some or none of those sends. `otherCommands` holds protocol command
+numbers. `resultCode` is the result's protocol return code. Counting starts with the handshake and stops once the
 command key is in place or the session closes. A later answer still sets the key
 after the 5-second wait. The counters stay until the session starts its next
 connection. The observation carries no identifier, address, port, cipher ID,
@@ -306,7 +314,10 @@ the session alive but does not take the request. `resultWaitExpired: true` with
 `answers: 0` means it took the request and did not answer. `answers` above zero
 on a failed attempt means the answer arrived and the key could not be set, which
 normally fails with `device_disconnected`. `otherMessages` above zero means the
-station sent something else instead. None of these values proves a cause on its own.
+station sent something else instead. `results` above zero with
+`resultWaitExpired: false` means the station answered the key request as a
+command result instead of a key answer, and `resultCode` then shows what it
+returned. None of these values proves a cause on its own.
 
 ## Live media
 
