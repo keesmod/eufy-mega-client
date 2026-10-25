@@ -327,14 +327,17 @@ returned, unless `resultEncrypted` is true. None of these values proves a cause 
 An experimental standalone camera may answer the key request with a successful
 command result and no key answer, as a standalone T8424 on firmware 2.1.1.5 was
 [reported](MODEL_MATRIX.md#reported-standalone-t8424-attempt-2026-10-24) to do.
-Since 0.30.2-beta.3 its session then waits the usual 5 seconds for a key answer.
-Without one it asks the caller's credentials again, with cipher ID -1 because no
-cipher was offered. Only when they are LAN-derived on local transport does it
-set that key itself, reports `encryption_ready` and sets `keyWithoutAnswer`. The
-LAN-derived key does not depend on the answer, and the commands stay encrypted.
-A HomeBase session and every other result keep waiting for the key answer as
-before, and a cipher always needs the answer. Whether the camera accepts the key
-shows only in its first answered command or media result.
+Since 0.30.2-beta.3 its session then waits the usual 5 seconds for a key answer
+and holds its queued commands meanwhile. Without an answer it asks the caller's
+credentials again, with cipher ID -1 because no cipher was offered. Only when
+they are LAN-derived on local transport does it set that key itself, report
+`encryption_ready` and set `keyWithoutAnswer`. The LAN-derived key does not
+depend on the answer, and the held commands leave encrypted with it. Otherwise
+it releases them as before. A HomeBase session and every other result keep
+waiting for the key answer as before, and a cipher always needs the answer. On
+this path `encryption_ready` and a connected station mean that the client set
+the key, not that the camera confirmed it. Its first answered command or media
+result shows whether the camera accepts the key.
 
 ## Live media
 

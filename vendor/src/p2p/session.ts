@@ -260,6 +260,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private keyWithoutAnswerAllowed = false;
   private keyWithoutAnswerTimeout?: NodeJS.Timeout;
   private keySetWithoutAnswer = false;
+  private keyWithoutAnswerPending = false;
+  /** Client addition: counts handshakes, so a late callback cannot act on a newer connection. */
+  private connectionGeneration = 0;
   private heartbeatTimeout?: NodeJS.Timeout;
   private keepaliveTimeout?: NodeJS.Timeout;
   private esdDisconnectTimeout?: NodeJS.Timeout;
@@ -374,6 +377,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     this._clearTimeout(this.keyWithoutAnswerTimeout);
     this.keyWithoutAnswerTimeout = undefined;
     this.keySetWithoutAnswer = false;
+    this.keyWithoutAnswerPending = false;
 
     this._clearMessageStateTimeouts();
     this._clearMessageVideoStateTimeouts();
@@ -950,6 +954,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
               waitingAcknowledge = true;
             }
           });
+          // Client addition: nothing leaves while the session decides on a key without an answer (#142).
+          if (this.keyWithoutAnswerPending) waitingAcknowledge = true;
           if (!exists && !waitingAcknowledge) {
             this._sendCommand(queuedMessage);
             break;
@@ -1335,28 +1341,45 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
    * seconds for the key answer. Without one, and only when the caller selects
    * LAN-derived credentials on local transport, the session sets that key
    * itself. The key does not depend on the answer in that mode. A cipher needs
-   * the answer, so then nothing is set.
+   * the answer, so then nothing is set. Queued commands wait until this is
+   * decided, so none leaves before the key.
    */
   private scheduleKeyWithoutAnswer(): void {
-    if (!this.keyWithoutAnswerAllowed || this.keyWithoutAnswerTimeout !== undefined) return;
+    if (!this.keyWithoutAnswerAllowed || this.keyWithoutAnswerPending) return;
+    this.keyWithoutAnswerPending = true;
+    const generation = this.connectionGeneration;
+    // The same connection, still without a key, and the decision not yet taken elsewhere.
+    const current = () =>
+      this.keyWithoutAnswerPending &&
+      generation === this.connectionGeneration &&
+      !this.terminating &&
+      this.runningKeySetup() !== undefined;
+    const release = () => {
+      this.keyWithoutAnswerPending = false;
+      this.sendQueuedMessage();
+    };
     this.keyWithoutAnswerTimeout = setTimeout(() => {
       this.keyWithoutAnswerTimeout = undefined;
-      if (this.runningKeySetup() === undefined || this.terminating) return;
+      if (!current()) return;
       // No cipher was offered, so the cipher ID is -1.
       this.api
         .getCommandCredentials(this.rawStation.station_sn, -1, this.rawStation.member.admin_user_id)
         .then((credentials) => {
-          const keySetup = this.runningKeySetup();
-          if (keySetup === undefined || this.terminating) return;
-          if (credentials.mode !== 'lan-derived' || this.connectionType !== P2PConnectionType.ONLY_LOCAL) return;
-          keySetup.keyWithoutAnswer = true;
+          if (!current()) return;
+          if (credentials.mode !== 'lan-derived' || this.connectionType !== P2PConnectionType.ONLY_LOCAL) {
+            release();
+            return;
+          }
+          this.runningKeySetup()!.keyWithoutAnswer = true;
           this.keySetWithoutAnswer = true;
           this.encryption = EncryptionType.LEVEL_1;
           this.p2pKey = Buffer.from(getP2PCommandEncryptionKey(this.rawStation.station_sn, this.rawStation.p2p_did));
           this.emit('encryption ready', credentials.mode);
-          this.sendQueuedMessage();
+          release();
         })
         .catch(() => {
+          if (!current()) return;
+          this.keyWithoutAnswerPending = false;
           this.emit('credential error');
           void this.close();
         });
@@ -1490,6 +1513,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         this.connectTime = new Date().getTime();
         this.lastPong = null;
         this.lastPongData = undefined;
+        this.connectionGeneration++;
         // Client addition: every handshake starts a new key setup observation.
         this.keySetupObservation = {
           requestSends: 0,
@@ -4411,6 +4435,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           // Client addition: a key answer replaces a pending local key (#142).
           this._clearTimeout(this.keyWithoutAnswerTimeout);
           this.keyWithoutAnswerTimeout = undefined;
+          this.keyWithoutAnswerPending = false;
           const cipherID = data.subarray(0, 2).readUInt16LE();
           //const unknownNumber = data.subarray(2, 2).readUInt16LE();
           rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - CMD_GATEWAYINFO - cipherID`, {

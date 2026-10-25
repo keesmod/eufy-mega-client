@@ -1051,20 +1051,29 @@ them.
 
 On 2026-10-25 the reporter [repeated][T8424-result-code] the attempt with bridge
 0.8.40-beta.2 and client 0.30.2-beta.2 under the same conditions. The attempt
-again ended with `device_request_timeout` at `session_open`, 12 ms after the
-attempt started.
+again ended with `device_request_timeout` at `session_open`. The session opened
+12 ms after the attempt started.
 
 - The camera answered the key request with one unencrypted command result with
   return code 0 and sent no key answer.
-- The other messages were that result, command 1350 (`CMD_SET_PAYLOAD`) and
-  command 1306 (`CMD_DATABASE`), two of them on the CONTROL channel. No media
-  datagram arrived, and one DATA datagram was a resend.
+- The first three distinct commands of the other messages were that result,
+  1350 (`CMD_SET_PAYLOAD`) and 1306 (`CMD_DATABASE`), two of the messages on the
+  CONTROL channel. No media datagram arrived, and one DATA datagram was a
+  resend.
 
-So the camera accepts the key request and offers no key or cipher. In LAN-derived
-mode the key does not depend on the answer. 0.30.2-beta.3 lets an experimental
-standalone camera set that key itself after such a result, see
-[the key setup observation](API.md#station-key-setup-observation-0302). Whether
-the T8424 accepts commands with it is not yet known.
+So the camera accepts the key request and offers no key or cipher. For type 39
+the station queues a database query, 1350 around 1306, when it connects. The
+result released that query before any key, so it left unencrypted. The 1350 and
+1306 messages are most likely the camera's answer to it. That is a reading of
+the code, not a decoded message. Two explanations remain. The camera may expect
+the LAN-derived key, which does not depend on the answer in that mode, or it may
+work without command encryption, as an upstream session without a key answer
+keeps doing. 0.30.2-beta.3 lets an experimental standalone camera set the
+LAN-derived key itself after such a result and holds its queued commands until
+then, see [the key setup observation](API.md#station-key-setup-observation-0302).
+Its first answered command tells whether the T8424 accepts that key. Its
+`signedMessages` count tells whether the camera's own messages are encrypted.
+Sending commands without encryption would need a separate decision.
 
 For this camera the states stay separate:
 
