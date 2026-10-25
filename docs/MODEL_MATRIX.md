@@ -1049,17 +1049,45 @@ in the 0.30.2-beta.1 observation. The [key setup
 observation](API.md#station-key-setup-observation-0302) of 0.30.2-beta.2 adds
 them.
 
+On 2026-10-25 the reporter [repeated][T8424-result-code] the attempt with bridge
+0.8.40-beta.2 and client 0.30.2-beta.2 under the same conditions. The attempt
+again ended with `device_request_timeout` at `session_open`. The session opened
+12 ms after the attempt started.
+
+- The camera answered the key request with one unencrypted command result with
+  return code 0 and sent no key answer.
+- The first three distinct commands of the other messages were that result,
+  1350 (`CMD_SET_PAYLOAD`) and 1306 (`CMD_DATABASE`). Two of the five other
+  messages arrived on the CONTROL channel. No media datagram arrived, and one
+  DATA datagram was a resend.
+
+So the camera accepts the key request and offers no key or cipher. For type 39
+the station queues a database query, 1350 around 1306, when it connects. The
+result released that query before any key, so it left unencrypted. The 1350 and
+1306 messages are most likely the camera's answer to it. That is a reading of
+the code, not a decoded message. Two explanations remain. The camera may expect
+the LAN-derived key, which does not depend on the answer in that mode, or it may
+work without command encryption, as an upstream session without a key answer
+keeps doing. 0.30.2-beta.3 lets an experimental standalone camera set the
+LAN-derived key itself after such a result and holds its queued commands until
+then, see [the key setup observation](API.md#station-key-setup-observation-0302).
+Its first answered command tells whether the T8424 accepts that key. Its
+`signedMessages` count tells whether the camera's own messages are encrypted.
+Sending commands without encryption would need a separate decision.
+
 For this camera the states stay separate:
 
 - Recognition: the exact pair `T8424`/39 as a standalone floodlight descriptor
   without media since 0.26.0.
 - Experimental software coverage: none. The pair is not admitted on the route.
 - Reported hardware result: lookup and handshake on firmware 2.1.1.5, the key
-  request acknowledged, no command key. No media, recording or event result.
+  request acknowledged and answered with a successful result without a key, no
+  command key. No media, recording or event result.
 
 [129]: https://github.com/keesmod/ha-eufy-cam/issues/129
 [T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
 [T8424-key-setup]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6397104597
+[T8424-result-code]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6400175091
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

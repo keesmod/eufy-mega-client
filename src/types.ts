@@ -341,6 +341,14 @@ export interface StationKeySetupObservation {
   mediaDatagrams: number;
   /** DATA datagrams the session had already processed, resent by the station. Since 0.30.2-beta.2. */
   repeatedDatagrams: number;
+  /** Messages of `otherMessages` that arrived signed, which means encrypted. Since 0.30.2-beta.3. */
+  signedMessages: number;
+  /**
+   * Whether the session set the LAN-derived key itself after a successful key
+   * request result without a key answer. Only an experimental standalone camera
+   * allows that. Since 0.30.2-beta.3.
+   */
+  keyWithoutAnswer: boolean;
 }
 export interface StationConnectOptions {
   signal?: AbortSignal;

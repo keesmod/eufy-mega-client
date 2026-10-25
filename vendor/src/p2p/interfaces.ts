@@ -557,4 +557,6 @@ export interface KeySetupObservation {
   otherCommands: number[];
   mediaDatagrams: number;
   repeatedDatagrams: number;
+  signedMessages: number;
+  keyWithoutAnswer: boolean;
 }

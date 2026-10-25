@@ -393,6 +393,7 @@ test('inventoryAddress follows the address a station session was created with', 
     const station = Object.assign(new EventEmitter(), {
       getSerial: () => wire.station_sn,
       setConnectionType() {},
+      setKeyWithoutAnswer() {},
       initialize() {},
       update() {},
       dispose: async () => {},
@@ -532,6 +533,8 @@ const emptyKeySetup = {
   otherCommands: [],
   mediaDatagrams: 0,
   repeatedDatagrams: 0,
+  signedMessages: 0,
+  keyWithoutAnswer: false,
 };
 
 // A running lookup on a bare session with an inventory address.
@@ -1162,6 +1165,7 @@ test('the inventory address flags use the address the session was created with',
     Object.assign(new EventEmitter(), {
       getSerial: () => wire.station_sn,
       setConnectionType() {},
+      setKeyWithoutAnswer() {},
       initialize() {},
       update() {},
       dispose: async () => {},
@@ -1262,6 +1266,7 @@ test('account rows that discovery or load did not admit still classify replies a
     Object.assign(new EventEmitter(), {
       getSerial: () => wire.station_sn,
       setConnectionType() {},
+      setKeyWithoutAnswer() {},
       initialize() {},
       update() {},
       dispose: async () => {},
@@ -1569,7 +1574,10 @@ function keySession(t, credentials = async () => ({ mode: 'lan-derived' })) {
   const advance = (ms) => {
     for (let step = 0; step < ms; step += 100) t.mock.timers.tick(100);
   };
-  return { protocol, keyRequests, advance };
+  // DATA datagrams that carry the given command after their XZYH magic.
+  const commandsSent = (commandId) =>
+    sent.filter((m) => m[0] === 0xf1 && m[1] === 0xd0 && m.readUInt16LE(12) === commandId).length;
+  return { protocol, keyRequests, commandsSent, advance };
 }
 
 test('the key setup observation counts the key request, its acknowledgement and answer until the key is in place', async (t) => {
@@ -1703,6 +1711,362 @@ test('a key request result with return code 503 counts as a result with its code
   assert.ok(keyRequests() > 1);
   assert.equal(protocol.getKeySetupObservation().requestSends, keyRequests());
   assert.equal(protocol.getKeySetupObservation().resultWaitExpired, false);
+});
+
+// A successful result to the key request, as a standalone T8424 sends it instead of a key answer.
+const keyResult = (seq = 0, returnCode = 0) => {
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(returnCode);
+  return dataMessage(DATA, seq, GATEWAYINFO, code, { result: true });
+};
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test('an allowed session sets the LAN-derived key 5 seconds after a successful result without a key answer', async (t) => {
+  const asked = [];
+  const { protocol } = keySession(t, async (...args) => {
+    asked.push(args);
+    return { mode: 'lan-derived' };
+  });
+  protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  t.mock.timers.tick(4999);
+  await settle();
+  assert.deepEqual(ready, []);
+  t.mock.timers.tick(1);
+  await settle();
+  assert.deepEqual(ready, ['lan-derived']);
+  // The caller still selects the credentials, for the station's own administrator.
+  assert.deepEqual(asked, [['T0000000000000HB', -1, 'U']]);
+  assert.deepEqual(protocol.getKeySetupObservation(), {
+    ...emptyKeySetup,
+    requestSends: 1,
+    requestAcknowledged: true,
+    dataDatagrams: 1,
+    otherMessages: 1,
+    otherCommands: [GATEWAYINFO],
+    results: 1,
+    resultCode: 0,
+    keyWithoutAnswer: true,
+  });
+  // A late key answer neither asks for credentials nor reports the key again.
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  await settle();
+  assert.deepEqual(ready, ['lan-derived']);
+  assert.equal(asked.length, 1);
+});
+
+test('without the allowance a successful result without a key answer sets no key', async (t) => {
+  const { protocol } = keySession(t);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  t.mock.timers.tick(20000);
+  await settle();
+  assert.deepEqual(ready, []);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
+});
+
+test('a key answer within the wait sets the key once, from the answer', async (t) => {
+  // A key answer in the wait sets the key once, from the answer.
+  const answered = keySession(t);
+  answered.protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  answered.protocol.on('encryption ready', (mode) => ready.push(mode));
+  answered.protocol.handleMsg(camId, from(INVENTORY_IP));
+  answered.protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  answered.protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  answered.protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  await settle();
+  t.mock.timers.tick(6000);
+  await settle();
+  assert.deepEqual(ready, ['lan-derived']);
+  assert.equal(answered.protocol.getKeySetupObservation().keyWithoutAnswer, false);
+});
+
+test('a failed result, a cipher or a closed session leave the local key unset', async (t) => {
+  const cases = [
+    { name: 'failed result', code: -103 },
+    {
+      name: 'cipher',
+      credentials: async () => ({ mode: 'cipher', cipher: { private_key: 'PRIVATE' } }),
+    },
+    { name: 'closed', close: true },
+  ];
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  for (const { name, code = 0, credentials, close } of cases) {
+    const protocol = new P2PClientProtocol(
+      {
+        station_sn: 'T0000000000000HB',
+        p2p_did: OWN_DID,
+        device_type: 18,
+        app_conn: '',
+        member: { admin_user_id: 'U' },
+      },
+      { getCommandCredentials: credentials ?? (async () => ({ mode: 'lan-derived' })) },
+      INVENTORY_IP,
+    );
+    const socket = protocol.socket;
+    protocol.socket = { send: (m, _p, _h, cb) => cb(null, m.length), removeAllListeners: () => {} };
+    protocol.setConnectionType(P2PConnectionType.ONLY_LOCAL);
+    protocol.setKeyWithoutAnswer(true);
+    const ready = [];
+    const errors = [];
+    protocol.on('encryption ready', (mode) => ready.push(mode));
+    protocol.on('credential error', () => errors.push(name));
+    protocol.handleMsg(camId, from(INVENTORY_IP));
+    protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+    protocol.handleMsg(keyResult(0, code), from(INVENTORY_IP));
+    if (close) await protocol.close();
+    t.mock.timers.tick(6000);
+    await settle();
+    assert.deepEqual([ready, errors], [[], []], name);
+    assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false, name);
+    await protocol.dispose();
+    socket.close();
+  }
+});
+
+test('queued commands wait for the local key and then leave once', async (t) => {
+  const { protocol, commandsSent } = keySession(t);
+  protocol.setKeyWithoutAnswer(true);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  // A command queued in the wait does not leave before the key.
+  protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(4999);
+  assert.equal(commandsSent(1101), 0);
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(commandsSent(1101), 1);
+});
+
+// Credentials that resolve or reject only when the test says so, in call order.
+const deferredCredentials = () => {
+  const calls = [];
+  const credentials = () =>
+    new Promise((resolve, reject) =>
+      calls.push({ resolve: () => resolve({ mode: 'lan-derived' }), reject }),
+    );
+  return { calls, credentials };
+};
+
+for (const order of ['answer first', 'local first'])
+  test(`a key answer after the wait but before its credentials sets the key once from the answer, ${order}`, async (t) => {
+    const { calls, credentials } = deferredCredentials();
+    const { protocol } = keySession(t, credentials);
+    protocol.setKeyWithoutAnswer(true);
+    const ready = [];
+    protocol.on('encryption ready', (mode) => ready.push(mode));
+    protocol.handleMsg(camId, from(INVENTORY_IP));
+    protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+    protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+    t.mock.timers.tick(5000);
+    protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+    assert.equal(calls.length, 2);
+    const [local, answer] = calls;
+    for (const call of order === 'answer first' ? [answer, local] : [local, answer]) {
+      call.resolve();
+      await settle();
+    }
+    assert.deepEqual(ready, ['lan-derived']);
+    assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
+  });
+
+test('a key answer before the result rules out the local key and keeps the queue moving', async (t) => {
+  const { calls, credentials } = deferredCredentials();
+  const { protocol, commandsSent } = keySession(t, credentials);
+  protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  protocol.sendCommandWithoutData(1101, 0);
+  calls[0].resolve();
+  await settle();
+  t.mock.timers.tick(6000);
+  await settle();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(ready, ['lan-derived']);
+  // Sent, and resent while unacknowledged, so the queue moves.
+  assert.ok(commandsSent(1101) >= 1);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
+});
+
+test('an unreadable key answer during the hold leaves the decision to the local key', async (t) => {
+  const { protocol, commandsSent } = keySession(t);
+  protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  // One byte cannot hold a cipher ID.
+  protocol.handleMsg(dataMessage(CONTROL, 0, GATEWAYINFO, Buffer.from([0])), from(INVENTORY_IP));
+  protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(5000);
+  await settle();
+  assert.deepEqual(ready, ['lan-derived']);
+  assert.ok(commandsSent(1101) >= 1);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, true);
+});
+
+test('a throwing encryption ready listener does not hold the queue after the local key', async (t) => {
+  const { protocol, commandsSent } = keySession(t);
+  protocol.setKeyWithoutAnswer(true);
+  protocol.on('encryption ready', () => {
+    throw new Error('listener');
+  });
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  // Queued during the hold, so only the end of the hold can send it.
+  protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(5000);
+  await settle();
+  assert.equal(commandsSent(1101), 1);
+});
+
+test('a key answer during the hold keeps queued commands until its own key is set', async (t) => {
+  const { calls, credentials } = deferredCredentials();
+  const { protocol, commandsSent } = keySession(t, credentials);
+  protocol.setKeyWithoutAnswer(true);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(6000);
+  await settle();
+  assert.equal(commandsSent(1101), 0);
+  // Only the answer asked for credentials, and its key releases the queue.
+  assert.equal(calls.length, 1);
+  calls[0].resolve();
+  await settle();
+  assert.ok(commandsSent(1101) >= 1);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
+});
+
+test('a close while the credentials are requested, a refused request, other transport and a signed result set no local key', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const session = (credentials, connectionType = P2PConnectionType.ONLY_LOCAL) => {
+    const protocol = new P2PClientProtocol(
+      {
+        station_sn: 'T0000000000000HB',
+        p2p_did: OWN_DID,
+        device_type: 18,
+        app_conn: '',
+        member: { admin_user_id: 'U' },
+      },
+      { getCommandCredentials: credentials },
+      INVENTORY_IP,
+    );
+    const real = protocol.socket;
+    const sent = [];
+    protocol.socket = {
+      send: (m, _p, _h, cb) => {
+        sent.push(Buffer.from(m));
+        cb(null, m.length);
+      },
+      removeAllListeners: () => {},
+    };
+    protocol.setConnectionType(connectionType);
+    protocol.setKeyWithoutAnswer(true);
+    const events = [];
+    protocol.on('encryption ready', () => events.push('ready'));
+    protocol.on('credential error', () => events.push('credential error'));
+    protocol.handleMsg(camId, from(INVENTORY_IP));
+    protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+    const done = async () => {
+      await protocol.dispose();
+      real.close();
+    };
+    return { protocol, events, sent, done };
+  };
+  // A close while the credentials are requested.
+  const pending = deferredCredentials();
+  const closed = session(pending.credentials);
+  closed.protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  t.mock.timers.tick(5000);
+  await closed.protocol.close();
+  pending.calls[0].resolve();
+  await settle();
+  assert.deepEqual(closed.events, []);
+  await closed.done();
+  // A refused request reports a credential error and closes the session.
+  const refused = session(async () => {
+    throw new Error('PRIVATE');
+  });
+  refused.protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  t.mock.timers.tick(5000);
+  await settle();
+  assert.deepEqual(refused.events, ['credential error']);
+  assert.equal(refused.protocol.isConnected(), false);
+  await refused.done();
+  // Other transport sets no key and releases the queued commands as before.
+  const remote = session(async () => ({ mode: 'lan-derived' }), P2PConnectionType.QUICKEST);
+  remote.protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  remote.protocol.sendCommandWithoutData(1101, 0);
+  t.mock.timers.tick(5000);
+  await settle();
+  assert.deepEqual(remote.events, []);
+  assert.equal(remote.sent.filter((m) => m[1] === 0xd0 && m.readUInt16LE(12) === 1101).length, 1);
+  await remote.done();
+  // A signed result is not a readable success, so nothing waits for a local key.
+  const signed = session(async () => ({ mode: 'lan-derived' }));
+  signed.protocol.handleMsg(
+    dataMessage(DATA, 0, GATEWAYINFO, Buffer.alloc(16), { signCode: 1, result: true }),
+    from(INVENTORY_IP),
+  );
+  t.mock.timers.tick(6000);
+  await settle();
+  assert.deepEqual(signed.events, []);
+  await signed.done();
+});
+
+test('a new connection after a local key needs its own result or answer', async (t) => {
+  const { protocol } = keySession(t);
+  protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  t.mock.timers.tick(5000);
+  await settle();
+  assert.deepEqual(ready, ['lan-derived']);
+  await protocol.close();
+  protocol.socket.bind = () => {};
+  await protocol.connect();
+  protocol._clearLookupTimeout();
+  protocol._clearLocalLookupRetryTimeout();
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
+  // The key answer of the new connection sets its key.
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  await settle();
+  assert.deepEqual(ready, ['lan-derived', 'lan-derived']);
+});
+
+test('signed messages before the command key are counted', (t) => {
+  const { protocol } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(
+    dataMessage(CONTROL, 0, 1350, Buffer.alloc(16, 1), { signCode: 1 }),
+    from(INVENTORY_IP),
+  );
+  protocol.handleMsg(dataMessage(CONTROL, 1, 1306, Buffer.from([1])), from(INVENTORY_IP));
+  const observed = protocol.getKeySetupObservation();
+  assert.deepEqual([observed.otherMessages, observed.signedMessages], [2, 1]);
 });
 
 test('an encrypted key request result is counted without a return code', (t) => {
