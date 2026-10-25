@@ -261,6 +261,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   private keyWithoutAnswerTimeout?: NodeJS.Timeout;
   private keySetWithoutAnswer = false;
   private keyWithoutAnswerPending = false;
+  /** Client addition: whether this connection received a key answer, which rules out a local key. */
+  private keyAnswerReceived = false;
   /** Client addition: counts handshakes, so a late callback cannot act on a newer connection. */
   private connectionGeneration = 0;
   private heartbeatTimeout?: NodeJS.Timeout;
@@ -378,6 +380,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
     this.keyWithoutAnswerTimeout = undefined;
     this.keySetWithoutAnswer = false;
     this.keyWithoutAnswerPending = false;
+    this.keyAnswerReceived = false;
 
     this._clearMessageStateTimeouts();
     this._clearMessageVideoStateTimeouts();
@@ -1345,7 +1348,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
    * decided, so none leaves before the key.
    */
   private scheduleKeyWithoutAnswer(): void {
-    if (!this.keyWithoutAnswerAllowed || this.keyWithoutAnswerPending) return;
+    if (!this.keyWithoutAnswerAllowed || this.keyWithoutAnswerPending || this.keyAnswerReceived) return;
     this.keyWithoutAnswerPending = true;
     const generation = this.connectionGeneration;
     // The same connection, still without a key, and the decision not yet taken elsewhere.
@@ -1374,8 +1377,10 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           this.keySetWithoutAnswer = true;
           this.encryption = EncryptionType.LEVEL_1;
           this.p2pKey = Buffer.from(getP2PCommandEncryptionKey(this.rawStation.station_sn, this.rawStation.p2p_did));
+          // The hold ends with the key, even if a listener throws.
+          this.keyWithoutAnswerPending = false;
           this.emit('encryption ready', credentials.mode);
-          release();
+          this.sendQueuedMessage();
         })
         .catch(() => {
           if (!current()) return;
@@ -4432,10 +4437,11 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           // Client addition: a key answer counts in the key setup observation.
           const keySetup = this.runningKeySetup();
           if (keySetup !== undefined) keySetup.answers = lookupCount(keySetup.answers);
-          // Client addition: a key answer replaces a pending local key (#142).
+          // Client addition: a key answer replaces a pending local key and rules out a later one (#142).
           this._clearTimeout(this.keyWithoutAnswerTimeout);
           this.keyWithoutAnswerTimeout = undefined;
           this.keyWithoutAnswerPending = false;
+          this.keyAnswerReceived = true;
           const cipherID = data.subarray(0, 2).readUInt16LE();
           //const unknownNumber = data.subarray(2, 2).readUInt16LE();
           rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - CMD_GATEWAYINFO - cipherID`, {

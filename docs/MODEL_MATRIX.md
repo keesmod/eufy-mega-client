@@ -1057,8 +1057,7 @@ again ended with `device_request_timeout` at `session_open`. The session opened
 - The camera answered the key request with one unencrypted command result with
   return code 0 and sent no key answer.
 - The first three distinct commands of the other messages were that result,
-  1350 (`CMD_SET_PAYLOAD`) and 1306 (`CMD_DATABASE`), two of the messages on the
-  CONTROL channel. No media datagram arrived, and one DATA datagram was a
+  1350 (`CMD_SET_PAYLOAD`) and 1306 (`CMD_DATABASE`). Two of the five other messages arrived on the CONTROL channel. No media datagram arrived, and one DATA datagram was a
   resend.
 
 So the camera accepts the key request and offers no key or cipher. For type 39

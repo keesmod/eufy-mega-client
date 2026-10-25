@@ -1879,6 +1879,43 @@ for (const order of ['answer first', 'local first'])
     assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
   });
 
+test('a key answer before the result rules out the local key and keeps the queue moving', async (t) => {
+  const { calls, credentials } = deferredCredentials();
+  const { protocol, commandsSent } = keySession(t, credentials);
+  protocol.setKeyWithoutAnswer(true);
+  const ready = [];
+  protocol.on('encryption ready', (mode) => ready.push(mode));
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  protocol.sendCommandWithoutData(1101, 0);
+  calls[0].resolve();
+  await settle();
+  t.mock.timers.tick(6000);
+  await settle();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(ready, ['lan-derived']);
+  // Sent, and resent while unacknowledged, so the queue moves.
+  assert.ok(commandsSent(1101) >= 1);
+  assert.equal(protocol.getKeySetupObservation().keyWithoutAnswer, false);
+});
+
+test('a throwing encryption ready listener does not hold the queue after the local key', async (t) => {
+  const { protocol, commandsSent } = keySession(t);
+  protocol.setKeyWithoutAnswer(true);
+  protocol.on('encryption ready', () => {
+    throw new Error('listener');
+  });
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(keyResult(), from(INVENTORY_IP));
+  t.mock.timers.tick(5000);
+  await settle();
+  protocol.sendCommandWithoutData(1101, 0);
+  assert.equal(commandsSent(1101), 1);
+});
+
 test('a close while the credentials are requested, a refused request, other transport and a signed result set no local key', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const session = (credentials, connectionType = P2PConnectionType.ONLY_LOCAL) => {
