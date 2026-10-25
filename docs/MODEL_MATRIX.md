@@ -1040,10 +1040,11 @@ storage target, and the Eufy app was closed. The evidence is one quoted
   messages that were not a key answer and 22 heartbeats. The camera did not end
   the session.
 
-In this client only a command result on the DATA channel with the key request's
-command and sequence stops that answer wait without a key. A test reproduces
-those counters with such a result. This is a reading of the code, not a
-decoded message. Its return code and the commands of the other messages are not
+While the session stays open, only a command result on the DATA channel with
+the key request's command and sequence stops that answer wait in this client
+without a key. A test shows that such a result produces this combination of an
+acknowledged request, no answer and no expired wait. This is a reading of the
+code, not a decoded message. Its return code and the commands of the other messages are not
 in the 0.30.2-beta.1 observation. The [key setup
 observation](API.md#station-key-setup-observation-0302) of 0.30.2-beta.2 adds
 them.

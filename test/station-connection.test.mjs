@@ -1604,6 +1604,11 @@ test('the key setup observation counts the key request, its acknowledgement and 
   // With the key in place nothing counts any more.
   protocol.handleMsg(pong, from(INVENTORY_IP));
   protocol.handleMsg(dataMessage(CONTROL, 1, 1101, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(VIDEO, 0, 1300, Buffer.from([1])), from(INVENTORY_IP));
+  protocol.handleMsg(keyAnswer(0), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(-103);
+  protocol.handleMsg(dataMessage(DATA, 0, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
   assert.deepEqual(protocol.getKeySetupObservation(), answered);
   // A read is a copy.
   protocol.getKeySetupObservation().answers = 99;
@@ -1658,6 +1663,41 @@ test('a key request result on the DATA channel ends the answer wait without a ke
     results: 1,
     resultCode: -103,
   });
+});
+
+test('a result with the key command that does not match the key request is not its result', (t) => {
+  const { protocol, advance } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  protocol.handleMsg(dataMessage(DATA, 0, 1102, Buffer.from([1])), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(-103);
+  protocol.handleMsg(dataMessage(DATA, 1, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
+  advance(5000);
+  const observed = protocol.getKeySetupObservation();
+  assert.deepEqual(
+    [
+      observed.results,
+      'resultCode' in observed,
+      observed.resultWaitExpired,
+      observed.otherCommands,
+    ],
+    [0, false, true, [1102, GATEWAYINFO]],
+  );
+});
+
+test('a key request result with return code 503 counts as a result with its code', (t) => {
+  const { protocol } = keySession(t);
+  protocol.handleMsg(camId, from(INVENTORY_IP));
+  protocol.handleMsg(ackData(0), from(INVENTORY_IP));
+  const code = Buffer.alloc(4);
+  code.writeInt32LE(503);
+  protocol.handleMsg(dataMessage(DATA, 0, GATEWAYINFO, code, { result: true }), from(INVENTORY_IP));
+  const observed = protocol.getKeySetupObservation();
+  assert.deepEqual(
+    [observed.results, observed.resultCode, observed.resultEncrypted],
+    [1, 503, false],
+  );
 });
 
 test('an encrypted key request result is counted without a return code', (t) => {

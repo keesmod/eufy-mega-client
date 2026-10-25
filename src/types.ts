@@ -323,7 +323,11 @@ export interface StationKeySetupObservation {
   heartbeats: number;
   /** Whether the station ended the session. */
   ended: boolean;
-  /** Results to the key request on the DATA channel. They stop the answer wait and carry no key. Since 0.30.2-beta.2. */
+  /**
+   * Command results on the DATA channel matched to the key request. They carry no
+   * key. Except for return code 503, which resends the request, they end the
+   * answer wait. Since 0.30.2-beta.2.
+   */
   results: number;
   /** Return code of the latest unencrypted result, absent when none arrived. Since 0.30.2-beta.2. */
   resultCode?: number;
@@ -331,9 +335,9 @@ export interface StationKeySetupObservation {
   resultEncrypted: boolean;
   /** Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel. Since 0.30.2-beta.2. */
   controlMessages: number;
-  /** Command IDs of the first three different messages of `otherMessages`, in arrival order. Since 0.30.2-beta.2. */
+  /** The first three distinct command IDs among `otherMessages`, in arrival order. Since 0.30.2-beta.2. */
   otherCommands: number[];
-  /** VIDEO and BINARY datagrams, which the session does not parse before a stream starts. Since 0.30.2-beta.2. */
+  /** VIDEO and BINARY datagrams, which the session does not parse before a stream starts. A repeated one also counts in `repeatedDatagrams`. Since 0.30.2-beta.2. */
   mediaDatagrams: number;
   /** DATA datagrams the session had already processed, resent by the station. Since 0.30.2-beta.2. */
   repeatedDatagrams: number;

@@ -3,15 +3,12 @@
 ## 0.30.2 - Unreleased
 
 - **Key setup observation**: `connectStation(id, { onKeySetup })` reports what
-  the session saw between `session_open` and the command key, as counts without
+  the session saw between `session_open` and the command key, including a
+  command result to the key request, as counts and protocol numbers without
   identifiers or payload. It helps diagnose a standalone T8424 that stops at
   `session_open` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
   [API](docs/API.md#station-key-setup-observation-0302)), diagnostics only and
   not yet confirmed on hardware.
-- **Key setup result detail**: the observation also reports a result to the key
-  request on the DATA channel with its return code, the commands of the other
-  messages and the media and repeated datagrams ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
-  Diagnostics only, not yet confirmed on hardware.
 
 Upgrade: `onKeySetup` is optional and additive, no code change is needed.
 Rollback: 0.30.1.

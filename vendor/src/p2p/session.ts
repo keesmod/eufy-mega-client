@@ -2156,13 +2156,6 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
           return_code = message.data.subarray(0, 4).readUInt32LE() | 0;
           resultData = message.data.subarray(4);
         }
-        // Client addition: a result to the key request on the DATA channel is recorded
-        // for diagnostics. Its return code is readable only when it is not encrypted.
-        if (keySetup !== undefined && message.commandId === CommandType.CMD_GATEWAYINFO) {
-          keySetup.results = lookupCount(keySetup.results);
-          if (message.signCode > 0) keySetup.resultEncrypted = true;
-          else if (message.data.length >= 4) keySetup.resultCode = return_code;
-        }
         const error_codeStr = ErrorCode[return_code];
 
         rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - Received data`, {
@@ -2200,6 +2193,13 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
         if (msg_state) {
           if (msg_state.commandType === message.commandId) {
             this._clearTimeout(msg_state.timeout);
+            // Client addition: a result matched to the key request is recorded for
+            // diagnostics. Its return code is readable only when it is not encrypted.
+            if (keySetup !== undefined && msg_state.commandType === CommandType.CMD_GATEWAYINFO) {
+              keySetup.results = lookupCount(keySetup.results);
+              if (message.signCode > 0) keySetup.resultEncrypted = true;
+              else if (message.data.length >= 4) keySetup.resultCode = return_code;
+            }
             const command_type =
               msg_state.nestedCommandType !== undefined ? msg_state.nestedCommandType : msg_state.commandType;
             rootP2PLogger.debug(`Handle DATA ${P2PDataType[message.dataType]} - Result data for command received`, {
