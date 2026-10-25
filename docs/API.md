@@ -282,31 +282,30 @@ attempt refused with `connection_busy` and an attempt that ended before
 change the connection. The request, its resends, timing and key are the same
 with and without `onKeySetup`. Only `connectStation` reports it.
 
-| Field                 | Meaning                                                                                                                                                            |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `requestSends`        | Command key requests sent, the first send and every resend                                                                                                         |
-| `requestAcknowledged` | Whether the station acknowledged a key request                                                                                                                     |
-| `resultWaitExpired`   | Whether an acknowledged key request waited 5 seconds without an answer. The session does not ask again                                                             |
-| `answers`             | Key answers the session received                                                                                                                                   |
-| `dataDatagrams`       | DATA datagrams the session received                                                                                                                                |
-| `otherMessages`       | Complete messages the session received that are not a key answer                                                                                                   |
-| `heartbeats`          | PING and PONG datagrams the session received                                                                                                                       |
-| `ended`               | Whether the station ended the session                                                                                                                              |
-| `results`             | Command results on the DATA channel matched to the key request. They carry no key. Except for return code 503, which resends the request, they end the answer wait |
-| `resultCode`          | Return code of the latest unencrypted result, absent when none arrived                                                                                             |
-| `resultEncrypted`     | Whether a result arrived encrypted, so its return code was not readable                                                                                            |
-| `controlMessages`     | Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel                                                                              |
-| `otherCommands`       | The first three distinct command IDs among `otherMessages`, in arrival order                                                                                       |
-| `mediaDatagrams`      | VIDEO and BINARY datagrams, which are not parsed before a stream starts                                                                                            |
-| `repeatedDatagrams`   | DATA datagrams already processed, resent by the station                                                                                                            |
+| Field                 | Meaning                                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `requestSends`        | Command key requests sent, the first send and every resend                                                                                                                                        |
+| `requestAcknowledged` | Whether the station acknowledged a key request                                                                                                                                                    |
+| `resultWaitExpired`   | Whether an acknowledged key request waited 5 seconds without an answer. The session does not ask again                                                                                            |
+| `answers`             | Key answers the session received                                                                                                                                                                  |
+| `dataDatagrams`       | DATA datagrams the session received                                                                                                                                                               |
+| `otherMessages`       | Complete messages the session received that are not a key answer                                                                                                                                  |
+| `heartbeats`          | PING and PONG datagrams the session received                                                                                                                                                      |
+| `ended`               | Whether the station ended the session                                                                                                                                                             |
+| `results`             | Command results on the DATA channel matched to the key request. They carry no key and end the answer wait. After return code 503 the session resends the request instead of waiting for an answer |
+| `resultCode`          | Return code of the latest unencrypted result, absent when none arrived                                                                                                                            |
+| `resultEncrypted`     | Whether a result arrived encrypted, so its return code was not readable                                                                                                                           |
+| `controlMessages`     | Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel                                                                                                             |
+| `otherCommands`       | The first three distinct command IDs among `otherMessages`, in arrival order                                                                                                                      |
+| `mediaDatagrams`      | VIDEO and BINARY datagrams, which are not parsed before a stream starts                                                                                                                           |
+| `repeatedDatagrams`   | DATA datagrams already processed, resent by the station                                                                                                                                           |
 
 Counts saturate at 999. `requestSends` covers the key request of camera and
 HomeBase sessions. Smart safe and lock sessions send it another way and count
 only some or none of those sends. `otherCommands` holds protocol command
 numbers. `resultCode` is the result's protocol return code. The fields from
 `results` on are in 0.30.2-beta.2 and later. A repeated VIDEO or BINARY datagram
-counts in both `mediaDatagrams` and `repeatedDatagrams`. A datagram that arrives
-out of order and waits for an earlier one counts only in `dataDatagrams`.
+counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a datagram that still waits for an earlier one does not count in `repeatedDatagrams`.
 Counting starts with the handshake and stops once the
 command key is in place or the session closes. A later answer still sets the key
 after the 5-second wait. The counters stay until the session starts its next

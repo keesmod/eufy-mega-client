@@ -325,8 +325,8 @@ export interface StationKeySetupObservation {
   ended: boolean;
   /**
    * Command results on the DATA channel matched to the key request. They carry no
-   * key. Except for return code 503, which resends the request, they end the
-   * answer wait. Since 0.30.2-beta.2.
+   * key and end the answer wait. After return code 503 the session resends the
+   * request instead of waiting for an answer. Since 0.30.2-beta.2.
    */
   results: number;
   /** Return code of the latest unencrypted result, absent when none arrived. Since 0.30.2-beta.2. */

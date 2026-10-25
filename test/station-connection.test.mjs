@@ -1686,8 +1686,8 @@ test('a result with the key command that does not match the key request is not i
   );
 });
 
-test('a key request result with return code 503 counts as a result with its code', (t) => {
-  const { protocol } = keySession(t);
+test('a key request result with return code 503 counts as a result with its code and resends the request', (t) => {
+  const { protocol, keyRequests, advance } = keySession(t);
   protocol.handleMsg(camId, from(INVENTORY_IP));
   protocol.handleMsg(ackData(0), from(INVENTORY_IP));
   const code = Buffer.alloc(4);
@@ -1698,6 +1698,11 @@ test('a key request result with return code 503 counts as a result with its code
     [observed.results, observed.resultCode, observed.resultEncrypted],
     [1, 503, false],
   );
+  // The session sends the request again instead of waiting for an answer.
+  advance(300);
+  assert.ok(keyRequests() > 1);
+  assert.equal(protocol.getKeySetupObservation().requestSends, keyRequests());
+  assert.equal(protocol.getKeySetupObservation().resultWaitExpired, false);
 });
 
 test('an encrypted key request result is counted without a return code', (t) => {
