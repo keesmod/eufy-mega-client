@@ -100,7 +100,7 @@ export class DeviceTransport extends EventEmitter {
   private standalone = new Set<string>();
   private stations = new Map<string, Station>();
   private cameras = new Map<string, ProtocolDevice>();
-  private encryption = new Map<string, 'lan-derived' | 'cipher'>();
+  private encryption = new Map<string, 'lan-derived' | 'cipher' | 'none'>();
   /** Whether each station session was created with an inventory LAN address. */
   private stationAddresses = new Map<string, boolean>();
   /** That address itself, read only for the lookup observation. */
@@ -337,9 +337,9 @@ export class DeviceTransport extends EventEmitter {
           const address = lanAddress(device);
           const station = await Station.getInstance(this.provider, stationWire, address);
           station.setConnectionType(P2PConnectionType.ONLY_LOCAL);
-          // #142: only an experimental standalone camera may get its LAN-derived
-          // key without a key answer, after a successful key request result. A
-          // change of route recreates the station, so a reused one keeps it.
+          // #142: only an experimental standalone camera may go on without a
+          // command key after a successful key request result without a key
+          // answer. A change of route recreates the station, so a reused one keeps it.
           station.setKeyWithoutAnswer(standalone.has(device.device_sn));
           this.stations.set(device.device_sn, station);
           this.stationAddresses.set(device.device_sn, address !== undefined);

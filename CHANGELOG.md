@@ -9,14 +9,14 @@
   `session_open` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
   [API](docs/API.md#station-key-setup-observation-0302)), diagnostics only and
   not yet confirmed on hardware.
-- **Key without a key answer**: for an experimental standalone camera that
-  answers the key request with a successful result and no key answer, the client
-  now sets the LAN-derived key itself after 5 seconds ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
+- **Key without a key answer**: an experimental standalone camera that answers
+  the key request with a successful result and no key answer now goes on after 5
+  seconds without command encryption ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
   [API](docs/API.md#station-key-setup-observation-0302)). HomeBase sessions are
-  unchanged, and whether a standalone T8424 accepts the key is not yet known.
+  unchanged, and whether a standalone T8424 then works is not yet known.
 
-Upgrade: `onKeySetup` is optional and additive, no code change is needed.
-Rollback: 0.30.1.
+Upgrade: `onKeySetup` is optional and additive. `StationState.commandEncryption`
+can now be `none`, so an exhaustive check on it needs that case. Rollback: 0.30.1.
 
 ## 0.30.1 - 2026-10-22
 

@@ -181,8 +181,11 @@ Before the 2026-10-13 report it was unknown whether a standalone T8410 accepts
 that key and envelope, and whether it answers the gateway information request
 after the handshake. The reported live video on firmware 2.3.2.4 on 2026-10-13
 and on 2.3.1.6 on 2026-10-15 implies that both firmware versions do both. For
-other firmware both remain unknown. Without that answer no command key is set and the connection ends at
-the `session_open` stage. Whether it serves snapshot covers from its own storage is unknown too. With a
+other firmware both remain unknown. Without that answer no command key is set
+and the connection ends at the `session_open` stage, unless the camera returns a
+successful result to the request, as described under the
+[key setup observation](API.md#station-key-setup-observation-0302). Whether it
+serves snapshot covers from its own storage is unknown too. With a
 microSD card, firmware 2.3.2.4 and 2.3.1.6 acknowledged the recording query in
 the 2026-10-16 report below but never answered it. Since 0.30.1 the camera's
 recordings report `standalone_recordings_unverified` on this route, and its

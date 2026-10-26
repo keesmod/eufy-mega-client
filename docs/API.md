@@ -198,7 +198,7 @@ in the order observed, with `elapsedMs` since the attempt started:
 | `lookup`           | The attempt started and its local lookup is about to begin. `inventoryAddress` says whether the station's session was created with a LAN address from the inventory |
 | `station_found`    | The station answered the lookup with its own DID                                                                                                                    |
 | `session_open`     | The station answered the session handshake                                                                                                                          |
-| `encryption_ready` | The command key is in place and the connection resolves                                                                                                             |
+| `encryption_ready` | The command key is in place, or an experimental standalone camera goes on without one, and the connection resolves                                                  |
 
 An already connected station resolves without stages. The callback runs
 synchronously until the attempt resolves, fails or is cancelled. Errors it
@@ -300,7 +300,7 @@ with and without `onKeySetup`. Only `connectStation` reports it.
 | `mediaDatagrams`      | VIDEO and BINARY datagrams, which are not parsed before a stream starts                                                                                                                           |
 | `repeatedDatagrams`   | DATA datagrams already processed, resent by the station                                                                                                                                           |
 | `signedMessages`      | Messages of `otherMessages` that arrived signed, which means encrypted                                                                                                                            |
-| `keyWithoutAnswer`    | Whether the session set the LAN-derived key itself after a successful result without a key answer, see below                                                                                      |
+| `keyWithoutAnswer`    | Whether the session went on without a command key after a successful result without a key answer, see below                                                                                       |
 
 Counts saturate at 999. `requestSends` covers the key request of camera and
 HomeBase sessions. Smart safe and lock sessions send it another way and count
@@ -311,10 +311,11 @@ numbers. `resultCode` is the result's protocol return code. The fields from
 datagram counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a
 datagram that still waits for an earlier one does not count in
 `repeatedDatagrams`. Counting starts with the handshake and stops once the
-command key is in place or the session closes. A later answer still sets the key
-after the 5-second wait, unless the session already set it without an answer.
-The counters stay until the session starts its next connection. The observation
-carries no identifier, address, port, cipher ID, key or payload.
+command key is in place, the session went on without one, or the session closes.
+A later answer still sets the key after the 5-second wait, unless the session
+already went on without a key. The counters stay until the session starts its
+next connection. The observation carries no identifier, address, port, cipher
+ID, key or payload.
 
 `requestAcknowledged: false` with `heartbeats` above zero means the station keeps
 the session alive but does not take the request. `resultWaitExpired: true` with
@@ -329,17 +330,20 @@ returned, unless `resultEncrypted` is true. None of these values proves a cause 
 An experimental standalone camera may answer the key request with a successful
 command result and no key answer, as a standalone T8424 on firmware 2.1.1.5 was
 [reported](MODEL_MATRIX.md#reported-standalone-t8424-attempt-2026-10-24) to do.
-Since 0.30.2-beta.3 its session then waits the usual 5 seconds for a key answer
-and holds its queued commands meanwhile. Without an answer it asks the caller for
-credentials, with cipher ID -1 because no cipher was offered. Only when
-they are LAN-derived on local transport does it set that key itself, report
-`encryption_ready` and set `keyWithoutAnswer`. The LAN-derived key does not
-depend on the answer, and the held commands leave encrypted with it. Otherwise
-it releases them as before. A HomeBase session and every other result keep
-waiting for the key answer as before, and a cipher always needs the answer. On
-this path `encryption_ready` and a connected station mean that the client set
-the key, not that the camera confirmed it. Its first answered command or media
-result shows whether the camera accepts the key.
+Its session then waits the usual 5 seconds for a key answer and holds its queued
+commands meanwhile. Without an answer it asks the caller for credentials, with
+cipher ID -1 because no cipher was offered. Only when they are LAN-derived on
+local transport does it go on without a command key, set `keyWithoutAnswer`,
+reach `encryption_ready` and release the held commands.
+`StationState.commandEncryption` is then `none`. Since 0.30.2-beta.4 those
+commands are not encrypted, so the account ID they carry and the public key of a
+live stream request cross the LAN readable, as in an upstream session without a
+key answer. A later key answer on that connection is ignored. Otherwise the
+session releases the held commands as before. In 0.30.2-beta.3 it set the
+LAN-derived key instead, and the T8424 answered a live start with -100. A
+HomeBase session and every other result keep waiting for the key answer as
+before, and a cipher always needs the answer. Whether the camera answers shows
+only in its first command or media result.
 
 ## Live media
 
@@ -378,7 +382,7 @@ the order observed, with `elapsedMs` since the call:
 
 | Stage           | Meaning                                                                                                                                 |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `session_ready` | The P2P session that carries the stream is connected and encrypted                                                                      |
+| `session_ready` | The P2P session that carries the stream is connected, encrypted unless an experimental standalone camera went on without a command key  |
 | `start_issued`  | START was handed to that session                                                                                                        |
 | `start_result`  | The station answered START, with its numeric `returnCode`, 0 for success                                                                |
 | `no_data_end`   | The P2P library ended the stream because no media followed: 5 seconds after the station's answer, or 20 seconds after START without one |
@@ -1146,8 +1150,9 @@ with its own DID, completed the session handshake, or opened the session without
 a command key being established. The
 [lookup observation](#station-lookup-observation-0300) from `onLookup` shows
 whether anything else answered the lookup.
-A connected session sets the key locally, so the first answered command or media
-result is what shows the camera accepts it.
+A connected session sets the LAN-derived key locally, or uses no command key
+after a successful key request result without a key answer, so the first
+answered command or media result is what shows the camera accepts it.
 
 Every standalone relationship carries `descriptor`: whether the inventory row
 has a P2P device ID (`did`), a P2P license (`license`), an administrator user
