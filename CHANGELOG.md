@@ -2,9 +2,9 @@
 
 ## 0.30.2 - 2026-10-26
 
-- Added the Floodlight Cam 2K `T8424` as experimental standalone camera ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
+- Added the standalone Floodlight Cam 2K `T8424` behind `experimentalStandalone` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
 - Experimental standalone cameras that offer no command key now connect without command encryption ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
-- Added key setup diagnostics for standalone connections ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
+- Added key setup diagnostics to `connectStation` with `onKeySetup` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
 
 Upgrade: no code change needed, but `StationState.commandEncryption` can now be `none`. Rollback: 0.30.1.
 
