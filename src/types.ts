@@ -229,8 +229,9 @@ export interface LiveStartOptions {
   onProgress?: (progress: LiveStartProgress) => void;
 }
 /**
- * `session_ready`: the P2P session that carries the stream is connected and
- * encrypted. `start_issued`: START was handed to that session.
+ * `session_ready`: the P2P session that carries the stream is connected, and
+ * encrypted unless an experimental standalone camera went on without a command
+ * key. `start_issued`: START was handed to that session.
  * `start_result`: the station answered START, with `returnCode`.
  * `no_data_end`: the P2P library ended the stream because no media followed.
  * `metadata`: the stream's metadata arrived and the start resolves.
@@ -512,7 +513,7 @@ export interface EventStatus {
  * Each refused push counts once, under the first rule it failed, in this order.
  */
 export type StandalonePushRefusal =
-  /** The exact profile has no standalone events, such as every T8410 and T8410C push. */
+  /** The exact profile has no standalone events, such as every T8410, T8410C and T8424 push. */
   | 'events_not_enabled'
   /** The camera is not initialised, or it or its session failed. */
   | 'owner_unavailable'

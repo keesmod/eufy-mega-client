@@ -21,7 +21,8 @@ Each recognized device has a relationship with one of these kinds:
   relationship also carries `descriptor`, presence booleans for the row's P2P
   device ID, license, administrator user and private LAN address. With the
   client option `experimentalStandalone`, a profile that allows it, T84A1, since
-  0.29.1 T8410 and since 0.30.0 T8410C, instead returns `transport: 'experimental'`
+  0.29.1 T8410, since 0.30.0 T8410C and since 0.30.2 T8424, instead returns
+  `transport: 'experimental'`
   without an issue. Its
   camera then gets its own SDK station and can open its own local session for
   media, never for alarm state. See

@@ -149,7 +149,11 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8425: camera(47, 'floodlight', 'h3-or-standalone', h3Media),
   T8426: camera(87, 'floodlight', 'h3-or-standalone', h3Media),
   // ha-eufy-cam#129: a T8424 stays its own station when HomeBase 3 stores its video.
-  T8424: camera(39, 'floodlight', 'standalone', blockedMedia),
+  // keesmod/eufy-mega-client#142: standalone T8424 behind experimentalStandalone.
+  T8424: Object.freeze({
+    ...camera(39, 'floodlight', 'standalone', blockedMedia),
+    experimentalStandalone: true,
+  }),
   T8530: camera(55, 'integrated', 'h3-or-standalone', h3Media),
   T8790: camera(90, 'integrated', 'h3-or-standalone', h3Media),
   T85V0: camera(203, 'integrated', 'h3-or-standalone', h3Media),

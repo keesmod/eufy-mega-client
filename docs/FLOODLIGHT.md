@@ -12,14 +12,14 @@ The [official HomeBase 3 table](https://service.eufy.com/article-description/S38
 checked 2026-09-11, distinguishes storage compatibility from AI, modes and
 automation. Product compatibility alone is not evidence of a Mega command route.
 
-| Model/type                  | Scope in this client                                                                                                                                                                                                       |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T8425/47, T8426/87          | Exact classification and existing commands through an actual T8030/type 18 parent. Empty or self parent remains a standalone descriptor with `standalone_transport_unverified`. Other owners return `unsupported_station`. |
-| T8420/3 and T8420X variant  | `unsupported_device`. The original model excludes H3. The X variant identifies a serial variant, not an interchangeable command profile. Its listed H3 compatibility is storage only.                                      |
-| T8424/39                    | Standalone descriptor with `standalone_transport_unverified` and no media since 0.26.0, from the report on ha-eufy-cam#129. An H3 parent returns `unsupported_station`, because HomeBase 3 only stores its video.          |
-| T8422/37                    | `unsupported_device`. Storage compatibility does not establish H3 command ownership.                                                                                                                                       |
-| T8423/38                    | `unsupported_device`. H3 storage is listed, AI/modes remain under evaluation. Its existing live envelope alone does not establish the selected owner profile.                                                              |
-| Unknown or mismatched pairs | `unsupported_device`, without disabling other cameras.                                                                                                                                                                     |
+| Model/type                  | Scope in this client                                                                                                                                                                                                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T8425/47, T8426/87          | Exact classification and existing commands through an actual T8030/type 18 parent. Empty or self parent remains a standalone descriptor with `standalone_transport_unverified`. Other owners return `unsupported_station`.                                                                   |
+| T8420/3 and T8420X variant  | `unsupported_device`. The original model excludes H3. The X variant identifies a serial variant, not an interchangeable command profile. Its listed H3 compatibility is storage only.                                                                                                        |
+| T8424/39                    | Standalone descriptor with `standalone_transport_unverified` and no media since 0.26.0, from the report on ha-eufy-cam#129. An H3 parent returns `unsupported_station`, because HomeBase 3 only stores its video. With `experimentalStandalone` its own local owner since 0.30.2, see below. |
+| T8422/37                    | `unsupported_device`. Storage compatibility does not establish H3 command ownership.                                                                                                                                                                                                         |
+| T8423/38                    | `unsupported_device`. H3 storage is listed, AI/modes remain under evaluation. Its existing live envelope alone does not establish the selected owner profile.                                                                                                                                |
+| Unknown or mismatched pairs | `unsupported_device`, without disabling other cameras.                                                                                                                                                                                                                                       |
 
 The original T8420 and X variant are not merged or inferred from their common
 type. No new model alias or guessed serial discriminator is introduced.
@@ -28,6 +28,26 @@ Floodlight model and command-owner work.
 [#143](https://github.com/keesmod/eufy-mega-client/issues/143) tracks other
 HomeBases and [#142](https://github.com/keesmod/eufy-mega-client/issues/142)
 standalone transport.
+
+## Experimental standalone T8424, 0.30.2
+
+With the client option `experimentalStandalone`, a standalone `T8424`/39 with an
+empty or self parent becomes its own local owner, like the T84A1, T8410 and
+T8410C. Snapshot and live are experimental, recordings report
+`standalone_recordings_unverified` and standalone events are not admitted. A
+HomeBase 3 that only stores its video does not change that, and an H3 parent
+still returns `unsupported_station`.
+
+The reported camera on firmware 2.1.1.5 answers the key request with a
+successful result and no key. The client then goes on without command
+encryption, so its commands cross the LAN readable, see the
+[key setup observation](API.md#station-key-setup-observation-0302). With client
+0.30.2-beta.4 and a local profile entry, its reporter on
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142) had a snapshot
+and live view with audio, as recorded in the
+[model matrix](MODEL_MATRIX.md#reported-standalone-t8424-attempt-2026-10-24).
+That is a reported result, not independently reproduced. Other firmware is
+unknown.
 
 ## Discovery, state and events
 

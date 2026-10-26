@@ -1072,7 +1072,7 @@ Version 0.29.0 adds the client option `experimentalStandalone`. It is off by
 default. Without it, standalone results only gain the `descriptor` described
 below. With it, a standalone camera whose
 exact profile allows it becomes its own P2P owner on the existing local route.
-Three profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
+Four profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
 [ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66). `T8410`/31,
 the Indoor Cam E220, which Eufy's comparison page calls Indoor Cam 2K Pan & Tilt,
@@ -1080,16 +1080,23 @@ has it since 0.29.1 for
 [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152).
 `T8410C`/31, the Indoor Cam Pan&Tilt 2K admitted in 0.29.2, has it since 0.30.0
 for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
+`T8424`/39, the Floodlight Cam 2K, has it since 0.30.2 for
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142). The reported
+camera on firmware 2.1.1.5 answers the key request with a successful result and
+no key, so its session goes on without command encryption, see the
+[key setup observation](#station-key-setup-observation-0302).
 
 - Discovery returns `{ kind: 'standalone', ownerId, transport: 'experimental', descriptor }`
   without an issue. Every other standalone row keeps
   `reason: 'standalone_transport_unverified'` and its issue. Under a HomeBase
-  all three models keep their H3 relationship and table media policy, blocked
-  for the T84A1 and H3 for the T8410 and T8410C.
+  the T84A1, T8410 and T8410C keep their H3 relationship and table media policy,
+  blocked for the T84A1 and H3 for the T8410 and T8410C. A T8424 under an H3
+  parent keeps `unsupported_station`.
 - The camera's `stationId` is its own ID. `connectStation(id, { onProgress })`
   connects to the camera itself with the same lookup, [stages](#station-connection-stages-0260)
-  and LAN-derived command key as a HomeBase. No cloud DSK, cipher or legacy
-  security-cloud call is made.
+  and LAN-derived command key as a HomeBase, or without a command key after a
+  successful key request result without a key answer. No cloud DSK, cipher or
+  legacy security-cloud call is made.
 - Snapshot and live report `available: true` with status `experimental`. They
   use the camera's own session and the vendor command set of its device type.
   Live always uses that one session, also when `maxLiveStreamsPerStation` is
@@ -1120,7 +1127,7 @@ for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
   report its session only, with null modes and no alarm.
 - Since 0.30.1 a standalone T84A1 delivers motion and person events from its
   pushes, for [ha-eufy-cam#185](https://github.com/keesmod/ha-eufy-cam/issues/185).
-  T8410 and T8410C pushes are counted but refused. Guard mode, alarm and microSD
+  T8410, T8410C and T8424 pushes are counted but refused. Guard mode, alarm and microSD
   pushes stay out of the route, and no event opens or wakes a connection or
   refreshes a snapshot. See
   [standalone events and push observation](#standalone-events-and-push-observation-0301).
@@ -1281,7 +1288,7 @@ refusal reason.
 An admitted push becomes a `motion` or `person` detection event with `source:
 'push'`, as for a HomeBase camera, and `startEvents` must be running. Guard
 mode, alarm, microSD, undecoded and every other push stay refused, as does every
-T8410 and T8410C push. No standalone push reaches the vendored station or camera
+T8410, T8410C and T8424 push. No standalone push reaches the vendored station or camera
 push handler, so the camera gets no guard mode, alarm or microSD state from it,
 and no event image is loaded. No event sends the latest-info query 10013, issues
 a command or opens or wakes a connection, also when the camera's session is

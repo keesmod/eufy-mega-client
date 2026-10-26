@@ -6,7 +6,12 @@ import { discover } from '../dist/discovery.js';
 import { DeviceTransport } from '../dist/device-transport.js';
 import { hasCameraMedia } from '../dist/camera-media.js';
 import { deviceProfiles } from '../dist/device-profiles.js';
-import { IndoorCamera, Station, WallLightCam } from '../dist/vendor/http/index.js';
+import {
+  FloodlightCamera,
+  IndoorCamera,
+  Station,
+  WallLightCam,
+} from '../dist/vendor/http/index.js';
 import { CommandName } from '../dist/vendor/http/types.js';
 import { CommandType, P2PConnectionType, VideoCodec } from '../dist/vendor/p2p/types.js';
 import { PassThrough } from 'node:stream';
@@ -16,7 +21,7 @@ import { PushNotificationService } from '../dist/vendor/push/service.js';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // keesmod/eufy-mega-client#142, ha-eufy-cam#66: a standalone T84A1 behind the
-// experimentalStandalone opt-in. ha-eufy-cam#152: a standalone T8410 behind the same
+// experimentalStandalone opt-in. #142 as well: a standalone T8424 since 0.30.2. ha-eufy-cam#152: a standalone T8410 behind the same
 // opt-in. ha-eufy-cam#168: a standalone T8410C as well. All rows and observations are
 // synthetic.
 const complete = { did: true, license: true, adminUser: true, lanAddress: true };
@@ -60,13 +65,30 @@ const indoorPanTilt2K = (extra = {}) =>
     params: [{ param_type: 1176, param_value: '192.168.1.43' }],
     ...extra,
   });
+// keesmod/eufy-mega-client#142: a standalone Floodlight Cam 2K, its own station even when a
+// HomeBase 3 stores its video.
+const floodlight2K = (extra = {}) => ({
+  category: 'eufy_security',
+  device_sn: 'T8424_FIXTURE',
+  parent_sn: '',
+  device_model: 'T8424',
+  device_type: 39,
+  device_channel: 0,
+  device_name: 'Synthetic Floodlight Cam 2K',
+  main_sw_version: '2.1.1.5',
+  p2p_did: 'SYNTHETIC-000005-ABCDE',
+  p2p_license: 'SYNTHETIC',
+  member: { admin_user_id: 'synthetic-admin' },
+  params: [{ param_type: 1176, param_value: '192.168.1.44' }],
+  ...extra,
+});
 // The type 31 Indoor Pan&Tilt profiles. Their Indoor tests run for each of them.
 const panTilts = [
   ['T8410', indoorPanTilt],
   ['T8410C', indoorPanTilt2K],
 ];
 // The admitted profiles. Model-independent tests run for each of them.
-const admitted = [['T84A1', wallLight], ...panTilts];
+const admitted = [['T84A1', wallLight], ...panTilts, ['T8424', floodlight2K]];
 const homeBase = {
   category: 'eufy_security',
   device_sn: 'T8030_OWNER',
@@ -149,11 +171,11 @@ async function fixture(t, rows, options, check, transportOptions) {
   }
 }
 
-test('only the T8410, T8410C and T84A1 profiles allow the experimental standalone route', () => {
+test('only the T8410, T8410C, T84A1 and T8424 profiles allow the experimental standalone route', () => {
   const allowed = Object.entries(deviceProfiles)
     .filter(([, profile]) => profile.experimentalStandalone)
     .map(([model]) => model);
-  assert.deepEqual(allowed, ['T8410', 'T8410C', 'T84A1']);
+  assert.deepEqual(allowed, ['T8410', 'T8410C', 'T84A1', 'T8424']);
   for (const model of allowed) assert.equal(Object.isFrozen(deviceProfiles[model]), true, model);
   assert.deepEqual(deviceProfiles.T84A1.features, {
     snapshot: 'blocked',
@@ -212,6 +234,7 @@ for (const [model, row] of admitted)
         '192.168.1.40',
         '192.168.1.42',
         '192.168.1.43',
+        '192.168.1.44',
         'p2p',
       ])
         assert.equal(text.includes(secret), false, secret);
@@ -246,7 +269,6 @@ for (const [model, row] of admitted)
 test('the opt-in admits no other standalone model, type or HomeBase topology', () => {
   const others = [
     ['T8134', 63],
-    ['T8424', 39],
     ['T8200', 5],
     ['T81A0', 10005],
     ['T8452', 132],
@@ -269,6 +291,8 @@ test('the opt-in admits no other standalone model, type or HomeBase topology', (
     indoorPanTilt({ device_model: 'T8410-C' }),
     indoorPanTilt2K({ device_type: 35 }),
     indoorPanTilt2K({ device_model: 'T8410C21' }),
+    floodlight2K({ device_type: 37 }),
+    floodlight2K({ device_model: 'T8424-2' }),
   ]) {
     const inventory = discover([wrong], { experimentalStandalone: true });
     const pair = `${wrong.device_model}/${wrong.device_type}`;
@@ -692,6 +716,120 @@ for (const [model, row] of panTilts)
     }
   });
 
+test('an opted-in T8424 under an H3 parent stays unsupported_station and gets no station', async (t) => {
+  const inventory = discover([homeBase, floodlight2K({ parent_sn: 'T8030_OWNER' })], {
+    experimentalStandalone: true,
+  });
+  assert.equal(
+    inventory.result.relationships.some((r) => r.transport === 'experimental'),
+    false,
+  );
+  assert.deepEqual(
+    inventory.result.issues.filter((i) => i.deviceId === 'T8424_FIXTURE').map((i) => i.code),
+    ['unsupported_station'],
+  );
+  assert.equal(inventory.owners.get('T8424_FIXTURE'), undefined);
+  await fixture(
+    t,
+    [homeBase, floodlight2K({ parent_sn: 'T8030_OWNER' })],
+    { experimentalStandalone: true },
+    async (transport, _inventory, created) => {
+      assert.deepEqual(
+        created.map((s) => s.wire.station_sn),
+        ['T8030_OWNER'],
+      );
+      assert.equal(transport.cameras.has('T8424_FIXTURE'), false);
+    },
+  );
+});
+
+test('the transport makes the opted-in T8424 its own local station with a FloodlightCamera', async (t) => {
+  const id = 'T8424_FIXTURE';
+  await fixture(
+    t,
+    [homeBase, eufyCam, floodlight2K()],
+    { experimentalStandalone: true },
+    async (transport, _inventory, created) => {
+      const standalone = created.find((s) => s.wire.station_sn === id);
+      assert.ok(standalone);
+      assert.equal(standalone.wire.device_type, 39);
+      assert.equal(standalone.wire.station_model, 'T8424');
+      assert.equal(standalone.address, '192.168.1.44');
+      assert.equal(standalone.connectionType, P2PConnectionType.ONLY_LOCAL);
+      // #142: the reported T8424 answers the key request without a key.
+      assert.equal(standalone.keyWithoutAnswer, true);
+      assert.equal(
+        created.find((s) => s.wire.station_sn === 'T8030_OWNER').keyWithoutAnswer,
+        false,
+      );
+      const camera = transport.cameras.get(id);
+      assert.equal(camera.constructor, FloodlightCamera);
+      assert.equal(camera.getStationSerial(), id);
+      assert.equal(camera.getChannel(), 0);
+      for (const feature of ['snapshot', 'live'])
+        assert.deepEqual(transport.cameraCapabilities(id)[feature], {
+          available: true,
+          status: 'experimental',
+          reason: null,
+        });
+      assert.deepEqual(transport.cameraCapabilities(id).recordings, {
+        available: false,
+        status: 'unsupported',
+        reason: 'standalone_recordings_unverified',
+      });
+      assert.deepEqual(transport.cameraCapabilities('T8161_FIXTURE').recordings, {
+        available: true,
+        status: 'experimental',
+        reason: null,
+      });
+      assert.equal(transport.cameras.get('T8161_FIXTURE').getStationSerial(), 'T8030_OWNER');
+      assert.equal(transport.device(id).stationId, id);
+    },
+  );
+});
+
+test('a real vendor station sends the floodlight live envelope for a standalone T8424', async () => {
+  const id = 'T8424_FIXTURE';
+  const transport = new DeviceTransport();
+  try {
+    const inventory = discover([floodlight2K()], { experimentalStandalone: true });
+    await transport.load(inventory.raw, inventory);
+    const station = transport.stations.get(id);
+    const camera = transport.cameras.get(id);
+    assert.ok(station instanceof Station);
+    assert.equal(station.getDeviceType(), 39);
+    assert.equal(station.isConnected(), false);
+    assert.equal(camera.constructor, FloodlightCamera);
+    for (const command of [CommandName.DeviceStartLivestream, CommandName.DeviceStopLivestream])
+      assert.equal(camera.hasCommand(command), true, command);
+    assert.equal(station.hasCommand(CommandName.StationDatabaseQueryLatestInfo), true);
+    // Capture the commands without a socket. The public key modulus is synthetic.
+    const sent = [];
+    const session = station.p2pSession;
+    station.p2pSession = {
+      getRSAPrivateKey: () => ({ exportKey: () => ({ n: Buffer.from([0, 171, 205]) }) }),
+      isLiveStreaming: () => false,
+      sendCommandWithStringPayload: (command) => sent.push(command),
+      sendCommandWithInt: (command) => sent.push(command),
+    };
+    try {
+      station.startLivestream(camera, VideoCodec.H264);
+      assert.equal(sent.length, 1);
+      const [command] = sent;
+      assert.equal(command.commandType, CommandType.CMD_DOORBELL_SET_PAYLOAD);
+      assert.equal(command.channel, 0);
+      assert.deepEqual(JSON.parse(command.value), {
+        commandType: 1000,
+        data: { accountId: 'synthetic-admin', encryptkey: 'abcd', streamtype: VideoCodec.H264 },
+      });
+    } finally {
+      station.p2pSession = session;
+    }
+  } finally {
+    await transport.close();
+  }
+});
+
 for (const [model, row] of admitted)
   for (const enabled of [true, false])
     test(`the client ${enabled ? 'forwards' : 'omits'} the experimentalStandalone opt-in for a ${model}`, async (t) => {
@@ -807,7 +945,7 @@ for (const [model, row] of admitted)
         }
         assert.equal(processed, 0);
         // ha-eufy-cam#185: the event filter admits the native T84A1 detection only,
-        // for Detections. The T8410 and T8410C stay refused.
+        // for Detections. The T8410, T8410C and T8424 stay refused.
         assert.equal(transport.filterPush(native, 'cloud'), model === 'T84A1');
         assert.equal(transport.filterPush(message, 'cloud'), false);
         assert.equal(transport.filterPush({ ...message, device_sn: '' }, 'cloud'), false);
@@ -929,7 +1067,7 @@ for (const [model, row] of panTilts)
   });
 
 // ha-eufy-cam#185: motion and person pushes of a standalone T84A1 become events.
-// Everything else, and every T8410 and T8410C push, stays refused and counted. No
+// Everything else, and every T8410, T8410C and T8424 push, stays refused and counted. No
 // standalone push reaches the vendored handlers, issues a command or connects.
 const T84A1 = 'T84A1_FIXTURE';
 const zeroObservation = {
@@ -1130,7 +1268,9 @@ test('a T84A1 push naming another serial is refused and fires no camera', async 
   );
 });
 
-for (const [model, row] of panTilts)
+// The admitted cameras without standalone events.
+const withoutEvents = [...panTilts, ['T8424', floodlight2K]];
+for (const [model, row] of withoutEvents)
   test(`standalone ${model} motion and person pushes stay refused`, async (t) => {
     const id = `${model}_FIXTURE`;
     await fixture(
@@ -1147,7 +1287,7 @@ for (const [model, row] of panTilts)
               detection(event_type, {
                 device_sn: id,
                 station_sn: id,
-                type: 31,
+                type: row().device_type,
                 unique_id: `${event_type}`,
               }),
             );
@@ -1161,7 +1301,7 @@ for (const [model, row] of panTilts)
             refused: { ...zeroObservation.refused, events_not_enabled: 2 },
             sources: { cloud: 2, local: 0 },
             eventCodes: { 3101: 1, 3102: 1 },
-            pushTypes: { 31: 2 },
+            pushTypes: { [row().device_type]: 2 },
           });
         } finally {
           await events.close();
