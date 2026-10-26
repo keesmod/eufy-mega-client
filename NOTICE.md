@@ -55,7 +55,18 @@ The reply is still dropped. The session and Station also list the custom data of
 sent commands of one name whose result is still pending, read-only.
 The Station also gains `databaseQueryLocalNewest`, a client-written builder for
 one read-only CMD_DATABASE_QUERY_LOCAL request for the newest 20 records of a
-day on channel 0, next to the unchanged upstream `databaseQueryLocal`.
+day on channel 0, next to the unchanged upstream `databaseQueryLocal`. Version
+0.30.2 adds a key setup observation to the P2P session: bounded counts and
+protocol numbers of what the session receives between its handshake and its
+command key, without identifiers or payload, which the client reads at most once
+per connection attempt. It also adds `setKeyWithoutAnswer` to the session and
+the Station. When the owner enables it, a session whose key request gets a
+successful command result holds its queued commands. Without a key answer within
+5 seconds it asks the caller for credentials and, only for LAN-derived
+credentials on local transport, goes on without a command key, reports the mode
+`none` and sends its commands unencrypted. Otherwise it releases the commands
+unchanged, or closes when the credentials fail. After it goes on without a key, a later key
+answer on that connection is ignored.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

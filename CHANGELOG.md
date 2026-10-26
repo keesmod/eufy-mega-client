@@ -1,27 +1,12 @@
 # Changelog
 
-## 0.30.2 - Unreleased
+## 0.30.2 - 2026-10-26
 
-- **Key setup observation**: `connectStation(id, { onKeySetup })` reports what
-  the session saw between `session_open` and the command key, including a
-  command result to the key request, as counts and protocol numbers without
-  identifiers or payload. It helps diagnose a standalone T8424 that stops at
-  `session_open` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
-  [API](docs/API.md#station-key-setup-observation-0302)). Diagnostics only,
-  reported in use on a standalone T8424.
-- **Key without a key answer**: an experimental standalone camera that answers
-  the key request with a successful result and no key answer now goes on after 5
-  seconds without command encryption ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
-  [API](docs/API.md#station-key-setup-observation-0302)). HomeBase sessions are
-  unchanged, and a standalone T8424 on firmware 2.1.1.5 was reported working.
-- **Standalone T8424**: with `experimentalStandalone`, a standalone Floodlight
-  Cam 2K `T8424`/39 becomes its own experimental owner with snapshot and live
-  ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
-  [FLOODLIGHT.md](docs/FLOODLIGHT.md#experimental-standalone-t8424-0302)).
-  Reported working on firmware 2.1.1.5, not independently reproduced.
+- Added the standalone Floodlight Cam 2K `T8424` behind `experimentalStandalone` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
+- Experimental standalone cameras that offer no command key now connect without command encryption ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
+- Added key setup diagnostics to `connectStation` with `onKeySetup` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
 
-Upgrade: `onKeySetup` is optional and additive. `StationState.commandEncryption`
-can now be `none`, so an exhaustive check on it needs that case. Rollback: 0.30.1.
+Upgrade: `StationState.commandEncryption` can now be `none`, so an exhaustive check on it needs that case. Rollback: 0.30.1.
 
 ## 0.30.1 - 2026-10-22
 
