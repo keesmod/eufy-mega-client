@@ -183,7 +183,8 @@ export interface StationState {
   alarm: boolean;
   alarmDelay: number;
   armDelay: number;
-  commandEncryption: 'lan-derived' | 'cipher' | null;
+  /** `none`: an experimental standalone camera that offered no key, its commands are not encrypted. */
+  commandEncryption: 'lan-derived' | 'cipher' | 'none' | null;
 }
 export interface Snapshot {
   deviceId: string;
@@ -344,9 +345,10 @@ export interface StationKeySetupObservation {
   /** Messages of `otherMessages` that arrived signed, which means encrypted. Since 0.30.2-beta.3. */
   signedMessages: number;
   /**
-   * Whether the session set the LAN-derived key itself after a successful key
-   * request result without a key answer. Only an experimental standalone camera
-   * allows that. Since 0.30.2-beta.3.
+   * Whether the session went on without a command key after a successful key
+   * request result without a key answer, so its commands are not encrypted.
+   * Only an experimental standalone camera allows that. Since 0.30.2-beta.3,
+   * without a key since 0.30.2-beta.4.
    */
   keyWithoutAnswer: boolean;
 }

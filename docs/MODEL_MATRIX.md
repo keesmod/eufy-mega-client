@@ -1068,26 +1068,43 @@ result released that query before any key, so it left unencrypted. The 1350 and
 the code, not a decoded message. Two explanations remain. The camera may expect
 the LAN-derived key, which does not depend on the answer in that mode, or it may
 work without command encryption, as an upstream session without a key answer
-keeps doing. 0.30.2-beta.3 lets an experimental standalone camera set the
-LAN-derived key itself after such a result and holds its queued commands until
-then, see [the key setup observation](API.md#station-key-setup-observation-0302).
-Its first answered command tells whether the T8424 accepts that key. Its
-`signedMessages` count tells whether the camera's own messages are encrypted.
-Sending commands without encryption would need a separate decision.
+keeps doing. 0.30.2-beta.3 let an experimental standalone camera set the
+LAN-derived key itself after such a result and held its queued commands until
+then.
+
+On 2026-10-26 the reporter [tested][T8424-beta3] bridge 0.8.40-beta.3 with client
+0.30.2-beta.3 under the same conditions.
+
+- The T8424 connected. `keyWithoutAnswer` was true and `signedMessages` 0, so
+  none of the camera's messages before the key was encrypted.
+- Two live view attempts got return code -100 (`ERROR_NULL_POINT`) for the
+  encrypted live start within 24 to 39 ms, and no video. Each ended after about
+  20 seconds.
+- No snapshot arrived. The database query left encrypted this time. The same
+  query sent unencrypted in beta.2 was most likely answered.
+
+So the T8424 on firmware 2.1.1.5 most likely does not use command encryption.
+The maintainer decided on 2026-10-26 that such a camera goes on without a command
+key. 0.30.2-beta.4 does that for an experimental standalone camera after a
+successful result without a key answer, see
+[the key setup observation](API.md#station-key-setup-observation-0302). Whether
+snapshots and live view then work is not yet known.
 
 For this camera the states stay separate:
 
 - Recognition: the exact pair `T8424`/39 as a standalone floodlight descriptor
   without media since 0.26.0.
 - Experimental software coverage: none. The pair is not admitted on the route.
-- Reported hardware result: lookup and handshake on firmware 2.1.1.5, the key
-  request acknowledged and answered with a successful result without a key, no
-  command key. No media, recording or event result.
+- Reported hardware result: lookup, handshake and a connection with the
+  LAN-derived key on firmware 2.1.1.5, after a successful key request result
+  without a key. Live start refused with -100 and no snapshot with that key. No
+  recording or event result.
 
 [129]: https://github.com/keesmod/ha-eufy-cam/issues/129
 [T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
 [T8424-key-setup]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6397104597
 [T8424-result-code]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6400175091
+[T8424-beta3]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6410128247
 
 ## Reported T817L Wired Cam C31, 0.28.0
 
