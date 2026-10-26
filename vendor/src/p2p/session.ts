@@ -1346,8 +1346,7 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
    * command key, so its commands are not encrypted. A standalone T8424 answered
    * a live start encrypted with the LAN-derived key with -100, and most likely
    * answered a plain database query (#142). A cipher needs the answer, so then
-   * nothing changes. Queued
-   * commands wait until this is decided.
+   * nothing changes. Queued commands wait until this is decided.
    */
   private scheduleKeyWithoutAnswer(): void {
     if (!this.keyWithoutAnswerAllowed || this.keyWithoutAnswerPending || this.keyAnswerReceived) return;

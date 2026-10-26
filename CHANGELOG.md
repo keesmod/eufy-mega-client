@@ -15,9 +15,8 @@
   [API](docs/API.md#station-key-setup-observation-0302)). HomeBase sessions are
   unchanged, and whether a standalone T8424 then works is not yet known.
 
-Upgrade: `onKeySetup` is optional and additive, no code change is needed.
-`commandEncryption` and the `encryption ready` mode can now be `none`.
-Rollback: 0.30.1.
+Upgrade: `onKeySetup` is optional and additive. `StationState.commandEncryption`
+can now be `none`, so an exhaustive check on it needs that case. Rollback: 0.30.1.
 
 ## 0.30.1 - 2026-10-22
 

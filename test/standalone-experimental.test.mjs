@@ -329,7 +329,7 @@ test('the transport makes the opted-in T84A1 its own local station with snapshot
       assert.equal(standalone.wire.station_model, 'T84A1');
       assert.equal(standalone.address, '192.168.1.40');
       assert.equal(standalone.connectionType, P2PConnectionType.ONLY_LOCAL);
-      // Only the experimental owner may set its key without a key answer (#142).
+      // Only the experimental owner may go on without a command key (#142).
       assert.equal(standalone.keyWithoutAnswer, true);
       assert.equal(
         created.find((s) => s.wire.station_sn === 'T8030_OWNER').keyWithoutAnswer,

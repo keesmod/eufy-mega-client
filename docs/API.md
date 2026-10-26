@@ -310,9 +310,12 @@ numbers. `resultCode` is the result's protocol return code. The fields from
 `keyWithoutAnswer` in 0.30.2-beta.3 and later. A repeated VIDEO or BINARY
 datagram counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a
 datagram that still waits for an earlier one does not count in
-`repeatedDatagrams`. Counting starts with the handshake and stops once the command key is in place, the session went on without one, or the session closes. A later answer still sets the key after the 5-second wait, unless the session already went on without a key.
-The counters stay until the session starts its next connection. The observation
-carries no identifier, address, port, cipher ID, key or payload.
+`repeatedDatagrams`. Counting starts with the handshake and stops once the
+command key is in place, the session went on without one, or the session closes.
+A later answer still sets the key after the 5-second wait, unless the session
+already went on without a key. The counters stay until the session starts its
+next connection. The observation carries no identifier, address, port, cipher
+ID, key or payload.
 
 `requestAcknowledged: false` with `heartbeats` above zero means the station keeps
 the session alive but does not take the request. `resultWaitExpired: true` with
@@ -330,16 +333,17 @@ command result and no key answer, as a standalone T8424 on firmware 2.1.1.5 was
 Its session then waits the usual 5 seconds for a key answer and holds its queued
 commands meanwhile. Without an answer it asks the caller for credentials, with
 cipher ID -1 because no cipher was offered. Only when they are LAN-derived on
-local transport does it go on without a command key, report `encryption_ready`
-with mode `none`, set `keyWithoutAnswer` and release the held commands.
-`StationState.commandEncryption` is then `none`. Otherwise it releases them as
-before. Since 0.30.2-beta.4 those commands are not encrypted, so the account ID
-they carry and the public key of a live stream request cross the LAN readable,
-as in an upstream session without a key answer. In 0.30.2-beta.3 the session set
-the LAN-derived key instead, and the T8424 answered a live start with -100. A later key answer on that connection is ignored. A HomeBase session and
-every other result keep waiting for the key answer as before, and a cipher always
-needs the answer. Whether the camera answers shows only in its first command or
-media result.
+local transport does it go on without a command key, set `keyWithoutAnswer`,
+reach `encryption_ready` and release the held commands.
+`StationState.commandEncryption` is then `none`. Since 0.30.2-beta.4 those
+commands are not encrypted, so the account ID they carry and the public key of a
+live stream request cross the LAN readable, as in an upstream session without a
+key answer. A later key answer on that connection is ignored. Otherwise the
+session releases the held commands as before. In 0.30.2-beta.3 it set the
+LAN-derived key instead, and the T8424 answered a live start with -100. A
+HomeBase session and every other result keep waiting for the key answer as
+before, and a cipher always needs the answer. Whether the camera answers shows
+only in its first command or media result.
 
 ## Live media
 
@@ -1146,8 +1150,9 @@ with its own DID, completed the session handshake, or opened the session without
 a command key being established. The
 [lookup observation](#station-lookup-observation-0300) from `onLookup` shows
 whether anything else answered the lookup.
-A connected session sets the key locally, so the first answered command or media
-result is what shows the camera accepts it.
+A connected session sets the LAN-derived key locally, or uses no command key
+after a successful key request result without a key answer, so the first
+answered command or media result is what shows the camera accepts it.
 
 Every standalone relationship carries `descriptor`: whether the inventory row
 has a P2P device ID (`did`), a P2P license (`license`), an administrator user
