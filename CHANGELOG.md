@@ -6,7 +6,7 @@
 - Experimental standalone cameras that offer no command key now connect without command encryption ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
 - Added key setup diagnostics to `connectStation` with `onKeySetup` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
 
-Upgrade: no code change needed, but `StationState.commandEncryption` can now be `none`. Rollback: 0.30.1.
+Upgrade: `StationState.commandEncryption` can now be `none`, so an exhaustive check on it needs that case. Rollback: 0.30.1.
 
 ## 0.30.1 - 2026-10-22
 
