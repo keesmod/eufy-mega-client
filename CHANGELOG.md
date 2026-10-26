@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.30.2 - Unreleased
+## 0.30.2 - 2026-10-26
 
 - **Key setup observation**: `connectStation(id, { onKeySetup })` reports what
   the session saw between `session_open` and the command key, including a
@@ -12,8 +12,8 @@
 - **Key without a key answer**: an experimental standalone camera that answers
   the key request with a successful result and no key answer now goes on after 5
   seconds without command encryption ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
-  [API](docs/API.md#station-key-setup-observation-0302)). HomeBase sessions are
-  unchanged, and a standalone T8424 on firmware 2.1.1.5 was reported working.
+  [API](docs/API.md#station-key-setup-observation-0302)). Experimental, reported
+  working on a standalone T8424 on firmware 2.1.1.5.
 - **Standalone T8424**: with `experimentalStandalone`, a standalone Floodlight
   Cam 2K `T8424`/39 becomes its own experimental owner with snapshot and live
   ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
