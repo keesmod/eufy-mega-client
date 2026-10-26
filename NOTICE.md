@@ -65,7 +65,8 @@ successful command result holds its queued commands. Without a key answer within
 5 seconds it asks the caller for credentials and, only for LAN-derived
 credentials on local transport, goes on without a command key, reports the mode
 `none` and sends its commands unencrypted. Otherwise it releases the commands
-unchanged, or closes when the credentials fail. A later key answer on that connection is ignored.
+unchanged, or closes when the credentials fail. After it goes on without a key, a later key
+answer on that connection is ignored.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter
