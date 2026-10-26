@@ -229,8 +229,9 @@ export interface LiveStartOptions {
   onProgress?: (progress: LiveStartProgress) => void;
 }
 /**
- * `session_ready`: the P2P session that carries the stream is connected and
- * encrypted. `start_issued`: START was handed to that session.
+ * `session_ready`: the P2P session that carries the stream is connected, and
+ * encrypted unless an experimental standalone camera went on without a command
+ * key. `start_issued`: START was handed to that session.
  * `start_result`: the station answered START, with `returnCode`.
  * `no_data_end`: the P2P library ended the stream because no media followed.
  * `metadata`: the stream's metadata arrived and the start resolves.

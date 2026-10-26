@@ -1087,24 +1087,40 @@ So the T8424 on firmware 2.1.1.5 most likely does not use command encryption.
 The maintainer decided on 2026-10-26 that such a camera goes on without a command
 key. 0.30.2-beta.4 does that for an experimental standalone camera after a
 successful result without a key answer, see
-[the key setup observation](API.md#station-key-setup-observation-0302). Whether
-snapshots and live view then work is not yet known.
+[the key setup observation](API.md#station-key-setup-observation-0302).
 
-For this camera the states stay separate:
+On 2026-10-26 the reporter [tested][T8424-beta4] bridge 0.8.40-beta.4 with client
+0.30.2-beta.4 under the same conditions, built without the Docker layer cache.
+
+- The T8424 connected without a command key, with `keyWithoutAnswer` true.
+- A snapshot arrived in Home Assistant.
+- A 40-second live view from the viewer card started with return code 0, gave
+  H.264 metadata after 180 ms and 561 frames without drops, with audio input. One
+  decode error appeared after about 5 seconds and the video kept running.
+- The HomeBase 3 cameras on the same bridge kept working.
+
+0.30.2-beta.5 admits exactly `T8424`/39 with an empty or self parent to the
+experimental route, as described in
+[API.md](API.md#experimental-standalone-cameras) and
+[FLOODLIGHT.md](FLOODLIGHT.md#experimental-standalone-t8424-0302). Without the
+option it keeps `standalone_transport_unverified`, and an H3 parent still returns
+`unsupported_station`. For this camera the states stay separate:
 
 - Recognition: the exact pair `T8424`/39 as a standalone floodlight descriptor
-  without media since 0.26.0.
-- Experimental software coverage: none. The pair is not admitted on the route.
-- Reported hardware result: lookup, handshake and a connection with the
-  LAN-derived key on firmware 2.1.1.5, after a successful key request result
-  without a key. Live start refused with -100 and no snapshot with that key. No
-  recording or event result.
+  since 0.26.0.
+- Experimental software coverage: the standalone route since 0.30.2, with
+  synthetic rows only, and commands without encryption after a successful key
+  request result without a key.
+- Reported hardware result: snapshot and live view with audio on firmware
+  2.1.1.5 with client 0.30.2-beta.4 and a local profile entry, not independently
+  reproduced. No recording or event result. Other firmware is unknown.
 
 [129]: https://github.com/keesmod/ha-eufy-cam/issues/129
 [T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
 [T8424-key-setup]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6397104597
 [T8424-result-code]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6400175091
 [T8424-beta3]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6410128247
+[T8424-beta4]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6422927610
 
 ## Reported T817L Wired Cam C31, 0.28.0
 
@@ -1464,7 +1480,8 @@ H3 profile. Available state covers identity and observed firmware. Battery is
 not applicable, and availability remains unknown because the attributed model
 properties have no such field. Standalone recognition retains an explicit
 transport blocker and does not inherit H3 media or event coverage. Other owners
-remain blocked. T8420/X, T8422, T8423 and T8424 retain their entry barriers.
+remain blocked. T8420/X, T8422 and T8423 retain their entry barriers. T8424 keeps
+them under a HomeBase and as its own station without the experimental option.
 H3 storage compatibility alone does not establish command ownership. That model
 work remains open in this matrix after scoped software acceptance of [#29]/[#30].
 

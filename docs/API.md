@@ -1072,7 +1072,7 @@ Version 0.29.0 adds the client option `experimentalStandalone`. It is off by
 default. Without it, standalone results only gain the `descriptor` described
 below. With it, a standalone camera whose
 exact profile allows it becomes its own P2P owner on the existing local route.
-Three profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
+Four profiles allow it. `T84A1`/151, the Wall Light Cam S100, has it since 0.29.0 for
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142) and
 [ha-eufy-cam#66](https://github.com/keesmod/ha-eufy-cam/issues/66). `T8410`/31,
 the Indoor Cam E220, which Eufy's comparison page calls Indoor Cam 2K Pan & Tilt,
@@ -1080,12 +1080,17 @@ has it since 0.29.1 for
 [ha-eufy-cam#152](https://github.com/keesmod/ha-eufy-cam/issues/152).
 `T8410C`/31, the Indoor Cam Pan&Tilt 2K admitted in 0.29.2, has it since 0.30.0
 for [ha-eufy-cam#168](https://github.com/keesmod/ha-eufy-cam/issues/168).
+`T8424`/39, the Floodlight Cam 2K, has it since 0.30.2 for
+[#142](https://github.com/keesmod/eufy-mega-client/issues/142). It answers the
+key request without a key, so its commands are not encrypted, see the
+[key setup observation](#station-key-setup-observation-0302).
 
 - Discovery returns `{ kind: 'standalone', ownerId, transport: 'experimental', descriptor }`
   without an issue. Every other standalone row keeps
   `reason: 'standalone_transport_unverified'` and its issue. Under a HomeBase
-  all three models keep their H3 relationship and table media policy, blocked
-  for the T84A1 and H3 for the T8410 and T8410C.
+  the T84A1, T8410 and T8410C keep their H3 relationship and table media policy,
+  blocked for the T84A1 and H3 for the T8410 and T8410C. A T8424 under an H3
+  parent keeps `unsupported_station`.
 - The camera's `stationId` is its own ID. `connectStation(id, { onProgress })`
   connects to the camera itself with the same lookup, [stages](#station-connection-stages-0260)
   and LAN-derived command key as a HomeBase. No cloud DSK, cipher or legacy

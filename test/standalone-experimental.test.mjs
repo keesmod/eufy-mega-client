@@ -60,13 +60,30 @@ const indoorPanTilt2K = (extra = {}) =>
     params: [{ param_type: 1176, param_value: '192.168.1.43' }],
     ...extra,
   });
+// keesmod/eufy-mega-client#142: a standalone Floodlight Cam 2K, its own station even when a
+// HomeBase 3 stores its video.
+const floodlight2K = (extra = {}) => ({
+  category: 'eufy_security',
+  device_sn: 'T8424_FIXTURE',
+  parent_sn: '',
+  device_model: 'T8424',
+  device_type: 39,
+  device_channel: 0,
+  device_name: 'Synthetic Floodlight Cam 2K',
+  main_sw_version: '2.1.1.5',
+  p2p_did: 'SYNTHETIC-000005-ABCDE',
+  p2p_license: 'SYNTHETIC',
+  member: { admin_user_id: 'synthetic-admin' },
+  params: [{ param_type: 1176, param_value: '192.168.1.44' }],
+  ...extra,
+});
 // The type 31 Indoor Pan&Tilt profiles. Their Indoor tests run for each of them.
 const panTilts = [
   ['T8410', indoorPanTilt],
   ['T8410C', indoorPanTilt2K],
 ];
 // The admitted profiles. Model-independent tests run for each of them.
-const admitted = [['T84A1', wallLight], ...panTilts];
+const admitted = [['T84A1', wallLight], ...panTilts, ['T8424', floodlight2K]];
 const homeBase = {
   category: 'eufy_security',
   device_sn: 'T8030_OWNER',
@@ -149,11 +166,11 @@ async function fixture(t, rows, options, check, transportOptions) {
   }
 }
 
-test('only the T8410, T8410C and T84A1 profiles allow the experimental standalone route', () => {
+test('only the T8410, T8410C, T84A1 and T8424 profiles allow the experimental standalone route', () => {
   const allowed = Object.entries(deviceProfiles)
     .filter(([, profile]) => profile.experimentalStandalone)
     .map(([model]) => model);
-  assert.deepEqual(allowed, ['T8410', 'T8410C', 'T84A1']);
+  assert.deepEqual(allowed, ['T8410', 'T8410C', 'T84A1', 'T8424']);
   for (const model of allowed) assert.equal(Object.isFrozen(deviceProfiles[model]), true, model);
   assert.deepEqual(deviceProfiles.T84A1.features, {
     snapshot: 'blocked',
@@ -212,6 +229,7 @@ for (const [model, row] of admitted)
         '192.168.1.40',
         '192.168.1.42',
         '192.168.1.43',
+        '192.168.1.44',
         'p2p',
       ])
         assert.equal(text.includes(secret), false, secret);
@@ -246,7 +264,6 @@ for (const [model, row] of admitted)
 test('the opt-in admits no other standalone model, type or HomeBase topology', () => {
   const others = [
     ['T8134', 63],
-    ['T8424', 39],
     ['T8200', 5],
     ['T81A0', 10005],
     ['T8452', 132],
@@ -269,6 +286,8 @@ test('the opt-in admits no other standalone model, type or HomeBase topology', (
     indoorPanTilt({ device_model: 'T8410-C' }),
     indoorPanTilt2K({ device_type: 35 }),
     indoorPanTilt2K({ device_model: 'T8410C21' }),
+    floodlight2K({ device_type: 37 }),
+    floodlight2K({ device_model: 'T8424-2' }),
   ]) {
     const inventory = discover([wrong], { experimentalStandalone: true });
     const pair = `${wrong.device_model}/${wrong.device_type}`;

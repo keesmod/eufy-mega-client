@@ -15,6 +15,12 @@
   [API](docs/API.md#station-key-setup-observation-0302)). HomeBase sessions are
   unchanged, and whether a standalone T8424 then works is not yet known.
 
+- **Standalone T8424**: with `experimentalStandalone`, a standalone Floodlight
+  Cam 2K `T8424`/39 becomes its own experimental owner with snapshot and live
+  ([#142](https://github.com/keesmod/eufy-mega-client/issues/142),
+  [FLOODLIGHT.md](docs/FLOODLIGHT.md#experimental-standalone-t8424-0302)).
+  Reported working on firmware 2.1.1.5, not independently reproduced.
+
 Upgrade: `onKeySetup` is optional and additive. `StationState.commandEncryption`
 can now be `none`, so an exhaustive check on it needs that case. Rollback: 0.30.1.
 
