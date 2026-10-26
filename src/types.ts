@@ -513,7 +513,7 @@ export interface EventStatus {
  * Each refused push counts once, under the first rule it failed, in this order.
  */
 export type StandalonePushRefusal =
-  /** The exact profile has no standalone events, such as every T8410 and T8410C push. */
+  /** The exact profile has no standalone events, such as every T8410, T8410C and T8424 push. */
   | 'events_not_enabled'
   /** The camera is not initialised, or it or its session failed. */
   | 'owner_unavailable'

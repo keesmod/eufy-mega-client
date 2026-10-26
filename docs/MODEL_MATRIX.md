@@ -1111,9 +1111,10 @@ option it keeps `standalone_transport_unverified`, and an H3 parent still return
 - Experimental software coverage: the standalone route since 0.30.2, with
   synthetic rows only, and commands without encryption after a successful key
   request result without a key.
-- Reported hardware result: snapshot and live view with audio on firmware
-  2.1.1.5 with client 0.30.2-beta.4 and a local profile entry, not independently
-  reproduced. No recording or event result. Other firmware is unknown.
+- Confirmed hardware support: none. Reported: snapshot and live view with audio
+  on firmware 2.1.1.5 with client 0.30.2-beta.4 and a local profile entry, not
+  independently reproduced. No recording or event result. Other firmware is
+  unknown.
 
 [129]: https://github.com/keesmod/ha-eufy-cam/issues/129
 [T8424-result]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6385997225
