@@ -249,7 +249,8 @@ export interface LiveStartProgress {
  * `lookup`: the station connection started and its local lookup is about to begin.
  * `station_found`: the station answered the lookup with its own DID.
  * `session_open`: the station answered the session handshake.
- * `encryption_ready`: the command key is in place and the connection resolves.
+ * `encryption_ready`: the command key is in place, or an experimental standalone
+ * camera went on without one, and the connection resolves.
  */
 export type StationConnectionStage =
   'lookup' | 'station_found' | 'session_open' | 'encryption_ready';

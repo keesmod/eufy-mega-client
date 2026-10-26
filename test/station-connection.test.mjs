@@ -1854,18 +1854,19 @@ test('a failed result, a cipher or a closed session never go on without a key', 
 });
 
 test('queued commands wait for the decision and then leave unencrypted', async (t) => {
-  const { protocol, commandsSent } = keySession(t);
+  const { protocol, datagrams } = keySession(t);
   protocol.setKeyWithoutAnswer(true);
   protocol.handleMsg(camId, from(INVENTORY_IP));
   protocol.handleMsg(ackData(0), from(INVENTORY_IP));
   protocol.handleMsg(keyResult(), from(INVENTORY_IP));
-  // A command queued in the wait does not leave before the key.
-  protocol.sendCommandWithoutData(1101, 0);
+  // A command of the encrypted list queued in the wait does not leave before the decision.
+  protocol.sendCommandWithStringPayload({ commandType: 1700, value: '{"held":1}', channel: 0 });
   t.mock.timers.tick(4999);
-  assert.equal(commandsSent(1101), 0);
+  assert.equal(datagrams(1700).length, 0);
   t.mock.timers.tick(1);
   await settle();
-  assert.equal(commandsSent(1101), 1);
+  assert.equal(datagrams(1700).length, 1);
+  assert.ok(datagrams(1700)[0].includes(Buffer.from('{"held":1}')));
 });
 
 // Credentials that resolve or reject only when the test says so, in call order.

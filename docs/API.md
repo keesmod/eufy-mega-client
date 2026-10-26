@@ -310,9 +310,7 @@ numbers. `resultCode` is the result's protocol return code. The fields from
 `keyWithoutAnswer` in 0.30.2-beta.3 and later. A repeated VIDEO or BINARY
 datagram counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a
 datagram that still waits for an earlier one does not count in
-`repeatedDatagrams`. Counting starts with the handshake and stops once the
-command key is in place or the session closes. A later answer still sets the key
-after the 5-second wait, unless the session already set it without an answer.
+`repeatedDatagrams`. Counting starts with the handshake and stops once the command key is in place, the session went on without one, or the session closes. A later answer still sets the key after the 5-second wait, unless the session already went on without a key.
 The counters stay until the session starts its next connection. The observation
 carries no identifier, address, port, cipher ID, key or payload.
 
@@ -334,12 +332,11 @@ commands meanwhile. Without an answer it asks the caller for credentials, with
 cipher ID -1 because no cipher was offered. Only when they are LAN-derived on
 local transport does it go on without a command key, report `encryption_ready`
 with mode `none`, set `keyWithoutAnswer` and release the held commands.
-Otherwise it releases them as before. Since 0.30.2-beta.4 those commands are not
-encrypted, so the account ID they carry and the public key of a live stream
-request cross the LAN readable, as in an upstream session without a key answer.
-In 0.30.2-beta.3 the session set the LAN-derived key instead, and the T8424
-answered a live start with -100. `StationState.commandEncryption` is then
-`none`. A later key answer on that connection is ignored. A HomeBase session and
+`StationState.commandEncryption` is then `none`. Otherwise it releases them as
+before. Since 0.30.2-beta.4 those commands are not encrypted, so the account ID
+they carry and the public key of a live stream request cross the LAN readable,
+as in an upstream session without a key answer. In 0.30.2-beta.3 the session set
+the LAN-derived key instead, and the T8424 answered a live start with -100. A later key answer on that connection is ignored. A HomeBase session and
 every other result keep waiting for the key answer as before, and a cipher always
 needs the answer. Whether the camera answers shows only in its first command or
 media result.
@@ -381,7 +378,7 @@ the order observed, with `elapsedMs` since the call:
 
 | Stage           | Meaning                                                                                                                                 |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `session_ready` | The P2P session that carries the stream is connected and encrypted                                                                      |
+| `session_ready` | The P2P session that carries the stream is connected, encrypted unless an experimental standalone camera went on without a command key  |
 | `start_issued`  | START was handed to that session                                                                                                        |
 | `start_result`  | The station answered START, with its numeric `returnCode`, 0 for success                                                                |
 | `no_data_end`   | The P2P library ended the stream because no media followed: 5 seconds after the station's answer, or 20 seconds after START without one |

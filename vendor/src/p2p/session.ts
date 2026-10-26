@@ -1344,8 +1344,9 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
    * seconds for the key answer. Without one, and only when the caller selects
    * LAN-derived credentials on local transport, the session goes on without a
    * command key, so its commands are not encrypted. A standalone T8424 answered
-   * commands encrypted with the LAN-derived key with -100 and plain ones with
-   * data (#142). A cipher needs the answer, so then nothing changes. Queued
+   * a live start encrypted with the LAN-derived key with -100, and most likely
+   * answered a plain database query (#142). A cipher needs the answer, so then
+   * nothing changes. Queued
    * commands wait until this is decided.
    */
   private scheduleKeyWithoutAnswer(): void {
@@ -1404,8 +1405,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
   /**
    * Client addition: the counters of the latest session between its handshake
    * and its command key, undefined when no handshake completed since the session
-   * last started a connection. Counting stops once the key is in place or the
-   * session closes. Reading leaves them in place.
+   * last started a connection. Counting stops once the key is in place, the
+   * session went on without one, or the session closes. Reading leaves them in place.
    */
   public getKeySetupObservation(): KeySetupObservation | undefined {
     const state = this.keySetupObservation;

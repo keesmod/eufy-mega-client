@@ -517,6 +517,23 @@ for (const [model, row] of admitted)
       );
     });
 
+test('a standalone owner that went on without a command key is connected with commandEncryption none', async (t) => {
+  const [model, row] = admitted[0];
+  const id = `${model}_FIXTURE`;
+  await fixture(t, [row()], { experimentalStandalone: true }, async (transport, _i, created) => {
+    const [station] = created;
+    station.connect = async () => {
+      station.emit('station found', station);
+      station.emit('connect', station);
+      station.emit('encryption ready', station, 'none');
+    };
+    await transport.connect(id);
+    station.isConnected = () => true;
+    const state = transport.state(id);
+    assert.deepEqual([state.connected, state.commandEncryption], [true, 'none']);
+  });
+});
+
 for (const [model, row] of admitted)
   test(`the standalone ${model} owner connects with stages, then starts live on its own channel`, async (t) => {
     const id = `${model}_FIXTURE`;
