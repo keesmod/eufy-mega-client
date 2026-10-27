@@ -307,7 +307,7 @@ export interface StationLookupObservation {
 /**
  * What the session of one connection attempt saw between `session_open` and its
  * command key. No identifier, address, port or payload. Counts saturate at 999.
- * See docs/API.md, station key setup observation.
+ * See docs/API.md, station key setup observation. Since 0.30.2.
  */
 export interface StationKeySetupObservation {
   /** Command key requests sent, the first send and every resend. Counted for camera and HomeBase sessions. */
@@ -329,28 +329,27 @@ export interface StationKeySetupObservation {
   /**
    * Command results on the DATA channel matched to the key request. They carry no
    * key and end the answer wait. After return code 503 the session resends the
-   * request instead of waiting for an answer. Since 0.30.2-beta.2.
+   * request instead of waiting for an answer.
    */
   results: number;
-  /** Return code of the latest unencrypted result, absent when none arrived. Since 0.30.2-beta.2. */
+  /** Return code of the latest unencrypted result, absent when none arrived. */
   resultCode?: number;
-  /** Whether a result arrived encrypted, so its return code was not readable. Since 0.30.2-beta.2. */
+  /** Whether a result arrived encrypted, so its return code was not readable. */
   resultEncrypted: boolean;
-  /** Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel. Since 0.30.2-beta.2. */
+  /** Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel. */
   controlMessages: number;
-  /** The first three distinct command IDs among `otherMessages`, in arrival order. Since 0.30.2-beta.2. */
+  /** The first three distinct command IDs among `otherMessages`, in arrival order. */
   otherCommands: number[];
-  /** VIDEO and BINARY datagrams, which the session does not parse before a stream starts. A repeated one also counts in `repeatedDatagrams`. Since 0.30.2-beta.2. */
+  /** VIDEO and BINARY datagrams, which the session does not parse before a stream starts. A repeated one also counts in `repeatedDatagrams`. */
   mediaDatagrams: number;
-  /** DATA datagrams the session had already processed, resent by the station. Since 0.30.2-beta.2. */
+  /** DATA datagrams the session had already processed, resent by the station. */
   repeatedDatagrams: number;
-  /** Messages of `otherMessages` that arrived signed, which means encrypted. Since 0.30.2-beta.3. */
+  /** Messages of `otherMessages` that arrived signed, which means encrypted. */
   signedMessages: number;
   /**
    * Whether the session went on without a command key after a successful key
    * request result without a key answer, so its commands are not encrypted.
-   * Only an experimental standalone camera allows that. Since 0.30.2-beta.3,
-   * without a key since 0.30.2-beta.4.
+   * Only an experimental standalone camera allows that.
    */
   keyWithoutAnswer: boolean;
 }
@@ -373,6 +372,7 @@ export interface StationConnectOptions {
    * Called synchronously at most once per attempt that reached `session_open`,
    * when it resolves, fails or is cancelled. Errors it throws are ignored. It
    * cannot change the connection. See docs/API.md, station key setup observation.
+   * Since 0.30.2.
    */
   onKeySetup?: (observation: StationKeySetupObservation) => void;
 }
