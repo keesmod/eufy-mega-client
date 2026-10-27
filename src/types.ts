@@ -329,28 +329,27 @@ export interface StationKeySetupObservation {
   /**
    * Command results on the DATA channel matched to the key request. They carry no
    * key and end the answer wait. After return code 503 the session resends the
-   * request instead of waiting for an answer. Since 0.30.2-beta.2.
+   * request instead of waiting for an answer. Since 0.30.2.
    */
   results: number;
-  /** Return code of the latest unencrypted result, absent when none arrived. Since 0.30.2-beta.2. */
+  /** Return code of the latest unencrypted result, absent when none arrived. Since 0.30.2. */
   resultCode?: number;
-  /** Whether a result arrived encrypted, so its return code was not readable. Since 0.30.2-beta.2. */
+  /** Whether a result arrived encrypted, so its return code was not readable. Since 0.30.2. */
   resultEncrypted: boolean;
-  /** Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel. Since 0.30.2-beta.2. */
+  /** Messages of `otherMessages` on the CONTROL channel. The rest came on the DATA channel. Since 0.30.2. */
   controlMessages: number;
-  /** The first three distinct command IDs among `otherMessages`, in arrival order. Since 0.30.2-beta.2. */
+  /** The first three distinct command IDs among `otherMessages`, in arrival order. Since 0.30.2. */
   otherCommands: number[];
-  /** VIDEO and BINARY datagrams, which the session does not parse before a stream starts. A repeated one also counts in `repeatedDatagrams`. Since 0.30.2-beta.2. */
+  /** VIDEO and BINARY datagrams, which the session does not parse before a stream starts. A repeated one also counts in `repeatedDatagrams`. Since 0.30.2. */
   mediaDatagrams: number;
-  /** DATA datagrams the session had already processed, resent by the station. Since 0.30.2-beta.2. */
+  /** DATA datagrams the session had already processed, resent by the station. Since 0.30.2. */
   repeatedDatagrams: number;
-  /** Messages of `otherMessages` that arrived signed, which means encrypted. Since 0.30.2-beta.3. */
+  /** Messages of `otherMessages` that arrived signed, which means encrypted. Since 0.30.2. */
   signedMessages: number;
   /**
    * Whether the session went on without a command key after a successful key
    * request result without a key answer, so its commands are not encrypted.
-   * Only an experimental standalone camera allows that. Since 0.30.2-beta.3,
-   * without a key since 0.30.2-beta.4.
+   * Only an experimental standalone camera allows that. Since 0.30.2.
    */
   keyWithoutAnswer: boolean;
 }
