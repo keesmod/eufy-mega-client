@@ -54,7 +54,7 @@ jobs:
       # main and every release run keep the complete suite and package.
       - name: Test the documentation against the code
         if: ${{ steps.scope.outputs.docs_only == 'true' }}
-        run: npm run build && node --test test/family-compatibility.test.mjs test/device-profiles.test.mjs
+        run: npm run build && node --test --test-timeout=15000 test/family-compatibility.test.mjs test/device-profiles.test.mjs
       - name: Build and test the compiled tarball in a clean consumer
         id: bundle
         if: ${{ steps.scope.outputs.docs_only != 'true' }}
