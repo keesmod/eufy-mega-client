@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.30.3 - Unreleased
+
+- The key setup type docs now name 0.30.2 instead of its betas ([#262](https://github.com/keesmod/eufy-mega-client/pull/262)).
+
 ## 0.30.2 - 2026-10-26
 
 - Added the standalone Floodlight Cam 2K `T8424` behind `experimentalStandalone` ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
