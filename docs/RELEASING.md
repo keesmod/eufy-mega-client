@@ -90,10 +90,21 @@ the stable release:
 - A stable batch stays under about 300 words.
 
 All Validate checks must pass on the current PR commit. The final **ci** check
-fails if any prerequisite failed, timed out, was cancelled or skipped. Protect
-`main` by requiring a pull request, up-to-date branches, resolved conversations
-and the GitHub Actions `ci` check; disallow force pushes and branch deletion.
-No second maintainer approval is required for this single-maintainer project.
+fails if any prerequisite failed, timed out, was cancelled or skipped.
+
+A pull request into `main`, or a push to a branch other than `main`, that
+changes only Markdown at the root or under `docs/`, except the generated
+`docs/DEVICE_PROFILES.md`, runs a shorter Validate. `scripts/ci_scope.py`
+detects it. The dependency, workflow, model matrix, release and format checks
+still run, and so do the tests that read `docs/`. The rest of the test suite
+and the package build are skipped. A push to `main`, a pull request into
+another branch and every Release run keep the complete workflow. Such a pull
+request needs no blind review rounds.
+
+Protect `main` by requiring a pull request, up-to-date branches, resolved
+conversations and the GitHub Actions `ci` check; disallow force pushes and
+branch deletion. No second maintainer approval is required for this
+single-maintainer project.
 
 After merge, check `ci` on the resulting `main` commit. Branch CI alone is not
 release evidence. Each Release run calls the same complete Validate workflow
