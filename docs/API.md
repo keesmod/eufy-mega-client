@@ -306,8 +306,7 @@ Counts saturate at 999. `requestSends` covers the key request of camera and
 HomeBase sessions. Smart safe and lock sessions send it another way and count
 only some or none of those sends. `otherCommands` holds protocol command
 numbers. `resultCode` is the result's protocol return code. The fields from
-`results` on are in 0.30.2-beta.2 and later, `signedMessages` and
-`keyWithoutAnswer` in 0.30.2-beta.3 and later. A repeated VIDEO or BINARY
+`results` on are in 0.30.2 and later. A repeated VIDEO or BINARY
 datagram counts in both `mediaDatagrams` and `repeatedDatagrams`. A resend of a
 datagram that still waits for an earlier one does not count in
 `repeatedDatagrams`. Counting starts with the handshake and stops once the
@@ -335,13 +334,11 @@ commands meanwhile. Without an answer it asks the caller for credentials, with
 cipher ID -1 because no cipher was offered. Only when they are LAN-derived on
 local transport does it go on without a command key, set `keyWithoutAnswer`,
 reach `encryption_ready` and release the held commands.
-`StationState.commandEncryption` is then `none`. Since 0.30.2-beta.4 those
-commands are not encrypted, so the account ID they carry and the public key of a
+`StationState.commandEncryption` is then `none`. Those commands are not
+encrypted, so the account ID they carry and the public key of a
 live stream request cross the LAN readable, as in an upstream session without a
 key answer. A later key answer on that connection is ignored. Otherwise the
-session releases the held commands as before. In 0.30.2-beta.3 it set the
-LAN-derived key instead, and the T8424 answered a live start with -100. A
-HomeBase session and every other result keep waiting for the key answer as
+session releases the held commands as before. A HomeBase session and every other result keep waiting for the key answer as
 before, and a cipher always needs the answer. Whether the camera answers shows
 only in its first command or media result.
 

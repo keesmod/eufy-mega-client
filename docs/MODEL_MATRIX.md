@@ -1099,7 +1099,18 @@ On 2026-10-26 the reporter [tested][T8424-beta4] bridge 0.8.40-beta.4 with clien
   decode error appeared after about 5 seconds and the video kept running.
 - The HomeBase 3 cameras on the same bridge kept working.
 
-0.30.2-beta.5 admits exactly `T8424`/39 with an empty or self parent to the
+On 2026-10-27 the reporter [confirmed][T8424-stable] the stable release with
+bridge 0.8.40, client 0.30.2 and integration 0.8.49, built without the Docker
+layer cache, without the local profile entry and with
+`EUFY_EXPERIMENTAL_STANDALONE=true`.
+
+- The T8424 connected on the experimental route.
+- A snapshot arrived.
+- Live view started with return code 0 and gave 220 frames in about 16 seconds
+  without drops, with audio.
+- The HomeBase 3 cameras on the same bridge kept working.
+
+0.30.2 admits exactly `T8424`/39 with an empty or self parent to the
 experimental route, as described in
 [API.md](API.md#experimental-standalone-cameras) and
 [FLOODLIGHT.md](FLOODLIGHT.md#experimental-standalone-t8424-0302). Without the
@@ -1112,7 +1123,7 @@ option it keeps `standalone_transport_unverified`, and an H3 parent still return
   synthetic rows only, and commands without encryption after a successful key
   request result without a key.
 - Confirmed hardware support: none. Reported: snapshot and live view with audio
-  on firmware 2.1.1.5 with client 0.30.2-beta.4 and a local profile entry, not
+  on firmware 2.1.1.5 with client 0.30.2 without a local profile entry, not
   independently reproduced. No recording or event result. Other firmware is
   unknown.
 
@@ -1122,6 +1133,7 @@ option it keeps `standalone_transport_unverified`, and an H3 parent still return
 [T8424-result-code]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6400175091
 [T8424-beta3]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6410128247
 [T8424-beta4]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6422927610
+[T8424-stable]: https://github.com/keesmod/eufy-mega-client/issues/142#issuecomment-6436025222
 
 ## Reported T817L Wired Cam C31, 0.28.0
 

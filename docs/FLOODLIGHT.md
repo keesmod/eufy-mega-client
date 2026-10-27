@@ -42,7 +42,7 @@ The reported camera on firmware 2.1.1.5 answers the key request with a
 successful result and no key. The client then goes on without command
 encryption, so its commands cross the LAN readable, see the
 [key setup observation](API.md#station-key-setup-observation-0302). With client
-0.30.2-beta.4 and a local profile entry, its reporter on
+0.30.2 and no local profile entry, its reporter on
 [#142](https://github.com/keesmod/eufy-mega-client/issues/142) had a snapshot
 and live view with audio, as recorded in the
 [model matrix](MODEL_MATRIX.md#reported-standalone-t8424-attempt-2026-10-24).
