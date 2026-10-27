@@ -92,13 +92,14 @@ the stable release:
 All Validate checks must pass on the current PR commit. The final **ci** check
 fails if any prerequisite failed, timed out, was cancelled or skipped.
 
-A pull request, or a push to a branch other than `main`, that changes only
-Markdown at the root or under `docs/`, except the generated
-`docs/DEVICE_PROFILES.md`, runs a shorter Validate. `scripts/ci_scope.py` detects it. The workflow, model matrix, release
-and format checks still run, and so does the test that reads the model matrix.
-The full test suite and the package build are skipped. A push to `main` and
-every Release run keep the complete workflow. Such a pull request needs no
-blind review rounds.
+A pull request into `main`, or a push to a branch other than `main`, that
+changes only Markdown at the root or under `docs/`, except the generated
+`docs/DEVICE_PROFILES.md`, runs a shorter Validate. `scripts/ci_scope.py`
+detects it. The dependency, workflow, model matrix, release and format checks
+still run, and so do the tests that read `docs/`. The rest of the test suite
+and the package build are skipped. A push to `main`, a pull request into
+another branch and every Release run keep the complete workflow. Such a pull
+request needs no blind review rounds.
 
 Protect `main` by requiring a pull request, up-to-date branches, resolved
 conversations and the GitHub Actions `ci` check; disallow force pushes and

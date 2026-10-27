@@ -36,6 +36,7 @@ jobs:
         id: scope
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: python3 scripts/ci_scope.py
       - run: python3 scripts/check_workflows.py
       - run: python3 scripts/check_model_matrix.py
@@ -49,11 +50,11 @@ jobs:
       - run: npm run format:check
       - run: npm test
         if: ${{ steps.scope.outputs.docs_only != 'true' }}
-      # A documentation-only change runs only the test that reads the model
-      # matrix. main and every release run keep the complete suite and package.
-      - name: Check the model matrix against the synthetic families
+      # A documentation-only change runs only the tests that read docs/.
+      # main and every release run keep the complete suite and package.
+      - name: Test the documentation against the code
         if: ${{ steps.scope.outputs.docs_only == 'true' }}
-        run: npm run build && node --test test/family-compatibility.test.mjs
+        run: npm run build && node --test test/family-compatibility.test.mjs test/device-profiles.test.mjs
       - name: Build and test the compiled tarball in a clean consumer
         id: bundle
         if: ${{ steps.scope.outputs.docs_only != 'true' }}
