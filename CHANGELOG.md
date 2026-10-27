@@ -2,7 +2,7 @@
 
 ## 0.30.3 - Unreleased
 
-- Cleaned up the key setup type docs to name 0.30.2 instead of its betas ([#142](https://github.com/keesmod/eufy-mega-client/issues/142)).
+- The key setup type docs now name 0.30.2 instead of its betas ([#262](https://github.com/keesmod/eufy-mega-client/pull/262)).
 
 ## 0.30.2 - 2026-10-26
 
