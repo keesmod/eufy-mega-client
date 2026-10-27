@@ -32,6 +32,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Detect a documentation-only change
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 scripts/ci_scope.py
       - run: python3 scripts/check_workflows.py
       - run: python3 scripts/check_model_matrix.py
       - run: python3 -m unittest discover -s scripts/tests -v
@@ -43,10 +48,18 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run format:check
       - run: npm test
+        if: ${{ steps.scope.outputs.docs_only != 'true' }}
+      # A documentation-only change runs only the test that reads the model
+      # matrix. main and every release run keep the complete suite and package.
+      - name: Check the model matrix against the synthetic families
+        if: ${{ steps.scope.outputs.docs_only == 'true' }}
+        run: npm run build && node --test test/family-compatibility.test.mjs
       - name: Build and test the compiled tarball in a clean consumer
         id: bundle
+        if: ${{ steps.scope.outputs.docs_only != 'true' }}
         run: python3 scripts/release.py build
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - if: ${{ steps.scope.outputs.docs_only != 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-package
           path: artifacts/release/
