@@ -22,6 +22,7 @@ import {
   type StationConnectOptions,
   type StreamStop,
   type StandalonePushObservation,
+  type PresetMoveResult,
 } from './types.js';
 
 export class EufyMegaClient extends EventEmitter<ClientEvents> {
@@ -199,6 +200,18 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   }
   async setGuardMode(id: string, mode: number, signal?: AbortSignal) {
     return (await this.deviceTransport()).setGuardMode(id, mode, signal);
+  }
+  /**
+   * ha-eufy-cam#229: moves an admitted T8170 under a HomeBase 3 to saved preset
+   * 0..3, the app's preset 1..4. Resolves when the HomeBase accepts the move,
+   * not when the camera stops. Never retried. See docs/API.md, preset moves.
+   */
+  async moveToPreset(
+    cameraId: string,
+    preset: number,
+    signal?: AbortSignal,
+  ): Promise<PresetMoveResult> {
+    return (await this.deviceTransport()).moveToPreset(cameraId, preset, signal);
   }
   /**
    * `options` is an abort signal or {@link RecordingOperationOptions}, which can

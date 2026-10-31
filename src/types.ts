@@ -47,6 +47,21 @@ export interface CameraCapabilities {
   snapshot: CameraMediaCapability;
   live: CameraMediaCapability;
   recordings: CameraMediaCapability;
+  /**
+   * Since 0.30.3, ha-eufy-cam#229: moves to a saved preset. This client always
+   * sets it. Available only for an admitted T8170 under a HomeBase 3.
+   */
+  readonly presets?: CameraMediaCapability;
+}
+/**
+ * A preset move the HomeBase accepted. Acceptance is not proof that the camera
+ * finished moving. See docs/API.md, preset moves.
+ */
+export interface PresetMoveResult {
+  /** Wire index 0..3, the app's preset 1..4. */
+  readonly preset: number;
+  /** Time from the send to the HomeBase result. */
+  readonly elapsedMs: number;
 }
 export interface Device {
   id: string;

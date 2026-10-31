@@ -22,6 +22,15 @@ a cloud cipher. Its snapshot and live are unchanged, and cameras under a
 HomeBase keep their recordings capability. List and calendar stay owner-wide
 metadata calls, as described below.
 
+Since 0.30.3 the result also has an optional `presets` field for
+[ha-eufy-cam#229](https://github.com/keesmod/ha-eufy-cam/issues/229). This
+client always sets it. It is available only for the exact `T8170` under an
+admitted HomeBase 3, see [preset moves](API.md#preset-moves-0303). Every other
+camera reports `{ available: false, status: 'unsupported', reason:
+'operation_outside_hardware_scope' }`, or an earlier failure such as
+`unknown_camera` as its reason. Older clients omit the field. Treat a missing
+field as unavailable.
+
 An available operation has status `experimental` and reason null. This describes
 software admission, not reachability, idle ownership, fresh imagery or physical
 support. Runtime operations still enforce authentication, concurrency, connection,

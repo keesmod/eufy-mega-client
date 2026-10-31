@@ -1,6 +1,7 @@
-import type { CameraCapabilities, WireDevice } from './types.js';
+import type { WireDevice } from './types.js';
 
-export type CameraMediaFeature = keyof CameraCapabilities;
+// Explicit, so an optional capability such as presets never enters MediaPolicy.
+export type CameraMediaFeature = 'snapshot' | 'live' | 'recordings';
 export type MediaAdmission = 'established' | 'h3' | 'blocked';
 export type MediaPolicy = Readonly<Record<CameraMediaFeature, MediaAdmission>>;
 export type CameraFamily =
@@ -27,6 +28,8 @@ export interface DeviceProfile {
   readonly experimentalStandalone?: true;
   // ha-eufy-cam#185: motion and person pushes on the standalone route. Only with experimentalStandalone.
   readonly standaloneEvents?: true;
+  // ha-eufy-cam#229: moves to a saved preset, only under an admitted HomeBase 3.
+  readonly presets?: true;
 }
 
 // Each feature is explicit. Shared policies avoid repeating identical admission rules.
@@ -129,7 +132,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8142: camera(15, 'eufycam', 'h3', establishedMedia),
   T8130: camera(32, 'solo', 'h3-or-standalone', h3Media),
   T8131: camera(33, 'solo', 'h3-or-standalone', h3Media),
-  T8170: camera(48, 'solo', 'h3-or-standalone', h3Media),
+  // ha-eufy-cam#229: preset moves for the exact T8170 under an admitted HomeBase 3.
+  T8170: Object.freeze({ ...camera(48, 'solo', 'h3-or-standalone', h3Media), presets: true }),
   T8122: camera(60, 'solo', 'h3-or-standalone', h3Media),
   T8123: camera(61, 'solo', 'h3-or-standalone', h3Media),
   T8124: camera(62, 'solo', 'h3-or-standalone', h3Media),

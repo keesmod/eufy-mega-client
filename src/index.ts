@@ -9,6 +9,7 @@ export type {
   Device,
   CameraCapabilities,
   CameraMediaCapability,
+  PresetMoveResult,
   DeviceRelationship,
   StandaloneDescriptor,
   DiscoveryIssue,
