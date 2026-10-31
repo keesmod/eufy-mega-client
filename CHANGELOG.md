@@ -4,6 +4,9 @@
 
 - The key setup type docs now name 0.30.2 instead of its betas ([#262](https://github.com/keesmod/eufy-mega-client/pull/262)).
 - Updated the dependency `qs` to 6.16.1 ([#266](https://github.com/keesmod/eufy-mega-client/pull/266)).
+- Added `onFrameTiming` to `startLive`, which passes on each live frame's camera timestamp ([#264](https://github.com/keesmod/eufy-mega-client/issues/264)).
+
+Upgrade: no changes needed. Rollback: 0.30.2.
 
 ## 0.30.2 - 2026-10-26
 

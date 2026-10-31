@@ -23,6 +23,7 @@ export type {
   StreamStop,
   LiveStream,
   LiveStartOptions,
+  LiveFrameTiming,
   LiveStartStage,
   LiveStartProgress,
   StationConnectionStage,

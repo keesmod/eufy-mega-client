@@ -406,6 +406,35 @@ acknowledgement; a local EOF, socket close or timeout does not establish success
 Cancelling an issued start retains its cleanup owner while awaiting STOP, even
 if no stream handle was returned. Subscribe to `live-stop` for that result.
 
+### Live frame timing, 0.30.3
+
+`startLive(cameraId, { onFrameTiming })` passes on the camera's own timing of
+each frame, so a consumer can play the stream on the camera's clock instead of
+the arrival time. Each call carries `kind` (`video` or `audio`), `offset`, the
+position of the frame's first byte in that stream counted from 0, its length in
+`bytes`, `timestampMs`, the camera's clock in milliseconds from the frame
+header, and `keyFrame`, which the header sets for a video key frame and which is
+always false for audio. The offsets pair the timing with the bytes however a
+consumer chunks the stream. Bytes before the first offset a consumer received
+have no timing.
+
+The frames already pushed when the stream starts come first, then each new frame
+right before its bytes are pushed. These first calls can run before `startLive`
+resolves, so the callback cannot use the returned `LiveStream`. A video frame leaves the library when the next frame
+starts, so its timing arrives one frame after the camera sent it. Every ADTS
+frame of one audio message carries that message's timestamp. The callback runs
+synchronously in the P2P receive path and carries no identifiers. Slow work in
+it delays that frame and every later P2P message, so keep it short or queue the
+work. Errors it throws are ignored and cannot change or end the stream.
+
+A camera key frame can take half a second to arrive over P2P while its
+timestamps stay even, see [ha-eufy-cam#230](https://github.com/keesmod/ha-eufy-cam/issues/230).
+On 2026-10-31 a `T8213` and a `T8160` behind a HomeBase 3 stamped video and
+audio with Unix time in milliseconds on one clock, which stayed within 0.05
+percent of the arrival time. Video steps were even. Audio steps came in
+multiples of 40 ms and averaged one AAC frame, 64 ms at 16 kHz. Audio arrived
+0.15 s (`T8160`) to 1.2 s (`T8213`) after video with the same timestamp.
+
 `stopLive(cameraId)` stops an owned stream on whichever session carries it.
 `ensureLiveStopped(cameraId, signal?)` does the same for a camera's own stream.
 For an uncertain previous session it sends an explicit STOP, checks its

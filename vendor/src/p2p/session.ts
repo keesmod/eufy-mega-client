@@ -2,6 +2,7 @@ import { createSocket, Socket, RemoteInfo } from "dgram";
 import { TypedEmitter } from "tiny-typed-emitter";
 import * as NodeRSA from "node-rsa";
 import { Readable } from "stream";
+import { recordFrameTiming } from "./frame-timing";
 import { SortedMap } from "sweet-collections";
 const { parse } = require("date-and-time");
 
@@ -445,6 +446,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
       rtspStreaming: {},
       receivedFirstIFrame: false,
       preFrameVideoData: Buffer.from([]),
+      preFrameTimestamp: 0,
+      preFrameKeyFrame: false,
       p2pTalkback: false,
       p2pTalkbackChannel: -1,
     };
@@ -2794,12 +2797,20 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
                 if (this.currentMessageState[message.dataType].preFrameVideoData.length > this.MAX_VIDEO_PACKET_BYTES)
                   this.currentMessageState[message.dataType].preFrameVideoData = Buffer.from([]);
 
-                if (this.currentMessageState[message.dataType].preFrameVideoData.length > 0) {
-                  this.currentMessageState[message.dataType].videoStream?.push(
-                    this.currentMessageState[message.dataType].preFrameVideoData
+                const state = this.currentMessageState[message.dataType];
+                if (state.preFrameVideoData.length > 0) {
+                  // A frame leaves when the next one starts, with the timing of its own header.
+                  recordFrameTiming(
+                    state.videoStream,
+                    state.preFrameVideoData.length,
+                    state.preFrameTimestamp,
+                    state.preFrameKeyFrame
                   );
+                  state.videoStream?.push(state.preFrameVideoData);
                 }
-                this.currentMessageState[message.dataType].preFrameVideoData = Buffer.from(video_data);
+                state.preFrameVideoData = Buffer.from(video_data);
+                state.preFrameTimestamp = videoMetaData.videoTimestamp;
+                state.preFrameKeyFrame = isKeyFrame;
               } else {
                 rootP2PLogger.trace(
                   `Handle DATA ${P2PDataType[message.dataType]} - CMD_VIDEO_FRAME: Skipping because first frame is not an I frame.`,
@@ -2877,9 +2888,11 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
             const stream = this.currentMessageState[message.dataType].audioStream;
             if (stream && (codec === AudioCodec.AAC || codec === AudioCodec.AAC_LC)) {
               for (const frame of normalizeAdtsFrames(audio_data)) {
+                recordFrameTiming(stream, frame.length, audioMetaData.audioTimestamp, false);
                 stream.push(frame);
               }
             } else {
+              recordFrameTiming(stream, audio_data.length, audioMetaData.audioTimestamp, false);
               stream?.push(audio_data);
             }
           }
