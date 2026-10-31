@@ -98,8 +98,8 @@ T8160 hardware evidence below still does not transfer to T8160-C. See
 ## Reported T8142-Z, 0.30.3
 
 The [2026-10-31 report on ha-eufy-cam#236][Z-report] shows three eufyCam 2C
-Pro cameras received as `T8142-Z` with `device_type=15`, firmware 3.3.8, under
-a T8030 on firmware 3.8.7.4. Bridge 0.8.40/client 0.30.2 rejected this exact
+Pro cameras received as `T8142-Z` with `device_type=15` under a T8030 on
+firmware 3.8.7.4. The report form gives camera firmware 3.3.8. Bridge 0.8.40/client 0.30.2 rejected this exact
 model as `unsupported_device`, so Home Assistant never created the cameras.
 0.30.3 admits this exact pair with the T8142 type, the same generic Camera
 adapter and H3 topology. No prefix matching or standalone route is added. Other
@@ -253,7 +253,7 @@ The additional model gate requires the exact pairs below, a T8030/type 18 owner
 whose serial follows the existing T8030 branch, and a four-part numeric owner
 firmware at or above 2.0.9.7. This is the existing payload branch threshold,
 not a firmware-support claim. Fixtures use owner firmware 3.8.6.0 and camera
-firmware 1.2.3, except the reported T8113-V and T8160-C fixtures, which use
+firmware 1.2.3, except the reported T8113-V, T8160-C and T8142-Z fixtures, which use
 their reported camera firmware under owner firmware 3.8.7.4. Unknown, malformed
 and earlier owner versions retain `EufyError` code `camera_media_unverified`.
 Existing baseline model behavior is preserved. Command credentials, connections
