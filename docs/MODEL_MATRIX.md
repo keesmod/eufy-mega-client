@@ -1141,9 +1141,9 @@ On 2026-10-31 the [reporter of ha-eufy-cam#236][236-report] ran HA 2026.10.4,
 integration 0.8.49 and bridge 0.8.40/client 0.30.2 with a T8030 on firmware
 3.8.7.4. Three cameras that the reporter names eufyCam 2C Pro were rejected as
 `unsupported_device` with parent status `present`. Each was received as
-`T8142-Z` with type 15. The report form gives camera firmware 3.3.8. 0.30.3 admits exactly `T8142-Z`/15
-with the T8142 type and Camera adapter but the additional-H3 media policy, not
-the established T8142 route, as described in
+`T8142-Z` with type 15. The report form gives camera firmware 3.3.8. 0.30.3
+admits exactly `T8142-Z`/15 with the T8142 type and Camera adapter but the
+additional-H3 media policy, not the established T8142 route, as described in
 [EUFYCAM.md](EUFYCAM.md#reported-t8142-z-0303). This is a reported inventory
 tuple, not independently reproduced. No result with the admission is reported
 yet, and the type 15 rows below gain no H or P cells.
