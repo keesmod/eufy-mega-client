@@ -47,7 +47,7 @@ export function movePreset(
         return;
       const code = result.return_code;
       if (code === 0) finish();
-      // The session's own results: no answer after the send, or aged out of its queue.
+      // The session's own results: it gave up on the move, or the move aged out of its queue.
       else if (code === ErrorCode.ERROR_COMMAND_TIMEOUT || code === ErrorCode.ERROR_CONNECT_TIMEOUT)
         finish(new EufyError('preset_move_unconfirmed', code));
       else finish(new EufyError('preset_move_rejected', code));

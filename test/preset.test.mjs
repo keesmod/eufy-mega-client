@@ -472,11 +472,11 @@ test("a move's own 40-second bound closes the session", async (t) => {
   }
 });
 
-test('refusals before the send leave the session open, connect errors close it', async () => {
+test('refusals before the send leave the session open, a failed own connection is closed once', async () => {
+  const aborted = new AbortController();
+  aborted.abort();
   let f = transport();
   try {
-    const aborted = new AbortController();
-    aborted.abort();
     await assert.rejects(f.t.moveToPreset('CAM', 0, aborted.signal), { code: 'cancelled' });
     f.primary.presetPosition = () => {
       throw new Error('synthetic refusal');
@@ -489,14 +489,39 @@ test('refusals before the send leave the session open, connect errors close it',
   }
   f = transport({ connected: false });
   try {
-    // Another connection attempt is in flight.
-    f.t.connecting.set(HB, new Promise(() => {}));
-    await assert.rejects(f.t.moveToPreset('CAM', 0), { code: 'connection_busy' });
+    // connect() closes its own cancelled attempt. The move adds no second close.
+    await assert.rejects(f.t.moveToPreset('CAM', 0, aborted.signal), { code: 'cancelled' });
     assert.equal(f.primary.closes, 1);
     assert.deepEqual(f.primary.moves, []);
     f.released();
   } finally {
-    f.t.connecting.clear();
+    await f.t.close();
+  }
+});
+
+test("connection_busy leaves another caller's connection attempt alone", async () => {
+  const f = transport({ connected: false });
+  try {
+    // A close while that attempt is in flight ends it, as it ends the vendored session's attempt.
+    const connect = f.primary.connect;
+    let open;
+    f.primary.connect = () =>
+      new Promise((resolve, reject) => {
+        const closes = f.primary.closes;
+        open = () =>
+          f.primary.closes === closes ? resolve(connect()) : reject(new Error('closed'));
+      });
+    const other = settled(f.t.connect(HB));
+    await assert.rejects(f.t.moveToPreset('CAM', 0), { code: 'connection_busy' });
+    assert.equal(f.primary.closes, 0);
+    assert.deepEqual(f.primary.moves, []);
+    assert.equal(f.t.commands.size, 0);
+    open();
+    assert.deepEqual(await other, { value: undefined });
+    assert.equal(f.t.state(HB).connected, true);
+    assert.equal(f.primary.closes, 0);
+    f.released();
+  } finally {
     await f.t.close();
   }
 });
@@ -734,6 +759,52 @@ test('the session itself resends a move answered with 503, the client sends it o
   }
 });
 
+test('a move still queued behind an unacknowledged message is dropped on abort or a session drop', async () => {
+  const ends = {
+    abort: (_r, controller) => controller.abort(),
+    // The session's own drop path, as after a lost heartbeat.
+    drop: (r) => r.session._disconnected(),
+  };
+  const preset = (frame) => frame?.includes(Buffer.from('"commandType":6035')) === true;
+  for (const [name, end] of Object.entries(ends)) {
+    const r = await sessionRig(),
+      controller = new AbortController();
+    try {
+      // An earlier command that the HomeBase has not acknowledged holds the send queue.
+      r.session.messageStates.set(4999, {
+        sequence: 4999,
+        commandType: CommandType.CMD_SET_ARMING,
+        channel: 0,
+        data: Buffer.alloc(0),
+        retries: 0,
+        acknowledged: false,
+      });
+      const moving = settled(r.t.moveToPreset(s340.device_sn, 1, controller.signal));
+      await turn();
+      assert.equal(r.payloads.length, 1, name);
+      assert.equal(r.session.sendQueue.length, 1, name);
+      assert.equal(r.frames.some(preset), false, name);
+      end(r, controller);
+      assert.deepEqual(
+        await moving,
+        { code: 'preset_move_unconfirmed', remoteCode: undefined },
+        name,
+      );
+      assert.equal(r.closes(), 1, name);
+      assert.equal(r.session.sendQueue.length, 0, name);
+      // A reopened, idle session has nothing left to send.
+      r.session.connected = true;
+      r.session.connectAddress = { host: '192.0.2.1', port: 32108 };
+      r.session.sendQueuedMessage();
+      await turn();
+      assert.equal(r.frames.some(preset), false, name);
+      assert.equal(r.payloads.length, 1, name);
+    } finally {
+      await r.done();
+    }
+  }
+});
+
 test('EufyMegaClient exposes the preset capability and move without opening a connection', async () => {
   const fixture = cloudFixture({ inventory: [homeBase, s340] });
   const client = new EufyMegaClient(fixture.options);
@@ -747,6 +818,12 @@ test('EufyMegaClient exposes the preset capability and move without opening a co
     });
     await assert.rejects(client.moveToPreset(s340.device_sn, 4), { code: 'invalid_preset' });
     await assert.rejects(client.moveToPreset('T8030_OWNER', 0), { code: 'unknown_camera' });
+    // The wrapper forwards the signal: an aborted one ends the move before any connection.
+    const aborted = new AbortController();
+    aborted.abort();
+    await assert.rejects(client.moveToPreset(s340.device_sn, 0, aborted.signal), {
+      code: 'cancelled',
+    });
     assert.equal(client.transport.state('T8030_OWNER').connected, false);
   } finally {
     await client.close();

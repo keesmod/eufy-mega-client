@@ -1377,12 +1377,8 @@ export class DeviceTransport extends EventEmitter {
     const abort = AbortSignal.any([this.lifetime.signal, ...(signal ? [signal] : [])]);
     this.commands.add(stationId);
     try {
-      try {
-        await this.connect(stationId, abort);
-      } catch (error) {
-        await station.close();
-        throw error;
-      }
+      // connect() closes its own failed attempt. connection_busy leaves the other attempt alone.
+      await this.connect(stationId, abort);
       try {
         return { preset, elapsedMs: await movePreset(station, camera, preset, abort) };
       } catch (error) {
