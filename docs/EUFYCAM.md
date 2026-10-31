@@ -95,6 +95,38 @@ T8160 hardware evidence below still does not transfer to T8160-C. See
 [C-report]: https://github.com/keesmod/ha-eufy-cam/issues/149
 [C-result]: https://github.com/keesmod/ha-eufy-cam/issues/149#issuecomment-6214980737
 
+## Reported T8142-Z, 0.30.3
+
+The [2026-10-31 report on ha-eufy-cam#236][Z-report] shows three eufyCam 2C Pro
+cameras received as `T8142-Z` with `device_type=15`. The report form gives
+camera firmware 3.3.8 under a T8030 on firmware 3.8.7.4. Bridge 0.8.40/client
+0.30.2 rejected this exact model as `unsupported_device`, so Home Assistant
+never created the cameras. 0.30.3 admits this exact pair with the T8142 type,
+the same generic Camera adapter and H3 topology. No prefix matching or
+standalone route is added. Other types, owners and unevidenced forms such as
+`T8142Z`, `T8142-V` or lower case retain their existing rejection. `T8142R`
+stays unresolved.
+
+As with T8160-C, this row is not a copy of its base row. T8142 keeps the
+`established` model-only media check of the original four routes, which
+[is not a template](DEVICE_PROFILES.md#reading-the-policy) for new devices.
+T8142-Z uses the additional-H3 media policy: snapshot, live and recordings
+require its actual T8030/type 18 parent with a T8030 serial prefix and
+four-part owner firmware at or above 2.0.9.7. The reporter's owner firmware
+3.8.7.4 passes the firmware check. The T8030 serial-prefix check cannot be
+confirmed from the redacted report.
+
+The synthetic tests include T8142-Z in discovery, state/events, the type 15
+livestream command and the shared media/lifecycle fixtures. They cover stored
+snapshots, both live codecs, video/audio, confirmed stop, recording
+metadata/download, cancellation and the owner and firmware rejections.
+Discovery and the media/lifecycle fixtures use the reported camera and owner
+firmware. The state/events tests use synthetic firmware. No result with this
+admission is reported yet. See
+[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-t8142-z-0303).
+
+[Z-report]: https://github.com/keesmod/ha-eufy-cam/issues/236
+
 ## Exact hardware validation
 
 [Story #55 hardware evidence](hardware/T8160_2026_09_11.md) records one T8160
@@ -222,9 +254,9 @@ The additional model gate requires the exact pairs below, a T8030/type 18 owner
 whose serial follows the existing T8030 branch, and a four-part numeric owner
 firmware at or above 2.0.9.7. This is the existing payload branch threshold,
 not a firmware-support claim. Fixtures use owner firmware 3.8.6.0 and camera
-firmware 1.2.3, except the reported T8113-V and T8160-C fixtures, which use
-their reported camera firmware under owner firmware 3.8.7.4. Unknown, malformed
-and earlier owner versions retain `EufyError` code `camera_media_unverified`.
+firmware 1.2.3, except the reported T8113-V, T8160-C and T8142-Z fixtures,
+which use their reported camera firmware under owner firmware 3.8.7.4. Unknown,
+malformed and earlier owner versions retain `EufyError` code `camera_media_unverified`.
 Existing baseline model behavior is preserved. Command credentials, connections
 and media stay with the actual owner.
 

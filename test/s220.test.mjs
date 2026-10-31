@@ -6,6 +6,8 @@ import { CommandType } from '../dist/vendor/p2p/types.js';
 
 for (const [model, type, command] of [
   ['T8142', 15, CommandType.CMD_SET_PAYLOAD],
+  // ha-eufy-cam#236: the reported 2C Pro variant reaches the same type 15 camera.
+  ['T8142-Z', 15, CommandType.CMD_SET_PAYLOAD],
   ['T8134', 63, CommandType.CMD_DOORBELL_SET_PAYLOAD],
 ]) {
   test(`${model} uses its existing protocol camera capabilities and livestream command`, async () => {

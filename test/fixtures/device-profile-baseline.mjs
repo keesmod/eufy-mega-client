@@ -67,4 +67,6 @@ export const profileBaseline = [
   // Added on 2026-10-22 for ha-eufy-cam#198 from public T8210 and T8210C type 7 evidence.
   ['T8210', 7, 'camera', '', false, true, 'h3'],
   ['T8210C', 7, 'camera', '', false, true, 'h3'],
+  // Reported in ha-eufy-cam#236 on 2026-10-31. Additional-H3 media, not established.
+  ['T8142-Z', 15, 'camera', '', false, true, 'h3'],
 ];
