@@ -419,11 +419,14 @@ consumer chunks the stream. Bytes before the first offset a consumer received
 have no timing.
 
 The frames already pushed when the stream starts come first, then each new frame
-right before its bytes are pushed. A video frame leaves the library when the
-next frame starts, so its timing arrives one frame after the camera sent it.
-Every ADTS frame of one audio message carries that message's timestamp. The
-callback runs synchronously, carries no identifiers, and errors it throws are
-ignored. It cannot change, end or delay the stream.
+right before its bytes are pushed. These first calls, including the key frame at
+offset 0, run before `startLive` resolves, so the callback cannot use the
+returned `LiveStream`. A video frame leaves the library when the next frame
+starts, so its timing arrives one frame after the camera sent it. Every ADTS
+frame of one audio message carries that message's timestamp. The callback runs
+synchronously in the P2P receive path and carries no identifiers. Slow work in
+it delays that frame and every later P2P message, so keep it short or queue the
+work. Errors it throws are ignored and cannot change or end the stream.
 
 A camera key frame can take half a second to arrive over P2P while its
 timestamps stay even, see [ha-eufy-cam#230](https://github.com/keesmod/ha-eufy-cam/issues/230).

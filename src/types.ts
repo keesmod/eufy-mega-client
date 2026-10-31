@@ -230,9 +230,12 @@ export interface LiveStartOptions {
   /**
    * Called synchronously with the camera timing of each video and audio frame
    * of this stream. The frames already pushed when the stream starts come
-   * first, then each new frame right before its bytes are pushed. Errors it
-   * throws are ignored. It cannot change, end or delay the stream. See
-   * docs/API.md, live frame timing.
+   * first, then each new frame right before its bytes are pushed. The first
+   * calls run before `startLive` resolves, so the callback cannot use the
+   * returned stream. It runs in the P2P receive path, so slow work in it
+   * delays that frame and every later P2P message. Errors it throws are
+   * ignored and cannot change or end the stream. See docs/API.md, live frame
+   * timing.
    */
   onFrameTiming?: (timing: LiveFrameTiming) => void;
 }

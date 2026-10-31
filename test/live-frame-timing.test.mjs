@@ -6,6 +6,7 @@ import { P2PClientProtocol } from '../dist/vendor/p2p/session.js';
 import { CommandType, P2PDataType } from '../dist/vendor/p2p/types.js';
 import { listenFrameTiming, recordFrameTiming } from '../dist/vendor/p2p/frame-timing.js';
 import { DeviceTransport } from '../dist/device-transport.js';
+import { EufyMegaClient } from '../dist/index.js';
 
 const HEADER = 22;
 // One CMD_VIDEO_FRAME payload: the 22 byte header, then `body`.
@@ -84,6 +85,10 @@ test('each pushed live frame carries its own header timing and exact byte offset
       received += chunk.length;
     });
     audio.on('data', (chunk) => bytes.audio.push(chunk));
+    // Drain the buffered start, so every later push emits 'data' at once and
+    // a push before its timing would show up in `received`.
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(received, 40);
     // A frame split over two messages keeps the timing of its first part.
     send(p, CommandType.CMD_VIDEO_FRAME, videoFrame(slice(0x41, 20), { timestamp: 1133 }));
     send(p, CommandType.CMD_VIDEO_FRAME, videoFrame(Buffer.alloc(7, 0x22), { timestamp: 9999 }));
@@ -135,6 +140,37 @@ test('each pushed live frame carries its own header timing and exact byte offset
     assert.equal(Buffer.concat(bytes.audio).length, 18);
     // A new frame's timing arrives before any of its bytes.
     for (const timing of timings.video.slice(2)) assert.ok(timing.received <= timing.offset);
+  } finally {
+    await p.dispose();
+  }
+});
+
+test('each ADTS frame of one audio message gets its own timing with the message timestamp', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const p = protocol();
+  let audio;
+  p.on('livestream started', (_channel, _metadata, _v, a) => {
+    audio = a;
+  });
+  try {
+    send(
+      p,
+      CommandType.CMD_VIDEO_FRAME,
+      videoFrame(slice(0x65, 20), { key: true, timestamp: 1000 }),
+    );
+    const adts = Buffer.from([0xff, 0xf1, 0x50, 0x80, 0x01, 0x3f, 0xfc, 0x00, 0x00]);
+    const two = Buffer.alloc(16 + 18);
+    two.writeUInt32LE(18, 0);
+    two.writeUIntLE(2000, 8, 6);
+    adts.copy(two, 16);
+    adts.copy(two, 25);
+    send(p, CommandType.CMD_AUDIO_FRAME, two);
+    const seen = [];
+    listenFrameTiming(audio, (timing) => seen.push(timing));
+    assert.deepEqual(seen, [
+      { offset: 0, bytes: 9, timestampMs: 2000, keyFrame: false },
+      { offset: 9, bytes: 9, timestampMs: 2000, keyFrame: false },
+    ]);
   } finally {
     await p.dispose();
   }
@@ -224,6 +260,23 @@ test('startLive passes each frame timing on, the backlog first, and ignores list
   } finally {
     await f.t.close();
   }
+});
+
+test('EufyMegaClient.startLive forwards onFrameTiming with the other options', async () => {
+  const calls = [];
+  const client = Object.create(EufyMegaClient.prototype);
+  client.closed = false;
+  client.transportLoading = Promise.resolve({
+    startLive: async (...args) => (calls.push(args), 'stream'),
+  });
+  const onProgress = () => {};
+  const onFrameTiming = () => {};
+  const signal = new AbortController().signal;
+  assert.equal(
+    await client.startLive('CAM', { signal, maxDurationMs: 5000, onProgress, onFrameTiming }),
+    'stream',
+  );
+  assert.deepEqual(calls, [['CAM', signal, 5000, onProgress, onFrameTiming]]);
 });
 
 test('startLive without onFrameTiming leaves the streams untouched', async () => {

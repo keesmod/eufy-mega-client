@@ -109,6 +109,26 @@ function fixture(options = { maxLiveStreamsPerStation: 2 }) {
   };
   return { t, primary, extras, stopped, stopConfirmed };
 }
+test('a stream on its own session passes its frame timing on as well', async () => {
+  const { recordFrameTiming } = await import('../dist/vendor/p2p/frame-timing.js');
+  const f = fixture();
+  const seen = [];
+  try {
+    const stream = await f.t.startLive('CAM1', undefined, undefined, undefined, (timing) =>
+      seen.push(timing),
+    );
+    assert.equal(f.extras.length, 1);
+    recordFrameTiming(stream.video, 12, 1000, true);
+    recordFrameTiming(stream.audio, 9, 1010, false);
+    assert.deepEqual(seen, [
+      { kind: 'video', offset: 0, bytes: 12, timestampMs: 1000, keyFrame: true },
+      { kind: 'audio', offset: 0, bytes: 9, timestampMs: 1010, keyFrame: false },
+    ]);
+    await f.stopConfirmed(stream, f.extras[0], 1);
+  } finally {
+    await f.t.close();
+  }
+});
 test('the option accepts 1 to 4 concurrent streams per station', async () => {
   for (const limit of [0, 5, 1.5, -1, Number.NaN])
     assert.throws(
