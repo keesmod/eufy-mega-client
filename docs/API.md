@@ -665,11 +665,12 @@ it about every 100 milliseconds and sends it again every 5 seconds. After a 503
 answer it sends the move again at once, as a new command with a new sequence
 number. It keeps the move marked as acknowledged, so it ignores the
 acknowledgements of these re-sends. It retransmits about every 100
-milliseconds and sends the move again as a new command every 5 seconds. This
-goes on until a result arrives or the session gives up after 10 re-sends with
--133, unless the client's 40-second bound closes the session first. That can
-mean about eight more move commands in one call. A preset is an absolute
-target, so a duplicate sends the camera to the same position.
+milliseconds and sends the move again as a new command every 5 seconds. Each
+further 503 answer starts another re-send at once. This goes on until a result
+arrives or the session gives up after 10 re-sends with -133, unless the
+client's 40-second bound closes the session first. One call can therefore send
+up to 10 more move commands. A preset is an absolute target, so a duplicate
+sends the camera to the same position.
 
 A result means that the HomeBase accepted the move. It never means that the
 camera finished moving or reached the position. There is no position read and
