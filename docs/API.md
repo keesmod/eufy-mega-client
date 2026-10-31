@@ -649,24 +649,27 @@ for a move.
 `preset_move_unconfirmed` carries `remoteCode` -133 or -134 when the session
 itself gave up on the move. -133 means that no result arrived 30 seconds after
 the HomeBase acknowledged the move, or that the session stopped after 10
-re-sends, for example after repeated 503 (failed to request) answers. -134
-means that the move aged out of the session's send queue. The session has then
-already dropped the move. Without `remoteCode`, the client's own 40-second bound
-ran out, the session closed or failed, or the signal was aborted after the send.
-The client then closes the session, so no queued copy can be sent later. The
-40-second bound is longer than the session's own 30-second wait for a result.
+re-sends. After a 503 (failed to request) answer only the limit of 10 re-sends
+applies, as described below. -134 means that the move aged out of the session's
+send queue. The session has then already dropped the move. Without
+`remoteCode`, the client's own 40-second bound ran out, the session closed or
+failed, or the signal was aborted after the send. The client then closes the
+session, so no queued copy can be sent later. The 40-second bound is longer
+than the session's own 30-second wait for a result.
 
 A failure before the send moved nothing. `connection_busy` leaves the other
 caller's connection attempt as it is. The client sends a move once and never
 replays it. The vendored session below can still send it again, as it does for
-guard mode. It retransmits a frame that the HomeBase has not acknowledged every
-100 milliseconds, and sends the move again every 5 seconds while it stays
-unacknowledged. After a 503 answer it sends the move again at once, as a new
-command with a new sequence number. From then on every re-send is a new
-command. This goes on until a result arrives or the session gives up after 10
-re-sends with -133, unless the client's 40-second bound closes the session
-first. A preset is an absolute target, so a duplicate sends the camera to the
-same position.
+guard mode. Until the HomeBase acknowledges the move, the session retransmits
+it about every 100 milliseconds and sends it again every 5 seconds. After a 503
+answer it sends the move again at once, as a new command with a new sequence
+number. It keeps the move marked as acknowledged, so it ignores the
+acknowledgements of these re-sends. It retransmits about every 100
+milliseconds and sends the move again as a new command every 5 seconds. This
+goes on until a result arrives or the session gives up after 10 re-sends with
+-133, unless the client's 40-second bound closes the session first. That can
+mean about eight more move commands in one call. A preset is an absolute
+target, so a duplicate sends the camera to the same position.
 
 A result means that the HomeBase accepted the move. It never means that the
 camera finished moving or reached the position. There is no position read and

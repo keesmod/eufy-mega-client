@@ -645,7 +645,8 @@ test('T8170 sends the vendored preset envelope on its own channel', async () => 
 /**
  * A loaded transport with a real vendor Station and P2P session for the
  * HomeBase, as in recordings-observation.test.mjs. The session builds and
- * queues the real frame. Only its socket write is captured.
+ * queues the real frame. Only its socket writes are captured: command sends in
+ * `frames`, and the session's direct retransmissions in `retransmits`.
  */
 async function sessionRig() {
   const t = new DeviceTransport();
@@ -655,9 +656,14 @@ async function sessionRig() {
   assert.ok(station instanceof Station);
   const session = station.p2pSession;
   const frames = [],
-    payloads = [];
+    payloads = [],
+    retransmits = [];
   session.sendMessage = async (_name, _address, _type, data) => {
     frames.push(data);
+  };
+  session.socket.send = (message, _port, _host, callback) => {
+    retransmits.push(Buffer.from(message));
+    callback?.(null, message.length);
   };
   session.connected = true;
   session.connectAddress = { host: '192.0.2.1', port: 32108 };
@@ -678,17 +684,29 @@ async function sessionRig() {
     session,
     frames,
     payloads,
+    retransmits,
     closes: () => closes,
-    /** The session's state for the move, acknowledged as the HomeBase would. */
-    acknowledged() {
+    /** The HomeBase's ACK for the move's current sequence, through the session's own parser. */
+    ack() {
       const states = [...session.messageStates.values()].filter(
         (state) => state.commandType === CommandType.CMD_DOORBELL_SET_PAYLOAD,
       );
       assert.equal(states.length, 1);
       const [state] = states;
-      clearTimeout(state.timeout);
-      clearTimeout(state.retryTimeout);
-      state.acknowledged = true;
+      const message = Buffer.alloc(10);
+      message[0] = 0xf1;
+      message[1] = 0xd1;
+      message.writeUInt16BE(6, 2);
+      message[4] = 0xd1;
+      message[5] = P2PDataType.DATA;
+      message.writeUInt16BE(1, 6);
+      message.writeUInt16BE(state.sequence, 8);
+      session.handleMsg(message, {
+        address: '192.0.2.1',
+        port: 32108,
+        family: 'IPv4',
+        size: message.length,
+      });
       return state;
     },
     /** A DATA result for that state through the session's own parser. */
@@ -724,7 +742,8 @@ test('the nested 6035 result from the real session reaches the move', async () =
     });
     assert.equal(r.frames.length, 1);
     assert.ok(r.frames[0].includes(Buffer.from('{"commandType":6035,"data":{"value":2}}')));
-    const state = r.acknowledged();
+    const state = r.ack();
+    assert.equal(state.acknowledged, true);
     assert.equal(state.nestedCommandType, PRESET);
     assert.equal(state.channel, 2);
     r.result(state, 0);
@@ -737,24 +756,47 @@ test('the nested 6035 result from the real session reaches the move', async () =
   }
 });
 
-test('the session itself resends a move answered with 503, the client sends it once', async () => {
+test('after a 503 answer the session ignores ACKs and resends the move, the client sends it once', async (t) => {
   const r = await sessionRig();
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // A mocked tick jumps at once, so step 100 ms at a time for the session's
+  // 100 ms retransmission timers to run as they would in real time.
+  const advance = (ms) => {
+    for (let left = ms; left > 0; left -= 100) t.mock.timers.tick(Math.min(100, left));
+  };
+  // A retransmitted frame carries its sequence after the 4-byte message header.
+  const sequenceOf = (frame) => frame.readUInt16BE(6);
   try {
     const moving = settled(r.t.moveToPreset(s340.device_sn, 0));
     await turn();
-    const first = r.acknowledged(),
-      sequence = first.sequence;
-    r.result(first, 503);
+    const state = r.ack(),
+      first = state.sequence;
+    // An acknowledged move waits for its result without retransmissions.
+    advance(1_000);
+    assert.equal(r.retransmits.length, 0);
+    r.result(state, 503);
     assert.equal(await pending(moving), 'pending');
-    assert.equal(r.payloads.length, 1);
     assert.equal(r.frames.length, 2);
-    // The session moves the same state to a new sequence.
-    const second = r.acknowledged();
-    assert.notEqual(second.sequence, sequence);
-    r.result(second, -104);
+    // The session sends the move again at once, as a new command with a new sequence.
+    const second = state.sequence;
+    assert.notEqual(second, first);
+    // The move stays marked as acknowledged, so the ACK of the re-send changes nothing.
+    assert.equal(r.ack(), state);
+    advance(4_900);
+    assert.ok(r.retransmits.length > 0);
+    assert.ok(r.retransmits.every((frame) => sequenceOf(frame) === second));
+    assert.equal(r.frames.length, 2);
+    // Five seconds after the re-send it sends the move again, as another new command.
+    advance(100);
+    assert.equal(r.frames.length, 3);
+    assert.notEqual(state.sequence, second);
+    assert.equal(state.retries, 2);
+    assert.equal(r.payloads.length, 1);
+    r.result(state, -104);
     assert.deepEqual(await moving, { code: 'preset_move_rejected', remoteCode: -104 });
     assert.equal(r.closes(), 0);
   } finally {
+    t.mock.timers.reset();
     await r.done();
   }
 });
