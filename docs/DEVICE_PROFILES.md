@@ -113,6 +113,9 @@ owner firmware at or above 2.0.9.7.
 T8224 also admits the reported type 96 with the same policy.
 See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
 
+T8170 also offers experimental moves to a saved preset, only with the H3 media owner
+admission above. See [API.md](API.md#preset-moves-0303).
+
 With the client option `experimentalStandalone`, a standalone T8410 becomes its own
 local owner with experimental snapshot and live, and recordings unavailable with
 `standalone_recordings_unverified`. Its H3 cells above apply only under a HomeBase.

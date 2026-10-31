@@ -15,8 +15,21 @@ export function hasCameraMedia(
   const profile = modelProfile(camera.device_model);
   const admission = profile?.features[feature];
   if (admission === 'established') return true;
+  return admission === 'h3' && admittedH3Owner(camera, owner);
+}
+
+/** ha-eufy-cam#229: an exact preset profile under the same HomeBase 3 owner admission. */
+export function hasCameraPresets(camera: WireDevice | undefined, owner?: WireDevice): boolean {
+  return (
+    camera !== undefined &&
+    exactDeviceProfile(camera)?.presets === true &&
+    admittedH3Owner(camera, owner)
+  );
+}
+
+/** The exact camera under its actual T8030 parent with admitted owner firmware. */
+function admittedH3Owner(camera: WireDevice, owner?: WireDevice): boolean {
   if (
-    admission !== 'h3' ||
     !exactDeviceProfile(camera) ||
     owner?.device_model !== h3MediaOwner.model ||
     exactDeviceProfile(owner)?.kind !== 'station' ||

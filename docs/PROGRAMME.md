@@ -22,7 +22,10 @@ records decisions and working rules, not a second backlog.
   A combined library API does not require a combined bridge service.
 - Camera scope is discovery, available status and battery, stored snapshots,
   live video/audio, supported events and recordings. PTZ, talkback and the full
-  set of app settings are outside this first expansion.
+  set of app settings are outside this first expansion. On 2026-10-31 the owner
+  selected preset moves for the exact `T8170` behind a HomeBase 3 through
+  [ha-eufy-cam#229](https://github.com/keesmod/ha-eufy-cam/issues/229). Other
+  PTZ remains outside.
 - Cover the full known camera catalogue, including eufyCam, SoloCam, indoor,
   battery and wired doorbells, floodlight, wall-light, garage, integrated camera
   products, 4G and PoE/NVR topologies. Camera-bearing locks or parcel boxes do not

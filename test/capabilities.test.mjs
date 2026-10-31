@@ -11,6 +11,7 @@ import { floodlightMedia } from './fixtures/floodlight-media.mjs';
 import { integratedMedia } from './fixtures/integrated-media.mjs';
 import { lteMedia } from './fixtures/lte-media.mjs';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
+const media = ['snapshot', 'live', 'recordings'];
 for (const profile of [
   ...eufycamMedia,
   ...batteryDoorbellMedia,
@@ -25,8 +26,15 @@ for (const profile of [
     const f = await mediaFixture(profile);
     try {
       const result = f.transport.cameraCapabilities(f.camera.device_sn);
-      for (const feature of Object.values(result))
-        assert.deepEqual(feature, { available: true, status: 'experimental', reason: null });
+      for (const key of media)
+        assert.deepEqual(result[key], { available: true, status: 'experimental', reason: null });
+      // ha-eufy-cam#229: preset moves only for the exact T8170 under an admitted HomeBase 3.
+      assert.deepEqual(
+        result.presets,
+        profile.model === 'T8170'
+          ? { available: true, status: 'experimental', reason: null }
+          : { available: false, status: 'unsupported', reason: 'operation_outside_hardware_scope' },
+      );
       result.live.available = false;
       assert.equal(f.transport.cameraCapabilities(f.camera.device_sn).live.available, true);
       assert.equal(f.counts.starts, 0);
@@ -36,12 +44,21 @@ for (const profile of [
         f.transport.cameraCapabilities(f.camera.device_sn).live.reason,
         'invalid_connection_credentials',
       );
+      if (profile.model === 'T8170')
+        assert.equal(
+          f.transport.cameraCapabilities(f.camera.device_sn).presets.reason,
+          'invalid_connection_credentials',
+        );
       f.transport.failures.clear();
       if (!['T8142', 'T8160', 'T8213', 'T8134'].includes(profile.model)) {
         f.transport.raw.get(f.camera.parent_sn).main_sw_version = '2.0.9.6';
         assert.equal(
           f.transport.cameraCapabilities(f.camera.device_sn).snapshot.reason,
           'camera_media_unverified',
+        );
+        assert.equal(
+          f.transport.cameraCapabilities(f.camera.device_sn).presets.reason,
+          'operation_outside_hardware_scope',
         );
         await assert.rejects(f.transport.snapshot(f.camera.device_sn), {
           code: 'camera_media_unverified',

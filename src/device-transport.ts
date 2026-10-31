@@ -1,4 +1,4 @@
-import { hasCameraMedia } from './camera-media.js';
+import { hasCameraMedia, hasCameraPresets } from './camera-media.js';
 import { exactDeviceProfile, type CameraMediaFeature } from './device-profiles.js';
 import { observedDeviceState, observedInteger } from './device-state.js';
 import {
@@ -12,6 +12,7 @@ import {
 import { hostSubnetContains, lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
 import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
+import { movePreset } from './preset.js';
 import { awaitEvent } from './operations.js';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
@@ -58,6 +59,7 @@ import {
   type StreamStop,
   type MediaMetadata,
   type StandalonePushObservation,
+  type PresetMoveResult,
 } from './types.js';
 import { LiveStartObserver } from './live-start.js';
 import { tapLiveFrames } from './live-frames.js';
@@ -426,12 +428,19 @@ export class DeviceTransport extends EventEmitter {
     if (feature && !this.hasMedia(id, feature)) throw new EufyError('camera_media_unverified');
     return camera;
   }
+  /** ha-eufy-cam#229: an admitted T8170 under a HomeBase 3. Never the standalone route. */
+  private presetCamera(id: string): ProtocolDevice {
+    const camera = this.camera(id);
+    const raw = this.raw.get(id);
+    if (this.standalone.has(id) || !hasCameraPresets(raw, this.raw.get(this.ownerOf(raw) ?? '')))
+      throw new EufyError('operation_outside_hardware_scope');
+    return camera;
+  }
   cameraCapabilities(id: string): import('./types.js').CameraCapabilities {
-    const capability = (feature: CameraMediaFeature) => {
+    const capability = (camera: () => ProtocolDevice) => {
       let reason: string | null = null;
       try {
-        const camera = this.camera(id, feature);
-        this.station(camera.getStationSerial());
+        this.station(camera().getStationSerial());
       } catch (error) {
         reason = error instanceof EufyError ? error.code : 'device_initialization_failed';
       }
@@ -441,10 +450,12 @@ export class DeviceTransport extends EventEmitter {
         reason,
       };
     };
+    const media = (feature: CameraMediaFeature) => capability(() => this.camera(id, feature));
     return {
-      snapshot: capability('snapshot'),
-      live: capability('live'),
-      recordings: capability('recordings'),
+      snapshot: media('snapshot'),
+      live: media('live'),
+      recordings: media('recordings'),
+      presets: capability(() => this.presetCamera(id)),
     };
   }
   supportsEvent(id: string, type: string): boolean {
@@ -1343,6 +1354,49 @@ export class DeviceTransport extends EventEmitter {
       throw error;
     } finally {
       this.commands.delete(id);
+    }
+  }
+  /**
+   * ha-eufy-cam#229: one move to a saved preset on the primary session, refused
+   * rather than queued while the HomeBase is busy. Never retried.
+   */
+  async moveToPreset(id: string, preset: number, signal?: AbortSignal): Promise<PresetMoveResult> {
+    const camera = this.presetCamera(id);
+    if (!Number.isInteger(preset) || preset < 0 || preset > 3)
+      throw new EufyError('invalid_preset');
+    const stationId = camera.getStationSerial(),
+      station = this.station(stationId);
+    // The guard mode rule. Streams on extra sessions leave the primary session free.
+    if (
+      this.commands.has(stationId) ||
+      this.lives.has(stationId) ||
+      this.starting.has(stationId) ||
+      this.recordings.busy(stationId)
+    )
+      throw new EufyError('station_busy');
+    const abort = AbortSignal.any([this.lifetime.signal, ...(signal ? [signal] : [])]);
+    this.commands.add(stationId);
+    try {
+      try {
+        await this.connect(stationId, abort);
+      } catch (error) {
+        await station.close();
+        throw error;
+      }
+      try {
+        return { preset, elapsedMs: await movePreset(station, camera, preset, abort) };
+      } catch (error) {
+        // No result arrived for this move. Closing drops any queued copy, so none is sent late.
+        if (
+          error instanceof EufyError &&
+          error.code === 'preset_move_unconfirmed' &&
+          error.remoteCode === undefined
+        )
+          await station.close();
+        throw error;
+      }
+    } finally {
+      this.commands.delete(stationId);
     }
   }
   async close(): Promise<void> {

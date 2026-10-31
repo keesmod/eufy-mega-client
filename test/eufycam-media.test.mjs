@@ -40,8 +40,14 @@ test('T8134 keeps its existing media admission without a new owner firmware rest
   for (const firmware of [undefined, 'unknown', '2.0.9.6']) {
     const f = await mediaFixture({ ...profile, owner: { ...profile.owner, firmware } });
     try {
-      for (const feature of Object.values(f.transport.cameraCapabilities(f.camera.device_sn)))
-        assert.deepEqual(feature, { available: true, status: 'experimental', reason: null });
+      const capabilities = f.transport.cameraCapabilities(f.camera.device_sn);
+      for (const key of ['snapshot', 'live', 'recordings'])
+        assert.deepEqual(capabilities[key], {
+          available: true,
+          status: 'experimental',
+          reason: null,
+        });
+      assert.equal(capabilities.presets.reason, 'operation_outside_hardware_scope');
       const opening = f.transport.startLive(f.camera.device_sn);
       await turn();
       f.startEvent();
@@ -539,12 +545,14 @@ for (const p of [
 test('T84A1 stays media-unverified beside the admitted T81A0 profile', async () => {
   const f = await mediaFixture({ ...walllightMedia[0], model: 'T84A1', type: 151 });
   try {
-    for (const feature of Object.values(f.transport.cameraCapabilities(f.camera.device_sn)))
-      assert.deepEqual(feature, {
+    const capabilities = f.transport.cameraCapabilities(f.camera.device_sn);
+    for (const key of ['snapshot', 'live', 'recordings'])
+      assert.deepEqual(capabilities[key], {
         available: false,
         status: 'unsupported',
         reason: 'camera_media_unverified',
       });
+    assert.equal(capabilities.presets.reason, 'operation_outside_hardware_scope');
     records(f);
     await assert.rejects(f.transport.snapshot(f.camera.device_sn), {
       code: 'camera_media_unverified',

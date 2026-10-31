@@ -35,6 +35,12 @@ test('registry contains exactly the characterized profiles with explicit immutab
   }
 });
 
+test('ha-eufy-cam#229: only T8170 offers preset moves', () => {
+  for (const [model, profile] of Object.entries(deviceProfiles))
+    assert.equal(profile.presets, model === 'T8170' ? true : undefined, model);
+  assert.equal(Object.isFrozen(deviceProfiles.T8170), true);
+});
+
 test('only T8224 admits a reported type, and only for that exact pair', () => {
   for (const [model, profile] of Object.entries(deviceProfiles))
     if (model !== 'T8224') assert.equal(profile.reportedTypes, undefined, model);
@@ -493,6 +499,11 @@ test('capabilities preserve individual feature failures and operation policy sel
       snapshot: { available: true, status: 'experimental', reason: null },
       live: { available: false, status: 'unsupported', reason: 'camera_media_unverified' },
       recordings: { available: true, status: 'experimental', reason: null },
+      presets: {
+        available: false,
+        status: 'unsupported',
+        reason: 'operation_outside_hardware_scope',
+      },
     });
     await assert.rejects(f.transport.startLive(f.camera.device_sn), {
       code: 'camera_media_unverified',
@@ -522,6 +533,7 @@ test('capabilities preserve individual feature failures and operation policy sel
         'invalid_connection_credentials',
         'invalid_connection_credentials',
         'camera_media_unverified',
+        'operation_outside_hardware_scope',
       ],
     );
     assert.equal(f.counts.starts, 0);

@@ -126,8 +126,9 @@ Both live envelopes use `CMD_DOORBELL_SET_PAYLOAD` with `commandType=1000`,
 `accountId`, public `encryptkey` and `streamtype` 0/1 for H.264/H.265. The
 T8170/T8171/T8173 branch also sends `camera_type=0` and `entrytype=0`. Tests assert
 both full envelopes and the actual channel for every model and codec. These
-names describe existing wire formats, not new adapters or permission to move a
-pan/tilt camera.
+names describe existing wire formats, not new adapters. Since 0.30.3 only the
+T8170 under an admitted HomeBase 3 can move to a preset saved in the app, see
+[preset moves](API.md#preset-moves-0303). Other pan/tilt control is not provided.
 
 Snapshots query the latest HomeBase cover and download it through
 `CMD_DATABASE_IMAGE`. They do not wake the camera for a fresh image. Recording

@@ -1191,6 +1191,17 @@ T8134 reporter cells and dated follow-up observations are preserved. At 0.12.0,
 standalone obligations. Software audio forwarding is not proof that the
 reporter's missing audio is resolved.
 
+## SoloCam S340 preset moves, 0.30.3
+
+[Camera-229] adds a move to one of the four presets saved in the app for the
+exact T8170/type 48 under an admitted HomeBase 3, see
+[preset moves](API.md#preset-moves-0303). It reuses the unchanged vendored
+preset command. This is a software path only. No hardware has shown that a
+HomeBase 3 answers the move for a T8170, or that app preset n is wire index
+n-1. The feature table has no preset column, so the type 48 row lists
+[Camera-229] as remaining work until a reporter result is recorded. Other
+pan/tilt models and the standalone route have no preset move.
+
 ## Integrated camera software evidence, 0.12.0
 
 [Issue #39][#39] adds [integrated camera software evidence](INTEGRATED_CAMERAS.md)
@@ -1425,7 +1436,7 @@ battery lifetime claim is made.
 | 45    | T8441 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57]               |
 | 46    | T8442 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57]               |
 | 47    | T8425 / H3 only                                      | X         | X                   | N/A       | X               | X          | X          | X               | X             | [Floodlight-software], [Catalogue]                  | [#29], [#30], [#60]                             |
-| 48    | T8170 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]                             |
+| 48    | T8170 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56], [Camera-229]               |
 | 49    | T8144 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#105]                                          |
 | 55    | T8530 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software]                               | [#39], [#35], [#36], [E2], [E6]                 |
 | 60    | T8122 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]                             |
@@ -1684,6 +1695,7 @@ S1 alone is not the discovery test. Review both files for the exact assertion.
 [R1]: https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5619177924
 [R2]: https://github.com/keesmod/ha-eufy-cam/issues/10#issuecomment-5619797793
 [Camera-10]: https://github.com/keesmod/ha-eufy-cam/issues/10
+[Camera-229]: https://github.com/keesmod/ha-eufy-cam/issues/229
 [Live-tests]: https://github.com/keesmod/eufy-mega-client/blob/e69624d79cd43e810a216602cc39eff70a27d046/test/live.test.mjs
 [Recording-tests]: https://github.com/keesmod/eufy-mega-client/blob/e69624d79cd43e810a216602cc39eff70a27d046/test/recordings.test.mjs
 [Event-tests]: https://github.com/keesmod/eufy-mega-client/blob/e69624d79cd43e810a216602cc39eff70a27d046/test/events.test.mjs
