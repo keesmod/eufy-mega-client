@@ -3,6 +3,7 @@
 ## 0.30.3 - Unreleased
 
 - The key setup type docs now name 0.30.2 instead of its betas ([#262](https://github.com/keesmod/eufy-mega-client/pull/262)).
+- Updated the dependency `qs` to 6.16.1 ([#266](https://github.com/keesmod/eufy-mega-client/pull/266)).
 
 ## 0.30.2 - 2026-10-26
 
