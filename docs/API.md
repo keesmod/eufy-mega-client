@@ -419,9 +419,8 @@ consumer chunks the stream. Bytes before the first offset a consumer received
 have no timing.
 
 The frames already pushed when the stream starts come first, then each new frame
-right before its bytes are pushed. These first calls, including the key frame at
-offset 0, run before `startLive` resolves, so the callback cannot use the
-returned `LiveStream`. A video frame leaves the library when the next frame
+right before its bytes are pushed. These first calls can run before `startLive`
+resolves, so the callback cannot use the returned `LiveStream`. A video frame leaves the library when the next frame
 starts, so its timing arrives one frame after the camera sent it. Every ADTS
 frame of one audio message carries that message's timestamp. The callback runs
 synchronously in the P2P receive path and carries no identifiers. Slow work in
