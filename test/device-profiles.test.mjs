@@ -208,6 +208,64 @@ test('T8160-C has the T8160 type and adapter with the additional-H3 media policy
   );
 });
 
+// ha-eufy-cam#236: three eufyCam 2C Pro cameras reported as T8142-Z/15 under a T8030.
+test('T8142-Z has the T8142 type and adapter with the additional-H3 media policy', () => {
+  const profile = deviceProfiles['T8142-Z'];
+  // Not a copy of the T8142 row: established media stays with the original four models.
+  assert.deepEqual(
+    { ...profile, features: { ...profile?.features } },
+    { type: 15, kind: 'camera', family: 'eufycam', topology: 'h3', features: h3Policy },
+  );
+  assert.equal(deviceProfiles.T8142.features.live, 'established');
+  assert.equal(exactDeviceProfile({ device_model: 'T8142-Z', device_type: 15 }), profile);
+  for (const [device_model, device_type] of [
+    ['T8142-Z', 8],
+    ['T8142-Z', 14],
+    ['T8142-Z', '15'],
+    ['T8142R', 15],
+    ['T8142-R', 15],
+    ['T8142-V', 15],
+    ['T8142-ZZ', 15],
+    ['T8142Z', 15],
+    ['t8142-z', 15],
+    ['T8142-z', 15],
+    ['T8142-Z ', 15],
+    [' T8142-Z', 15],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8142-Z',
+    device_type: 15,
+    parent_sn: reportedOwner.device_sn,
+    main_sw_version: '3.3.8',
+  };
+  const result = discover([reportedOwner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), {
+    kind: 'station',
+    ownerId: reportedOwner.device_sn,
+  });
+  assert.equal(result.result.devices[1].model, 'T8142-Z');
+  assert.equal(result.result.devices[1].firmware, '3.3.8');
+  assert.deepEqual(result.result.issues, []);
+  assertH3OwnerGates(camera, reportedOwner);
+  // The original T8142 keeps its model-only check, so only T8142-Z needs the owner.
+  for (const feature of ['snapshot', 'live', 'recordings']) {
+    assert.equal(hasCameraMedia({ ...camera, device_model: 'T8142' }, undefined, feature), true);
+    assert.equal(hasCameraMedia(camera, undefined, feature), false);
+  }
+  for (const parent_sn of ['', 'CAM'])
+    assert.deepEqual(discover([reportedOwner, { ...camera, parent_sn }]).relationships.get('CAM'), {
+      kind: 'unsupported',
+      reason: 'invalid_device_relationship',
+    });
+  assert.equal(
+    discover([reportedOwner, { ...camera, parent_sn: 'HB\n' }]).result.issues[0].code,
+    'invalid_device_relationship',
+  );
+});
+
 // ha-eufy-cam#198: T8210/7 and T8210C/7 rest on public evidence, not on the reporter's row.
 test('T8210 and T8210C are admitted only as type 7 with the additional-H3 doorbell policy', () => {
   // Separate profiles with the same policy, not a prefix match.
