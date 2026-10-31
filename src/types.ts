@@ -227,6 +227,26 @@ export interface LiveStartOptions {
    * end or retry the start. See docs/API.md, live start stages.
    */
   onProgress?: (progress: LiveStartProgress) => void;
+  /**
+   * Called synchronously with the camera timing of each video and audio frame
+   * of this stream. The frames already pushed when the stream starts come
+   * first, then each new frame right before its bytes are pushed. Errors it
+   * throws are ignored. It cannot change, end or delay the stream. See
+   * docs/API.md, live frame timing.
+   */
+  onFrameTiming?: (timing: LiveFrameTiming) => void;
+}
+/** One frame of a live stream on the camera's clock. No identifiers. */
+export interface LiveFrameTiming {
+  kind: 'video' | 'audio';
+  /** Position of the frame's first byte in `video` or `audio`, counted from 0. */
+  offset: number;
+  /** The frame's length in bytes. */
+  bytes: number;
+  /** The camera's clock in milliseconds, from the frame's header. */
+  timestampMs: number;
+  /** The header marks a video key frame. Always false for audio. */
+  keyFrame: boolean;
 }
 /**
  * `session_ready`: the P2P session that carries the stream is connected, and

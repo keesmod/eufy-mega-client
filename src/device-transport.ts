@@ -50,6 +50,7 @@ import {
   type Snapshot,
   type LiveStream,
   type LiveStartProgress,
+  type LiveFrameTiming,
   type StationConnectionProgress,
   type StationConnectionStage,
   type StationLookupObservation,
@@ -59,6 +60,7 @@ import {
   type StandalonePushObservation,
 } from './types.js';
 import { LiveStartObserver } from './live-start.js';
+import { tapLiveFrames } from './live-frames.js';
 
 import { mediaMetadata } from './media.js';
 interface ActiveLive {
@@ -810,6 +812,7 @@ export class DeviceTransport extends EventEmitter {
     signal?: AbortSignal,
     maxDurationMs?: number,
     onProgress?: (progress: LiveStartProgress) => void,
+    onFrameTiming?: (timing: LiveFrameTiming) => void,
   ): Promise<LiveStream> {
     const progress = new LiveStartObserver(onProgress);
     const bound = this.liveBound(maxDurationMs);
@@ -828,12 +831,21 @@ export class DeviceTransport extends EventEmitter {
     // experimental standalone camera always uses its one primary session.
     if (this.liveLimit > 1 && !this.standalone.has(stationId)) {
       if (this.liveCount(stationId) >= this.liveLimit) throw new EufyError('station_busy');
-      return this.startExtraLive(id, camera, stationId, bound, progress, signal);
+      return this.startExtraLive(id, camera, stationId, bound, progress, signal, onFrameTiming);
     }
     if (this.lives.has(stationId) || this.starting.has(stationId))
       throw new EufyError('station_busy');
     this.starting.set(stationId, channel);
-    const operation = this.openLive(id, camera, stationId, station, bound, progress, signal);
+    const operation = this.openLive(
+      id,
+      camera,
+      stationId,
+      station,
+      bound,
+      progress,
+      signal,
+      onFrameTiming,
+    );
     this.pendingStarts.add(operation);
     try {
       return await operation;
@@ -850,6 +862,7 @@ export class DeviceTransport extends EventEmitter {
     bound: number,
     progress: LiveStartObserver,
     signal?: AbortSignal,
+    onFrameTiming?: (timing: LiveFrameTiming) => void,
   ): Promise<LiveStream> {
     let issued = false;
     let unwatch = () => {};
@@ -904,6 +917,7 @@ export class DeviceTransport extends EventEmitter {
           video.once('error', abort);
           audio.once('error', abort);
           this.lives.set(stationId, active);
+          tapLiveFrames(video, audio, onFrameTiming);
           return handle;
         },
         signal,
@@ -1066,12 +1080,22 @@ export class DeviceTransport extends EventEmitter {
     bound: number,
     progress: LiveStartObserver,
     signal?: AbortSignal,
+    onFrameTiming?: (timing: LiveFrameTiming) => void,
   ): Promise<LiveStream> {
     const key = this.liveKey(stationId, camera.getChannel());
     if (this.extraLives.has(key) || this.extraStarting.has(key))
       throw new EufyError('station_busy');
     this.extraStarting.set(key, stationId);
-    const operation = this.openExtraLive(id, camera, stationId, key, bound, progress, signal);
+    const operation = this.openExtraLive(
+      id,
+      camera,
+      stationId,
+      key,
+      bound,
+      progress,
+      signal,
+      onFrameTiming,
+    );
     this.pendingStarts.add(operation);
     try {
       return await operation;
@@ -1088,6 +1112,7 @@ export class DeviceTransport extends EventEmitter {
     bound: number,
     progress: LiveStartObserver,
     signal?: AbortSignal,
+    onFrameTiming?: (timing: LiveFrameTiming) => void,
   ): Promise<LiveStream> {
     const station = await this.createExtraStation(stationId);
     let issued = false;
@@ -1161,6 +1186,7 @@ export class DeviceTransport extends EventEmitter {
           video.once('error', abort);
           audio.once('error', abort);
           this.extraLives.set(key, active);
+          tapLiveFrames(video, audio, onFrameTiming);
           return handle;
         },
         signal,

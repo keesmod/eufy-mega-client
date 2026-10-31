@@ -155,6 +155,8 @@ export interface P2PDataMessageState {
   waitForAudioData?: NodeJS.Timeout;
   receivedFirstIFrame: boolean;
   preFrameVideoData: Buffer;
+  preFrameTimestamp: number;
+  preFrameKeyFrame: boolean;
   p2pTalkback: boolean;
   p2pTalkbackChannel: number;
 }
