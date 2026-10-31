@@ -28,6 +28,13 @@ export async function renderDeviceProfiles(text) {
         'See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.',
       ]),
     ...Object.entries(deviceProfiles)
+      .filter(([, profile]) => profile.presets)
+      .flatMap(([model]) => [
+        '',
+        `${model} also offers experimental moves to a saved preset, only with the H3 media owner`,
+        'admission above. See [API.md](API.md#preset-moves-0303).',
+      ]),
+    ...Object.entries(deviceProfiles)
       .filter(([, profile]) => profile.experimentalStandalone)
       .flatMap(([model, { features, standaloneEvents }]) => {
         // Blocked cells apply without the option. H3 cells apply only under a HomeBase.

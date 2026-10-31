@@ -606,6 +606,77 @@ command acknowledgement and fresh device-reported Guard Mode. `commandSent`
 is false if a fresh read already matches. Rejection or timeout never causes an
 automatic retry. Read the device again before deciding what to do next.
 
+## Preset moves, 0.30.3
+
+`moveToPreset(cameraId, preset, signal?)` moves a camera to one of the four
+presets saved in the Eufy app, for
+[ha-eufy-cam#229](https://github.com/keesmod/ha-eufy-cam/issues/229). `preset`
+is the wire index 0 to 3. The app labels its presets 1 to 4, so app preset 1 is
+index 0. That mapping is not yet confirmed on hardware. The result is a
+`PresetMoveResult` with `preset` and `elapsedMs`, the time from the send to the
+HomeBase result.
+
+Only the exact SoloCam S340 `T8170`, type 48, under a HomeBase 3 has this
+operation. It needs the same owner admission as camera media: the actual `T8030`
+parent, the `T8030` serial prefix and owner firmware at or above 2.0.9.7. The
+`presets` field of [`getCameraCapabilities`](CAMERA_CAPABILITIES.md) reports it.
+Other pan/tilt models, the standalone route, pan and tilt steps, 360° rotation,
+saving, deleting or renaming presets, preset names, the current position and
+move completion are not provided. This is software only and not yet confirmed
+on hardware.
+
+The client sends one `CMD_DOORBELL_SET_PAYLOAD` with the nested preset command
+6035 on the HomeBase's primary session. As with `setGuardMode`, a move fails
+with `station_busy` and is never queued while a station command, a recording
+operation, or a live start or stream on the primary session holds that session.
+With the default `maxLiveStreamsPerStation` of 1, live view runs on the primary
+session, so a move during live view fails with `station_busy`. Above 1, every
+live stream runs on its own extra session and the primary session stays free
+for a move.
+
+| Code                                                    | Phase           | Meaning                                                            |
+| ------------------------------------------------------- | --------------- | ------------------------------------------------------------------ |
+| `operation_outside_hardware_scope`                      | Before the send | The camera is not admitted for preset moves.                       |
+| `unknown_camera`, `unknown_station` or a stored failure | Before the send | As for other camera operations.                                    |
+| `invalid_preset`                                        | Before the send | `preset` is not an integer from 0 to 3.                            |
+| `station_busy`                                          | Before the send | Another operation holds the primary session.                       |
+| `connection_busy` or another connection error           | Before the send | Another caller is opening the session, or the connection failed.   |
+| `cancelled`                                             | Before the send | The signal was aborted before the send.                            |
+| `preset_move_failed`                                    | Before the send | The protocol layer refused the command. Nothing was sent.          |
+| `preset_move_rejected`                                  | After the send  | The HomeBase answered with the non-zero code in `remoteCode`.      |
+| `preset_move_unconfirmed`                               | After the send  | No acceptance arrived. The camera may still have moved or move on. |
+
+`preset_move_unconfirmed` carries `remoteCode` -133 or -134 when the session
+itself gave up on the move. -133 means that no result arrived 30 seconds after
+the HomeBase acknowledged the move, or that the session stopped after 10
+re-sends. After a 503 (failed to request) answer only the limit of 10 re-sends
+applies, as described below. -134 means that the move aged out of the session's
+send queue. The session has then already dropped the move. Without
+`remoteCode`, the client's own 40-second bound ran out, the session closed or
+failed, or the signal was aborted after the send. The client then closes the
+session, so no queued copy can be sent later. The 40-second bound is longer
+than the session's own 30-second wait for a result.
+
+A failure before the send moved nothing. `connection_busy` leaves the other
+caller's connection attempt as it is. The client sends a move once and never
+replays it. The vendored session below can still send it again, as it does for
+guard mode. Until the HomeBase acknowledges the move, the session retransmits
+it about every 100 milliseconds and sends it again every 5 seconds. After a 503
+answer it sends the move again at once, as a new command with a new sequence
+number. It keeps the move marked as acknowledged, so it ignores the
+acknowledgements of these re-sends. It retransmits about every 100
+milliseconds and sends the move again as a new command every 5 seconds. Each
+further 503 answer starts another re-send at once. This goes on until a result
+arrives or the session gives up after 10 re-sends with -133, unless the
+client's 40-second bound closes the session first. One call can therefore send
+up to 10 more move commands. A preset is an absolute target, so a duplicate
+sends the camera to the same position.
+
+A result means that the HomeBase accepted the move. It never means that the
+camera finished moving or reached the position. There is no position read and
+no completion signal. A move creates no guarantee about motion events or
+recordings.
+
 ## Errors and shutdown
 
 Catch `EufyError` and use its stable `code`; `remoteCode` is an optional numeric
