@@ -440,7 +440,10 @@ multiples of 40 ms and averaged one AAC frame, 64 ms at 16 kHz. Audio arrived
 For an uncertain previous session it sends an explicit STOP, checks its
 acknowledgement and renews the primary session, which needs an idle station: it
 rejects with `station_busy` while any camera streams or another operation owns
-the station. An old stream handle cannot stop a newer stream.
+the station. A failure after the connection was requested closes the session,
+except `connection_busy`, which leaves another caller's attempt alone. From the
+renewal it follows a confirmed STOP, while another caller opens the fresh
+session. An old stream handle cannot stop a newer stream.
 
 ## Recordings
 
@@ -604,7 +607,9 @@ it does not manufacture missing names or detections.
 3–5 (Custom), 47 (Geofencing) or 63 (Disarmed). Its result requires a matching
 command acknowledgement and fresh device-reported Guard Mode. `commandSent`
 is false if a fresh read already matches. Rejection or timeout never causes an
-automatic retry. Read the device again before deciding what to do next.
+automatic retry. Read the device again before deciding what to do next. A
+failure after the connection was requested closes the session, except
+`connection_busy`, which leaves another caller's attempt alone.
 
 ## Preset moves, 0.30.3
 
