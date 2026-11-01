@@ -441,8 +441,9 @@ For an uncertain previous session it sends an explicit STOP, checks its
 acknowledgement and renews the primary session, which needs an idle station: it
 rejects with `station_busy` while any camera streams or another operation owns
 the station. A failure after the connection was requested closes the session,
-except `connection_busy`, which leaves another caller's attempt alone. An old
-stream handle cannot stop a newer stream.
+except `connection_busy`, which leaves another caller's attempt alone. From the
+renewal it follows a confirmed STOP, while another caller opens the fresh
+session. An old stream handle cannot stop a newer stream.
 
 ## Recordings
 
