@@ -1021,17 +1021,20 @@ export class DeviceTransport extends EventEmitter {
     this.commands.add(stationId);
     const abort = AbortSignal.any([this.lifetime.signal, ...(signal ? [signal] : [])]);
     try {
+      // connect() closes its own failed attempt. connection_busy leaves the other attempt alone.
       await this.connect(stationId, abort);
-      await this.confirmStop(station, camera, abort);
+      try {
+        await this.confirmStop(station, camera, abort);
+      } catch (error) {
+        await station.close();
+        throw error;
+      }
       // Lost UDP packets can leave the media sequence out of sync even when
       // commands work again. End that session after its STOP acknowledgement
       // and establish a fresh encrypted connection before releasing ownership.
       await station.close();
       await this.connect(stationId, abort);
       return { confirmed: true, reason: 'device' };
-    } catch (error) {
-      await station.close();
-      throw error;
     } finally {
       this.commands.delete(stationId);
     }
@@ -1344,14 +1347,17 @@ export class DeviceTransport extends EventEmitter {
       abort = AbortSignal.any([this.lifetime.signal, ...(signal ? [signal] : [])]);
     this.commands.add(id);
     try {
+      // connect() closes its own failed attempt. connection_busy leaves the other attempt alone.
       await this.connect(id, abort);
-      const before = await readGuardMode(station, abort);
-      if (before === mode) return { confirmed: true, commandSent: false, state: this.state(id) };
-      await changeGuardMode(station, mode, abort);
-      return { confirmed: true, commandSent: true, state: this.state(id) };
-    } catch (error) {
-      await station.close();
-      throw error;
+      try {
+        const before = await readGuardMode(station, abort);
+        if (before === mode) return { confirmed: true, commandSent: false, state: this.state(id) };
+        await changeGuardMode(station, mode, abort);
+        return { confirmed: true, commandSent: true, state: this.state(id) };
+      } catch (error) {
+        await station.close();
+        throw error;
+      }
     } finally {
       this.commands.delete(id);
     }

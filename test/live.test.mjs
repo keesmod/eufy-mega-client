@@ -183,6 +183,67 @@ test('recovery confirms STOP and retains ownership until the media connection is
   }
 });
 
+test("guard mode and the stop recovery leave another caller's connection attempt alone", async () => {
+  const f = fixture();
+  let closes = 0,
+    open;
+  const close = f.station.close;
+  f.station.close = async () => {
+    closes++;
+    await close();
+  };
+  try {
+    await f.station.close();
+    closes = 0;
+    // A close while that attempt is in flight ends it, as it ends the vendored session's attempt.
+    const connect = f.station.connect;
+    f.station.connect = () =>
+      new Promise((resolve, reject) => {
+        const before = closes;
+        open = () => (closes === before ? resolve(connect()) : reject(new Error('closed')));
+      });
+    const other = f.t.connect('HB');
+    await assert.rejects(f.t.setGuardMode('HB', 1), { code: 'connection_busy' });
+    await assert.rejects(f.t.ensureLiveStopped('CAM'), { code: 'connection_busy' });
+    assert.equal(closes, 0);
+    assert.equal(f.t.commands.size, 0);
+    open();
+    await other;
+    assert.equal(f.t.state('HB').connected, true);
+    assert.equal(closes, 0);
+    assert.equal(f.stops(), 0);
+  } finally {
+    await f.t.close();
+  }
+});
+
+test('a failure after the connection still closes the session for guard mode and the stop recovery', async () => {
+  const f = fixture();
+  let closes = 0;
+  const close = f.station.close;
+  f.station.close = async () => {
+    closes++;
+    await close();
+  };
+  f.station.stopLivestream = () => {};
+  try {
+    const abort = new AbortController();
+    const guard = f.t.setGuardMode('HB', 1, abort.signal);
+    await delay(0);
+    abort.abort();
+    await assert.rejects(guard, { code: 'cancelled' });
+    assert.equal(closes, 1);
+    const recovery = f.t.ensureLiveStopped('CAM');
+    await delay(0);
+    f.ack(-1);
+    await assert.rejects(recovery, { code: 'stop_rejected' });
+    assert.equal(closes, 2);
+    assert.equal(f.t.commands.size, 0);
+  } finally {
+    await f.t.close();
+  }
+});
+
 test('live metadata reflects audio discovered after video startup', async () => {
   const f = fixture();
   const metadata = {

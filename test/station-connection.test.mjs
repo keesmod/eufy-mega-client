@@ -1482,12 +1482,15 @@ test('a close the attempt did not make still lets onLookup report the counts', a
         inventoryReply: 'own',
       },
     ]);
-    // Another operation on the station during the lookup is refused and closes the session.
+    // Another operation on the station during the lookup is refused and leaves
+    // the session alone. A close from elsewhere, such as an unconfirmed stop, does not.
     const controller = new AbortController();
     const cancelled = transport.connect('HB', controller.signal, undefined, observe);
     protocol.lookup();
     protocol.handleMsg(lookupResponse(FOREIGN_DID), from('192.168.1.9'));
     await assert.rejects(transport.setGuardMode('HB', 1), { code: 'connection_busy' });
+    assert.equal(calls.close, 1);
+    await station.close();
     assert.equal(calls.close, 2);
     controller.abort();
     await assert.rejects(cancelled, { code: 'cancelled' });
