@@ -41,7 +41,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "date-and-time": "^4.6.0",
+    "date-and-time": "^4.7.0",
     "got": "^14.4.2",
     "image-type": "^6.1.0",
     "long": "^5.2.3",
