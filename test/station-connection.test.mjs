@@ -1483,7 +1483,7 @@ test('a close the attempt did not make still lets onLookup report the counts', a
       },
     ]);
     // Another operation on the station during the lookup is refused and leaves
-    // the session alone. A close from elsewhere, such as an unconfirmed stop, does not.
+    // the session alone. A close from elsewhere, such as an unconfirmed stop, still ends it.
     const controller = new AbortController();
     const cancelled = transport.connect('HB', controller.signal, undefined, observe);
     protocol.lookup();
