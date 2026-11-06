@@ -67,10 +67,10 @@ credentials on local transport, goes on without a command key, reports the mode
 `none` and sends its commands unencrypted. Otherwise it releases the commands
 unchanged, or closes when the credentials fail. After it goes on without a key, a later key
 answer on that connection is ignored. Version 0.30.3 records the timing of
-each live video and audio frame that the P2P session pushes to its media
-streams: the frame's byte offset in its stream, its length, its camera timestamp
-and, for video, whether it is a key frame. Each video frame carries the timing
-of its own header. The client-written `vendor/src/p2p/frame-timing.ts` holds
+each frame that the P2P session pushes to a live video stream and to the audio
+stream of a live view or a download: the frame's byte offset in its stream, its
+length, its camera timestamp and, for video, whether it is a key frame. Each
+live video frame carries the timing of its own header. The client-written `vendor/src/p2p/frame-timing.ts` holds
 these records per stream, keeps at most the newest 256 until a listener attaches
 and ignores listener errors. The pushed bytes are unchanged.
 Those changes must not be attributed to the original upstream release.

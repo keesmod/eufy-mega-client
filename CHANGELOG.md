@@ -4,8 +4,8 @@
 
 - Added the eufyCam 2C Pro `T8142-Z` on a HomeBase 3 ([ha-eufy-cam#236](https://github.com/keesmod/ha-eufy-cam/issues/236)), not yet confirmed on hardware.
 - Added preset moves for the SoloCam S340 `T8170` on a HomeBase 3 ([ha-eufy-cam#229](https://github.com/keesmod/ha-eufy-cam/issues/229)), not yet confirmed on hardware.
-- Added `onFrameTiming` to `startLive`, which passes on each live frame's camera timestamp ([#264](https://github.com/keesmod/eufy-mega-client/issues/264)).
-- `setGuardMode` and `ensureLiveStopped` no longer close a connection attempt that another caller is making ([#270](https://github.com/keesmod/eufy-mega-client/pull/270)).
+- Added `onFrameTiming` to `startLive`, which passes on each live frame's camera timestamp ([#264](https://github.com/keesmod/eufy-mega-client/issues/264)), not yet confirmed on hardware.
+- `setGuardMode` and `ensureLiveStopped` no longer close a connection attempt that another caller is making ([#270](https://github.com/keesmod/eufy-mega-client/pull/270)), not yet confirmed on hardware.
 - Updated `qs` to 6.16.1, `date-and-time` to 4.7.0 and `strtok3` to 10.6.2, and corrected the key setup type docs ([#266](https://github.com/keesmod/eufy-mega-client/pull/266), [#271](https://github.com/keesmod/eufy-mega-client/pull/271), [#262](https://github.com/keesmod/eufy-mega-client/pull/262)).
 
 Upgrade: no changes needed. Rollback: 0.30.2.
