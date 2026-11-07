@@ -627,8 +627,8 @@ parent, the `T8030` serial prefix and owner firmware at or above 2.0.9.7. The
 `presets` field of [`getCameraCapabilities`](CAMERA_CAPABILITIES.md) reports it.
 Other pan/tilt models, the standalone route, pan and tilt steps, 360° rotation,
 saving, deleting or renaming presets, preset names, the current position and
-move completion are not provided. This is software only and not yet confirmed
-on hardware.
+move completion are not provided. A user reported moves working on hardware,
+see the [model matrix](MODEL_MATRIX.md#reported-s340-preset-moves-2026-11-07).
 
 The client sends one `CMD_DOORBELL_SET_PAYLOAD` with the nested preset command
 6035 on the HomeBase's primary session. As with `setGuardMode`, a move fails

@@ -1211,11 +1211,28 @@ reporter's missing audio is resolved.
 [Camera-229] adds a move to one of the four presets saved in the app for the
 exact T8170/type 48 under an admitted HomeBase 3, see
 [preset moves](API.md#preset-moves-0303). It reuses the unchanged vendored
-preset command. This is a software path only. No hardware has shown that a
-HomeBase 3 answers the move for a T8170, or that app preset n is wire index
-n-1. The feature table has no preset column, so the type 48 row lists
-[Camera-229] as remaining work until a reporter result is recorded. Other
-pan/tilt models and the standalone route have no preset move.
+preset command. At 0.30.3 this was a software path only. No hardware had shown
+that a HomeBase 3 answers the move for a T8170, or that app preset n is wire
+index n-1. The feature table has no preset column, so the type 48 row listed
+[Camera-229] as remaining work until the
+[reported result](#reported-s340-preset-moves-2026-11-07) below. Other pan/tilt
+models and the standalone route have no preset move.
+
+## Reported S340 preset moves, 2026-11-07
+
+On 2026-11-07 the [reporter of ha-eufy-cam#229][229-report] ran integration
+0.8.50 and bridge 0.8.41 with client 0.30.3 on a T8170 with firmware 3.3.5.4
+under a T8030 with firmware 3.8.8.0. The four preset moves took the camera to
+four different saved positions. About 15 moves were accepted in 1.9 to 2.2
+seconds each, the first one after a restart in 5.0 seconds, and none failed.
+The camera turned back to its default view by itself. A snapshot refresh 4
+seconds after a move showed the preset, a refresh 20 or 30 seconds after it the
+default view. The moves created no motion events in Home Assistant. Whether app
+preset n is wire index n-1 and whether a move starts a recording in the app
+were not checked. This is a reported result, not independently reproduced. The
+type 48 feature row and its cells are unchanged.
+
+[229-report]: https://github.com/keesmod/ha-eufy-cam/issues/229#issuecomment-6703738436
 
 ## Integrated camera software evidence, 0.12.0
 
@@ -1451,7 +1468,7 @@ battery lifetime claim is made.
 | 45    | T8441 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57]               |
 | 46    | T8442 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57]               |
 | 47    | T8425 / H3 only                                      | X         | X                   | N/A       | X               | X          | X          | X               | X             | [Floodlight-software], [Catalogue]                  | [#29], [#30], [#60]                             |
-| 48    | T8170 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56], [Camera-229]               |
+| 48    | T8170 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]                             |
 | 49    | T8144 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#105]                                          |
 | 55    | T8530 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software]                               | [#39], [#35], [#36], [E2], [E6]                 |
 | 60    | T8122 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]                             |
