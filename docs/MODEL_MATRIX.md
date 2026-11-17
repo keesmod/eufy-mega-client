@@ -286,6 +286,21 @@ independently reproduced. The type 97 feature row and its cells are unchanged.
 
 [252-result]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6946575850
 
+## Reported T8215 beta results, 2026-11-17
+
+Later that day the [same reporter][252-beta] ran the beta integration
+0.8.52-beta.1 and bridge 0.8.43-beta.1 with client 0.30.5-beta.1 on the same
+T8215. One press of the doorbell produced one ring event. Recordings played
+without sound. The bridge logged the recording input as H.265 video, as the
+client reported it, and audio type 7 (`aac-eld`) without ADTS framing. The
+bridge leaves that audio out, because the FFmpeg it uses cannot decode 16 kHz
+AAC-ELD. [ha-eufy-cam#264][264] tracks the audio. This is a reported result,
+not independently reproduced. The type 97 feature row and its cells are
+unchanged.
+
+[252-beta]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6960995150
+[264]: https://github.com/keesmod/ha-eufy-cam/issues/264
+
 ## Reported T8113-Z and T8424, 0.26.0
 
 A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
