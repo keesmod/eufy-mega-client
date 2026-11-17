@@ -10,11 +10,12 @@ import {
 import { discover } from '../dist/discovery.js';
 import { hasCameraMedia } from '../dist/camera-media.js';
 import { EufyError } from '../dist/index.js';
-import { CommandName } from '../dist/vendor/http/index.js';
+import { BatteryDoorbellCamera, CommandName } from '../dist/vendor/http/index.js';
 import { renderDeviceProfiles } from '../scripts/device-profiles.mjs';
 import { profileBaseline } from './fixtures/device-profile-baseline.mjs';
 import { mediaFixture } from './fixtures/media.mjs';
 import { indoorMedia } from './fixtures/indoor-media.mjs';
+import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 
 test('registry contains exactly the characterized profiles with explicit immutable feature policy', async () => {
   assert.deepEqual(
@@ -318,6 +319,116 @@ test('T8210 and T8210C are admitted only as type 7 with the additional-H3 doorbe
         { kind: 'unsupported', reason: 'invalid_device_relationship' },
       );
   }
+});
+
+// ha-eufy-cam#252: a Video Doorbell S4 reported as T8215/97 under a T8030 on 2026-11-10.
+test('T8215 admits only the reported Video Doorbell S4 pair, with media commands only', async () => {
+  const profile = deviceProfiles.T8215;
+  assert.deepEqual(
+    { ...profile, features: { ...profile?.features } },
+    { type: 97, kind: 'camera', family: 'battery-doorbell', topology: 'h3', features: h3Policy },
+  );
+  assert.equal(exactDeviceProfile({ device_model: 'T8215', device_type: 97 }), profile);
+  for (const [device_model, device_type] of [
+    ['T8215', 96],
+    ['T8215', 7],
+    ['T8215', 94],
+    ['T8215', 98],
+    ['T8215', '97'],
+    ['t8215', 97],
+    ['T8215C', 97],
+    ['T8215-Z', 97],
+    ['T8215 ', 97],
+    [' T8215', 97],
+    ['T8216', 97],
+    ['T8224', 97],
+    ['T8223', 97],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  // The reported owner, camera firmware and hardware from ha-eufy-cam#252.
+  const owner = { ...reportedOwner, main_sw_version: '3.8.8.0' };
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8215',
+    device_type: 97,
+    parent_sn: owner.device_sn,
+    main_sw_version: '2.0.1.4',
+    main_hw_version: '0.0.0.2',
+  };
+  const result = discover([owner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), { kind: 'station', ownerId: owner.device_sn });
+  assert.equal(result.result.devices[1].model, 'T8215');
+  assert.equal(result.result.devices[1].firmware, '2.0.1.4');
+  assert.deepEqual(result.result.issues, []);
+  assertH3OwnerGates(camera, owner);
+  for (const feature of ['snapshot', 'live', 'recordings'])
+    assert.equal(hasCameraMedia(camera, undefined, feature), false);
+  for (const parent_sn of ['', 'CAM'])
+    assert.deepEqual(discover([owner, { ...camera, parent_sn }]).relationships.get('CAM'), {
+      kind: 'unsupported',
+      reason: 'invalid_device_relationship',
+    });
+  // Every event kind the transport maps. A doorbell under a T8030 supports these ten.
+  const kinds = [
+    'motion',
+    'person',
+    'ring',
+    'vehicle',
+    'pet',
+    'crying',
+    'sound',
+    'package_delivered',
+    'package_stranded',
+    'package_taken',
+    'loitering',
+    'radar_motion',
+    'dog',
+    'dog_lick',
+    'dog_poop',
+  ];
+  const doorbellEvents = [
+    'motion',
+    'person',
+    'ring',
+    'vehicle',
+    'pet',
+    'crying',
+    'sound',
+    'dog',
+    'dog_lick',
+    'dog_poop',
+  ];
+  const supported = async (model) => {
+    const f = await mediaFixture(batteryDoorbellMedia.find((p) => p.model === model));
+    try {
+      const sdk = f.transport.cameras.get(f.camera.device_sn);
+      return {
+        sdk,
+        commands: sdk.getCommands(),
+        events: kinds.filter((kind) => f.transport.supportsEvent(f.camera.device_sn, kind)),
+        notification: f.transport.supportsEvent(f.camera.device_sn, 'notification'),
+      };
+    } finally {
+      await f.close();
+    }
+  };
+  const s4 = await supported('T8215');
+  // The doorbell adapter comes from the exact profile, not from a vendored doorbell predicate.
+  assert.equal(s4.sdk.constructor, BatteryDoorbellCamera);
+  assert.equal(s4.sdk.isCamera(), true);
+  assert.equal(s4.sdk.isDoorbell(), false);
+  assert.equal(s4.sdk.isBatteryDoorbell(), false);
+  assert.deepEqual(s4.commands, [
+    CommandName.DeviceStartLivestream,
+    CommandName.DeviceStopLivestream,
+    CommandName.DeviceStartDownload,
+    CommandName.DeviceCancelDownload,
+  ]);
+  assert.deepEqual(s4.events, doorbellEvents);
+  assert.equal(s4.notification, true);
+  // The same detection events as the admitted C31 type 96 under a T8030.
+  assert.deepEqual((await supported('T8223')).events, s4.events);
 });
 
 test('T8410C has the T8410 H3 policy and its experimental standalone flag', () => {

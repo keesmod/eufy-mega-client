@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.4 - Unreleased
+
+- Added the Video Doorbell S4 `T8215` on a HomeBase 3 ([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)), not yet confirmed on hardware.
+
+Upgrade: no changes needed. Rollback: 0.30.3.
+
 ## 0.30.3 - 2026-11-06
 
 - Added the eufyCam 2C Pro `T8142-Z` on a HomeBase 3 ([ha-eufy-cam#236](https://github.com/keesmod/ha-eufy-cam/issues/236)), not yet confirmed on hardware.

@@ -5,15 +5,17 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { discover } from '../dist/discovery.js';
 import { DeviceTransport } from '../dist/device-transport.js';
 import { EventTransport } from '../dist/event-transport.js';
-import { BatteryDoorbellCamera, Station } from '../dist/vendor/http/index.js';
+import { BatteryDoorbellCamera, PropertyName, Station } from '../dist/vendor/http/index.js';
 import { CommandType } from '../dist/vendor/p2p/types.js';
+import { PushNotificationService } from '../dist/vendor/push/service.js';
 import { hasCameraMedia } from '../dist/camera-media.js';
 import { EufyMegaClient } from '../dist/index.js';
 import { cloudFixture } from './fixtures/mega-cloud.mjs';
 
 // Independently authored tuples from the pinned catalogue and MODEL_MATRIX.md.
 // T8224/96 is the reported C30 pair from ha-eufy-cam#40. T8210/7 and T8210C/7 rest
-// on the public evidence for ha-eufy-cam#198.
+// on the public evidence for ha-eufy-cam#198. T8215/97 is the reported Video Doorbell
+// S4 pair from ha-eufy-cam#252.
 const models = [
   ['T8213', 91],
   ['T8214', 94],
@@ -22,6 +24,7 @@ const models = [
   ['T8224', 96],
   ['T8210', 7],
   ['T8210C', 7],
+  ['T8215', 97],
 ];
 const owner = (id = 'T8030_OWNER') => ({
   category: 'eufy_security',
@@ -259,5 +262,125 @@ test('public doorbell identity and observations agree across discovery and lazy 
     }
   } finally {
     await client.close();
+  }
+});
+
+// ha-eufy-cam#252: type 97 joins Device.isCamera() in 0.30.4, so a push that a HomeBase 3
+// relays for it is read by the HomeBase branch, like the C31 type 96.
+const relayed = (type, a) => ({
+  payload: {
+    type: String(type),
+    station_sn: 'T8030_OWNER',
+    device_sn: 'DOORBELL_FIXTURE',
+    event_time: '1762804800',
+    push_time: '1762804800',
+    title: 'Synthetic',
+    content: 'Synthetic',
+    payload: {
+      a,
+      channel: 2,
+      msg_type: 18,
+      nick_name: 'Synthetic person',
+      session_id: 'session',
+      pic_url: '',
+      file_path: '/synthetic/path',
+      name: 'Synthetic doorbell',
+      unique_id: 'one',
+      storage_type: 1,
+    },
+  },
+});
+test('T8215/97 pushes relayed by a HomeBase 3 normalize like the C31 type 96', () => {
+  const service = Object.create(PushNotificationService.prototype);
+  const fields = (message) => {
+    const { type, ...rest } = message;
+    return rest;
+  };
+  for (const a of [3101, 3102, 3103]) {
+    const s4 = service._normalizePushMessage(relayed(97, a));
+    assert.equal(s4.type, 97);
+    assert.equal(s4.event_type, a);
+    assert.equal(s4.msg_type, 18);
+    assert.equal(s4.channel, 2);
+    assert.equal(s4.person_name, 'Synthetic person');
+    assert.equal(s4.file_path, '/synthetic/path');
+    assert.deepEqual(fields(s4), fields(service._normalizePushMessage(relayed(96, a))));
+  }
+  // A type outside Device.isCamera() takes the generic branch, which reads it differently.
+  assert.notDeepEqual(
+    fields(service._normalizePushMessage(relayed(92, 3103))),
+    fields(service._normalizePushMessage(relayed(96, 3103))),
+  );
+});
+// One push relayed by a HomeBase 3, read through the device and event transports. For a
+// ring (3103) a ringing property change comes first.
+const relay = async (model, type, a) => {
+  const service = Object.create(PushNotificationService.prototype);
+  const raw = doorbell(model, type, { device_sn: 'DOORBELL_FIXTURE' });
+  const outcome = {};
+  await fixture([owner(), raw], async (t) => {
+    // Without a command table the event image fallback does nothing, so the camera
+    // handler reaches its event case instead of stopping at the missing method.
+    t.stations.get('T8030_OWNER').hasCommand = () => false;
+    const sdk = t.cameras.get(raw.device_sn);
+    outcome.adapter = sdk.constructor;
+    const detections = [];
+    t.on('detection', (event) => detections.push(event.type));
+    if (a === 3103) {
+      assert.equal(sdk.updateProperty(PropertyName.DeviceRinging, true), true);
+      sdk.updateProperty(PropertyName.DeviceRinging, false);
+      outcome.propertyChange = [...detections];
+    }
+    const events = new EventTransport(
+      {},
+      (id) => t.supportsEvent(id, 'notification'),
+      (message) => t.processPush(message),
+      (message) => t.acceptPush(message),
+    );
+    const received = [];
+    events.on('event', (event) => received.push(event));
+    t.on('detection', (d) => events.device(d.id, d.type, d.name, d.stranger));
+    try {
+      const message = service._normalizePushMessage(relayed(type, a));
+      outcome.accepted = t.acceptPush(message);
+      events.push(message);
+      await delay(550);
+      outcome.ringing = sdk.isRinging();
+      outcome.detections = detections;
+      outcome.events = received.map(({ id, receivedAt, ...event }) => event);
+    } finally {
+      await events.close();
+    }
+  });
+  return outcome;
+};
+test('T8215/97 rings reach the ring event like T8223/96, from a property change and a relayed push', async () => {
+  const s4 = await relay('T8215', 97, 3103);
+  assert.equal(s4.adapter, BatteryDoorbellCamera);
+  assert.deepEqual(s4.propertyChange, ['ring']);
+  assert.equal(s4.accepted, true);
+  assert.equal(s4.ringing, true);
+  assert.deepEqual(s4.detections, ['ring', 'ring']);
+  assert.deepEqual(
+    s4.events.map((event) => [event.deviceId, event.type]),
+    [['DOORBELL_FIXTURE', 'ring']],
+  );
+  assert.deepEqual(s4, await relay('T8223', 96, 3103));
+});
+// The HomeBase 3 push codes include identity (3111) and stranger (3112) person events.
+// Type 97 carries both states, so the device emits them like T8223/96 under a T8030.
+test('T8215/97 relayed identity and stranger pushes reach the person event like T8223/96', async () => {
+  for (const [a, detections] of [
+    [3111, ['person']],
+    [3112, ['person', 'person']],
+  ]) {
+    const s4 = await relay('T8215', 97, a);
+    assert.equal(s4.accepted, true);
+    assert.deepEqual(s4.detections, detections);
+    assert.deepEqual(
+      s4.events.map((event) => [event.deviceId, event.type]),
+      [['DOORBELL_FIXTURE', 'person']],
+    );
+    assert.deepEqual(s4, await relay('T8223', 96, a));
   }
 });

@@ -249,6 +249,29 @@ candidate. No H or P cell changes.
 [T8210C-763]: https://github.com/bropat/eufy-security-client/pull/763
 [T8210C-302]: https://github.com/mega-yfue/eufy-sdk/issues/302
 
+## Reported T8215 Video Doorbell S4, 0.30.4
+
+On 2026-11-10 the [reporter of ha-eufy-cam#252][252-report] ran HA 2026.11.1,
+integration 0.8.50 and bridge 0.8.41/client 0.30.3 with a T8030 on firmware
+3.8.8.0. A Video Doorbell S4 was rejected as `unsupported_device` with parent
+status `present`. It was received as `T8215` with type 97, firmware 2.0.1.4 and
+hardware 0.0.0.2. Type 97 was absent from the pinned catalogue. 0.30.4 adds
+`VIDEO_DOORBELL_S4` to the vendored catalogue and admits exactly `T8215`/97 as a
+HomeBase 3 doorbell with the additional-H3 media policy, as described in
+[BATTERY_DOORBELLS.md](BATTERY_DOORBELLS.md#reported-video-doorbell-s4-type-97-0304).
+[T8215-1230] shows the same pair on firmware 2.0.1.4 under a T8030. [T8215-486]
+shows it under a HomeBase Professional S1 (T9000), not a T8030. [Doorbell-S4]
+describes a wired-only doorbell and lists HomeBase 3, Mini, Pro and NVR support.
+The S4 is not a PoE camera, so its NVR pairing is not the `N` topology that [#144]
+tracks. [HB3] did not list T8215 when read on 2026-11-17. These are a reported
+inventory tuple and third-party reports, not observations through this client.
+The new type 97 rows below are software evidence only.
+
+[252-report]: https://github.com/keesmod/ha-eufy-cam/issues/252
+[T8215-1230]: https://github.com/homebridge-plugins/homebridge-eufy/issues/1230
+[T8215-486]: https://github.com/mscodemonkey/eufy-mega-security/issues/486
+[Doorbell-S4]: https://www.eufy.com/products/e82151f2
+
 ## Reported T8113-Z and T8424, 0.26.0
 
 A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
@@ -1258,16 +1281,16 @@ and [#35].
 ## Source boundary and reading rules
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
-commit `e69624d79cd43e810a216602cc39eff70a27d046`, plus `WIRED_CAM_C31` with its
-label, property map and commands added in 0.28.0. The complete file SHA-256
-including that addition is
-`9d8711575e3c545d6838e783ced4f6034ced848dfa17255ee61996b32c4f76bf`.
+commit `e69624d79cd43e810a216602cc39eff70a27d046`, plus `WIRED_CAM_C31` added in
+0.28.0 and `VIDEO_DOORBELL_S4` added in 0.30.4, each with its label, property map
+and commands. The complete file SHA-256 including those additions is
+`9565569a1991b74d34d7778abf1b0dbf478661d0c6ac8b1ae21b8e30c2314d24`.
 Its attributed upstream is bropat/eufy-security-client 4.1.1-1,
 commit `d75e7996d4cbce3839a6075bed95b752ccc3ee43`, under MIT, as recorded in
 [NOTICE.md](../NOTICE.md). Protocol types are numeric Eufy identifiers, not network
 transport versions. Do not infer wire compatibility from a shared product name.
 
-All 97 enum entries are accounted for below. Camera rows include integrated
+All 98 enum entries are accounted for below. Camera rows include integrated
 products and unresolved candidates. The owner and exclusion tables account for
 the rest. The check compares exact names and numeric values, not just a count.
 `Device.isCamera()` alone is insufficient. In this revision it omits
@@ -1381,6 +1404,7 @@ evidence section. Every row also has a separate feature row below.
 | 94            | `BATTERY_DOORBELL_PLUS_E340`           | T8214                                        | Video Doorbell E340                                                           | battery    | W candidate, H3, H2/HM candidates           | [HB3], [HB-guide]                                           | C           |
 | 95            | `BATTERY_DOORBELL_C30`                 | T8224                                        | Video Doorbell C30                                                            | battery    | W candidate, H3, H2/HM candidates           | [HB3], [HB-guide]                                           | C           |
 | 96            | `BATTERY_DOORBELL_C31`                 | T8223                                        | Video Doorbell C31                                                            | battery    | W candidate, H3, H2/HM candidates           | [HB3], [HB-guide]                                           | C           |
+| 97            | `VIDEO_DOORBELL_S4`                    | T8215                                        | Video Doorbell S4, wired                                                      | battery    | H3. HM, T9000 and NVR candidates, not PoE   | [Doorbell-S4], [252-report], [T8215-1230], [T8215-486]      | R           |
 | 98            | `SOLOCAM_E42`                          | T8173                                        | SoloCam E42                                                                   | solo       | W candidate, H3, H2 candidate               | [Catalogue], [Display], [HB-guide]                          | C           |
 | 100           | `INDOOR_COST_DOWN_CAMERA`              | T8414                                        | Indoor Cam Mini 2K / Solo IndoorCam P44                                       | indoor     | W, H3. HM candidate                         | [Indoor], [Display], [HB-guide]                             | R           |
 | 101           | `CAMERA_GUN`                           | Unknown                                      | Unresolved catalogue label. No verified marketing name                        | unresolved | Unknown                                     | [Catalogue]                                                 | C           |
@@ -1485,6 +1509,7 @@ battery lifetime claim is made.
 | 94    | T8214 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#113]                                          |
 | 95    | T8224 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#114]                                          |
 | 96    | T8223 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#115]                                          |
+| 97    | T8215 / actual H3 owner only                         | X         | X                   | X         | X               | X          | X          | X               | X             | [Battery-software], [252-report]                    | [252-report], [#143]                            |
 | 98    | T8173 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]                             |
 | 100   | T8414 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57]               |
 | 101   | Unknown / listed topologies                          | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [Integrated-software]            | [#39], [E2], [E6]                               |
@@ -1523,7 +1548,9 @@ allowlist/parent rules. [S1] checks the existing live command choice. T8142 and
 T8142-Z use `CMD_SET_PAYLOAD`, T8134 uses `CMD_DOORBELL_SET_PAYLOAD` in that test.
 Since 0.11.0 the adapter instantiates `SoloCamera` for T8134. It instantiates
 generic `Camera` for T8142 and T8142-Z and `BatteryDoorbellCamera` for T8213, T85V0/203,
-T8210/7, T8210C/7 and the exact pairs in the 0.8.0 and 0.18.1 sections. [#21] added that SoloCam
+T8210/7, T8210C/7 and the exact pairs in the 0.8.0 and 0.18.1 sections. Since 0.30.4 it also
+instantiates `BatteryDoorbellCamera` for T8215/97 through its exact battery-doorbell profile,
+because no vendored doorbell predicate includes type 97. [#21] added that SoloCam
 selection and closed on 2026-09-11.
 
 For excluded models, available vendor predicates, properties or command tables

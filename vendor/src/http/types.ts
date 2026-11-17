@@ -74,6 +74,7 @@ export enum DeviceType {
   BATTERY_DOORBELL_PLUS_E340 = 94,
   BATTERY_DOORBELL_C30 = 95,
   BATTERY_DOORBELL_C31 = 96,
+  VIDEO_DOORBELL_S4 = 97, // T8215, added by eufy-mega-client 0.30.4
   SOLOCAM_E42 = 98, //T8173
   INDOOR_COST_DOWN_CAMERA = 100,
   CAMERA_GUN = 101,
@@ -1047,6 +1048,7 @@ export const GenericTypeProperty: PropertyMetadataNumeric = {
     94: "Video Doorbell Dual (E340)",
     95: "Video Doorbell (C30)",
     96: "Video Doorbell (C31)",
+    97: "Video Doorbell S4 (T8215)",
     98: "SoloCam E42 (T8173)",
     100: "Indoor Cost Down Camera",
     101: "Camera Gun",
@@ -6293,6 +6295,25 @@ export const DeviceProperties: Properties = {
     [PropertyName.DeviceSnoozeMotion]: DeviceSnoozeMotionProperty,
     [PropertyName.DevicePersonName]: DevicePersonNameProperty,
   },
+  // eufy-mega-client 0.30.4: battery, state and detection states only. No setting is claimed for T8215.
+  [DeviceType.VIDEO_DOORBELL_S4]: {
+    ...GenericDeviceProperties,
+    [PropertyName.DeviceBattery]: DeviceBatteryProperty,
+    [PropertyName.DeviceState]: DeviceStateProperty,
+    [PropertyName.DeviceMotionDetected]: DeviceMotionDetectedProperty,
+    [PropertyName.DevicePersonDetected]: DevicePersonDetectedProperty,
+    [PropertyName.DevicePersonName]: DevicePersonNameProperty,
+    [PropertyName.DeviceIdentityPersonDetected]: DeviceIdentityPersonDetectedProperty,
+    [PropertyName.DeviceStrangerPersonDetected]: DeviceStrangerPersonDetectedProperty,
+    [PropertyName.DeviceRinging]: DeviceRingingProperty,
+    [PropertyName.DevicePetDetected]: DevicePetDetectedProperty,
+    [PropertyName.DeviceVehicleDetected]: DeviceVehicleDetectedProperty,
+    [PropertyName.DeviceSoundDetected]: DeviceSoundDetectedProperty,
+    [PropertyName.DeviceCryingDetected]: DeviceCryingDetectedProperty,
+    [PropertyName.DeviceDogDetected]: DeviceDogDetectedProperty,
+    [PropertyName.DeviceDogLickDetected]: DeviceDogLickDetectedProperty,
+    [PropertyName.DeviceDogPoopDetected]: DeviceDogPoopDetectedProperty,
+  },
   [DeviceType.BATTERY_DOORBELL_PLUS_E340]: {
     //T8023 E340 Dual Doorbell
     ...GenericDeviceProperties,
@@ -10289,6 +10310,13 @@ export const DeviceCommands: Commands = {
     CommandName.DeviceStartTalkback,
     CommandName.DeviceStopTalkback,
     CommandName.DeviceSnooze,
+  ],
+  // eufy-mega-client 0.30.4: media commands only. Talkback, quick response, snooze and settings stay out of scope.
+  [DeviceType.VIDEO_DOORBELL_S4]: [
+    CommandName.DeviceStartLivestream,
+    CommandName.DeviceStopLivestream,
+    CommandName.DeviceStartDownload,
+    CommandName.DeviceCancelDownload,
   ],
   [DeviceType.BATTERY_DOORBELL_PLUS_E340]: [
     CommandName.DeviceStartLivestream,
