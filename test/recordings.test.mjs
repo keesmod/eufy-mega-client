@@ -83,7 +83,8 @@ test('a download passes on the timing of each audio frame, those before its star
     new AbortController().signal,
     (timing) => {
       seen.push(timing);
-      if (timing.offset === 0) throw new Error('listener failure');
+      // Throws for the backlog frame and for a frame from the receive path.
+      throw new Error('listener failure');
     },
   );
   // The session records a frame right before pushing it.
@@ -111,6 +112,40 @@ test('a download passes on the timing of each audio frame, those before its star
   f.station.emit('download complete', f.station, 1);
   assert.deepEqual(await handle.completed, { complete: true, bytes: 214 });
   assert.equal(Buffer.concat(received).length, 213, 'a throwing listener changes nothing');
+});
+test('a download whose audio timing already has a listener still completes without it', async () => {
+  const f = fixture(),
+    seen = [],
+    owner = [],
+    video = new PassThrough(),
+    audio = new PassThrough();
+  listenFrameTiming(audio, (timing) => owner.push(timing.bytes));
+  const p = downloadRecording(
+    f.station,
+    { getSerial: () => 'CAM', getChannel: () => 1 },
+    { storage_path: '/fixture' },
+    new AbortController().signal,
+    (timing) => seen.push(timing),
+  );
+  f.station.emit(
+    'download start',
+    f.station,
+    1,
+    { videoCodec: 1, audioCodec: 3, videoFPS: 15, videoWidth: 1920, videoHeight: 1080 },
+    video,
+    audio,
+  );
+  const handle = await p;
+  handle.video.resume();
+  handle.audio.resume();
+  recordFrameTiming(audio, 9, 5, false);
+  video.end(Buffer.from('v'));
+  audio.end(Buffer.alloc(9));
+  f.station.emit('download finish', f.station, 1);
+  f.station.emit('download complete', f.station, 1);
+  assert.deepEqual(await handle.completed, { complete: true, bytes: 10 });
+  assert.deepEqual(seen, []);
+  assert.deepEqual(owner, [9], 'the earlier listener keeps the timing');
 });
 test('the timing of a rejected second download start never reaches onFrameTiming', async () => {
   const f = fixture(),
