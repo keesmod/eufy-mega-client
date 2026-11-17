@@ -223,15 +223,27 @@ test('a download records each raw AAC-ELD unit with its own timing and offset (h
     download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[1], 1030));
     const seen = [],
       bytes = [];
-    listenFrameTiming(audio, (timing) => seen.push(timing));
-    audio.on('data', (chunk) => bytes.push(chunk));
+    let received = 0;
+    listenFrameTiming(audio, (timing) => seen.push({ ...timing, received }));
+    audio.on('data', (chunk) => {
+      bytes.push(chunk);
+      received += chunk.length;
+    });
+    // Drain the buffered start, so the next push emits 'data' at once and a
+    // push before its timing would show up in `received`.
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(received, 213);
     download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[2], 1060));
     await new Promise((resolve) => setImmediate(resolve));
-    assert.deepEqual(seen, [
-      { offset: 0, bytes: 71, timestampMs: 1000, keyFrame: false },
-      { offset: 71, bytes: 142, timestampMs: 1030, keyFrame: false },
-      { offset: 213, bytes: 90, timestampMs: 1060, keyFrame: false },
-    ]);
+    assert.deepEqual(
+      seen.map(({ received: _, ...timing }) => timing),
+      [
+        { offset: 0, bytes: 71, timestampMs: 1000, keyFrame: false },
+        { offset: 71, bytes: 142, timestampMs: 1030, keyFrame: false },
+        { offset: 213, bytes: 90, timestampMs: 1060, keyFrame: false },
+      ],
+    );
+    assert.equal(seen[2].received, 213, 'the timing of a new unit arrives before any of its bytes');
     assert.deepEqual(Buffer.concat(bytes), Buffer.concat(units), 'units are pushed unchanged');
   } finally {
     await p.dispose();
