@@ -500,7 +500,9 @@ The frames pushed before the transfer starts come first, then each new frame
 right before its bytes are pushed, so these calls can run before
 `downloadRecording` resolves. Video frames of a download carry no timing. The
 callback runs synchronously in the P2P receive path and carries no
-identifiers. Errors it throws are ignored and cannot change the transfer. When
+identifiers. Slow work in it delays that frame and every later P2P message of
+the session, and counts against the transfer's 40 seconds, so keep it short or
+queue the work. Errors it throws are ignored and cannot change the transfer. When
 a download ends incomplete, bytes still buffered in the session's stream are dropped, so
 the last timings can point past the end of `audio`.
 
