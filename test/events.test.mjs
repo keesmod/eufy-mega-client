@@ -105,3 +105,91 @@ test('doorbell events stay distinct and shutdown clears pending delivery', async
   await delay(15);
   assert.equal(events.length, 2);
 });
+test('a late copy of a delivered ring is suppressed, a second press is not (ha-eufy-cam#252)', (t) => {
+  const start = 1789052400000;
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: start });
+  const events = [],
+    d = new Detections(
+      (id) => id === 'BELL',
+      (e) => events.push(e),
+      () => {},
+    );
+  // HomeBase session copy: raw unique_id and no event time. Cloud copy: event
+  // session and event time, 555 ms later, after the first copy was delivered.
+  const local = (id) => ({ device_sn: 'BELL', event_type: 3103, unique_id: id, type: 18 });
+  const cloud = (session, time) => ({
+    device_sn: 'BELL',
+    event_type: 3103,
+    event_session: session,
+    event_time: time,
+    type: 97,
+  });
+  d.push(local('press-1'));
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].occurred_at, null);
+  t.mock.timers.tick(55);
+  d.push(cloud('session-1', start - 27));
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 1);
+  // A second press 1.5 s after the first is its own ring, and so is its cloud copy's occurrence.
+  t.mock.timers.tick(445);
+  d.push(local('press-2'));
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 2);
+  t.mock.timers.tick(55);
+  d.push(cloud('session-2', start + 1500));
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 2);
+  assert.equal(d.metrics.duplicates, 2);
+  d.close();
+});
+test('two cloud copies of one press with the same session are one ring', (t) => {
+  const start = 1789052400000;
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: start });
+  const events = [],
+    d = new Detections(
+      () => true,
+      (e) => events.push(e),
+      () => {},
+    );
+  const copy = { device_sn: 'BELL', event_type: 3103, event_session: 'session-1', type: 97 };
+  d.push(copy);
+  t.mock.timers.tick(650);
+  d.push({ ...copy, event_time: start });
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 1);
+  // Another session over the same transport stays a distinct ring.
+  d.push({ ...copy, event_session: 'session-2', event_time: start + 1200 });
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 2);
+  d.close();
+});
+test('late copies are only matched within the companion window and with agreeing times', (t) => {
+  const start = 1789052400000;
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: start });
+  const events = [],
+    d = new Detections(
+      () => true,
+      (e) => events.push(e),
+      () => {},
+    );
+  d.push({ device_sn: 'CAM', event_type: 3101, event_time: start, unique_id: 'a', type: 18 });
+  t.mock.timers.tick(600);
+  // Another transport, but an event time 1.5 s later: a different motion.
+  d.push({
+    device_sn: 'CAM',
+    event_type: 3101,
+    event_time: start + 1500,
+    event_session: 'b',
+    type: 97,
+  });
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 2);
+  // Another transport without event time, but after the 2 s window: delivered.
+  t.mock.timers.tick(2000);
+  d.push({ device_sn: 'CAM', event_type: 3101, event_session: 'c', type: 5 });
+  t.mock.timers.tick(500);
+  assert.equal(events.length, 3);
+  d.close();
+});

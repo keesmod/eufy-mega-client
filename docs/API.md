@@ -601,7 +601,12 @@ Typed events are `auth`, `device`, `station`, `snapshot`, `event`,
 `events-connection`, `live-stop` and `fault`. Detection events preserve supported
 motion/person/ring semantics and recognized names when supplied by the device.
 Deduplication correlates device/push copies and persists recent delivery hashes;
-it does not manufacture missing names or detections.
+it does not manufacture missing names or detections. A detection is delivered
+0.5 s after its first copy. Since 0.30.5 a push copy that arrives up to 2 s
+after the first copy is still recognised as the same occurrence when it came
+over another transport or carries the same `unique_id` or event session, and
+both event times, when present, agree within a second
+([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)).
 
 `setGuardMode(stationId, mode, signal?)` accepts 0 (Away), 1 (Home), 2 (Schedule),
 3–5 (Custom), 47 (Geofencing) or 63 (Disarmed). Its result requires a matching
