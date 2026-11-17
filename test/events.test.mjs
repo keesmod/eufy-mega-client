@@ -526,3 +526,99 @@ test('a copy with the code of a notification that a device event relabelled merg
   );
   d.close();
 });
+test('a copy with the identity of a delivered ring is not merged into a pending second press', (t) => {
+  const { start, events, d, at } = harness(t);
+  const local = (id) => ({ device_sn: 'BELL', event_type: 3103, unique_id: id, type: 18 });
+  const cloud = (session, time) => ({
+    device_sn: 'BELL',
+    event_type: 3103,
+    event_session: session,
+    ...(time === undefined ? {} : { event_time: start + time }),
+    type: 97,
+  });
+  d.push(local('u1'), 'local');
+  at(555);
+  d.push(cloud('s1'), 'cloud');
+  at(900);
+  d.push(local('u2'), 'local');
+  at(1205);
+  d.push(cloud('s1', -27), 'cloud');
+  at(1455);
+  d.push(cloud('s2'), 'cloud');
+  at(2105);
+  d.push(cloud('s2', 873), 'cloud');
+  at(3000);
+  assert.equal(events.length, 2);
+  assert.equal(d.metrics.duplicates, 4);
+  d.close();
+});
+test('person copies find their own delivered event, and a stronger match is searched in every candidate', (t) => {
+  const { events, d, at } = harness(t);
+  for (const serial of ['F2', 'R']) {
+    d.push({ device_sn: serial, event_type: 3102, unique_id: 'u1', type: 18 }, 'local');
+  }
+  at(300);
+  for (const serial of ['F2', 'R']) {
+    d.push(
+      { device_sn: serial, event_type: 3111, unique_id: 'u2', person_name: 'Alpha', type: 18 },
+      'local',
+    );
+  }
+  at(600);
+  d.push({ device_sn: 'F2', event_type: 3102, event_session: 's1', type: 97 }, 'cloud');
+  at(900);
+  for (const serial of ['F2', 'R']) {
+    d.push(
+      { device_sn: serial, event_type: 3111, event_session: 's2', person_name: 'Alpha', type: 97 },
+      'cloud',
+    );
+  }
+  at(2000);
+  assert.deepEqual(
+    events.map((e) => [e.serial, e.recognition, e.person_name]),
+    [
+      ['F2', 'unidentified', null],
+      ['R', 'unidentified', null],
+      ['F2', 'known', 'Alpha'],
+      ['R', 'known', 'Alpha'],
+    ],
+  );
+  d.close();
+});
+test('a merge keeps the event code, and an old push does not merge into a pending ring', (t) => {
+  const { start, events, d, at } = harness(t);
+  d.push({ device_sn: 'N', event_type: 1, type: 18 }, 'local');
+  d.push({ device_sn: 'BELL', event_type: 3103, unique_id: 'u1', type: 18 }, 'local');
+  at(100);
+  d.push({ device_sn: 'N', type: 97 }, 'cloud');
+  at(200);
+  d.push({ device_sn: 'N', event_type: 2, type: 5 }, 'cloud');
+  at(300);
+  d.push(
+    {
+      device_sn: 'BELL',
+      event_type: 3103,
+      event_session: 's0',
+      event_time: start - 30000,
+      type: 97,
+    },
+    'cloud',
+  );
+  at(400);
+  d.push(
+    { device_sn: 'BELL', event_type: 3103, event_session: 's1', event_time: start - 27, type: 97 },
+    'cloud',
+  );
+  at(1500);
+  const iso = (ms) => new Date(ms).toISOString();
+  assert.deepEqual(
+    events.map((e) => [e.serial, e.eufy_event_type, e.occurred_at]),
+    [
+      ['N', 1, null],
+      ['BELL', 3103, iso(start - 27)],
+      ['N', 2, null],
+      ['BELL', 3103, iso(start - 30000)],
+    ],
+  );
+  d.close();
+});

@@ -87,6 +87,16 @@ const recognitionRank: Record<Recognition, number> = {
 };
 const timesAgree = (a: string | null, b: string | null) =>
   !a || !b || Math.abs(Date.parse(a) - Date.parse(b)) <= 1000;
+/**
+ * Only the transport ties two copies. When the earlier copy has no event time,
+ * the copy must have occurred between 2 s before and 1 s after the earlier
+ * copy arrived, which assumes the device and host clocks agree.
+ */
+const aroundArrival = (occurred: string | null, earlier: string | null, received: number) => {
+  if (earlier !== null || occurred === null) return true;
+  const time = Date.parse(occurred);
+  return time >= received - 2000 && time <= received + 1000;
+};
 type Kind = Pick<Draft, 'event_type' | 'eufy_event_type'>;
 /**
  * The same detection type, where distinct unmapped codes stay distinct. An
@@ -189,8 +199,9 @@ export class Detections {
     const id = identity ? String(identity) : undefined;
     // Distinct IDs in the SAME format are distinct detections, even very close
     // together. Cross-format companions, and copies with the same raw identity,
-    // are correlated within the settling window. A candidate with the same key,
-    // then one with the same identity, comes before a transport-only match.
+    // are correlated within the settling window and, once delivered, up to
+    // companionMs. A pending copy with the same key or identity comes first,
+    // then a delivered occurrence, then a pending copy linked otherwise.
     const candidates = [...this.pending].filter(
       (p) =>
         p.event.serial === serial &&
@@ -200,21 +211,30 @@ export class Detections {
             type === 'notification')) ||
           (sameKind(p.event, event) &&
             ((key !== undefined && p.identities.has(key)) ||
-              ((!p.transports.has(transport) || (id !== undefined && p.ids.has(id))) &&
+              (((!p.transports.has(transport) &&
+                aroundArrival(occurred_at, p.event.occurred_at, Date.parse(p.event.received_at))) ||
+                (id !== undefined && p.ids.has(id))) &&
                 timesAgree(occurred_at, p.event.occurred_at)) ||
               (!key && p.identities.size === 0)))),
     );
-    const existing =
-      candidates.find((p) => key !== undefined && p.identities.has(key)) ??
-      candidates.find((p) => id !== undefined && p.ids.has(id)) ??
-      candidates[0];
     this.lastPush.set(serial, now);
+    let existing =
+      candidates.find((p) => key !== undefined && p.identities.has(key)) ??
+      candidates.find((p) => id !== undefined && p.ids.has(id));
+    if (!existing && this.lateCopy(event, transport, id, now)) {
+      this.metrics.duplicates++;
+      if (key) this.remember([key]);
+      return;
+    }
+    existing ??= candidates[0];
     if (existing) {
       const previous = existing.event;
+      const code = event.eufy_event_type ?? previous.eufy_event_type;
       existing.event = {
         ...event,
         received_at: previous.received_at,
         occurred_at: event.occurred_at ?? previous.occurred_at,
+        ...(code === undefined ? {} : { eufy_event_type: code }),
       };
       if (type === 'notification' && previous.event_type !== 'notification') {
         existing.event.event_type = previous.event_type;
@@ -234,9 +254,6 @@ export class Detections {
       if (key) existing.identities.add(key);
       if (id) existing.ids.add(id);
       existing.transports.add(transport);
-    } else if (this.lateCopy(event, transport, id, now)) {
-      this.metrics.duplicates++;
-      if (key) this.remember([key]);
     } else this.queue(event, key, transport, id);
   }
 
@@ -249,7 +266,6 @@ export class Detections {
    */
   private lateCopy(event: Draft, transport: string, id: string | undefined, now: number): boolean {
     this.delivered = this.delivered.filter((d) => now - d.received <= this.companionMs);
-    const occurred = event.occurred_at === null ? undefined : Date.parse(event.occurred_at);
     const candidates = this.delivered.filter((d) => {
       if (
         d.serial !== event.serial ||
@@ -258,14 +274,8 @@ export class Detections {
       )
         return false;
       if (id !== undefined && d.ids.has(id)) return true;
-      // Only the transport ties these copies. When the delivered copy has no
-      // event time, the copy must have occurred around the time the first copy
-      // arrived, which assumes the device and host clocks agree.
       return (
-        !d.transports.has(transport) &&
-        (d.occurred_at !== null ||
-          occurred === undefined ||
-          (occurred >= d.received - 2000 && occurred <= d.received + 1000))
+        !d.transports.has(transport) && aroundArrival(event.occurred_at, d.occurred_at, d.received)
       );
     });
     const match = [
