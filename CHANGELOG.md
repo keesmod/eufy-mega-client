@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.30.5 - Unreleased
+
+- Updated `date-and-time` to 4.7.1, `qs` to 6.17.1, `strtok3` to 10.7.0, `token-types` to 6.2.0, `http2-wrapper` to 2.2.4 and `@borewit/text-codec` to 0.2.3 ([#279](https://github.com/keesmod/eufy-mega-client/pull/279)).
+
+Upgrade: no changes needed. Rollback: 0.30.4.
+
 ## 0.30.4 - 2026-11-17
 
 - Added the Video Doorbell S4 `T8215` on a HomeBase 3 ([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)), not yet confirmed on hardware.
