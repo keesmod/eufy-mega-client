@@ -483,13 +483,18 @@ cameras, and the next operation connects again.
 
 `downloadRecording(recordingId, { onFrameTiming })` passes on the camera's
 timing of each audio frame of the download, so a consumer can split audio that
-has no framing of its own. Audio type 7 (`aac-eld`) arrives as raw AAC-ELD
-access units, one per frame, without ADTS headers or a decoder config
+has no framing of its own, such as audio type 7 (`aac-eld`) without ADTS headers
+or a decoder config
 ([ha-eufy-cam#264](https://github.com/keesmod/ha-eufy-cam/issues/264)). Each
 call carries `kind`, always `audio`, `offset`, the position of the frame's first
 byte in the download's `audio` counted from 0, its length in `bytes` and
-`timestampMs`, the camera's clock in milliseconds from the frame header. Every
-ADTS frame of one audio message carries that message's timestamp.
+`timestampMs`, the camera's clock in milliseconds from the frame header. The
+client passes each audio message on unchanged as one frame, except AAC and
+AAC-LC, where every ADTS frame of one message is a frame with that message's
+timestamp. For type 7,
+[mega-yfue/eufy-sdk#317](https://github.com/mega-yfue/eufy-sdk/issues/317)
+reports one raw AAC-ELD access unit per message in the live view of a `T8410C`.
+That is not yet confirmed for downloads or for the `T8215`.
 
 The frames pushed before the transfer starts come first, then each new frame
 right before its bytes are pushed, so these calls can run before

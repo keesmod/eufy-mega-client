@@ -893,6 +893,9 @@ test('the client passes a signal or recording options through unchanged', async 
   await prototype.recordingThumbnail.call(client, 'R', options);
   await prototype.downloadRecording.call(client, 'R', signal);
   await prototype.downloadRecording.call(client, 'R', options);
+  const downloadOptions = { ...options, onFrameTiming() {} };
+  await prototype.downloadRecording.call(client, 'R', downloadOptions);
+  assert.equal(calls.at(-1)[2].onFrameTiming, downloadOptions.onFrameTiming);
   assert.deepEqual(calls, [
     ['list', 'S', DAY, undefined, undefined],
     ['list', 'S', DAY, ['C'], signal],
@@ -903,6 +906,7 @@ test('the client passes a signal or recording options through unchanged', async 
     ['thumbnail', 'R', options],
     ['download', 'R', signal],
     ['download', 'R', options],
+    ['download', 'R', downloadOptions],
   ]);
 });
 

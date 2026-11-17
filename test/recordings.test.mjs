@@ -112,6 +112,41 @@ test('a download passes on the timing of each audio frame, those before its star
   assert.deepEqual(await handle.completed, { complete: true, bytes: 214 });
   assert.equal(Buffer.concat(received).length, 213, 'a throwing listener changes nothing');
 });
+test('the timing of a rejected second download start never reaches onFrameTiming', async () => {
+  const f = fixture(),
+    seen = [],
+    p = downloadRecording(
+      f.station,
+      { getSerial: () => 'CAM', getChannel: () => 1 },
+      { storage_path: '/fixture' },
+      new AbortController().signal,
+      (timing) => seen.push(timing),
+    );
+  const start = (video, audio) =>
+    f.station.emit(
+      'download start',
+      f.station,
+      1,
+      { videoCodec: 1, audioCodec: 3, videoFPS: 15, videoWidth: 1920, videoHeight: 1080 },
+      video,
+      audio,
+    );
+  const audio = new PassThrough(),
+    second = new PassThrough();
+  recordFrameTiming(audio, 71, 1000, false);
+  start(new PassThrough(), audio);
+  const handle = await p;
+  recordFrameTiming(second, 50, 5000, false);
+  start(new PassThrough(), second);
+  recordFrameTiming(second, 60, 5030, false);
+  assert.deepEqual(seen, [{ kind: 'audio', offset: 0, bytes: 71, timestampMs: 1000 }]);
+  f.station.emit('command result', f.station, { command_type: 1051, channel: 1, return_code: 0 });
+  assert.equal((await handle.completed).reason, 'rejected');
+  // The rejected stream's timing stays free for its own owner.
+  const other = [];
+  listenFrameTiming(second, (timing) => other.push(timing.bytes));
+  assert.deepEqual(other, [50, 60]);
+});
 test('a download without onFrameTiming leaves the audio timing to its owner', async () => {
   const f = fixture(),
     { handle, video, audio } = await f.begin(),

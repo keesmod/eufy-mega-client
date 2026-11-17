@@ -203,7 +203,16 @@ test('a download records each raw AAC-ELD unit with its own timing and offset (h
       data,
     });
   try {
-    const units = [Buffer.alloc(71, 0x5a), Buffer.alloc(142, 0x33), Buffer.alloc(90, 0x11)];
+    // The second unit starts like an ADTS header: raw AAC-ELD can, about once in
+    // 4096 units, and the ADTS normaliser must never split it.
+    const units = [
+      Buffer.alloc(71, 0x5a),
+      Buffer.concat([
+        Buffer.from([0xff, 0xf1, 0x50, 0x80, 0x02, 0x9f, 0xfc]),
+        Buffer.alloc(135, 0x33),
+      ]),
+      Buffer.alloc(90, 0x11),
+    ];
     download(
       CommandType.CMD_VIDEO_FRAME,
       videoFrame(slice(0x65, 40), { key: true, timestamp: 1000 }),
