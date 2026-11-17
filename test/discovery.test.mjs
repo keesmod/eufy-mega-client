@@ -311,6 +311,8 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
   assert.equal(issue('T8410', 31).devices.length, 3);
   assert.equal(issue('T8210', 7).devices.length, 3);
   assert.equal(issue('T8210C', 7).devices.length, 3);
+  // ha-eufy-cam#252: only the reported T8215/97 pair. T8224/97 above stays rejected.
+  assert.equal(issue('T8215', 97).devices.length, 3);
   for (const [model, type] of [
     ['T8160-C', 23],
     ['T8142-Z', 14],
@@ -318,6 +320,12 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
     ['T8210', 16],
     ['T8210C', 16],
     ['T8212', 7],
+    ['T8215', 96],
+    ['T8215', 7],
+    ['T8215', 94],
+    ['T8215C', 97],
+    ['T8215-Z', 97],
+    ['T8216', 97],
   ])
     assert.deepEqual(issue(model, type).issues[0], {
       index: 2,
@@ -326,6 +334,20 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
       deviceModel: model,
       deviceType: type,
     });
+  // Lower case and whitespace stay rejected and outside the bounded model diagnostic.
+  for (const model of ['t8215', 'T8215 '])
+    assert.deepEqual(issue(model, 97).issues[0], {
+      index: 2,
+      deviceId: 'PRIVATE_SERIAL',
+      code: 'unsupported_device',
+      deviceType: 97,
+    });
+  // A string type is not a numeric device type.
+  assert.deepEqual(issue('T8215', '97').issues[0], {
+    index: 2,
+    deviceId: 'PRIVATE_SERIAL',
+    code: 'invalid_device_relationship',
+  });
   for (const model of [
     undefined,
     null,

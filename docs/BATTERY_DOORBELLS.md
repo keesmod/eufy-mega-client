@@ -12,6 +12,7 @@ bounded discovery and state/event slice in 0.8.0.
 | T8224/96   | BatteryDoorbellCamera | Software, reported tuple    | Observed only        | Software           | Unverified               |
 | T8210/7    | BatteryDoorbellCamera | Software, public evidence   | Observed only        | Software           | Unverified               |
 | T8210C/7   | BatteryDoorbellCamera | Software, public evidence   | Observed only        | Software           | Unverified               |
+| T8215/97   | BatteryDoorbellCamera | Software, reported tuple    | Observed only        | Software           | Unverified               |
 
 All rows require the actual admitted T8030/type 18 HomeBase owner. Transport is
 the existing local LAN-derived credential path. Model/type associations use the
@@ -113,6 +114,7 @@ MIT adapter at `e968376f176cfb91f1dc4a74d43fe82a40c2d190`, specifically
 | T8224/96   | Generic payload          | Software        | Software                | Software            |
 | T8210/7    | Generic payload          | Software        | Software                | Software            |
 | T8210C/7   | Generic payload          | Software        | Software                | Software            |
+| T8215/97   | Generic payload          | Software        | Software                | Software            |
 
 New media requires the actual matching T8030/type 18 parent with a T8030 serial
 prefix and a four-part numeric owner firmware at or above 2.0.9.7. Unknown,
@@ -254,3 +256,65 @@ other rows. T8212/7, other suffixes such as `T8210P` and other types for either
 code stay `unsupported_device`. Discovery, state, events and media of either
 code on hardware remain unverified until a tester reports a release with this
 change.
+
+## Reported Video Doorbell S4 type 97, 0.30.4
+
+[ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252) reports a
+Video Doorbell S4 received as exactly `T8215` with type 97, camera firmware
+2.0.1.4 and hardware 0.0.0.2, under a T8030 owner on firmware 3.8.8.0, on
+2026-11-10. Client 0.30.3 rejected it as `unsupported_device`. Type 97 was also
+absent from the pinned catalogue and from the upstream client. A profile alone
+would have given the doorbell the generic `Camera` adapter, with no battery,
+availability, ring or other detection properties and no media commands.
+
+Other sources show the same pair. No code or data is taken from them:
+
+- A [homebridge-eufy report](https://github.com/homebridge-plugins/homebridge-eufy/issues/1230)
+  shows T8215/97 on firmware 2.0.1.4 under a T8030.
+- An [eufy-mega-security report](https://github.com/mscodemonkey/eufy-mega-security/issues/486)
+  shows T8215/97 under a HomeBase Professional S1 (T9000), not a T8030. Its
+  results through that owner say nothing about a T8030.
+- Eufy's [product page](https://www.eufy.com/products/e82151f2) describes a
+  wired-only doorbell (AC 16-24V) with a 180 x 180 degree view that does not
+  support daily battery-powered use. It lists support for HomeBase 3, Mini, Pro,
+  NVR and Smart Display E10.
+- Eufy's [HomeBase 3 compatibility page](https://service.eufy.com/article-description/S380-HomeBase-HomeBase-3-Compatibility)
+  did not list T8215 when read on 2026-11-17.
+
+0.30.4 adds type 97 to the vendored catalogue, as 0.28.0 did for the Wired Cam
+C31 in [INDOOR.md](INDOOR.md#wired-cam-c31-0280). Each addition except the type
+label carries a 0.30.4 marker in the source and is listed in
+[NOTICE](../NOTICE.md):
+
+- `DeviceType.VIDEO_DOORBELL_S4 = 97` and its type label.
+- A property map with `GenericDeviceProperties`, battery (`CMD_GET_BATTERY`),
+  availability (`CMD_GET_DEV_STATUS`) and the motion, person, person name, ring,
+  pet, vehicle, sound, crying, dog, dog lick and dog poop detection states. These
+  are the property objects that types 91, 95 and 96 have under a T8030. No
+  setting and no detection-type property is claimed, so the owner-aware HomeBase
+  3 metadata leaves this map unchanged.
+- `DeviceStartLivestream`, `DeviceStopLivestream`, `DeviceStartDownload` and
+  `DeviceCancelDownload` only. Talkback, quick response, snooze and settings are
+  not registered.
+- Type 97 in `Device.isCamera()`, so a push that a T8030 relays for the doorbell
+  is read by the HomeBase branch, like those of the other doorbells.
+
+No other vendored predicate includes type 97, and no live branch is added. The
+client selects `BatteryDoorbellCamera` also when the exact device profile is in
+the `battery-doorbell` family, which names the HomeBase-paired doorbell adapter
+route. Every existing pair keeps its adapter. The S4 itself is wired, so the
+family name says nothing about its power. Under the H3 media gate type 97 matches
+no special live branch and sends the generic `CMD_SET_PAYLOAD` envelope of
+C30/C31. Stored snapshots, calendar, lists and downloads use HomeBase station
+commands.
+
+The per-model [adapter tests](../test/battery-doorbell.test.mjs), the
+[shared media fixtures](../test/fixtures/battery-doorbell-media.mjs) with the
+reported firmware and the [profile tests](../test/device-profiles.test.mjs) cover
+T8215/97 like the other rows. They also compare a relayed T8215/97 push and its
+ring, from a property change and from a push, with T8223/96. T8215 with other
+types, `T8215C`, `T8215-Z`, lower case, whitespace and T8216/97 stay
+`unsupported_device`. T8224/97 stays rejected. This is recognition with
+experimental software coverage only, not confirmed on hardware. The T8030 live
+envelope, the push shape and battery reads of the S4 are unverified until the
+reporter tests a release with this change.

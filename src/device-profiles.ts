@@ -129,6 +129,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   // ha-eufy-cam#40: an inventory reports a C30 with the C31 type. Only this exact pair.
   T8224: camera(95, 'battery-doorbell', 'h3', h3Media, [96]),
   T8223: camera(96, 'battery-doorbell', 'h3', h3Media),
+  // ha-eufy-cam#252: T8215/type 97 under a T8030, reported on 2026-11-10. Only this exact pair.
+  T8215: camera(97, 'battery-doorbell', 'h3', h3Media),
   T8142: camera(15, 'eufycam', 'h3', establishedMedia),
   // ha-eufy-cam#236: T8142-Z/type 15 under a T8030, reported on 2026-10-31. H3 media only.
   'T8142-Z': camera(15, 'eufycam', 'h3', h3Media),

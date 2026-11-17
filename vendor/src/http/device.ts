@@ -1893,6 +1893,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
       type == DeviceType.BATTERY_DOORBELL_PLUS_E340 ||
       type == DeviceType.BATTERY_DOORBELL_C30 ||
       type == DeviceType.BATTERY_DOORBELL_C31 ||
+      type == DeviceType.VIDEO_DOORBELL_S4 || // eufy-mega-client 0.30.4
       type == DeviceType.DOORBELL_SOLO ||
       type == DeviceType.CAMERA2C_PRO ||
       type == DeviceType.CAMERA2_PRO ||

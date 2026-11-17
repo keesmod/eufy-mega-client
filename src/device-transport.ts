@@ -278,11 +278,14 @@ export class DeviceTransport extends EventEmitter {
             continue;
           }
           // Discovery admits exact pairs. Family selection does not grant media access.
+          // ha-eufy-cam#252: the exact battery-doorbell profile also selects the doorbell
+          // adapter for a type without a vendored doorbell predicate, such as T8215/97.
           const factory = Camera.isSmartDrop(device.device_type)
             ? SmartDrop
             : Camera.isLockWifiVideo(device.device_type)
               ? DoorbellCamera
-              : Camera.isBatteryDoorbell(device.device_type)
+              : Camera.isBatteryDoorbell(device.device_type) ||
+                  exactDeviceProfile(device)?.family === 'battery-doorbell'
                 ? BatteryDoorbellCamera
                 : isFloodlightCamera(device)
                   ? FloodlightCamera

@@ -73,7 +73,10 @@ length, its camera timestamp and, for video, whether it is a key frame. Each
 live video frame carries the timing of its own header. The client-written
 `vendor/src/p2p/frame-timing.ts` holds these records per stream, keeps at most
 the newest 256 until a listener attaches and ignores listener errors. The pushed
-bytes are unchanged.
+bytes are unchanged. Version 0.30.4 adds the Video Doorbell S4 as
+`DeviceType.VIDEO_DOORBELL_S4` (97, T8215), with battery, availability and
+detection states, four media commands and camera push normalization, as described
+in [BATTERY_DOORBELLS.md](docs/BATTERY_DOORBELLS.md#reported-video-doorbell-s4-type-97-0304).
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter
