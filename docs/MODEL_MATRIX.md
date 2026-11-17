@@ -288,9 +288,9 @@ independently reproduced. The type 97 feature row and its cells are unchanged.
 
 ## Reported T8215 beta results, 2026-11-17
 
-Later that day the [same reporter][252-beta] ran the beta integration
-0.8.52-beta.1 and bridge 0.8.43-beta.1 with client 0.30.5-beta.1 on the same
-T8215. One press of the doorbell produced one ring event. Recordings played
+Later that day the [same reporter][252-beta] ran the beta bridge 0.8.43-beta.1
+with client 0.30.5-beta.1 on the same T8215, as its `recording_input_adjusted`
+log line shows. The integration version was not stated. One press of the doorbell produced one ring event. Recordings played
 without sound. The bridge logged the recording input as H.265 video, as the
 client reported it, and audio type 7 (`aac-eld`) without ADTS framing. The
 bridge cannot decode raw AAC-ELD yet, so it leaves that audio out.
