@@ -622,3 +622,75 @@ test('a merge keeps the event code, and an old push does not merge into a pendin
   );
   d.close();
 });
+test('copies inside the time tolerances are one detection', (t) => {
+  const { start, events, d, at } = harness(t);
+  // A and B: local copies without time. C: a local copy with time.
+  d.push({ device_sn: 'A', event_type: 3103, unique_id: 'a', type: 18 }, 'local');
+  d.push({ device_sn: 'B', event_type: 3103, unique_id: 'b', type: 18 }, 'local');
+  d.push(
+    { device_sn: 'C', event_type: 3103, unique_id: 'c', event_time: start, type: 18 },
+    'local',
+  );
+  // D and E: the same, still pending when the cloud copy arrives.
+  d.push({ device_sn: 'D', event_type: 3103, unique_id: 'd', type: 18 }, 'local');
+  d.push({ device_sn: 'E', event_type: 3103, unique_id: 'e', type: 18 }, 'local');
+  at(300);
+  d.push(
+    { device_sn: 'D', event_type: 3103, event_session: 'sd', event_time: start + 900, type: 97 },
+    'cloud',
+  );
+  d.push(
+    { device_sn: 'E', event_type: 3103, event_session: 'se', event_time: start - 1900, type: 97 },
+    'cloud',
+  );
+  at(555);
+  // Occurred 0.9 s after and 1.9 s before the first copy arrived.
+  d.push(
+    { device_sn: 'A', event_type: 3103, event_session: 'sa', event_time: start + 900, type: 97 },
+    'cloud',
+  );
+  d.push(
+    { device_sn: 'B', event_type: 3103, event_session: 'sb', event_time: start - 1900, type: 97 },
+    'cloud',
+  );
+  // Event times 0.9 s apart.
+  d.push(
+    { device_sn: 'C', event_type: 3103, event_session: 'sc', event_time: start + 900, type: 97 },
+    'cloud',
+  );
+  at(1500);
+  assert.deepEqual(
+    events.map((e) => e.serial),
+    ['A', 'B', 'C', 'D', 'E'],
+  );
+  d.close();
+});
+test('EventTransport passes the push source, so standalone copies typed 151 are one event', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1789052400000 });
+  const transport = new EventTransport(
+    { getEventSession: () => undefined },
+    () => true,
+    () => {},
+  );
+  const events = [];
+  transport.on('event', (event) => events.push(event));
+  transport.push(
+    { device_sn: 'T84A1_FIXTURE', event_type: 3101, unique_id: 'u1', type: 151 },
+    'local',
+  );
+  t.mock.timers.tick(600);
+  transport.push(
+    {
+      device_sn: 'T84A1_FIXTURE',
+      event_type: 3101,
+      event_session: 's1',
+      event_time: Date.now() - 580,
+      type: 151,
+    },
+    'cloud',
+  );
+  t.mock.timers.tick(1000);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, 'motion');
+  return transport.close();
+});

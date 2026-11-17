@@ -605,7 +605,8 @@ it does not manufacture missing names or detections. A detection is delivered
 0.5 s after its first copy. Since 0.30.5
 ([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)) a push
 copy is the same occurrence when it has the same type and either arrives over
-another transport or carries the same `unique_id` or event session, and both
+another transport or carries the same identity (the `unique_id`, else the
+event session), and both
 event times, when present, agree within a second. A transport is the push
 source, `local` or `cloud`, with the payload `type`. This holds while the first
 copy is pending and up to 2 s after the first copy arrived. A copy with the
@@ -1452,12 +1453,13 @@ interface StandalonePushObservation {
   both sources counts twice. Before 0.30.5 two admitted copies became one event
   only when both parts of the detection key matched: the identity, which is the
   `unique_id`, else the session, else none, and the valid event time or none.
-  Two copies with neither an identity nor a valid event time still merge only
-  while the first is pending. Since 0.30.5 a local and a cloud copy are
-  different transports, and copies become one event as described under
-  [Events and Guard Mode](#events-and-guard-mode). A shared `unique_id` where
-  the event times differ by more than a second still gives two events. No
-  capture has shown which case applies.
+  Since 0.30.5 a local and a cloud copy are different transports, and copies
+  become one event as described under
+  [Events and Guard Mode](#events-and-guard-mode). Two copies over the same
+  transport with neither an identity nor a valid event time still merge only
+  while the first is pending. A shared `unique_id` where the event times differ
+  by more than a second still gives two events. No standalone capture has shown
+  whether its local and cloud copies share an identity or an event time.
 
 Reading the counts:
 
