@@ -337,3 +337,192 @@ test('late copies add their transport, identity and event time, and are remember
   assert.equal(d.metrics.duplicates, 3);
   d.close();
 });
+test('a repeated named copy follows the delivered named event, not the first match', (t) => {
+  const { start, events, d, at } = harness(t);
+  const named = {
+    device_sn: 'CAM',
+    event_type: 3111,
+    event_session: 's1',
+    person_name: 'Fixture Person',
+    type: 97,
+  };
+  d.push({ device_sn: 'CAM', event_type: 3102, unique_id: 'u1', type: 18 }, 'local');
+  at(600);
+  d.push(named, 'cloud');
+  at(1200);
+  d.push({ ...named, event_time: start }, 'cloud');
+  at(2000);
+  assert.deepEqual(
+    events.map((e) => [e.recognition, e.person_name]),
+    [
+      ['unidentified', null],
+      ['known', 'Fixture Person'],
+    ],
+  );
+  d.close();
+});
+test('device clock skew does not split copies that carry event times or share a session', (t) => {
+  const { start, events, d, at } = harness(t);
+  // Both copies carry the device time, 1.5 s ahead of the host.
+  d.push(
+    { device_sn: 'A', event_type: 3103, unique_id: 'u1', event_time: start + 1500, type: 18 },
+    'local',
+  );
+  // Two cloud copies of one session, the second with a time 2 s ahead.
+  d.push({ device_sn: 'B', event_type: 3103, event_session: 's2', type: 97 }, 'cloud');
+  at(600);
+  d.push(
+    { device_sn: 'A', event_type: 3103, event_session: 's1', event_time: start + 1500, type: 97 },
+    'cloud',
+  );
+  at(650);
+  d.push(
+    { device_sn: 'B', event_type: 3103, event_session: 's2', event_time: start + 2650, type: 97 },
+    'cloud',
+  );
+  at(1500);
+  assert.deepEqual(
+    events.map((e) => e.serial),
+    ['A', 'B'],
+  );
+  d.close();
+});
+test('an old delayed push is not taken for the late copy of a new ring', (t) => {
+  const { start, events, d, at } = harness(t);
+  d.push({ device_sn: 'BELL', event_type: 3103, unique_id: 'u1', type: 18 }, 'local');
+  at(600);
+  d.push(
+    {
+      device_sn: 'BELL',
+      event_type: 3103,
+      event_session: 's0',
+      event_time: start - 30000,
+      type: 97,
+    },
+    'cloud',
+  );
+  at(700);
+  d.push(
+    { device_sn: 'BELL', event_type: 3103, event_session: 's1', event_time: start - 27, type: 97 },
+    'cloud',
+  );
+  at(1500);
+  assert.deepEqual(
+    events.map((e) => e.occurred_at),
+    [null, new Date(start - 30000).toISOString()],
+  );
+  d.close();
+});
+test('codes, recognition and identity decide merges inside the settling window', (t) => {
+  const { start, events, d, at } = harness(t);
+  // A stranger copy and a later plain copy of one session keep the stranger.
+  d.push({ device_sn: 'P', event_type: 3112, event_session: 's1', type: 97 }, 'cloud');
+  // Distinct unmapped codes stay distinct.
+  d.push({ device_sn: 'U', event_type: 1, type: 18 }, 'local');
+  // A name goes to the pending event with the same session.
+  d.push(
+    { device_sn: 'G', event_type: 3102, unique_id: 'u1', event_time: start, type: 18 },
+    'local',
+  );
+  at(100);
+  d.push(
+    { device_sn: 'G', event_type: 3102, event_session: 's2', event_time: start + 1500, type: 97 },
+    'cloud',
+  );
+  at(200);
+  d.push(
+    { device_sn: 'P', event_type: 3102, event_session: 's1', event_time: start, type: 97 },
+    'cloud',
+  );
+  d.push({ device_sn: 'U', event_type: 2, type: 5 }, 'cloud');
+  d.push(
+    {
+      device_sn: 'G',
+      event_type: 3111,
+      event_session: 's2',
+      person_name: 'Fixture Person',
+      type: 97,
+    },
+    'cloud',
+  );
+  at(1000);
+  assert.deepEqual(
+    events.map((e) => [e.serial, e.eufy_event_type, e.recognition, e.person_name]),
+    [
+      ['P', 3102, 'unknown', null],
+      ['U', 1, 'not_applicable', null],
+      ['G', 3102, 'unidentified', null],
+      ['G', 3111, 'known', 'Fixture Person'],
+      ['U', 2, 'not_applicable', null],
+    ],
+  );
+  d.close();
+});
+test('a late copy without an event code, and standalone copies typed 151, are one event', (t) => {
+  const { start, events, d, at } = harness(t);
+  d.push({ device_sn: 'N', event_type: 1, type: 18 }, 'local');
+  d.push({ device_sn: 'S', event_type: 3101, unique_id: 'x', type: 151 }, 'local');
+  at(600);
+  d.push({ device_sn: 'N', type: 97 }, 'cloud');
+  d.push(
+    { device_sn: 'S', event_type: 3101, event_session: 'y', event_time: start, type: 151 },
+    'cloud',
+  );
+  at(1500);
+  assert.deepEqual(
+    events.map((e) => e.serial),
+    ['N', 'S'],
+  );
+  d.close();
+});
+test('a late copy with another name is delivered, and a late copy updates its own occurrence', (t) => {
+  const { start, events, d, at } = harness(t);
+  d.push(
+    { device_sn: 'CAM', event_type: 3111, event_session: 's1', person_name: 'Alpha', type: 97 },
+    'cloud',
+  );
+  d.push({ device_sn: 'BELL', event_type: 3103, unique_id: 'u1', type: 18 }, 'local');
+  at(300);
+  d.push({ device_sn: 'BELL', event_type: 3103, unique_id: 'u2', type: 18 }, 'local');
+  at(600);
+  d.push(
+    { device_sn: 'CAM', event_type: 3111, unique_id: 'u9', person_name: 'Beta', type: 18 },
+    'local',
+  );
+  // A cloud copy that names press 2 belongs to press 2, not to press 1.
+  at(900);
+  d.push(
+    { device_sn: 'BELL', event_type: 3103, unique_id: 'u2', event_time: start + 300, type: 97 },
+    'cloud',
+  );
+  // So press 1 has no event time yet, and its own copy still matches it.
+  at(1000);
+  d.push(
+    { device_sn: 'BELL', event_type: 3103, unique_id: 'u1', event_time: start - 1900, type: 97 },
+    'cloud',
+  );
+  at(1800);
+  assert.deepEqual(
+    events.map((e) => [e.serial, e.person_name]),
+    [
+      ['CAM', 'Alpha'],
+      ['BELL', null],
+      ['BELL', null],
+      ['CAM', 'Beta'],
+    ],
+  );
+  d.close();
+});
+test('a copy with the code of a notification that a device event relabelled merges into it', (t) => {
+  const { events, d, at } = harness(t);
+  d.push({ device_sn: 'X', event_type: 9999, type: 18 }, 'local');
+  d.device('X', 'ring');
+  at(200);
+  d.push({ device_sn: 'X', event_type: 9999, type: 97 }, 'cloud');
+  at(1000);
+  assert.deepEqual(
+    events.map((e) => [e.event_type, e.eufy_event_type]),
+    [['ring', 9999]],
+  );
+  d.close();
+});

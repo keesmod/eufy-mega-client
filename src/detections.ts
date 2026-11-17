@@ -87,6 +87,18 @@ const recognitionRank: Record<Recognition, number> = {
 };
 const timesAgree = (a: string | null, b: string | null) =>
   !a || !b || Math.abs(Date.parse(a) - Date.parse(b)) <= 1000;
+type Kind = Pick<Draft, 'event_type' | 'eufy_event_type'>;
+/**
+ * The same detection type, where distinct unmapped codes stay distinct. An
+ * equal code also matches a notification that a device event relabelled.
+ */
+const sameKind = (a: Kind, b: Kind) =>
+  a.event_type === b.event_type
+    ? a.event_type !== 'notification' ||
+      a.eufy_event_type === undefined ||
+      b.eufy_event_type === undefined ||
+      a.eufy_event_type === b.eufy_event_type
+    : a.eufy_event_type !== undefined && a.eufy_event_type === b.eufy_event_type;
 
 export function personName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -177,20 +189,25 @@ export class Detections {
     const id = identity ? String(identity) : undefined;
     // Distinct IDs in the SAME format are distinct detections, even very close
     // together. Cross-format companions, and copies with the same raw identity,
-    // are correlated within the settling window.
-    const existing = [...this.pending].find(
+    // are correlated within the settling window. A candidate with the same key,
+    // then one with the same identity, comes before a transport-only match.
+    const candidates = [...this.pending].filter(
       (p) =>
         p.event.serial === serial &&
         ((p.event.source === 'device' &&
           (p.event.event_type === type ||
             p.event.event_type === 'motion' ||
             type === 'notification')) ||
-          ((p.event.event_type === type || p.event.eufy_event_type === message.event_type) &&
+          (sameKind(p.event, event) &&
             ((key !== undefined && p.identities.has(key)) ||
               ((!p.transports.has(transport) || (id !== undefined && p.ids.has(id))) &&
                 timesAgree(occurred_at, p.event.occurred_at)) ||
               (!key && p.identities.size === 0)))),
     );
+    const existing =
+      candidates.find((p) => key !== undefined && p.identities.has(key)) ??
+      candidates.find((p) => id !== undefined && p.ids.has(id)) ??
+      candidates[0];
     this.lastPush.set(serial, now);
     if (existing) {
       const previous = existing.event;
@@ -207,7 +224,12 @@ export class Detections {
       if (!name && previous.event_type === 'person' && type === 'person' && previous.person_name) {
         existing.event.person_name = previous.person_name;
         existing.event.recognition = 'known';
-      }
+      } else if (
+        previous.event_type === 'person' &&
+        type === 'person' &&
+        recognitionRank[previous.recognition] > recognitionRank[existing.event.recognition]
+      )
+        existing.event.recognition = previous.recognition;
       this.metrics.duplicates++;
       if (key) existing.identities.add(key);
       if (id) existing.ids.add(id);
@@ -219,34 +241,42 @@ export class Detections {
   }
 
   /**
-   * A copy that arrives after its occurrence was delivered: over another
-   * transport, or with the same raw identity. Event times, when both copies
-   * carry one, agree within a second, and the copy cannot have occurred more
-   * than a second after the first copy arrived. Distinct identities over the
-   * same transport stay distinct detections, and a copy that adds a person
-   * name or a stronger recognition is delivered, not dropped.
+   * A copy that arrives after its occurrence was delivered: with the same raw
+   * identity, or over another transport. Event times, when both copies carry
+   * one, agree within a second. Distinct identities over the same transport
+   * stay distinct detections. A copy that adds a person name or a stronger
+   * recognition than every candidate is delivered, not dropped.
    */
   private lateCopy(event: Draft, transport: string, id: string | undefined, now: number): boolean {
     this.delivered = this.delivered.filter((d) => now - d.received <= this.companionMs);
-    const match = this.delivered.find(
+    const occurred = event.occurred_at === null ? undefined : Date.parse(event.occurred_at);
+    const candidates = this.delivered.filter((d) => {
+      if (
+        d.serial !== event.serial ||
+        !sameKind(d, event) ||
+        !timesAgree(event.occurred_at, d.occurred_at)
+      )
+        return false;
+      if (id !== undefined && d.ids.has(id)) return true;
+      // Only the transport ties these copies. When the delivered copy has no
+      // event time, the copy must have occurred around the time the first copy
+      // arrived, which assumes the device and host clocks agree.
+      return (
+        !d.transports.has(transport) &&
+        (d.occurred_at !== null ||
+          occurred === undefined ||
+          (occurred >= d.received - 2000 && occurred <= d.received + 1000))
+      );
+    });
+    const match = [
+      ...candidates.filter((d) => id !== undefined && d.ids.has(id)),
+      ...candidates,
+    ].find(
       (d) =>
-        d.serial === event.serial &&
-        (d.event_type === event.event_type
-          ? event.event_type !== 'notification' ||
-            event.eufy_event_type === undefined ||
-            d.eufy_event_type === undefined ||
-            d.eufy_event_type === event.eufy_event_type
-          : event.eufy_event_type !== undefined && d.eufy_event_type === event.eufy_event_type) &&
-        timesAgree(event.occurred_at, d.occurred_at) &&
-        (!event.occurred_at || Date.parse(event.occurred_at) <= d.received + 1000) &&
-        ((id !== undefined && d.ids.has(id)) || !d.transports.has(transport)),
+        recognitionRank[event.recognition] <= recognitionRank[d.recognition] &&
+        (event.person_name === null || event.person_name === d.person_name),
     );
-    if (
-      !match ||
-      recognitionRank[event.recognition] > recognitionRank[match.recognition] ||
-      (event.person_name !== null && event.person_name !== match.person_name)
-    )
-      return false;
+    if (!match) return false;
     match.transports.add(transport);
     if (id) match.ids.add(id);
     match.occurred_at ??= event.occurred_at;
