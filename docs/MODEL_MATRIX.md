@@ -272,6 +272,20 @@ The new type 97 rows below are software evidence only.
 [T8215-486]: https://github.com/mscodemonkey/eufy-mega-security/issues/486
 [Doorbell-S4]: https://www.eufy.com/products/e82151f2
 
+## Reported T8215 results, 2026-11-17
+
+On 2026-11-17 the [reporter of ha-eufy-cam#252][252-result] ran integration
+0.8.51 and bridge 0.8.42 with client 0.30.4 on the same T8215 and T8030. The
+doorbell appeared, and stored snapshots, a snapshot refresh, live view, the
+recording list with thumbnails, events including the ring and the battery level
+worked. Each press of the doorbell produced two ring events. Recording playback
+failed in the Events card with its generic error. Both problems are open in
+ha-eufy-cam#252. Audio, the event types other than the ring and the timing of
+the two ring events were not reported. This is a reported result, not
+independently reproduced. The type 97 feature row and its cells are unchanged.
+
+[252-result]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6946575850
+
 ## Reported T8113-Z and T8424, 0.26.0
 
 A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
