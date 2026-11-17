@@ -288,11 +288,13 @@ label carries a 0.30.4 marker in the source and is listed in
 
 - `DeviceType.VIDEO_DOORBELL_S4 = 97` and its type label.
 - A property map with `GenericDeviceProperties`, battery (`CMD_GET_BATTERY`),
-  availability (`CMD_GET_DEV_STATUS`) and the motion, person, person name, ring,
-  pet, vehicle, sound, crying, dog, dog lick and dog poop detection states. These
-  are the property objects that types 91, 95 and 96 have under a T8030. No
-  setting and no detection-type property is claimed, so the owner-aware HomeBase
-  3 metadata leaves this map unchanged.
+  availability (`CMD_GET_DEV_STATUS`) and the motion, person, person name,
+  identity person, stranger person, ring, pet, vehicle, sound, crying, dog, dog
+  lick and dog poop detection states. Types 95 and 96 have the same detection
+  states under a T8030. Type 91 also has radar motion, package and loitering
+  states there. The detection statistics that a T8030 adds for those types are
+  not included. No setting and no detection-type property is claimed, so the
+  owner-aware HomeBase 3 metadata leaves this map unchanged.
 - `DeviceStartLivestream`, `DeviceStopLivestream`, `DeviceStartDownload` and
   `DeviceCancelDownload` only. Talkback, quick response, snooze and settings are
   not registered.
@@ -311,10 +313,11 @@ commands.
 The per-model [adapter tests](../test/battery-doorbell.test.mjs), the
 [shared media fixtures](../test/fixtures/battery-doorbell-media.mjs) with the
 reported firmware and the [profile tests](../test/device-profiles.test.mjs) cover
-T8215/97 like the other rows. They also compare a relayed T8215/97 push and its
-ring, from a property change and from a push, with T8223/96. T8215 with other
-types, `T8215C`, `T8215-Z`, lower case, whitespace and T8216/97 stay
-`unsupported_device`. T8224/97 stays rejected. This is recognition with
+T8215/97 like the other rows. They also compare a relayed T8215/97 push, its
+ring from a property change and from a push, and its relayed identity and
+stranger person pushes with T8223/96. T8215 with other types, `T8215C`,
+`T8215-Z`, lower case, whitespace and T8216/97 stay `unsupported_device`.
+T8224/97 stays rejected. This is recognition with
 experimental software coverage only, not confirmed on hardware. The T8030 live
 envelope, the push shape and battery reads of the S4 are unverified until the
 reporter tests a release with this change.

@@ -6303,6 +6303,8 @@ export const DeviceProperties: Properties = {
     [PropertyName.DeviceMotionDetected]: DeviceMotionDetectedProperty,
     [PropertyName.DevicePersonDetected]: DevicePersonDetectedProperty,
     [PropertyName.DevicePersonName]: DevicePersonNameProperty,
+    [PropertyName.DeviceIdentityPersonDetected]: DeviceIdentityPersonDetectedProperty,
+    [PropertyName.DeviceStrangerPersonDetected]: DeviceStrangerPersonDetectedProperty,
     [PropertyName.DeviceRinging]: DeviceRingingProperty,
     [PropertyName.DevicePetDetected]: DevicePetDetectedProperty,
     [PropertyName.DeviceVehicleDetected]: DeviceVehicleDetectedProperty,

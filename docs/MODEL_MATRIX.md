@@ -262,9 +262,10 @@ HomeBase 3 doorbell with the additional-H3 media policy, as described in
 [T8215-1230] shows the same pair on firmware 2.0.1.4 under a T8030. [T8215-486]
 shows it under a HomeBase Professional S1 (T9000), not a T8030. [Doorbell-S4]
 describes a wired-only doorbell and lists HomeBase 3, Mini, Pro and NVR support.
-[HB3] did not list T8215 when read on 2026-11-17. These are a reported inventory
-tuple and third-party reports, not observations through this client. The new
-type 97 rows below are software evidence only.
+The S4 is not a PoE camera, so its NVR pairing is not the `N` topology that [#144]
+tracks. [HB3] did not list T8215 when read on 2026-11-17. These are a reported
+inventory tuple and third-party reports, not observations through this client.
+The new type 97 rows below are software evidence only.
 
 [252-report]: https://github.com/keesmod/ha-eufy-cam/issues/252
 [T8215-1230]: https://github.com/homebridge-plugins/homebridge-eufy/issues/1230
@@ -1283,7 +1284,7 @@ The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
 commit `e69624d79cd43e810a216602cc39eff70a27d046`, plus `WIRED_CAM_C31` added in
 0.28.0 and `VIDEO_DOORBELL_S4` added in 0.30.4, each with its label, property map
 and commands. The complete file SHA-256 including those additions is
-`6173a625f15601ea346f37a2d4e0e48cb2cf1bdcccf86f988c4582fa7013267c`.
+`9565569a1991b74d34d7778abf1b0dbf478661d0c6ac8b1ae21b8e30c2314d24`.
 Its attributed upstream is bropat/eufy-security-client 4.1.1-1,
 commit `d75e7996d4cbce3839a6075bed95b752ccc3ee43`, under MIT, as recorded in
 [NOTICE.md](../NOTICE.md). Protocol types are numeric Eufy identifiers, not network
@@ -1403,7 +1404,7 @@ evidence section. Every row also has a separate feature row below.
 | 94            | `BATTERY_DOORBELL_PLUS_E340`           | T8214                                        | Video Doorbell E340                                                           | battery    | W candidate, H3, H2/HM candidates           | [HB3], [HB-guide]                                           | C           |
 | 95            | `BATTERY_DOORBELL_C30`                 | T8224                                        | Video Doorbell C30                                                            | battery    | W candidate, H3, H2/HM candidates           | [HB3], [HB-guide]                                           | C           |
 | 96            | `BATTERY_DOORBELL_C31`                 | T8223                                        | Video Doorbell C31                                                            | battery    | W candidate, H3, H2/HM candidates           | [HB3], [HB-guide]                                           | C           |
-| 97            | `VIDEO_DOORBELL_S4`                    | T8215                                        | Video Doorbell S4, wired                                                      | battery    | H3. HM, T9000 and N candidates              | [Doorbell-S4], [252-report], [T8215-1230], [T8215-486]      | R           |
+| 97            | `VIDEO_DOORBELL_S4`                    | T8215                                        | Video Doorbell S4, wired                                                      | battery    | H3. HM, T9000 and NVR candidates, not PoE   | [Doorbell-S4], [252-report], [T8215-1230], [T8215-486]      | R           |
 | 98            | `SOLOCAM_E42`                          | T8173                                        | SoloCam E42                                                                   | solo       | W candidate, H3, H2 candidate               | [Catalogue], [Display], [HB-guide]                          | C           |
 | 100           | `INDOOR_COST_DOWN_CAMERA`              | T8414                                        | Indoor Cam Mini 2K / Solo IndoorCam P44                                       | indoor     | W, H3. HM candidate                         | [Indoor], [Display], [HB-guide]                             | R           |
 | 101           | `CAMERA_GUN`                           | Unknown                                      | Unresolved catalogue label. No verified marketing name                        | unresolved | Unknown                                     | [Catalogue]                                                 | C           |
@@ -1508,7 +1509,7 @@ battery lifetime claim is made.
 | 94    | T8214 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#113]                                          |
 | 95    | T8224 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#114]                                          |
 | 96    | T8223 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#115]                                          |
-| 97    | T8215 / actual H3 owner only                         | X         | X                   | X         | X               | X          | X          | X               | X             | [Battery-software], [252-report]                    | [252-report], [#143], [#144]                    |
+| 97    | T8215 / actual H3 owner only                         | X         | X                   | X         | X               | X          | X          | X               | X             | [Battery-software], [252-report]                    | [252-report], [#143]                            |
 | 98    | T8173 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X               | X             | [Solo-software], [Catalogue]                        | [#35], [#36], [#56]                             |
 | 100   | T8414 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [Catalogue]                      | [#23], [#24], [#35], [#36], [#57]               |
 | 101   | Unknown / listed topologies                          | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [Integrated-software]            | [#39], [E2], [E6]                               |

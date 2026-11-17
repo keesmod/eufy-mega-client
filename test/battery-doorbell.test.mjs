@@ -312,46 +312,50 @@ test('T8215/97 pushes relayed by a HomeBase 3 normalize like the C31 type 96', (
     fields(service._normalizePushMessage(relayed(96, 3103))),
   );
 });
-test('T8215/97 rings reach the ring event like T8223/96, from a property change and a relayed push', async () => {
+// One push relayed by a HomeBase 3, read through the device and event transports. For a
+// ring (3103) a ringing property change comes first.
+const relay = async (model, type, a) => {
   const service = Object.create(PushNotificationService.prototype);
-  const run = async (model, type) => {
-    const raw = doorbell(model, type, { device_sn: 'DOORBELL_FIXTURE' });
-    const outcome = {};
-    await fixture([owner(), raw], async (t) => {
-      // Without a command table the event image fallback does nothing, so the camera
-      // handler reaches its ring case instead of stopping at the missing method.
-      t.stations.get('T8030_OWNER').hasCommand = () => false;
-      const sdk = t.cameras.get(raw.device_sn);
-      outcome.adapter = sdk.constructor;
-      const detections = [];
-      t.on('detection', (event) => detections.push(event.type));
+  const raw = doorbell(model, type, { device_sn: 'DOORBELL_FIXTURE' });
+  const outcome = {};
+  await fixture([owner(), raw], async (t) => {
+    // Without a command table the event image fallback does nothing, so the camera
+    // handler reaches its event case instead of stopping at the missing method.
+    t.stations.get('T8030_OWNER').hasCommand = () => false;
+    const sdk = t.cameras.get(raw.device_sn);
+    outcome.adapter = sdk.constructor;
+    const detections = [];
+    t.on('detection', (event) => detections.push(event.type));
+    if (a === 3103) {
       assert.equal(sdk.updateProperty(PropertyName.DeviceRinging, true), true);
       sdk.updateProperty(PropertyName.DeviceRinging, false);
       outcome.propertyChange = [...detections];
-      const events = new EventTransport(
-        {},
-        (id) => t.supportsEvent(id, 'notification'),
-        (message) => t.processPush(message),
-        (message) => t.acceptPush(message),
-      );
-      const received = [];
-      events.on('event', (event) => received.push(event));
-      t.on('detection', (d) => events.device(d.id, d.type, d.name, d.stranger));
-      try {
-        const message = service._normalizePushMessage(relayed(type, 3103));
-        outcome.accepted = t.acceptPush(message);
-        events.push(message);
-        await delay(550);
-        outcome.ringing = sdk.isRinging();
-        outcome.detections = detections;
-        outcome.events = received.map(({ id, receivedAt, ...event }) => event);
-      } finally {
-        await events.close();
-      }
-    });
-    return outcome;
-  };
-  const s4 = await run('T8215', 97);
+    }
+    const events = new EventTransport(
+      {},
+      (id) => t.supportsEvent(id, 'notification'),
+      (message) => t.processPush(message),
+      (message) => t.acceptPush(message),
+    );
+    const received = [];
+    events.on('event', (event) => received.push(event));
+    t.on('detection', (d) => events.device(d.id, d.type, d.name, d.stranger));
+    try {
+      const message = service._normalizePushMessage(relayed(type, a));
+      outcome.accepted = t.acceptPush(message);
+      events.push(message);
+      await delay(550);
+      outcome.ringing = sdk.isRinging();
+      outcome.detections = detections;
+      outcome.events = received.map(({ id, receivedAt, ...event }) => event);
+    } finally {
+      await events.close();
+    }
+  });
+  return outcome;
+};
+test('T8215/97 rings reach the ring event like T8223/96, from a property change and a relayed push', async () => {
+  const s4 = await relay('T8215', 97, 3103);
   assert.equal(s4.adapter, BatteryDoorbellCamera);
   assert.deepEqual(s4.propertyChange, ['ring']);
   assert.equal(s4.accepted, true);
@@ -361,5 +365,22 @@ test('T8215/97 rings reach the ring event like T8223/96, from a property change 
     s4.events.map((event) => [event.deviceId, event.type]),
     [['DOORBELL_FIXTURE', 'ring']],
   );
-  assert.deepEqual(s4, await run('T8223', 96));
+  assert.deepEqual(s4, await relay('T8223', 96, 3103));
+});
+// The HomeBase 3 push codes include identity (3111) and stranger (3112) person events.
+// Type 97 carries both states, so the device emits them like T8223/96 under a T8030.
+test('T8215/97 relayed identity and stranger pushes reach the person event like T8223/96', async () => {
+  for (const [a, detections] of [
+    [3111, ['person']],
+    [3112, ['person', 'person']],
+  ]) {
+    const s4 = await relay('T8215', 97, a);
+    assert.equal(s4.accepted, true);
+    assert.deepEqual(s4.detections, detections);
+    assert.deepEqual(
+      s4.events.map((event) => [event.deviceId, event.type]),
+      [['DOORBELL_FIXTURE', 'person']],
+    );
+    assert.deepEqual(s4, await relay('T8223', 96, a));
+  }
 });
