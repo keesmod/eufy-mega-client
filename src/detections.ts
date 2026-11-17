@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from 'node:crypto';
 import type { PushMessage } from './vendor/push/models.js';
+import type { PushSource } from './standalone-events.js';
 
 export const detectionEvents = {
   'device motion detected': 'motion',
@@ -61,8 +62,9 @@ interface Pending {
   event: Draft;
   identities: Set<string>;
   /** Raw unique_id or event_session values, independent of event time. */
-  sources: Set<string>;
-  transports: Set<number>;
+  ids: Set<string>;
+  /** Push source and payload type, such as `local:18` or `cloud:97`. */
+  transports: Set<string>;
   timer: ReturnType<typeof setTimeout>;
 }
 /** A delivered push detection that a late copy of the same occurrence may still follow. */
@@ -70,11 +72,21 @@ interface Delivered {
   serial: string;
   event_type: string;
   eufy_event_type?: number;
+  person_name: string | null;
+  recognition: Recognition;
   received: number;
   occurred_at: string | null;
-  sources: Set<string>;
-  transports: Set<number>;
+  ids: Set<string>;
+  transports: Set<string>;
 }
+const recognitionRank: Record<Recognition, number> = {
+  not_applicable: 0,
+  unidentified: 1,
+  unknown: 2,
+  known: 3,
+};
+const timesAgree = (a: string | null, b: string | null) =>
+  !a || !b || Math.abs(Date.parse(a) - Date.parse(b)) <= 1000;
 
 export function personName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -124,7 +136,8 @@ export class Detections {
     private companionMs = 2000,
   ) {}
 
-  push(message: PushMessage): void {
+  /** `source` tells a cloud push from a push over an open device session. */
+  push(message: PushMessage, source: PushSource = 'cloud'): void {
     const serial = message.device_sn || message.station_sn;
     if (!this.known(serial)) return;
     const now = Date.now();
@@ -160,8 +173,11 @@ export class Detections {
               : 'unidentified',
       ...(Number.isSafeInteger(message.event_type) ? { eufy_event_type: message.event_type } : {}),
     };
+    const transport = `${source}:${message.type ?? 'none'}`;
+    const id = identity ? String(identity) : undefined;
     // Distinct IDs in the SAME format are distinct detections, even very close
-    // together. Cross-format companions are correlated within the settling window.
+    // together. Cross-format companions, and copies with the same raw identity,
+    // are correlated within the settling window.
     const existing = [...this.pending].find(
       (p) =>
         p.event.serial === serial &&
@@ -171,14 +187,11 @@ export class Detections {
             type === 'notification')) ||
           ((p.event.event_type === type || p.event.eufy_event_type === message.event_type) &&
             ((key !== undefined && p.identities.has(key)) ||
-              (!p.transports.has(message.type) &&
-                (!occurred_at ||
-                  !p.event.occurred_at ||
-                  Math.abs(Date.parse(occurred_at) - Date.parse(p.event.occurred_at)) <= 1000)) ||
+              ((!p.transports.has(transport) || (id !== undefined && p.ids.has(id))) &&
+                timesAgree(occurred_at, p.event.occurred_at)) ||
               (!key && p.identities.size === 0)))),
     );
     this.lastPush.set(serial, now);
-    const source = identity ? String(identity) : undefined;
     if (existing) {
       const previous = existing.event;
       existing.event = {
@@ -197,40 +210,45 @@ export class Detections {
       }
       this.metrics.duplicates++;
       if (key) existing.identities.add(key);
-      if (source) existing.sources.add(source);
-      existing.transports.add(message.type);
-    } else if (this.lateCopy(event, message.type, source, now)) {
+      if (id) existing.ids.add(id);
+      existing.transports.add(transport);
+    } else if (this.lateCopy(event, transport, id, now)) {
       this.metrics.duplicates++;
       if (key) this.remember([key]);
-    } else this.queue(event, key, message.type, source);
+    } else this.queue(event, key, transport, id);
   }
 
   /**
    * A copy that arrives after its occurrence was delivered: over another
    * transport, or with the same raw identity. Event times, when both copies
-   * carry one, must agree within a second. Distinct identities over the same
-   * transport stay distinct detections.
+   * carry one, agree within a second, and the copy cannot have occurred more
+   * than a second after the first copy arrived. Distinct identities over the
+   * same transport stay distinct detections, and a copy that adds a person
+   * name or a stronger recognition is delivered, not dropped.
    */
-  private lateCopy(
-    event: Draft,
-    transport: number,
-    source: string | undefined,
-    now: number,
-  ): boolean {
+  private lateCopy(event: Draft, transport: string, id: string | undefined, now: number): boolean {
     this.delivered = this.delivered.filter((d) => now - d.received <= this.companionMs);
     const match = this.delivered.find(
       (d) =>
         d.serial === event.serial &&
-        (d.event_type === event.event_type ||
-          (event.eufy_event_type !== undefined && d.eufy_event_type === event.eufy_event_type)) &&
-        (!event.occurred_at ||
-          !d.occurred_at ||
-          Math.abs(Date.parse(event.occurred_at) - Date.parse(d.occurred_at)) <= 1000) &&
-        ((source !== undefined && d.sources.has(source)) || !d.transports.has(transport)),
+        (d.event_type === event.event_type
+          ? event.event_type !== 'notification' ||
+            event.eufy_event_type === undefined ||
+            d.eufy_event_type === undefined ||
+            d.eufy_event_type === event.eufy_event_type
+          : event.eufy_event_type !== undefined && d.eufy_event_type === event.eufy_event_type) &&
+        timesAgree(event.occurred_at, d.occurred_at) &&
+        (!event.occurred_at || Date.parse(event.occurred_at) <= d.received + 1000) &&
+        ((id !== undefined && d.ids.has(id)) || !d.transports.has(transport)),
     );
-    if (!match) return false;
+    if (
+      !match ||
+      recognitionRank[event.recognition] > recognitionRank[match.recognition] ||
+      (event.person_name !== null && event.person_name !== match.person_name)
+    )
+      return false;
     match.transports.add(transport);
-    if (source) match.sources.add(source);
+    if (id) match.ids.add(id);
     match.occurred_at ??= event.occurred_at;
     return true;
   }
@@ -301,12 +319,12 @@ export class Detections {
     } else this.queue(event);
   }
 
-  private queue(event: Draft, key?: string, transport?: number, source?: string): void {
+  private queue(event: Draft, key?: string, transport?: string, id?: string): void {
     if (this.pending.size >= 256) this.flush(this.pending.values().next().value!);
     const pending: Pending = {
       event,
       identities: new Set(key ? [key] : []),
-      sources: new Set(source ? [source] : []),
+      ids: new Set(id ? [id] : []),
       transports: new Set(transport === undefined ? [] : [transport]),
       timer: setTimeout(() => this.flush(pending), this.settleMs),
     };
@@ -323,9 +341,11 @@ export class Detections {
         serial: pending.event.serial,
         event_type: pending.event.event_type,
         eufy_event_type: pending.event.eufy_event_type,
+        person_name: pending.event.person_name,
+        recognition: pending.event.recognition,
         received: Date.parse(pending.event.received_at),
         occurred_at: pending.event.occurred_at,
-        sources: pending.sources,
+        ids: pending.ids,
         transports: pending.transports,
       });
       if (this.delivered.length > 256) this.delivered.shift();

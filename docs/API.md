@@ -602,11 +602,15 @@ Typed events are `auth`, `device`, `station`, `snapshot`, `event`,
 motion/person/ring semantics and recognized names when supplied by the device.
 Deduplication correlates device/push copies and persists recent delivery hashes;
 it does not manufacture missing names or detections. A detection is delivered
-0.5 s after its first copy. Since 0.30.5 a push copy that arrives up to 2 s
-after the first copy is still recognised as the same occurrence when it came
-over another transport or carries the same `unique_id` or event session, and
-both event times, when present, agree within a second
-([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)).
+0.5 s after its first copy. Since 0.30.5
+([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)) a push
+copy is the same occurrence when it has the same type and either arrives over
+another transport or carries the same `unique_id` or event session, and both
+event times, when present, agree within a second. A transport is the push
+source, `local` or `cloud`, with the payload `type`. This holds while the first
+copy is pending and up to 2 s after the first copy arrived. A late copy must not
+have occurred more than a second after the first copy arrived. A late copy that
+adds a person name or a stronger recognition is delivered as its own event.
 
 `setGuardMode(stationId, mode, signal?)` accepts 0 (Away), 1 (Home), 2 (Schedule),
 3–5 (Custom), 47 (Geofencing) or 63 (Disarmed). Its result requires a matching
@@ -1443,9 +1447,11 @@ interface StandalonePushObservation {
   only when both parts of the detection key match: the identity, which is the
   `unique_id`, else the session, else none, and the valid event time or none.
   Two copies with neither an identity nor a valid event time merge only while
-  the first is still pending. A shared `unique_id` where the event times differ
-  or only one copy carries a valid time gives two events. No capture has shown
-  which case applies.
+  the first is still pending. Since 0.30.5 a local and a cloud copy are
+  different transports, and they become one event as described under
+  [Events and Guard Mode](#events-and-guard-mode). A shared `unique_id` where
+  the event times differ by more than a second gives two events. No capture has
+  shown which case applies.
 
 Reading the counts:
 

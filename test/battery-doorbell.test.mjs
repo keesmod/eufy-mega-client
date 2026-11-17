@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { discover } from '../dist/discovery.js';
 import { DeviceTransport } from '../dist/device-transport.js';
 import { EventTransport } from '../dist/event-transport.js';
+import { Detections } from '../dist/detections.js';
 import { BatteryDoorbellCamera, PropertyName, Station } from '../dist/vendor/http/index.js';
 import { CommandType } from '../dist/vendor/p2p/types.js';
 import { PushNotificationService } from '../dist/vendor/push/service.js';
@@ -311,6 +312,38 @@ test('T8215/97 pushes relayed by a HomeBase 3 normalize like the C31 type 96', (
     fields(service._normalizePushMessage(relayed(92, 3103))),
     fields(service._normalizePushMessage(relayed(96, 3103))),
   );
+});
+test('the local and cloud copies of one HomeBase 3 ring are one detection (ha-eufy-cam#252)', (t) => {
+  const service = Object.create(PushNotificationService.prototype);
+  const relay = relayed(97, 3103);
+  t.mock.timers.enable({
+    apis: ['setTimeout', 'Date'],
+    now: Number(relay.payload.event_time) * 1000 + 27,
+  });
+  const events = [];
+  const d = new Detections(
+    () => true,
+    (e) => events.push(e),
+    () => {},
+  );
+  // The session's CMD_CAMERA_PUSH_NOTIFY copy: the inner payload with type set to msg_type.
+  const local = {
+    ...relay.payload.payload,
+    device_sn: 'DOORBELL_FIXTURE',
+    event_type: 3103,
+    type: relay.payload.payload.msg_type,
+    station_sn: 'T8030_OWNER',
+  };
+  const cloud = service._normalizePushMessage(relay);
+  assert.equal(cloud.type, 97);
+  assert.equal(cloud.unique_id ?? '', '');
+  d.push(local, 'local');
+  t.mock.timers.tick(555);
+  d.push(cloud, 'cloud');
+  t.mock.timers.tick(1000);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].event_type, 'ring');
+  d.close();
 });
 // One push relayed by a HomeBase 3, read through the device and event transports. For a
 // ring (3103) a ringing property change comes first.

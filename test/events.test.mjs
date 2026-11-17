@@ -193,3 +193,147 @@ test('late copies are only matched within the companion window and with agreeing
   assert.equal(events.length, 3);
   d.close();
 });
+const harness = (t, settle) => {
+  const start = 1789052400000;
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: start });
+  const events = [];
+  const d = new Detections(
+    () => true,
+    (e) => events.push(e),
+    () => {},
+    settle,
+  );
+  const at = (ms) => t.mock.timers.tick(ms - (Date.now() - start));
+  return { start, events, d, at };
+};
+test('a copy with the same session inside the settling window is one ring', (t) => {
+  const { start, events, d, at } = harness(t);
+  const copy = { device_sn: 'BELL', event_type: 3103, event_session: 's1', type: 97 };
+  d.push(copy);
+  at(300);
+  d.push({ ...copy, event_time: start });
+  at(1000);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].occurred_at, new Date(start).toISOString());
+  d.close();
+});
+test('a late copy that adds a recognised name or recognition is delivered, not dropped', (t) => {
+  const { start, events, d, at } = harness(t);
+  d.push({ device_sn: 'CAM', event_type: 3102, unique_id: 'u1', type: 18 }, 'local');
+  d.push({ device_sn: 'CAM2', event_type: 3102, unique_id: 'u2', type: 18 }, 'local');
+  at(800);
+  d.push({ device_sn: 'CAM2', event_type: 3112, event_session: 's2', type: 97 }, 'cloud');
+  d.push(
+    {
+      device_sn: 'CAM',
+      event_type: 3111,
+      event_session: 's1',
+      event_time: start + 300,
+      person_name: 'Fixture Person',
+      type: 97,
+    },
+    'cloud',
+  );
+  at(1500);
+  assert.deepEqual(
+    events.map((e) => [e.serial, e.recognition, e.person_name]),
+    [
+      ['CAM', 'unidentified', null],
+      ['CAM2', 'unidentified', null],
+      ['CAM2', 'unknown', null],
+      ['CAM', 'known', 'Fixture Person'],
+    ],
+  );
+  d.close();
+});
+test('a second press that only arrives by cloud is not taken for a lost copy', (t) => {
+  const { start, events, d, at } = harness(t);
+  d.push({ device_sn: 'BELL', event_type: 3103, unique_id: 'u1', type: 18 }, 'local');
+  at(1200);
+  // Occurred 1.2 s after the first copy arrived: a copy of that press cannot.
+  d.push(
+    {
+      device_sn: 'BELL',
+      event_type: 3103,
+      event_session: 's2',
+      event_time: start + 1200,
+      type: 97,
+    },
+    'cloud',
+  );
+  at(2000);
+  assert.equal(events.length, 2);
+  d.close();
+});
+test('the transport is the push source with the payload type, an absent type included', (t) => {
+  const { start, events, d, at } = harness(t);
+  // Two local presses without msg_type are one transport: distinct rings.
+  d.push({ device_sn: 'A', event_type: 3103, unique_id: 'u1' }, 'local');
+  at(1000);
+  d.push({ device_sn: 'A', event_type: 3103, unique_id: 'u2' }, 'local');
+  // A cloud copy typed 18 like the local copy is still another transport.
+  at(2000);
+  d.push({ device_sn: 'B', event_type: 3103, unique_id: 'u3', type: 18 }, 'local');
+  at(2555);
+  d.push(
+    { device_sn: 'B', event_type: 3103, event_session: 's3', event_time: start + 1973, type: 18 },
+    'cloud',
+  );
+  // Distinct unmapped codes are distinct notifications.
+  at(3000);
+  d.push({ device_sn: 'C', event_type: 1, type: 18 }, 'local');
+  at(4000);
+  d.push({ device_sn: 'C', event_type: 2, type: 5 }, 'cloud');
+  at(5000);
+  assert.deepEqual(
+    events.map((e) => e.serial),
+    ['A', 'A', 'B', 'C', 'C'],
+  );
+  d.close();
+});
+test('the companion window ends 2 s after the first copy', (t) => {
+  const { events, d, at } = harness(t);
+  d.push({ device_sn: 'A', event_type: 3103, unique_id: 'a', type: 18 }, 'local');
+  d.push({ device_sn: 'B', event_type: 3103, unique_id: 'b', type: 18 }, 'local');
+  at(2000);
+  d.push({ device_sn: 'A', event_type: 3103, event_session: 'sa', type: 97 }, 'cloud');
+  at(2001);
+  d.push({ device_sn: 'B', event_type: 3103, event_session: 'sb', type: 97 }, 'cloud');
+  at(3000);
+  assert.deepEqual(
+    events.map((e) => e.serial),
+    ['A', 'B', 'B'],
+  );
+  d.close();
+});
+test('late copies add their transport, identity and event time, and are remembered', (t) => {
+  const { start, events, d, at } = harness(t);
+  const local = { device_sn: 'BELL', event_type: 3103, unique_id: 'u1', type: 18 };
+  const cloud = { device_sn: 'BELL', event_type: 3103, event_session: 's1', type: 97 };
+  d.push(local, 'local');
+  at(600);
+  d.push(cloud, 'cloud');
+  // The same session again, now with a time: matched by its identity.
+  at(1000);
+  d.push({ ...cloud, event_time: start - 27 }, 'cloud');
+  // Another session over a transport this ring already used: a new ring.
+  at(1200);
+  d.push({ ...cloud, event_session: 's2', event_time: start - 27 }, 'cloud');
+  // A copy over a third transport whose time disagrees with the learned time.
+  at(1300);
+  d.push(
+    { device_sn: 'BELL', event_type: 3103, event_session: 's4', event_time: start - 1100, type: 5 },
+    'cloud',
+  );
+  // A replay of a suppressed copy after the window stays suppressed.
+  at(3000);
+  d.push({ ...cloud, event_time: start - 27 }, 'cloud');
+  at(4000);
+  const iso = (ms) => new Date(ms).toISOString();
+  assert.deepEqual(
+    events.map((e) => e.occurred_at),
+    [null, iso(start - 27), iso(start - 1100)],
+  );
+  assert.equal(d.metrics.duplicates, 3);
+  d.close();
+});
