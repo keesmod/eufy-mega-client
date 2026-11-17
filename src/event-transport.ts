@@ -64,7 +64,7 @@ export class EventTransport extends EventEmitter {
     if (this.closed) return;
     try {
       if (!this.acceptPush(message, source)) return;
-      this.detections.push(message);
+      this.detections.push(message, source);
       this.devicePush(message);
     } catch {
       this.emit('fault', new EufyError('invalid_event'));

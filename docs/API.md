@@ -601,7 +601,23 @@ Typed events are `auth`, `device`, `station`, `snapshot`, `event`,
 `events-connection`, `live-stop` and `fault`. Detection events preserve supported
 motion/person/ring semantics and recognized names when supplied by the device.
 Deduplication correlates device/push copies and persists recent delivery hashes;
-it does not manufacture missing names or detections.
+it does not manufacture missing names or detections. A detection is delivered
+0.5 s after its first copy. Since 0.30.5
+([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)) a push
+copy is the same occurrence when it has the same type and either arrives over
+another transport or carries the same identity (the `unique_id`, else the
+event session), and both
+event times, when present, agree within a second. A transport is the push
+source, `local` or `cloud`, with the payload `type`. This holds while the first
+copy is pending and up to 2 s after the first copy arrived. A copy with the
+same key or identity is matched before a copy linked only by its transport.
+When only the transport links a copy to an earlier copy without event time,
+the copy must have occurred between 2 s before and 1 s after the earlier copy
+arrived. That check compares the device's event time with the host clock. A
+late copy that adds a person name, or a stronger recognition than every match,
+is delivered as its own event. Distinct unmapped event codes stay distinct. Two
+copies over the same transport with neither an identity nor a valid event time
+merge while the first is pending.
 
 `setGuardMode(stationId, mode, signal?)` accepts 0 (Away), 1 (Home), 2 (Schedule),
 3–5 (Custom), 47 (Geofencing) or 63 (Disarmed). Its result requires a matching
@@ -1434,13 +1450,16 @@ interface StandalonePushObservation {
   unlike `eventStatus.received` and `eventStatus.duplicates`. Admitted events
   still count in `eventStatus` as well.
 - `arrived` counts deliveries, not detections. A detection that arrives over
-  both sources counts twice. If both copies are admitted, they become one event
-  only when both parts of the detection key match: the identity, which is the
+  both sources counts twice. Before 0.30.5 two admitted copies became one event
+  only when both parts of the detection key matched: the identity, which is the
   `unique_id`, else the session, else none, and the valid event time or none.
-  Two copies with neither an identity nor a valid event time merge only while
-  the first is still pending. A shared `unique_id` where the event times differ
-  or only one copy carries a valid time gives two events. No capture has shown
-  which case applies.
+  Since 0.30.5 a local and a cloud copy are different transports, and copies
+  become one event as described under
+  [Events and Guard Mode](#events-and-guard-mode). Two copies over the same
+  transport with neither an identity nor a valid event time still merge only
+  while the first is pending. A shared `unique_id` where the event times differ
+  by more than a second still gives two events. No standalone capture has shown
+  whether its local and cloud copies share an identity or an event time.
 
 Reading the counts:
 

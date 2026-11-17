@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from 'node:crypto';
 import type { PushMessage } from './vendor/push/models.js';
+import type { PushSource } from './standalone-events.js';
 
 export const detectionEvents = {
   'device motion detected': 'motion',
@@ -60,9 +61,54 @@ type Draft = Omit<Notification, 'id'>;
 interface Pending {
   event: Draft;
   identities: Set<string>;
-  transports: Set<number>;
+  /** Raw unique_id or event_session values, independent of event time. */
+  ids: Set<string>;
+  /** Push source and payload type, such as `local:18` or `cloud:97`. */
+  transports: Set<string>;
   timer: ReturnType<typeof setTimeout>;
 }
+/** A delivered push detection that a late copy of the same occurrence may still follow. */
+interface Delivered {
+  serial: string;
+  event_type: string;
+  eufy_event_type?: number;
+  person_name: string | null;
+  recognition: Recognition;
+  received: number;
+  occurred_at: string | null;
+  ids: Set<string>;
+  transports: Set<string>;
+}
+const recognitionRank: Record<Recognition, number> = {
+  not_applicable: 0,
+  unidentified: 1,
+  unknown: 2,
+  known: 3,
+};
+const timesAgree = (a: string | null, b: string | null) =>
+  !a || !b || Math.abs(Date.parse(a) - Date.parse(b)) <= 1000;
+/**
+ * Only the transport ties two copies. When the earlier copy has no event time,
+ * the copy must have occurred between 2 s before and 1 s after the earlier
+ * copy arrived, which assumes the device and host clocks agree.
+ */
+const aroundArrival = (occurred: string | null, earlier: string | null, received: number) => {
+  if (earlier !== null || occurred === null) return true;
+  const time = Date.parse(occurred);
+  return time >= received - 2000 && time <= received + 1000;
+};
+type Kind = Pick<Draft, 'event_type' | 'eufy_event_type'>;
+/**
+ * The same detection type, where distinct unmapped codes stay distinct. An
+ * equal code also matches a notification that a device event relabelled.
+ */
+const sameKind = (a: Kind, b: Kind) =>
+  a.event_type === b.event_type
+    ? a.event_type !== 'notification' ||
+      a.eufy_event_type === undefined ||
+      b.eufy_event_type === undefined ||
+      a.eufy_event_type === b.eufy_event_type
+    : a.eufy_event_type !== undefined && a.eufy_event_type === b.eufy_event_type;
 
 export function personName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -95,16 +141,25 @@ export class Detections {
     last_received_at: null as string | null,
   };
   private pending = new Set<Pending>();
+  private delivered: Delivered[] = [];
   private seen = new Map<string, number>();
   private lastPush = new Map<string, number>();
+  /**
+   * settleMs delays delivery. companionMs bounds how long after the first copy
+   * a late copy of the same occurrence is still recognised. A HomeBase sends a
+   * local copy without event time and the cloud copy can follow 0.5 to 0.7 s
+   * later, and a Video Doorbell S4 can send two cloud copies (ha-eufy-cam#252).
+   */
   constructor(
     private known: (serial: string) => boolean,
     private deliver: (event: Notification) => void,
     private changed: () => void,
     private settleMs = 500,
+    private companionMs = 2000,
   ) {}
 
-  push(message: PushMessage): void {
+  /** `source` tells a cloud push from a push over an open device session. */
+  push(message: PushMessage, source: PushSource = 'cloud'): void {
     const serial = message.device_sn || message.station_sn;
     if (!this.known(serial)) return;
     const now = Date.now();
@@ -140,30 +195,46 @@ export class Detections {
               : 'unidentified',
       ...(Number.isSafeInteger(message.event_type) ? { eufy_event_type: message.event_type } : {}),
     };
+    const transport = `${source}:${message.type ?? 'none'}`;
+    const id = identity ? String(identity) : undefined;
     // Distinct IDs in the SAME format are distinct detections, even very close
-    // together. Cross-format companions are correlated within the settling window.
-    const existing = [...this.pending].find(
+    // together. Cross-format companions, and copies with the same raw identity,
+    // are correlated within the settling window and, once delivered, up to
+    // companionMs. A pending copy with the same key or identity comes first,
+    // then a delivered occurrence, then a pending copy linked otherwise.
+    const candidates = [...this.pending].filter(
       (p) =>
         p.event.serial === serial &&
         ((p.event.source === 'device' &&
           (p.event.event_type === type ||
             p.event.event_type === 'motion' ||
             type === 'notification')) ||
-          ((p.event.event_type === type || p.event.eufy_event_type === message.event_type) &&
+          (sameKind(p.event, event) &&
             ((key !== undefined && p.identities.has(key)) ||
-              (!p.transports.has(message.type) &&
-                (!occurred_at ||
-                  !p.event.occurred_at ||
-                  Math.abs(Date.parse(occurred_at) - Date.parse(p.event.occurred_at)) <= 1000)) ||
+              (((!p.transports.has(transport) &&
+                aroundArrival(occurred_at, p.event.occurred_at, Date.parse(p.event.received_at))) ||
+                (id !== undefined && p.ids.has(id))) &&
+                timesAgree(occurred_at, p.event.occurred_at)) ||
               (!key && p.identities.size === 0)))),
     );
     this.lastPush.set(serial, now);
+    let existing =
+      candidates.find((p) => key !== undefined && p.identities.has(key)) ??
+      candidates.find((p) => id !== undefined && p.ids.has(id));
+    if (!existing && this.lateCopy(event, transport, id, now)) {
+      this.metrics.duplicates++;
+      if (key) this.remember([key]);
+      return;
+    }
+    existing ??= candidates[0];
     if (existing) {
       const previous = existing.event;
+      const code = event.eufy_event_type ?? previous.eufy_event_type;
       existing.event = {
         ...event,
         received_at: previous.received_at,
         occurred_at: event.occurred_at ?? previous.occurred_at,
+        ...(code === undefined ? {} : { eufy_event_type: code }),
       };
       if (type === 'notification' && previous.event_type !== 'notification') {
         existing.event.event_type = previous.event_type;
@@ -173,11 +244,53 @@ export class Detections {
       if (!name && previous.event_type === 'person' && type === 'person' && previous.person_name) {
         existing.event.person_name = previous.person_name;
         existing.event.recognition = 'known';
-      }
+      } else if (
+        previous.event_type === 'person' &&
+        type === 'person' &&
+        recognitionRank[previous.recognition] > recognitionRank[existing.event.recognition]
+      )
+        existing.event.recognition = previous.recognition;
       this.metrics.duplicates++;
       if (key) existing.identities.add(key);
-      existing.transports.add(message.type);
-    } else this.queue(event, key, message.type);
+      if (id) existing.ids.add(id);
+      existing.transports.add(transport);
+    } else this.queue(event, key, transport, id);
+  }
+
+  /**
+   * A copy that arrives after its occurrence was delivered: with the same raw
+   * identity, or over another transport. Event times, when both copies carry
+   * one, agree within a second. Distinct identities over the same transport
+   * stay distinct detections. A copy that adds a person name or a stronger
+   * recognition than every candidate is delivered, not dropped.
+   */
+  private lateCopy(event: Draft, transport: string, id: string | undefined, now: number): boolean {
+    this.delivered = this.delivered.filter((d) => now - d.received <= this.companionMs);
+    const candidates = this.delivered.filter((d) => {
+      if (
+        d.serial !== event.serial ||
+        !sameKind(d, event) ||
+        !timesAgree(event.occurred_at, d.occurred_at)
+      )
+        return false;
+      if (id !== undefined && d.ids.has(id)) return true;
+      return (
+        !d.transports.has(transport) && aroundArrival(event.occurred_at, d.occurred_at, d.received)
+      );
+    });
+    const match = [
+      ...candidates.filter((d) => id !== undefined && d.ids.has(id)),
+      ...candidates,
+    ].find(
+      (d) =>
+        recognitionRank[event.recognition] <= recognitionRank[d.recognition] &&
+        (event.person_name === null || event.person_name === d.person_name),
+    );
+    if (!match) return false;
+    match.transports.add(transport);
+    if (id) match.ids.add(id);
+    match.occurred_at ??= event.occurred_at;
+    return true;
   }
 
   device(serial: string, type: string, rawName?: string, stranger = false): void {
@@ -246,11 +359,12 @@ export class Detections {
     } else this.queue(event);
   }
 
-  private queue(event: Draft, key?: string, transport?: number): void {
+  private queue(event: Draft, key?: string, transport?: string, id?: string): void {
     if (this.pending.size >= 256) this.flush(this.pending.values().next().value!);
     const pending: Pending = {
       event,
       identities: new Set(key ? [key] : []),
+      ids: new Set(id ? [id] : []),
       transports: new Set(transport === undefined ? [] : [transport]),
       timer: setTimeout(() => this.flush(pending), this.settleMs),
     };
@@ -261,12 +375,29 @@ export class Detections {
     clearTimeout(pending.timer);
     this.pending.delete(pending);
     if (!this.known(pending.event.serial)) return;
-    for (const key of pending.identities) this.seen.set(key, Date.now() + 300_000);
-    while (this.seen.size > 2048) this.seen.delete(this.seen.keys().next().value!);
+    this.remember(pending.identities);
+    if (pending.event.source === 'push') {
+      this.delivered.push({
+        serial: pending.event.serial,
+        event_type: pending.event.event_type,
+        eufy_event_type: pending.event.eufy_event_type,
+        person_name: pending.event.person_name,
+        recognition: pending.event.recognition,
+        received: Date.parse(pending.event.received_at),
+        occurred_at: pending.event.occurred_at,
+        ids: pending.ids,
+        transports: pending.transports,
+      });
+      if (this.delivered.length > 256) this.delivered.shift();
+    }
     this.metrics.received++;
     this.metrics.last_received_at = pending.event.received_at;
     this.deliver({ ...pending.event, id: randomUUID() });
     this.changed();
+  }
+  private remember(keys: Iterable<string>): void {
+    for (const key of keys) this.seen.set(key, Date.now() + 300_000);
+    while (this.seen.size > 2048) this.seen.delete(this.seen.keys().next().value!);
   }
   exportSeen(): Record<string, number> {
     return Object.fromEntries([...this.seen].filter(([, expiry]) => expiry > Date.now()));
@@ -284,6 +415,7 @@ export class Detections {
   close(): void {
     for (const p of this.pending) clearTimeout(p.timer);
     this.pending.clear();
+    this.delivered = [];
     this.lastPush.clear();
     this.metrics.push_connected = false;
   }
