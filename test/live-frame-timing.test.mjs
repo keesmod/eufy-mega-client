@@ -7,6 +7,8 @@ import { AudioCodec, CommandType, P2PDataType } from '../dist/vendor/p2p/types.j
 import { listenFrameTiming, recordFrameTiming } from '../dist/vendor/p2p/frame-timing.js';
 import { DeviceTransport } from '../dist/device-transport.js';
 import { EufyMegaClient } from '../dist/index.js';
+import { Station } from '../dist/vendor/http/index.js';
+import { downloadRecording } from '../dist/download.js';
 
 const HEADER = 22;
 // One CMD_VIDEO_FRAME payload: the 22 byte header, then `body`.
@@ -320,6 +322,67 @@ for (const [type, codec] of [
     }
   });
 }
+
+test('a real Station hands the download audio of the session and its timing to downloadRecording', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const station = await Station.getInstance(
+    {},
+    {
+      station_sn: 'T8030_FIXTURE',
+      device_type: 18,
+      app_conn: '',
+      devices: [],
+      member: { admin_user_id: 'test' },
+    },
+  );
+  const session = station.p2pSession;
+  const download = (commandId, data) =>
+    session.handleDataBinaryAndVideo({
+      dataType: P2PDataType.BINARY,
+      commandId,
+      channel: 0,
+      signCode: 0,
+      data,
+    });
+  station.startDownload = async () => {};
+  const seen = [];
+  let started;
+  // Before the Station's own listener, which relays the start at once.
+  session.prependOnceListener('download started', (channel, _metadata, _v, a) => {
+    started = { channel, audio: a };
+  });
+  const relayed = new Promise((resolve) =>
+    station.once('download start', (_station, _channel, _metadata, _v, a) => resolve(a)),
+  );
+  const pending = downloadRecording(
+    station,
+    { getSerial: () => 'CAM', getChannel: () => started?.channel ?? 0 },
+    { storage_path: '/fixture' },
+    new AbortController().signal,
+    (timing) => seen.push(timing),
+  );
+  pending.catch(() => {});
+  try {
+    download(
+      CommandType.CMD_VIDEO_FRAME,
+      videoFrame(slice(0x65, 40), { key: true, timestamp: 1000 }),
+    );
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(Buffer.alloc(71, 0x5a), 1000));
+    assert.equal(await relayed, started.audio, 'the Station relays the same audio stream');
+    const handle = await pending;
+    handle.video.resume();
+    handle.audio.resume();
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(Buffer.alloc(90, 0x11), 1030));
+    assert.deepEqual(seen, [
+      { kind: 'audio', offset: 0, bytes: 71, timestampMs: 1000 },
+      { kind: 'audio', offset: 71, bytes: 90, timestampMs: 1030 },
+    ]);
+  } finally {
+    // Ends the transfer whatever failed, so no timer keeps the file running.
+    station.emit('close', station);
+    await session.dispose();
+  }
+});
 
 test('frame timing keeps the newest backlog, isolates a throwing listener and allows one listener', () => {
   const stream = new Readable({ read() {} });
