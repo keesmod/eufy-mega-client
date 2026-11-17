@@ -119,9 +119,12 @@ commit stay green.
 
 ## Batch release run
 
-Stable releases happen on request, in one run together with ha-eufy-cam. One
-approval covers the whole run: this stable release, the camera release PR whose
-merge updates the stable Home Assistant app, and both GitHub releases.
+Stable releases happen on request, in one run together with ha-eufy-cam. An
+issue run that adds a new device, a camera model, model variant or device type
+the client did not admit before, continues with a batch release run instead of
+a beta. This applies since 2026-11-17 under the maintainer's standing approval.
+One approval covers the whole run: this stable release, the camera release PR
+whose merge updates the stable Home Assistant app, and both GitHub releases.
 
 1. Start the merge freeze in both repositories with the approval. A hotfix has
    already started it.
