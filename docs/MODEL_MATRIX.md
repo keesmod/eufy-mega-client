@@ -293,8 +293,8 @@ Later that day the [same reporter][252-beta] ran the beta integration
 T8215. One press of the doorbell produced one ring event. Recordings played
 without sound. The bridge logged the recording input as H.265 video, as the
 client reported it, and audio type 7 (`aac-eld`) without ADTS framing. The
-bridge leaves that audio out, because the FFmpeg it uses cannot decode 16 kHz
-AAC-ELD. [ha-eufy-cam#264][264] tracks the audio. This is a reported result,
+bridge cannot decode raw AAC-ELD yet, so it leaves that audio out.
+[ha-eufy-cam#264][264] tracks the audio. This is a reported result,
 not independently reproduced. The type 97 feature row and its cells are
 unchanged.
 
