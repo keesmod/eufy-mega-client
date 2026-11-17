@@ -622,46 +622,85 @@ test('a merge keeps the event code, and an old push does not merge into a pendin
   );
   d.close();
 });
-test('copies inside the time tolerances are one detection', (t) => {
+test('copies at the edges of the time tolerances are one detection', (t) => {
   const { start, events, d, at } = harness(t);
-  // A and B: local copies without time. C: a local copy with time.
-  d.push({ device_sn: 'A', event_type: 3103, unique_id: 'a', type: 18 }, 'local');
-  d.push({ device_sn: 'B', event_type: 3103, unique_id: 'b', type: 18 }, 'local');
-  d.push(
-    { device_sn: 'C', event_type: 3103, unique_id: 'c', event_time: start, type: 18 },
-    'local',
-  );
-  // D and E: the same, still pending when the cloud copy arrives.
-  d.push({ device_sn: 'D', event_type: 3103, unique_id: 'd', type: 18 }, 'local');
-  d.push({ device_sn: 'E', event_type: 3103, unique_id: 'e', type: 18 }, 'local');
+  // A, B, D, E: local copies without time. C, F: local copies with time.
+  for (const serial of ['A', 'B', 'C', 'D', 'E', 'F'])
+    d.push(
+      {
+        device_sn: serial,
+        event_type: 3103,
+        unique_id: serial,
+        ...(serial === 'C' || serial === 'F' ? { event_time: start } : {}),
+        type: 18,
+      },
+      'local',
+    );
+  const cloud = (serial, time) =>
+    d.push(
+      {
+        device_sn: serial,
+        event_type: 3103,
+        event_session: `s${serial}`,
+        event_time: start + time,
+        type: 97,
+      },
+      'cloud',
+    );
+  // Still pending: occurred 1 s after and 2 s before the first copy arrived,
+  // and an event time exactly 1 s after the first copy's.
   at(300);
-  d.push(
-    { device_sn: 'D', event_type: 3103, event_session: 'sd', event_time: start + 900, type: 97 },
-    'cloud',
-  );
-  d.push(
-    { device_sn: 'E', event_type: 3103, event_session: 'se', event_time: start - 1900, type: 97 },
-    'cloud',
-  );
+  cloud('D', 1000);
+  cloud('E', -2000);
+  cloud('F', 1000);
+  // The same after delivery.
   at(555);
-  // Occurred 0.9 s after and 1.9 s before the first copy arrived.
-  d.push(
-    { device_sn: 'A', event_type: 3103, event_session: 'sa', event_time: start + 900, type: 97 },
-    'cloud',
-  );
-  d.push(
-    { device_sn: 'B', event_type: 3103, event_session: 'sb', event_time: start - 1900, type: 97 },
-    'cloud',
-  );
-  // Event times 0.9 s apart.
-  d.push(
-    { device_sn: 'C', event_type: 3103, event_session: 'sc', event_time: start + 900, type: 97 },
-    'cloud',
-  );
+  cloud('A', 1000);
+  cloud('B', -2000);
+  cloud('C', 1000);
   at(1500);
   assert.deepEqual(
     events.map((e) => e.serial),
-    ['A', 'B', 'C', 'D', 'E'],
+    ['A', 'B', 'C', 'D', 'E', 'F'],
+  );
+  d.close();
+});
+test('copies 1 ms outside the time tolerances are separate detections', (t) => {
+  const { start, events, d, at } = harness(t);
+  for (const serial of ['A', 'B', 'C', 'D', 'E', 'F'])
+    d.push(
+      {
+        device_sn: serial,
+        event_type: 3103,
+        unique_id: serial,
+        ...(serial === 'C' || serial === 'F' ? { event_time: start } : {}),
+        type: 18,
+      },
+      'local',
+    );
+  const cloud = (serial, time) =>
+    d.push(
+      {
+        device_sn: serial,
+        event_type: 3103,
+        event_session: `s${serial}`,
+        event_time: start + time,
+        type: 97,
+      },
+      'cloud',
+    );
+  at(300);
+  cloud('D', 1001);
+  cloud('E', -2001);
+  cloud('F', 1001);
+  at(555);
+  cloud('A', 1001);
+  cloud('B', -2001);
+  cloud('C', 1001);
+  at(1500);
+  assert.deepEqual(
+    events.map((e) => e.serial),
+    ['A', 'B', 'C', 'D', 'E', 'F', 'D', 'E', 'F', 'A', 'B', 'C'],
   );
   d.close();
 });
