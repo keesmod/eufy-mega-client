@@ -250,6 +250,49 @@ test('a download records each raw AAC-ELD unit with its own timing and offset (h
   }
 });
 
+test('a download gives each ADTS frame of one AAC message its own timing, as live does', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const p = protocol();
+  let audio;
+  p.on('download started', (_channel, _metadata, _v, a) => {
+    audio = a;
+  });
+  const download = (commandId, data) =>
+    p.handleDataBinaryAndVideo({
+      dataType: P2PDataType.BINARY,
+      commandId,
+      channel: 0,
+      signCode: 0,
+      data,
+    });
+  try {
+    download(
+      CommandType.CMD_VIDEO_FRAME,
+      videoFrame(slice(0x65, 20), { key: true, timestamp: 1000 }),
+    );
+    const adts = Buffer.from([0xff, 0xf1, 0x50, 0x80, 0x01, 0x3f, 0xfc, 0x00, 0x00]);
+    for (const type of [0, 1]) {
+      const two = Buffer.alloc(16 + 18);
+      two.writeUInt32LE(18, 0);
+      two[5] = type;
+      two.writeUIntLE(2000 + type, 8, 6);
+      adts.copy(two, 16);
+      adts.copy(two, 25);
+      download(CommandType.CMD_AUDIO_FRAME, two);
+    }
+    const seen = [];
+    listenFrameTiming(audio, (timing) => seen.push(timing));
+    assert.deepEqual(seen, [
+      { offset: 0, bytes: 9, timestampMs: 2000, keyFrame: false },
+      { offset: 9, bytes: 9, timestampMs: 2000, keyFrame: false },
+      { offset: 18, bytes: 9, timestampMs: 2001, keyFrame: false },
+      { offset: 27, bytes: 9, timestampMs: 2001, keyFrame: false },
+    ]);
+  } finally {
+    await p.dispose();
+  }
+});
+
 test('frame timing keeps the newest backlog, isolates a throwing listener and allows one listener', () => {
   const stream = new Readable({ read() {} });
   for (let i = 0; i < 300; i++) recordFrameTiming(stream, 10, i, i === 0);
