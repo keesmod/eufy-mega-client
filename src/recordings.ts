@@ -18,6 +18,7 @@ import {
   type RecordingObservation,
   type RecordingOperation,
   type RecordingOperationOptions,
+  type RecordingDownloadOptions,
   type RecordingOperationStage,
   type RecordingRowClasses,
   type StationConnectionProgress,
@@ -643,14 +644,14 @@ export class RecordingAccess {
       ),
     );
   }
-  async download(id: string, options?: AbortSignal | RecordingOperationOptions) {
-    const settings = operationOptions(options);
+  async download(id: string, options?: AbortSignal | RecordingDownloadOptions) {
+    const settings: RecordingDownloadOptions = operationOptions(options);
     const observation = new Observation('download', settings.onObservation);
     return this.observed(observation, () => this.startDownload(id, settings, observation));
   }
   private async startDownload(
     id: string,
-    settings: RecordingOperationOptions,
+    settings: RecordingDownloadOptions,
     observation: Observation,
   ) {
     const ref = this.reference(id),
@@ -684,7 +685,13 @@ export class RecordingAccess {
       );
       observation.watch(station);
       observation.stage = 'transfer';
-      const transfer = await downloadRecording(station, camera, ref.row, abort);
+      const transfer = await downloadRecording(
+        station,
+        camera,
+        ref.row,
+        abort,
+        settings.onFrameTiming,
+      );
       const cleanup = transfer.completed
         .then(async (result) => {
           if (!result.complete) await station?.close();

@@ -459,7 +459,8 @@ session. An old stream handle cannot stop a newer stream.
 
 Each of the four also accepts `{ signal?, onObservation?, onProgress?, onLookup? }`
 in place of the signal, to [observe the operation](#recording-operation-observation-0301)
-and its connection.
+and its connection. `downloadRecording` also accepts `onFrameTiming`, see
+[recording download frame timing](#recording-download-frame-timing-0305).
 
 Recording IDs are opaque, bound to this client and expire after 15 minutes.
 Refresh the list when they expire. Device paths and cipher identifiers are never
@@ -477,6 +478,24 @@ A recording operation that fails or is cancelled after it reached the owner's
 connection closes the owner's session, as before. So does a download whose
 transfer ends incomplete. On a HomeBase that session is shared by all its
 cameras, and the next operation connects again.
+
+### Recording download frame timing, 0.30.5
+
+`downloadRecording(recordingId, { onFrameTiming })` passes on the camera's
+timing of each audio frame of the download, so a consumer can split audio that
+has no framing of its own. Audio type 7 (`aac-eld`) arrives as raw AAC-ELD
+access units, one per frame, without ADTS headers or a decoder config
+([ha-eufy-cam#264](https://github.com/keesmod/ha-eufy-cam/issues/264)). Each
+call carries `kind`, always `audio`, `offset`, the position of the frame's first
+byte in the download's `audio` counted from 0, its length in `bytes` and
+`timestampMs`, the camera's clock in milliseconds from the frame header. Every
+ADTS frame of one audio message carries that message's timestamp.
+
+The frames pushed before the transfer starts come first, then each new frame
+right before its bytes are pushed, so these calls can run before
+`downloadRecording` resolves. Video frames of a download carry no timing. The
+callback runs synchronously in the P2P receive path and carries no
+identifiers. Errors it throws are ignored and cannot change the transfer.
 
 ### Recording operation observation, 0.30.1
 

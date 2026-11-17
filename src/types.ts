@@ -266,6 +266,16 @@ export interface LiveFrameTiming {
   /** The header marks a video key frame. Always false for audio. */
   keyFrame: boolean;
 }
+/** One audio frame of a recording download on the camera's clock. No identifiers. */
+export interface RecordingFrameTiming {
+  kind: 'audio';
+  /** Position of the frame's first byte in the download's `audio`, counted from 0. */
+  offset: number;
+  /** The frame's length in bytes. */
+  bytes: number;
+  /** The camera's clock in milliseconds, from the frame's header. */
+  timestampMs: number;
+}
 /**
  * `session_ready`: the P2P session that carries the stream is connected, and
  * encrypted unless an experimental standalone camera went on without a command
@@ -522,6 +532,19 @@ export interface RecordingOperationOptions {
   onProgress?: (progress: StationConnectionProgress) => void;
   /** Forwarded to the owner's connection when the operation has to connect. See StationConnectOptions. */
   onLookup?: (observation: StationLookupObservation) => void;
+}
+export interface RecordingDownloadOptions extends RecordingOperationOptions {
+  /**
+   * Called synchronously with the camera timing of each audio frame of the
+   * download, so a consumer can split a raw stream such as AAC-ELD, which has
+   * no framing of its own. The frames pushed before the transfer starts come
+   * first, then each new frame right before its bytes are pushed. These calls
+   * can run before `downloadRecording` resolves. Video frames of a download
+   * carry no timing. It runs in the P2P receive path, and errors it throws are
+   * ignored and cannot change the transfer. See docs/API.md, recording
+   * download frame timing.
+   */
+  onFrameTiming?: (timing: RecordingFrameTiming) => void;
 }
 export type DownloadResult =
   | { complete: true; bytes: number }

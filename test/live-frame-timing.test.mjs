@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { P2PClientProtocol } from '../dist/vendor/p2p/session.js';
-import { CommandType, P2PDataType } from '../dist/vendor/p2p/types.js';
+import { AudioCodec, CommandType, P2PDataType } from '../dist/vendor/p2p/types.js';
 import { listenFrameTiming, recordFrameTiming } from '../dist/vendor/p2p/frame-timing.js';
 import { DeviceTransport } from '../dist/device-transport.js';
 import { EufyMegaClient } from '../dist/index.js';
@@ -171,6 +171,59 @@ test('each ADTS frame of one audio message gets its own timing with the message 
       { offset: 0, bytes: 9, timestampMs: 2000, keyFrame: false },
       { offset: 9, bytes: 9, timestampMs: 2000, keyFrame: false },
     ]);
+  } finally {
+    await p.dispose();
+  }
+});
+
+// One CMD_AUDIO_FRAME payload of audio type 7 (AAC-ELD): a raw access unit.
+function eldFrame(body, timestamp) {
+  const data = Buffer.alloc(16 + body.length);
+  data.writeUInt32LE(body.length, 0);
+  data[5] = 7;
+  data.writeUIntLE(timestamp, 8, 6);
+  body.copy(data, 16);
+  return data;
+}
+
+test('a download records each raw AAC-ELD unit with its own timing and offset (ha-eufy-cam#264)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const p = protocol();
+  let metadata, audio;
+  p.on('download started', (_channel, m, _v, a) => {
+    metadata = m;
+    audio = a;
+  });
+  const download = (commandId, data) =>
+    p.handleDataBinaryAndVideo({
+      dataType: P2PDataType.BINARY,
+      commandId,
+      channel: 0,
+      signCode: 0,
+      data,
+    });
+  try {
+    const units = [Buffer.alloc(71, 0x5a), Buffer.alloc(142, 0x33), Buffer.alloc(90, 0x11)];
+    download(
+      CommandType.CMD_VIDEO_FRAME,
+      videoFrame(slice(0x65, 40), { key: true, timestamp: 1000 }),
+    );
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[0], 1000));
+    assert.ok(audio, 'the download started after the first video and audio');
+    assert.equal(metadata.audioCodec, AudioCodec.AAC_ELD);
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[1], 1030));
+    const seen = [],
+      bytes = [];
+    listenFrameTiming(audio, (timing) => seen.push(timing));
+    audio.on('data', (chunk) => bytes.push(chunk));
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[2], 1060));
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(seen, [
+      { offset: 0, bytes: 71, timestampMs: 1000, keyFrame: false },
+      { offset: 71, bytes: 142, timestampMs: 1030, keyFrame: false },
+      { offset: 213, bytes: 90, timestampMs: 1060, keyFrame: false },
+    ]);
+    assert.deepEqual(Buffer.concat(bytes), Buffer.concat(units), 'units are pushed unchanged');
   } finally {
     await p.dispose();
   }

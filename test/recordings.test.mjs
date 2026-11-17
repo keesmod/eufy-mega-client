@@ -5,6 +5,7 @@ import { PassThrough } from 'node:stream';
 import { setTimeout as delay } from 'node:timers/promises';
 import { completeHistory, calendarDate } from '../dist/recordings.js';
 import { downloadRecording } from '../dist/download.js';
+import { listenFrameTiming, recordFrameTiming } from '../dist/vendor/p2p/frame-timing.js';
 
 test('days exceeding 100 records are widened without losing any prefix records', async () => {
   const rows = Array.from({ length: 371 }, (_, record_id) => ({ record_id })),
@@ -70,6 +71,60 @@ function fixture() {
   };
   return { station, begin, stops: () => stops };
 }
+test('a download passes on the timing of each audio frame, those before its start first (ha-eufy-cam#264)', async () => {
+  const f = fixture(),
+    seen = [],
+    video = new PassThrough(),
+    audio = new PassThrough();
+  const p = downloadRecording(
+    f.station,
+    { getSerial: () => 'CAM', getChannel: () => 1 },
+    { storage_path: '/fixture' },
+    new AbortController().signal,
+    (timing) => {
+      seen.push(timing);
+      if (timing.offset === 0) throw new Error('listener failure');
+    },
+  );
+  // The session records a frame right before pushing it.
+  recordFrameTiming(audio, 71, 1000, false);
+  audio.write(Buffer.alloc(71));
+  f.station.emit(
+    'download start',
+    f.station,
+    1,
+    { videoCodec: 1, audioCodec: 3, videoFPS: 15, videoWidth: 1920, videoHeight: 1080 },
+    video,
+    audio,
+  );
+  assert.deepEqual(seen, [{ kind: 'audio', offset: 0, bytes: 71, timestampMs: 1000 }]);
+  recordFrameTiming(audio, 142, 1030, false);
+  audio.write(Buffer.alloc(142));
+  const handle = await p,
+    received = [];
+  handle.audio.on('data', (chunk) => received.push(chunk));
+  handle.video.resume();
+  assert.deepEqual(seen[1], { kind: 'audio', offset: 71, bytes: 142, timestampMs: 1030 });
+  video.end(Buffer.from('v'));
+  audio.end();
+  f.station.emit('download finish', f.station, 1);
+  f.station.emit('download complete', f.station, 1);
+  assert.deepEqual(await handle.completed, { complete: true, bytes: 214 });
+  assert.equal(Buffer.concat(received).length, 213, 'a throwing listener changes nothing');
+});
+test('a download without onFrameTiming leaves the audio timing to its owner', async () => {
+  const f = fixture(),
+    { handle, video, audio } = await f.begin(),
+    seen = [];
+  listenFrameTiming(audio, (timing) => seen.push(timing));
+  recordFrameTiming(audio, 9, 5, false);
+  assert.deepEqual(seen, [{ offset: 0, bytes: 9, timestampMs: 5, keyFrame: false }]);
+  video.end();
+  audio.end();
+  f.station.emit('download finish', f.station, 1);
+  f.station.emit('download complete', f.station, 1);
+  assert.equal((await handle.completed).complete, true);
+});
 test('only a device finish message can complete a download', async () => {
   const f = fixture(),
     { handle, video, audio } = await f.begin();
