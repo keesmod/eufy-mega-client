@@ -324,7 +324,9 @@ for (const [type, codec] of [
 }
 
 test('a real Station hands the download audio of the session and its timing to downloadRecording', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+  // Both mocked: a start that never arrives must fail the test, not leave
+  // the transfer's buffer check running and the file hanging.
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
   const station = await Station.getInstance(
     {},
     {
