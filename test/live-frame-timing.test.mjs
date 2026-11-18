@@ -324,8 +324,7 @@ for (const [type, codec] of [
 }
 
 test('a real Station hands the download audio of the session and its timing to downloadRecording', async (t) => {
-  // Both mocked: a start that never arrives must fail the test, not leave
-  // the transfer's buffer check running and the file hanging.
+  // The transfer's own timers stay mocked, so they cannot run past the test.
   t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
   const station = await Station.getInstance(
     {},
@@ -353,9 +352,12 @@ test('a real Station hands the download audio of the session and its timing to d
   session.prependOnceListener('download started', (channel, _metadata, _v, a) => {
     started = { channel, audio: a };
   });
-  const relayed = new Promise((resolve) =>
-    station.once('download start', (_station, _channel, _metadata, _v, a) => resolve(a)),
-  );
+  // The session and the Station both emit the start synchronously, so the
+  // relay is checked right after the frame, and a missing relay fails at once.
+  let relayed;
+  station.once('download start', (_station, _channel, _metadata, _v, a) => {
+    relayed = a;
+  });
   const pending = downloadRecording(
     station,
     { getSerial: () => 'CAM', getChannel: () => started?.channel ?? 0 },
@@ -370,7 +372,8 @@ test('a real Station hands the download audio of the session and its timing to d
       videoFrame(slice(0x65, 40), { key: true, timestamp: 1000 }),
     );
     download(CommandType.CMD_AUDIO_FRAME, eldFrame(Buffer.alloc(71, 0x5a), 1000));
-    assert.equal(await relayed, started.audio, 'the Station relays the same audio stream');
+    assert.ok(started, 'the session started the download');
+    assert.equal(relayed, started.audio, 'the Station relays the same audio stream');
     const handle = await pending;
     handle.video.resume();
     handle.audio.resume();
