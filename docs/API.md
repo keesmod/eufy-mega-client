@@ -494,7 +494,10 @@ AAC-LC, where every ADTS frame of one message is a frame with that message's
 timestamp. For type 7,
 [mega-yfue/eufy-sdk#317](https://github.com/mega-yfue/eufy-sdk/issues/317)
 reports one raw AAC-ELD access unit per message in the live view of a `T8410C`.
-That is not yet confirmed for downloads or for the `T8215`.
+On 2026-11-18 the camera bridge decoded the downloads of a `T8215` unit by
+unit on that framing, as
+[reported](https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6972373625)
+on ha-eufy-cam#252.
 
 The frames pushed before the transfer starts come first, then each new frame
 right before its bytes are pushed, so these calls can run before
