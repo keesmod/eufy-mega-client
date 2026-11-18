@@ -124,17 +124,19 @@ export function downloadRecording(
       }
       source.push(v, a);
       // The session records each audio frame before pushing it, and keeps the
-      // frames pushed before this start, so the first offset is 0 (#264).
+      // frames pushed before this start, so the first offset is 0 (#264). The
+      // tap cannot be removed, so the wrapper goes quiet once the transfer settles.
       if (onFrameTiming)
         try {
-          listenFrameTiming(a, (timing) =>
+          listenFrameTiming(a, (timing) => {
+            if (done) return;
             onFrameTiming({
               kind: 'audio',
               offset: timing.offset,
               bytes: timing.bytes,
               timestampMs: timing.timestampMs,
-            }),
-          );
+            });
+          });
         } catch {
           // A stream that already has a listener keeps it. Timing is optional.
         }

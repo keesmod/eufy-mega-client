@@ -504,7 +504,8 @@ identifiers. Slow work in it delays that frame and every later P2P message of
 the session, and counts against the transfer's 40 seconds, so keep it short or
 queue the work. Errors it throws are ignored and cannot change the transfer. When
 a download ends incomplete, bytes still buffered in the session's stream are dropped, so
-the last timings can point past the end of `audio`.
+the last timings can point past the end of `audio`. No call follows the
+settlement of `completed`.
 
 ### Recording operation observation, 0.30.1
 

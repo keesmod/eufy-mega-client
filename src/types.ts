@@ -542,8 +542,8 @@ export interface RecordingDownloadOptions extends RecordingOperationOptions {
    * can run before `downloadRecording` resolves. Video frames of a download
    * carry no timing. It runs in the P2P receive path, so slow work in it
    * delays that frame and every later P2P message. Errors it throws are
-   * ignored and cannot change the transfer. See docs/API.md, recording
-   * download frame timing.
+   * ignored and cannot change the transfer. No call follows the settlement of
+   * `completed`. See docs/API.md, recording download frame timing.
    */
   onFrameTiming?: (timing: RecordingFrameTiming) => void;
 }

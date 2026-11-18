@@ -182,6 +182,34 @@ test('the timing of a rejected second download start never reaches onFrameTiming
   listenFrameTiming(second, (timing) => other.push(timing.bytes));
   assert.deepEqual(other, [50, 60]);
 });
+test('no timing reaches onFrameTiming once a cancelled download has settled', async () => {
+  const f = fixture(),
+    seen = [],
+    audio = new PassThrough();
+  const p = downloadRecording(
+    f.station,
+    { getSerial: () => 'CAM', getChannel: () => 1 },
+    { storage_path: '/fixture' },
+    new AbortController().signal,
+    (timing) => seen.push(timing.offset),
+  );
+  recordFrameTiming(audio, 10, 1000, false);
+  f.station.emit(
+    'download start',
+    f.station,
+    1,
+    { videoCodec: 1, audioCodec: 3, videoFPS: 15, videoWidth: 1920, videoHeight: 1080 },
+    new PassThrough(),
+    audio,
+  );
+  const handle = await p,
+    cancel = handle.cancel();
+  f.station.emit('command result', f.station, { command_type: 1051, channel: 1, return_code: 0 });
+  assert.equal((await cancel).reason, 'cancelled');
+  // The session may still record a frame on this stream until it closes.
+  recordFrameTiming(audio, 20, 1064, false);
+  assert.deepEqual(seen, [0]);
+});
 test('a download without onFrameTiming leaves the audio timing to its owner', async () => {
   const f = fixture(),
     { handle, video, audio } = await f.begin(),
