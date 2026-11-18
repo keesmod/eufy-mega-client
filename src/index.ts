@@ -39,6 +39,8 @@ export type {
   RecordingRowClasses,
   RecordingObservation,
   RecordingOperationOptions,
+  RecordingDownloadOptions,
+  RecordingFrameTiming,
   DetectionEvent,
   EventSession,
   StandalonePushRefusal,

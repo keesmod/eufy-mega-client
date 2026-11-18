@@ -19,6 +19,7 @@ import {
   type LiveStartOptions,
   type RecordingObservation,
   type RecordingOperationOptions,
+  type RecordingDownloadOptions,
   type StationConnectOptions,
   type StreamStop,
   type StandalonePushObservation,
@@ -239,7 +240,7 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   ): Promise<Buffer> {
     return (await this.deviceTransport()).recordings.thumbnail(id, options);
   }
-  async downloadRecording(id: string, options?: AbortSignal | RecordingOperationOptions) {
+  async downloadRecording(id: string, options?: AbortSignal | RecordingDownloadOptions) {
     return (await this.deviceTransport()).recordings.download(id, options);
   }
   /**

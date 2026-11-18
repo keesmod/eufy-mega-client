@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { P2PClientProtocol } from '../dist/vendor/p2p/session.js';
-import { CommandType, P2PDataType } from '../dist/vendor/p2p/types.js';
+import { AudioCodec, CommandType, P2PDataType } from '../dist/vendor/p2p/types.js';
 import { listenFrameTiming, recordFrameTiming } from '../dist/vendor/p2p/frame-timing.js';
 import { DeviceTransport } from '../dist/device-transport.js';
 import { EufyMegaClient } from '../dist/index.js';
+import { Station } from '../dist/vendor/http/index.js';
+import { downloadRecording } from '../dist/download.js';
 
 const HEADER = 22;
 // One CMD_VIDEO_FRAME payload: the 22 byte header, then `body`.
@@ -173,6 +175,217 @@ test('each ADTS frame of one audio message gets its own timing with the message 
     ]);
   } finally {
     await p.dispose();
+  }
+});
+
+// One CMD_AUDIO_FRAME payload of audio type 7 (AAC-ELD): a raw access unit.
+function eldFrame(body, timestamp) {
+  const data = Buffer.alloc(16 + body.length);
+  data.writeUInt32LE(body.length, 0);
+  data[5] = 7;
+  data.writeUIntLE(timestamp, 8, 6);
+  body.copy(data, 16);
+  return data;
+}
+
+test('a download records each raw AAC-ELD unit with its own timing and offset (ha-eufy-cam#264)', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const p = protocol();
+  let metadata, audio;
+  p.on('download started', (_channel, m, _v, a) => {
+    metadata = m;
+    audio = a;
+  });
+  const download = (commandId, data) =>
+    p.handleDataBinaryAndVideo({
+      dataType: P2PDataType.BINARY,
+      commandId,
+      channel: 0,
+      signCode: 0,
+      data,
+    });
+  try {
+    // The second unit starts like an ADTS header: raw AAC-ELD can, about once in
+    // 4096 units, and the ADTS normaliser must never split it.
+    const units = [
+      Buffer.alloc(71, 0x5a),
+      Buffer.concat([
+        Buffer.from([0xff, 0xf1, 0x50, 0x80, 0x02, 0x9f, 0xfc]),
+        Buffer.alloc(135, 0x33),
+      ]),
+      Buffer.alloc(90, 0x11),
+    ];
+    download(
+      CommandType.CMD_VIDEO_FRAME,
+      videoFrame(slice(0x65, 40), { key: true, timestamp: 1000 }),
+    );
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[0], 1000));
+    assert.ok(audio, 'the download started after the first video and audio');
+    assert.equal(metadata.audioCodec, AudioCodec.AAC_ELD);
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[1], 1030));
+    const seen = [],
+      bytes = [];
+    let received = 0;
+    listenFrameTiming(audio, (timing) => seen.push({ ...timing, received }));
+    audio.on('data', (chunk) => {
+      bytes.push(chunk);
+      received += chunk.length;
+    });
+    // Drain the buffered start, so the next push emits 'data' at once and a
+    // push before its timing would show up in `received`.
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(received, 213);
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(units[2], 1060));
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(
+      seen.map(({ received: _, ...timing }) => timing),
+      [
+        { offset: 0, bytes: 71, timestampMs: 1000, keyFrame: false },
+        { offset: 71, bytes: 142, timestampMs: 1030, keyFrame: false },
+        { offset: 213, bytes: 90, timestampMs: 1060, keyFrame: false },
+      ],
+    );
+    assert.equal(seen[2].received, 213, 'the timing of a new unit arrives before any of its bytes');
+    assert.deepEqual(Buffer.concat(bytes), Buffer.concat(units), 'units are pushed unchanged');
+  } finally {
+    await p.dispose();
+  }
+});
+
+for (const [type, codec] of [
+  [0, AudioCodec.AAC],
+  [1, AudioCodec.AAC_LC],
+]) {
+  test(`a download gives each ADTS frame of one type ${type} message its own timing before its bytes`, async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const p = protocol();
+    let metadata, audio;
+    p.on('download started', (_channel, m, _v, a) => {
+      metadata = m;
+      audio = a;
+    });
+    const download = (commandId, data) =>
+      p.handleDataBinaryAndVideo({
+        dataType: P2PDataType.BINARY,
+        commandId,
+        channel: 0,
+        signCode: 0,
+        data,
+      });
+    // Two ADTS frames in one message with this audio type.
+    const message = (timestamp) => {
+      const adts = Buffer.from([0xff, 0xf1, 0x50, 0x80, 0x01, 0x3f, 0xfc, 0x00, 0x00]);
+      const two = Buffer.alloc(16 + 18);
+      two.writeUInt32LE(18, 0);
+      two[5] = type;
+      two.writeUIntLE(timestamp, 8, 6);
+      adts.copy(two, 16);
+      adts.copy(two, 25);
+      return two;
+    };
+    try {
+      download(
+        CommandType.CMD_VIDEO_FRAME,
+        videoFrame(slice(0x65, 20), { key: true, timestamp: 1000 }),
+      );
+      download(CommandType.CMD_AUDIO_FRAME, message(2000));
+      assert.equal(metadata.audioCodec, codec, 'the first audio packet sets the codec');
+      const seen = [];
+      let received = 0;
+      listenFrameTiming(audio, (timing) => seen.push({ ...timing, received }));
+      audio.on('data', (chunk) => {
+        received += chunk.length;
+      });
+      // Drain the buffered start, so each later push emits 'data' at once and
+      // a push before its timing would show up in `received`.
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(received, 18);
+      download(CommandType.CMD_AUDIO_FRAME, message(2064));
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.deepEqual(
+        seen.map(({ received: _, ...timing }) => timing),
+        [
+          { offset: 0, bytes: 9, timestampMs: 2000, keyFrame: false },
+          { offset: 9, bytes: 9, timestampMs: 2000, keyFrame: false },
+          { offset: 18, bytes: 9, timestampMs: 2064, keyFrame: false },
+          { offset: 27, bytes: 9, timestampMs: 2064, keyFrame: false },
+        ],
+      );
+      for (const timing of seen.slice(2))
+        assert.ok(
+          timing.received <= timing.offset,
+          'the timing of a frame arrives before its bytes',
+        );
+      assert.equal(received, 36);
+    } finally {
+      await p.dispose();
+    }
+  });
+}
+
+test('a real Station hands the download audio of the session and its timing to downloadRecording', async (t) => {
+  // The transfer's own timers stay mocked, so they cannot run past the test.
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+  const station = await Station.getInstance(
+    {},
+    {
+      station_sn: 'T8030_FIXTURE',
+      device_type: 18,
+      app_conn: '',
+      devices: [],
+      member: { admin_user_id: 'test' },
+    },
+  );
+  const session = station.p2pSession;
+  const download = (commandId, data) =>
+    session.handleDataBinaryAndVideo({
+      dataType: P2PDataType.BINARY,
+      commandId,
+      channel: 0,
+      signCode: 0,
+      data,
+    });
+  station.startDownload = async () => {};
+  const seen = [];
+  let started;
+  // Before the Station's own listener, which relays the start at once.
+  session.prependOnceListener('download started', (channel, _metadata, _v, a) => {
+    started = { channel, audio: a };
+  });
+  // The session and the Station both emit the start synchronously, so the
+  // relay is checked right after the frame, and a missing relay fails at once.
+  let relayed;
+  station.once('download start', (_station, _channel, _metadata, _v, a) => {
+    relayed = a;
+  });
+  const pending = downloadRecording(
+    station,
+    { getSerial: () => 'CAM', getChannel: () => started?.channel ?? 0 },
+    { storage_path: '/fixture' },
+    new AbortController().signal,
+    (timing) => seen.push(timing),
+  );
+  pending.catch(() => {});
+  try {
+    download(
+      CommandType.CMD_VIDEO_FRAME,
+      videoFrame(slice(0x65, 40), { key: true, timestamp: 1000 }),
+    );
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(Buffer.alloc(71, 0x5a), 1000));
+    assert.ok(started, 'the session started the download');
+    assert.equal(relayed, started.audio, 'the Station relays the same audio stream');
+    const handle = await pending;
+    handle.video.resume();
+    handle.audio.resume();
+    download(CommandType.CMD_AUDIO_FRAME, eldFrame(Buffer.alloc(90, 0x11), 1030));
+    assert.deepEqual(seen, [
+      { kind: 'audio', offset: 0, bytes: 71, timestampMs: 1000 },
+      { kind: 'audio', offset: 71, bytes: 90, timestampMs: 1030 },
+    ]);
+  } finally {
+    // Ends the transfer whatever failed, so no timer keeps the file running.
+    station.emit('close', station);
+    await session.dispose();
   }
 });
 

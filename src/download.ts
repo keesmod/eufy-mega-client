@@ -5,8 +5,14 @@ import type { Device } from './vendor/http/device.js';
 import type { CommandResult } from './vendor/p2p/models.js';
 import type { StreamMetadata, DatabaseQueryByDate } from './vendor/p2p/interfaces.js';
 import { CommandType } from './vendor/p2p/types.js';
+import { listenFrameTiming } from './vendor/p2p/frame-timing.js';
 import { mediaMetadata } from './media.js';
-import { EufyError, type RecordingDownload, type DownloadResult } from './types.js';
+import {
+  EufyError,
+  type RecordingDownload,
+  type DownloadResult,
+  type RecordingFrameTiming,
+} from './types.js';
 
 /** Owns one device transfer until its real finish or cancel acknowledgement. */
 export function downloadRecording(
@@ -14,6 +20,7 @@ export function downloadRecording(
   device: Device,
   record: DatabaseQueryByDate,
   signal: AbortSignal,
+  onFrameTiming?: (timing: RecordingFrameTiming) => void,
 ): Promise<RecordingDownload> {
   if (signal.aborted) return Promise.reject(new EufyError('cancelled'));
   return new Promise((resolve, reject) => {
@@ -116,6 +123,23 @@ export function downloadRecording(
         return;
       }
       source.push(v, a);
+      // The session records each audio frame before pushing it, and keeps the
+      // frames pushed before this start, so the first offset is 0 (#264). The
+      // tap cannot be removed, so the wrapper goes quiet once the transfer settles.
+      if (onFrameTiming)
+        try {
+          listenFrameTiming(a, (timing) => {
+            if (done) return;
+            onFrameTiming({
+              kind: 'audio',
+              offset: timing.offset,
+              bytes: timing.bytes,
+              timestampMs: timing.timestampMs,
+            });
+          });
+        } catch {
+          // A stream that already has a listener keeps it. Timing is optional.
+        }
       const count = (chunk: Buffer, isVideo: boolean) => {
         bytes += chunk.length;
         if (isVideo) videoBytes += chunk.length;

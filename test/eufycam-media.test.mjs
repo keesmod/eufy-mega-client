@@ -5,6 +5,7 @@ import { PassThrough } from 'node:stream';
 import { Station, CommandName } from '../dist/vendor/http/index.js';
 import { CommandType, VideoCodec } from '../dist/vendor/p2p/types.js';
 import { mediaFixture } from './fixtures/media.mjs';
+import { recordFrameTiming } from '../dist/vendor/p2p/frame-timing.js';
 import { eufycamMedia } from './fixtures/eufycam-media.mjs';
 import { batteryDoorbellMedia } from './fixtures/battery-doorbell-media.mjs';
 import { solocamMedia } from './fixtures/solocam-media.mjs';
@@ -569,6 +570,33 @@ test('T84A1 stays media-unverified beside the admitted T81A0 profile', async () 
     });
     assert.equal(f.counts.starts, 0);
     assert.equal(f.transport.recordings.active, false);
+  } finally {
+    await f.close();
+  }
+});
+test('downloadRecording passes onFrameTiming on to the transfer of a T8215 (ha-eufy-cam#264)', async () => {
+  const f = await mediaFixture(batteryDoorbellMedia.find((p) => p.model === 'T8215'));
+  try {
+    records(f);
+    const listed = await f.transport.recordings.list(f.camera.parent_sn, day, [f.camera.device_sn]);
+    const seen = [];
+    const opening = f.transport.recordings.download(listed.recordings[0].id, {
+      onFrameTiming: (timing) => seen.push(timing),
+    });
+    await turn();
+    const video = new PassThrough(),
+      audio = new PassThrough();
+    recordFrameTiming(audio, 5, 1000, false);
+    f.station.emit('download start', f.station, 2, metadata, video, audio);
+    const transfer = await opening;
+    transfer.video.resume();
+    transfer.audio.resume();
+    video.end(Buffer.from('video'));
+    audio.end(Buffer.from('audio'));
+    f.station.emit('download finish', f.station, 2);
+    f.station.emit('download complete', f.station, 2);
+    assert.equal((await transfer.completed).complete, true);
+    assert.deepEqual(seen, [{ kind: 'audio', offset: 0, bytes: 5, timestampMs: 1000 }]);
   } finally {
     await f.close();
   }
