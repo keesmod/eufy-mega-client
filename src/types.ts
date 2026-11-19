@@ -168,10 +168,10 @@ export interface Accessory {
   firmware: string | null;
   hardware: string | null;
   /**
-   * Diagnostics only, since 0.31.2 (ha-eufy-cam#275): the sorted keys of the
-   * inventory row that hold a non-empty string, at the top level and one level
-   * into plain objects as `parent.child`, without `member` and `params`. Keys
-   * only, never values. At most 48. This client always sets it.
+   * Diagnostics only, since 0.31.2 (ha-eufy-cam#275): the sorted top-level
+   * keys of the inventory row that hold a non-empty string, and `parent.*` for a
+   * nested plain object that holds one, without `member` and `params`. Only
+   * schema-like keys, never values. At most 48. This client always sets it.
    */
   stringFields?: string[];
   /**

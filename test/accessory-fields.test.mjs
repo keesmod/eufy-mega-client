@@ -15,7 +15,7 @@ import { reportedInventory, SENSORS } from './fixtures/reported-275-inventory.mj
 
 const SECRET = 'Synthetic private value';
 
-test('string fields list keys of non-empty strings, sorted, one nested level', () => {
+test('string fields list top-level keys of non-empty strings, sorted, and nested objects as parent.*', () => {
   const row = {
     device_sn: 'SYNTH_SN',
     device_name: SECRET,
@@ -28,7 +28,7 @@ test('string fields list keys of non-empty strings, sorted, one nested level', (
     flag: true,
     nothing: null,
   };
-  assert.deepEqual(stringFields(row), ['alpha', 'device_name', 'device_sn', 'extra.label', 'zeta']);
+  assert.deepEqual(stringFields(row), ['alpha', 'device_name', 'device_sn', 'extra.*', 'zeta']);
 });
 
 test('member and params are skipped, and keys outside the safe pattern are dropped', () => {
@@ -44,7 +44,7 @@ test('member and params are skipped, and keys outside the safe pattern are dropp
   assert.deepEqual(stringFields(row), ['nested.*', 'ok_key']);
 });
 
-test('only schema-like keys appear, and a map keyed by data shows as parent.*', () => {
+test('only schema-like keys appear, and a nested object never shows its own keys', () => {
   const serial = 'T8030P23ABCDEF12';
   const hexId = '3f9a2b7c4d5e6f708192a3b4';
   const row = {
@@ -64,16 +64,15 @@ test('only schema-like keys appear, and a map keyed by data shows as parent.*', 
   const fields = stringFields(row);
   assert.deepEqual(fields, [
     'device_name',
-    'lowercase_names.frontdoor',
+    'lowercase_names.*',
     'numbers.*',
     'permission.*',
     'relate_devices.*',
-    'room.floor',
-    'room.title',
+    'room.*',
     'rooms.*',
   ]);
   const text = JSON.stringify(fields);
-  for (const value of [serial, serial.toLowerCase(), hexId, 'Frontdoor'])
+  for (const value of [serial, serial.toLowerCase(), hexId, 'Frontdoor', 'frontdoor', 'title'])
     assert.ok(!text.includes(value));
 });
 
@@ -180,7 +179,8 @@ test('discovery puts the diagnostics on every accessory and leaves devices uncha
   const first = result.accessories.find((a) => a.id === SENSORS[0]);
   assert.equal(first.nameSource, 'device_name');
   assert.ok(first.stringFields.includes('device_name'));
-  assert.ok(first.stringFields.includes('room.title'));
+  assert.ok(first.stringFields.includes('room.*'));
+  assert.ok(!first.stringFields.includes('room.title'));
   assert.ok(!first.stringFields.includes('device_alias_name'));
   assert.ok(first.textParams.includes(1234));
   assert.ok(!JSON.stringify(result.accessories).includes(SECRET));

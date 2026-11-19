@@ -23,8 +23,7 @@ const text = (value: unknown): value is string => typeof value === 'string' && v
 /**
  * A key segment that looks like a schema name and not like data: lowercase
  * snake_case, at most 32 characters, no run of four or more digits and not 12 or
- * more hex characters. A serial, an id or a capitalized name never passes. A
- * lowercase single word, such as a room name typed in lowercase, still does.
+ * more hex characters. A serial, an id or a capitalized name never passes.
  */
 export function schemaKey(key: string): boolean {
   return (
@@ -49,22 +48,17 @@ const paramType = (value: unknown): number | undefined => {
 };
 
 /**
- * The sorted keys of non-empty strings, top level and one nested level of plain
- * objects. Only schema-like keys appear. A nested object with any other key is
- * reported as `parent.*` without its keys, because its keys may be data.
+ * The sorted top-level keys of non-empty strings. A nested plain object that
+ * holds a non-empty string is reported as `parent.*` only. Its own keys never
+ * appear, because a map keyed by data could name a room, a person or a device.
+ * Only schema-like top-level keys appear.
  */
 export function stringFields(row: Record<string, unknown>): string[] {
   const keys = new Set<string>();
   for (const [key, value] of Object.entries(row)) {
     if (SKIPPED.has(key) || !schemaKey(key)) continue;
     if (text(value)) keys.add(key);
-    else if (plainObject(value)) {
-      const children = Object.entries(value).filter(([, nested]) => text(nested));
-      if (children.length === 0) continue;
-      if (Object.keys(value).every(schemaKey))
-        for (const [child] of children) keys.add(`${key}.${child}`);
-      else keys.add(`${key}.*`);
-    }
+    else if (plainObject(value) && Object.values(value).some(text)) keys.add(`${key}.*`);
   }
   return [...keys].sort().slice(0, STRING_FIELDS_LIMIT);
 }
