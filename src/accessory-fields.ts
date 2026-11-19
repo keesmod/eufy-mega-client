@@ -11,7 +11,7 @@ export interface AccessoryFieldDiagnostics {
   nameSource: 'alias' | 'device_name' | null;
 }
 
-const KEY = /^[A-Za-z0-9_.]{1,64}$/;
+const SEGMENT = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
 const NUMBER = /^-?\d+(\.\d+)?$/;
 const SKIPPED = new Set(['member', 'params']);
 export const STRING_FIELDS_LIMIT = 48;
@@ -19,6 +19,18 @@ export const TEXT_PARAMS_LIMIT = 32;
 export const PARAM_TYPE_MAX = 100000;
 
 const text = (value: unknown): value is string => typeof value === 'string' && value !== '';
+
+/**
+ * A key segment that looks like a schema name and not like data: lowercase
+ * snake_case, at most 32 characters, no run of four or more digits and not 12 or
+ * more hex characters. A serial, an id or a capitalized name never passes. A
+ * lowercase single word, such as a room name typed in lowercase, still does.
+ */
+export function schemaKey(key: string): boolean {
+  return (
+    key.length <= 32 && SEGMENT.test(key) && !/\d{4}/.test(key) && !/^[0-9a-f]{12,}$/.test(key)
+  );
+}
 
 const plainObject = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
@@ -36,20 +48,25 @@ const paramType = (value: unknown): number | undefined => {
   return Number.isInteger(type) && type >= 0 && type <= PARAM_TYPE_MAX ? type : undefined;
 };
 
-/** The sorted keys of non-empty strings, top level and one nested level of plain objects. */
+/**
+ * The sorted keys of non-empty strings, top level and one nested level of plain
+ * objects. Only schema-like keys appear. A nested object with any other key is
+ * reported as `parent.*` without its keys, because its keys may be data.
+ */
 export function stringFields(row: Record<string, unknown>): string[] {
   const keys = new Set<string>();
   for (const [key, value] of Object.entries(row)) {
-    if (SKIPPED.has(key)) continue;
+    if (SKIPPED.has(key) || !schemaKey(key)) continue;
     if (text(value)) keys.add(key);
-    else if (plainObject(value))
-      for (const [child, nested] of Object.entries(value))
-        if (text(nested)) keys.add(`${key}.${child}`);
+    else if (plainObject(value)) {
+      const children = Object.entries(value).filter(([, nested]) => text(nested));
+      if (children.length === 0) continue;
+      if (Object.keys(value).every(schemaKey))
+        for (const [child] of children) keys.add(`${key}.${child}`);
+      else keys.add(`${key}.*`);
+    }
   }
-  return [...keys]
-    .filter((key) => KEY.test(key))
-    .sort()
-    .slice(0, STRING_FIELDS_LIMIT);
+  return [...keys].sort().slice(0, STRING_FIELDS_LIMIT);
 }
 
 /** The sorted parameter types whose value is non-empty text that is not a plain number. */

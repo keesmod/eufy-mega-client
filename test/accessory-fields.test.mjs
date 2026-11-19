@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   accessoryFieldDiagnostics,
   nameSource,
+  schemaKey,
   stringFields,
   textParams,
 } from '../dist/accessory-fields.js';
@@ -40,7 +41,61 @@ test('member and params are skipped, and keys outside the safe pattern are dropp
     nested: { 'bad-child': SECRET, good_child: SECRET },
     ok_key: SECRET,
   };
-  assert.deepEqual(stringFields(row), ['nested.good_child', 'ok_key']);
+  assert.deepEqual(stringFields(row), ['nested.*', 'ok_key']);
+});
+
+test('only schema-like keys appear, and a map keyed by data shows as parent.*', () => {
+  const serial = 'T8030P23ABCDEF12';
+  const hexId = '3f9a2b7c4d5e6f708192a3b4';
+  const row = {
+    [serial]: SECRET,
+    [serial.toLowerCase()]: SECRET,
+    [hexId]: SECRET,
+    Frontdoor: SECRET,
+    relate_devices: { [serial]: 'T8900' },
+    permission: { [hexId]: 'owner' },
+    rooms: { Frontdoor: SECRET },
+    room: { title: SECRET, floor: SECRET },
+    lowercase_names: { frontdoor: SECRET },
+    numbers: { [`id_${'1'.repeat(4)}`]: SECRET },
+    nothing_text: { [serial]: 5 },
+    device_name: SECRET,
+  };
+  const fields = stringFields(row);
+  assert.deepEqual(fields, [
+    'device_name',
+    'lowercase_names.frontdoor',
+    'numbers.*',
+    'permission.*',
+    'relate_devices.*',
+    'room.floor',
+    'room.title',
+    'rooms.*',
+  ]);
+  const text = JSON.stringify(fields);
+  for (const value of [serial, serial.toLowerCase(), hexId, 'Frontdoor'])
+    assert.ok(!text.includes(value));
+});
+
+test('a key segment passes only when it looks like a schema name', () => {
+  for (const key of ['device_name', 'p2p_did', 'a', 'room_title2', 'frontdoor'])
+    assert.equal(schemaKey(key), true, key);
+  for (const key of [
+    'Device_name',
+    'T8030P23ABCDEF12',
+    't8030p23abcdef12',
+    '3f9a2b7c4d5e',
+    'abcdefabcdef',
+    'id_1234',
+    'name__x',
+    '_name',
+    'name_',
+    'x'.repeat(33),
+    '',
+    'bad-key',
+    'a.b',
+  ])
+    assert.equal(schemaKey(key), false, key);
 });
 
 test('string fields stop at 48 entries after sorting', () => {

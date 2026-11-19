@@ -136,8 +136,12 @@ row, never their contents.
 
 - `stringFields` lists the sorted keys whose value is a non-empty string, at the
   top level and one level into plain objects as `parent.child`. `member` and
-  `params` are skipped. Keys outside `[A-Za-z0-9_.]` or longer than 64
-  characters are dropped. At most 48 keys.
+  `params` are skipped. Only schema-like keys appear: lowercase snake_case, at
+  most 32 characters, no run of four or more digits and not 12 or more hex
+  characters. Other top-level keys are dropped. A nested object with any other
+  key shows as `parent.*` without its keys, because those keys may be serials,
+  ids or names. A lowercase single word still passes, so a map keyed by a name
+  typed in lowercase can show that name. At most 48 keys.
 - `textParams` lists the sorted parameter types, 0 to 100000, whose value is
   non-empty text that is not a plain number. At most 32 types.
 - `nameSource` is `alias` or `device_name` for the field that supplied `name`,
