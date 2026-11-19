@@ -493,7 +493,7 @@ test('a session reply gives entry sensors their starting values without other co
     const camera = r.inventory.result.devices.find((d) => d.kind === 'camera');
     const cameraChannel = r.inventory.raw.get(camera.id).device_channel;
     r.cameraInfo([
-      param(0, 1176, '1'),
+      param(255, 1176, '1'),
       param(cameraChannel, 1550, '1'),
       param(CHANNELS[SENSORS[1]], 1550, '1'),
       param(CHANNELS[SENSORS[1]], 1552, '0'),
@@ -561,6 +561,10 @@ test('a channel shared with a camera or another accessory matches nothing', asyn
   const r = await rig(rows);
   try {
     r.hub([param(2, 1550, '1'), param(CHANNELS[SENSORS[0]], 1550, '1')]);
+    assert.deepEqual(r.events, []);
+    assert.deepEqual(r.transport.accessoryObservation(), { ...zero, unknown_channel: 2 });
+    // The session reply uses the same exclusion and counts nothing for these channels.
+    r.cameraInfo([param(2, 1550, '1'), param(CHANNELS[SENSORS[0]], 1550, '1')]);
     assert.deepEqual(r.events, []);
     assert.deepEqual(r.transport.accessoryObservation(), { ...zero, unknown_channel: 2 });
   } finally {
