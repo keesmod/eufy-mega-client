@@ -227,10 +227,10 @@ export class AccessoryStore {
           received === undefined ? -Infinity : received - PUSH_CLOCK_ALLOWANCE_MS,
         );
         if (eventTime < reference) return 'late';
-      } else if (current.source === 'p2p') this.counts.conflicts++;
+      } else if (record.p2pTimes[name] !== undefined) this.counts.conflicts++;
     }
     if (source === 'p2p') {
-      record.p2pTimes[name] = now;
+      record.p2pTimes[name] = changes ? now : Math.max(record.p2pTimes[name] ?? now, now);
       if (changes) delete record.pushTimes[name];
     } else if (timed) {
       // An older push of the same value never moves the reference back.

@@ -106,15 +106,15 @@ becomes not live, with one event per changed accessory.
 created. It carries no serial, channel, name, value or time. ha-eufy-cam
 forwards these keys unchanged.
 
-| Key                | Counts                                                                     |
-| ------------------ | -------------------------------------------------------------------------- |
-| `hub_notify`       | Known, valid accessory parameters in hub notify updates (1829)             |
-| `sensor_status`    | Valid legacy sensor status notifications (1550) for an entry sensor        |
-| `push_door_sensor` | Door sensor pushes that set or confirmed an entry sensor reading           |
-| `camera_info`      | Known, valid keypad parameters from device information                     |
-| `cloud_seeded`     | Readings that discovery seeded from inventory values                       |
-| `conflicts`        | Dropped older pushes, plus applied pushes without event time that differed |
-| `unknown_channel`  | Reports whose channel is no single admitted accessory of that HomeBase     |
+| Key                | Counts                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `hub_notify`       | Known, valid accessory parameters in hub notify updates (1829)                                                |
+| `sensor_status`    | Valid legacy sensor status notifications (1550) for an entry sensor                                           |
+| `push_door_sensor` | Door sensor pushes that set or confirmed an entry sensor reading                                              |
+| `camera_info`      | Known, valid keypad parameters from device information                                                        |
+| `cloud_seeded`     | Readings that discovery seeded from inventory values                                                          |
+| `conflicts`        | Dropped older pushes, plus applied pushes without a usable event time that differed from a P2P-reported value |
+| `unknown_channel`  | Reports whose channel is no single admitted accessory of that HomeBase                                        |
 
 A HomeBase without an admitted entry sensor or keypad counts nothing and gets
 no new handling.
