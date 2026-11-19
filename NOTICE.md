@@ -77,6 +77,12 @@ bytes are unchanged. Version 0.30.4 adds the Video Doorbell S4 as
 `DeviceType.VIDEO_DOORBELL_S4` (97, T8215), with battery, availability and
 detection states, four media commands and camera push normalization, as described
 in [BATTERY_DOORBELLS.md](docs/BATTERY_DOORBELLS.md#reported-video-doorbell-s4-type-97-0304).
+Version 0.31.0 makes the P2P session also emit `param report` for a
+CMD_HUB_NOTIFY_UPDATE (1829) notification, with the notification's parameters
+as channel, key and text value, at most 32. The client-written
+`vendor/src/p2p/param-report.ts` parses them and drops malformed entries. The
+Station forwards the event. The existing `hub notify update` event is
+unchanged, as described in [ACCESSORIES.md](docs/ACCESSORIES.md#delivery).
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

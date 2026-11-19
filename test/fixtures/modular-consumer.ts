@@ -3,6 +3,9 @@ import {
   EufyMegaClient,
   EufyError,
   FileSessionStore,
+  type Accessory,
+  type AccessoryObservation,
+  type AccessoryState,
   type AuthState,
   type ClientOptions,
   type Device,
@@ -24,6 +27,12 @@ const options: ClientOptions = { credentials, sessionStore: new FileSessionStore
 const legacy = new EufyMegaClient(options);
 const devices: Promise<Device[]> = legacy.listDevices();
 const discovery: Promise<DiscoveryResult> = legacy.discoverDevices();
+const accessories: Promise<Accessory[]> = legacy.listAccessories();
+const accessoryState: Promise<AccessoryState> = legacy.getAccessoryState('fixture');
+const observation: AccessoryObservation = legacy.accessoryObservation;
+legacy.on('accessory', (state: AccessoryState) => void state.readings.open?.live);
+// @ts-expect-error An accessory is never a Device kind.
+const accessoryKind: Device['kind'] = 'entry_sensor';
 const camera = new EufyClient({ security: options });
 const security: SecurityModule | undefined = camera.security;
 const store: MowerSessionStore = { load: async () => undefined, save: async () => {} };
@@ -57,6 +66,7 @@ module?.start();
 // @ts-expect-error Camera configuration cannot use the mower session format.
 new EufyClient({ security: { credentials, sessionStore: store } });
 void [devices, state, securitySession, new EufyError('fixture')];
+void [accessories, accessoryState, observation, accessoryKind];
 
 void discovery;
 void [cloudState, cloudStatus, cloudCharger, atStation, localSource];

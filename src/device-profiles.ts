@@ -1,4 +1,4 @@
-import type { WireDevice } from './types.js';
+import type { AccessoryCategory, WireDevice } from './types.js';
 
 // Explicit, so an optional capability such as presets never enters MediaPolicy.
 export type CameraMediaFeature = 'snapshot' | 'live' | 'recordings';
@@ -195,3 +195,43 @@ export const profileEvidence: Readonly<Record<DeviceProfile['family'], string>> 
   integrated: 'INTEGRATED_CAMERAS.md',
   lte: 'LTE.md',
 });
+
+/**
+ * ha-eufy-cam#275: a HomeBase accessory. It is never a camera or a station, never
+ * a connection owner and never offers media. `h3`: admitted only under an
+ * admitted HomeBase 3 (T8030). `self`: admitted only as its own parent, and
+ * never connected.
+ */
+export interface AccessoryProfile {
+  readonly type: number;
+  readonly category: AccessoryCategory;
+  readonly topology: 'h3' | 'self';
+}
+const accessory = (
+  type: number,
+  category: AccessoryCategory,
+  topology: AccessoryProfile['topology'],
+): AccessoryProfile => Object.freeze({ type, category, topology });
+
+// Exact pairs only, separate from deviceProfiles so no accessory can reach a
+// camera, media or station path. Consulted only when exactDeviceProfile fails.
+export const accessoryProfiles: Readonly<Record<string, AccessoryProfile>> = Object.freeze({
+  // ha-eufy-cam#275: Entry Sensor T8900/type 2 on a HomeBase 3, reported on 2026-11-18.
+  T8900: accessory(2, 'entry_sensor', 'h3'),
+  // ha-eufy-cam#275: Keypad T8960/type 11 on a HomeBase 3, reported on 2026-11-18.
+  T8960: accessory(11, 'keypad', 'h3'),
+  // ha-eufy-cam#275: doorbell chime T8026/type 600, its own parent, reported on 2026-11-18.
+  T8026: accessory(600, 'chime', 'self'),
+});
+
+export function exactAccessoryProfile(raw: WireDevice): AccessoryProfile | undefined {
+  const model = raw.device_model;
+  const profile =
+    typeof model === 'string' && Object.hasOwn(accessoryProfiles, model)
+      ? accessoryProfiles[model]
+      : undefined;
+  return profile && profile.type === raw.device_type ? profile : undefined;
+}
+
+// Software evidence for every accessory profile.
+export const accessoryEvidence = 'ACCESSORIES.md';

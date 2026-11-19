@@ -38,6 +38,12 @@ are rejected for every affected security row, including a collision with an
 unknown model or another category. A duplicated or malformed parent cannot own
 another device. Cycles, camera-as-parent chains and dangling parents are rejected.
 
+Since 0.31.0 `accessories` lists admitted HomeBase accessories: the Entry
+Sensor T8900 and the Keypad T8960 under an admitted HomeBase 3, and the doorbell
+chime T8026 as its own parent. They have no relationship and no Device, never
+own a connection and keep the existing issue codes when rejected. See
+[HomeBase accessories](ACCESSORIES.md).
+
 Non-security categories are outside this inventory. Invalid envelopes still
 throw `invalid_inventory`. A response with at least 100 rows throws
 `inventory_completeness_unconfirmed`, so a server cap never looks complete.

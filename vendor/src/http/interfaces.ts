@@ -28,6 +28,7 @@ import { Cipher, Voice, Invite, DeviceListResponse, StationListResponse, HouseLi
 import { Station } from "./station";
 import { CommandName, PropertyName, SourceType } from "./types";
 import { TalkbackStream } from "../p2p/talkback";
+import type { ParamReport } from "../p2p/param-report";
 
 export type PropertyValue = number | boolean | string | object | undefined;
 
@@ -282,6 +283,8 @@ export interface StationEvents {
   "garage door status": (station: Station, channel: number, doorId: number, status: number) => void;
   "storage info hb3": (station: Station, channel: number, storageInfo: StorageInfoBodyHB3) => void;
   "hub notify update": (station: Station) => void;
+  /** Client addition, 0.31.0: the parameters of a CMD_HUB_NOTIFY_UPDATE notification. */
+  "param report": (station: Station, reports: ParamReport[]) => void;
   "push notification": (station: Station, message: PushMessage) => void;
 }
 

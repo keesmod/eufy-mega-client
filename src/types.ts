@@ -110,11 +110,15 @@ export interface DiscoveryIssue {
   index: number;
   deviceId: string | null;
   /**
-   * Unsupported-device diagnostics only. At most eight characters: T, four uppercase ASCII
+   * Unsupported-device and rejected-accessory diagnostics only (accessories since 0.31.0).
+   * At most eight characters: T, four uppercase ASCII
    * letters/digits, then optionally one to three more or a hyphen and one or two more.
    */
   deviceModel?: string;
-  /** Unsupported-device diagnostics only. Integer in 0..65535, never coerced. */
+  /**
+   * Unsupported-device and rejected-accessory diagnostics only (accessories since 0.31.0).
+   * Integer in 0..65535, never coerced.
+   */
   deviceType?: number;
   /** Bounded received context. parentId is private, like deviceId. Never log either ID. */
   context?: {
@@ -136,6 +140,92 @@ export interface DiscoveryResult {
   devices: Device[];
   relationships: (DeviceRelationship & { deviceId: string })[];
   issues: DiscoveryIssue[];
+  /**
+   * Since 0.31.0, ha-eufy-cam#275: admitted HomeBase accessories, in inventory
+   * order. They are never in `devices` or `relationships`. This client always
+   * sets it. Optional so that results written before 0.31.0 still type-check.
+   */
+  accessories?: Accessory[];
+}
+/**
+ * Since 0.31.0, ha-eufy-cam#275. `entry_sensor`: an Entry Sensor T8900 on a
+ * HomeBase 3. `keypad`: a Keypad T8960 on a HomeBase 3. `chime`: a doorbell
+ * chime T8026 that is its own parent. None is a camera or a station.
+ */
+export type AccessoryCategory = 'entry_sensor' | 'keypad' | 'chime';
+/** An admitted accessory. Read-only: no accessory accepts a command. */
+export interface Accessory {
+  id: string;
+  /** The row's position in the inventory, as in DiscoveryIssue. */
+  index: number;
+  /** The HomeBase 3 of an entry sensor or keypad. `null` for a chime. */
+  stationId: string | null;
+  category: AccessoryCategory;
+  model: string;
+  /** The received device type, the exact type of the accessory profile. */
+  deviceType: number;
+  name: string;
+  firmware: string | null;
+  hardware: string | null;
+}
+/**
+ * `p2p`: reported on the HomeBase's local session. `push`: an Eufy push
+ * notification. `cloud`: the inventory value that discovery read, which is not
+ * an observation.
+ */
+export type AccessorySource = 'p2p' | 'push' | 'cloud';
+export interface AccessoryReading<T> {
+  value: T;
+  source: AccessorySource;
+  /** When this client received the value. For `cloud`, when discovery read the inventory. */
+  observedAt: string;
+  /**
+   * Observed by P2P or push since the accessory's HomeBase session last closed.
+   * Always false for `cloud`. A close keeps the value and sets this to false.
+   */
+  live: boolean;
+}
+/** The readings an accessory category has. A reading is `null` until a value is known. */
+export interface AccessoryReadings {
+  /** Entry sensor only: the contact is open. */
+  open?: AccessoryReading<boolean> | null;
+  /** Entry sensor and keypad: the battery is low. */
+  batteryLow?: AccessoryReading<boolean> | null;
+  /** Keypad only: the battery is charging. */
+  charging?: AccessoryReading<boolean> | null;
+}
+/** Synchronous state, no I/O. A chime has no readings. */
+export interface AccessoryState {
+  id: string;
+  stationId: string | null;
+  category: AccessoryCategory;
+  readings: AccessoryReadings;
+}
+/**
+ * Since 0.31.0, ha-eufy-cam#275: numbers-only counts of how accessory state
+ * arrived, since the device transport was created. No serial, channel, name,
+ * value or time. The keys are a contract with ha-eufy-cam, which forwards them
+ * unchanged. See docs/ACCESSORIES.md, delivery observation.
+ */
+export interface AccessoryObservation {
+  /** Known, valid parameters for an admitted accessory in hub notify updates (P2P 1829). */
+  hub_notify: number;
+  /** Valid legacy sensor status notifications (P2P 1550) for an admitted entry sensor. */
+  sensor_status: number;
+  /** Door sensor pushes that set or confirmed an entry sensor reading. */
+  push_door_sensor: number;
+  /** Known, valid keypad parameters from the HomeBase's device information (CMD_CAMERA_INFO). */
+  camera_info: number;
+  /** Readings that discovery seeded from inventory values, labelled `cloud`. */
+  cloud_seeded: number;
+  /**
+   * Pushes with an event time older than the current reading and another value,
+   * which are dropped, plus applied pushes without an event time whose value
+   * differed from a P2P reading.
+   */
+  conflicts: number;
+  /** Reports whose channel is no single admitted accessory of that HomeBase. Dropped. */
+  unknown_channel: number;
 }
 export interface Diagnostic {
   operation: string;
@@ -200,6 +290,13 @@ export interface StationState {
   armDelay: number;
   /** `none`: an experimental standalone camera that offered no key, its commands are not encrypted. */
   commandEncryption: 'lan-derived' | 'cipher' | 'none' | null;
+  /**
+   * Since 0.31.0, ha-eufy-cam#275: the guard modes `setGuardMode` accepts for
+   * this owner, ascending. Mode 6 (Off) only with an admitted keypad on this
+   * HomeBase. Empty for an experimental standalone owner. This client always
+   * sets it.
+   */
+  availableModes?: number[];
 }
 export interface Snapshot {
   deviceId: string;
@@ -649,4 +746,6 @@ export interface ClientEvents {
   'events-connection': [connected: boolean];
   'live-stop': [result: StreamStop & { deviceId: string }];
   fault: [error: EufyError];
+  /** Since 0.31.0, ha-eufy-cam#275: an accessory reading changed its value, source or `live`. */
+  accessory: [state: AccessoryState];
 }

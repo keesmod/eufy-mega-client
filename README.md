@@ -74,11 +74,12 @@ Recognizing a model does not mean that every feature works on it.
 
 ### Security cameras
 
-| Area                | Status                             | Notes                                                                                                                                                                                                                              |
-| ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HomeBase 3 cameras  | Experimental, observed on hardware | Discovery, state, events, Guard Mode, snapshots, live media and recordings.                                                                                                                                                        |
-| Standalone cameras  | Opt-in, experimental               | `experimentalStandalone` covers only the T84A1, T8410, T8410C and T8424. Live view and snapshot reported working on all four, not independently reproduced. See [standalone cameras](docs/API.md#experimental-standalone-cameras). |
-| Other hubs and NVRs | Not supported                      | Older HomeBases, HomeBase Mini and PoE cameras behind an NVR. See the [topology inventory](docs/MODEL_MATRIX.md#topology-inventory).                                                                                               |
+| Area                 | Status                             | Notes                                                                                                                                                                                                                              |
+| -------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HomeBase 3 cameras   | Experimental, observed on hardware | Discovery, state, events, Guard Mode, snapshots, live media and recordings.                                                                                                                                                        |
+| Standalone cameras   | Opt-in, experimental               | `experimentalStandalone` covers only the T84A1, T8410, T8410C and T8424. Live view and snapshot reported working on all four, not independently reproduced. See [standalone cameras](docs/API.md#experimental-standalone-cameras). |
+| Other hubs and NVRs  | Not supported                      | Older HomeBases, HomeBase Mini and PoE cameras behind an NVR. See the [topology inventory](docs/MODEL_MATRIX.md#topology-inventory).                                                                                               |
+| HomeBase accessories | Experimental, read-only            | Entry Sensor T8900 and Keypad T8960 on a HomeBase 3, and Guard Mode Off with a keypad. The doorbell chime T8026 is recognized only. Not yet confirmed on hardware. See [HomeBase accessories](docs/ACCESSORIES.md).                |
 
 Media is enabled per exact model, as listed in the [device profiles](docs/DEVICE_PROFILES.md),
 and reports `status: 'experimental'` in `CameraCapabilities`. Hardware results differ per model.

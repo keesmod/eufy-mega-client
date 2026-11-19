@@ -21,6 +21,16 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 | T8160 camera     | 3.4.3.0           | 3        |
 | T8213 doorbell   | 0.2.1.8           | 1        |
 
+## HomeBase accessories, 0.31.0
+
+[HomeBase accessories](ACCESSORIES.md) adds the Entry Sensor T8900, the Keypad
+T8960 and Guard Mode Off with a keypad on a HomeBase 3, read-only, and recognizes
+the doorbell chime T8026. This is software evidence on a reported-shaped
+synthetic inventory. Which delivery path a HomeBase 3 uses, the channel mapping,
+the value polarity and writing Off are not yet confirmed on hardware. A HomeBase
+without these accessories keeps its station wire, and its discovery result only
+gains an empty `accessories` list.
+
 ## Combined camera candidate, 0.12.0
 
 The [combined candidate notes](RELEASE_0_12_0.md) list the added exact H3 camera

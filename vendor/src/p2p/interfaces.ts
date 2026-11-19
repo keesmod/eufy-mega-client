@@ -6,6 +6,7 @@ import { AlarmMode, DeviceType, MicStatus, ParamType, TriggerType, VideoType } f
 import { Address, CmdCameraInfoResponse, CommandResult, CustomData, StorageInfoBodyHB3 } from "./models";
 import { PushMessage } from "../push/models";
 import { TalkbackStream } from "./talkback";
+import type { ParamReport } from "./param-report";
 import {
   AlarmEvent,
   AudioCodec,
@@ -78,6 +79,8 @@ export interface P2PClientProtocolEvents {
   "push notification": (message: PushMessage) => void;
   "sequence error": (channel: number, command: number, sequence: number, serialnumber: string) => void;
   "hub notify update": () => void;
+  /** Client addition, 0.31.0: the parameters of a CMD_HUB_NOTIFY_UPDATE notification. */
+  "param report": (reports: ParamReport[]) => void;
 }
 
 export interface P2PQueueMessage {

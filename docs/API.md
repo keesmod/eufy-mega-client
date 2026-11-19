@@ -168,7 +168,8 @@ CAPTCHA, verification and lockout states pause automatic login attempts.
   [lookup observation](#station-lookup-observation-0300) and its
   [key setup observation](#station-key-setup-observation-0302).
 - `getStationState(id)` returns the last observed state. Mode values can be
-  `null` before device telemetry arrives.
+  `null` before device telemetry arrives. Since 0.31.0 `availableModes` lists
+  the modes `setGuardMode` accepts for that owner.
 - `refreshStationState(id, signal?)` requests a fresh device observation.
 - `snapshot(cameraId, signal?)` returns the latest HomeBase cover JPEG with its
   receipt time. It does not wake a camera for a new live capture.
@@ -630,7 +631,9 @@ stored delivery IDs. `eventStatus` reports connectivity and delivery counters.
 see [standalone events and push observation](#standalone-events-and-push-observation-0301).
 
 Typed events are `auth`, `device`, `station`, `snapshot`, `event`,
-`events-connection`, `live-stop` and `fault`. Detection events preserve supported
+`events-connection`, `live-stop`, `fault` and, since 0.31.0, `accessory`, see
+[HomeBase accessories](#homebase-accessories-0310). A `station` event follows a
+connection change, a station property change or a change of an observed mode. Detection events preserve supported
 motion/person/ring semantics and recognized names when supplied by the device.
 Deduplication correlates device/push copies and persists recent delivery hashes;
 it does not manufacture missing names or detections. A detection is delivered
@@ -652,7 +655,9 @@ copies over the same transport with neither an identity nor a valid event time
 merge while the first is pending.
 
 `setGuardMode(stationId, mode, signal?)` accepts 0 (Away), 1 (Home), 2 (Schedule),
-3–5 (Custom), 47 (Geofencing) or 63 (Disarmed). Its result requires a matching
+3–5 (Custom), 47 (Geofencing) or 63 (Disarmed). Since 0.31.0 it also accepts 6
+(Off) on a HomeBase with an admitted keypad, see
+[guard mode Off](ACCESSORIES.md#guard-mode-off). Every HomeBase now reads 6. Its result requires a matching
 command acknowledgement and fresh device-reported Guard Mode. `commandSent`
 is false if a fresh read already matches. Rejection or timeout never causes an
 automatic retry. Read the device again before deciding what to do next. A
@@ -1209,10 +1214,29 @@ these interfaces itself, for example in a test double, adds them. The
 settings opt-in now also allows the two work parameter writes, and only
 through this new call.
 
+## HomeBase accessories, 0.31.0
+
+[ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275) adds the
+Entry Sensor T8900 and the Keypad T8960 under a HomeBase 3, and recognizes the
+doorbell chime T8026. They are read-only and not yet confirmed on hardware.
+
+- `discoverDevices()` returns them as `accessories`, never as `devices`.
+  `listAccessories(signal?)` returns the same list.
+- `getAccessoryState(id)` returns `{ id, stationId, category, readings }`
+  without I/O. An entry sensor has `open` and `batteryLow`, a keypad
+  `batteryLow` and `charging`, a chime none. Each reading is `null` or
+  `{ value, source, observedAt, live }` with `source` `p2p`, `push` or `cloud`.
+- The `accessory` event carries the new state when a reading changes its value,
+  source or `live`.
+- `accessoryObservation` counts how the state arrived, numbers only.
+
+See [HomeBase accessories](ACCESSORIES.md) for admission, delivery and the
+observation keys.
+
 ## Discovery relationships
 
 `discoverDevices(signal?)` returns typed `DiscoveryResult` data with devices,
-relationships and per-device issues. `listDevices(signal?)` retains `Device[]`
+relationships and per-device issues, and since 0.31.0 admitted `accessories`. `listDevices(signal?)` retains `Device[]`
 and stable identifier fields. Recognized unsupported identities remain visible.
 See [the discovery contract](DISCOVERY.md) for operation gates and software evidence.
 

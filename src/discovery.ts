@@ -1,8 +1,14 @@
-import { exactDeviceProfile, modelProfile } from './device-profiles.js';
+import {
+  exactAccessoryProfile,
+  exactDeviceProfile,
+  modelProfile,
+  type AccessoryProfile,
+} from './device-profiles.js';
 import { observedDeviceState } from './device-state.js';
 import { lanAddress } from './network.js';
 import {
   EufyError,
+  type Accessory,
   type Device,
   type DiscoveryIssue,
   type DiscoveryResult,
@@ -45,6 +51,15 @@ const standaloneDescriptor = (device: WireDevice): StandaloneDescriptor => {
     lanAddress: lanAddress(device) !== undefined,
   };
 };
+/** ha-eufy-cam#275: an admitted accessory row. Never in `raw`, `owners` or `relationships`. */
+export interface AccessoryRow {
+  raw: WireDevice;
+  /** Position in the inventory. */
+  index: number;
+  profile: AccessoryProfile;
+  /** The admitted HomeBase 3 for `h3` accessories, `null` for a chime. */
+  stationId: string | null;
+}
 export interface Inventory {
   result: DiscoveryResult;
   raw: Map<string, WireDevice>;
@@ -56,6 +71,8 @@ export interface Inventory {
   accountRows: WireDevice[];
   owners: Map<string, ConnectionOwner>;
   relationships: Map<string, DeviceRelationship>;
+  /** ha-eufy-cam#275: admitted accessories in inventory order. */
+  accessories: Map<string, AccessoryRow>;
 }
 const identity = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
@@ -71,6 +88,7 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
   if (!Array.isArray(items)) throw new EufyError('invalid_inventory');
   if (items.length >= 100) throw new EufyError('inventory_completeness_unconfirmed');
   const raw = new Map<string, WireDevice>();
+  const accessoryRows = new Map<string, number>();
   const accountRows: WireDevice[] = [];
   const issues: DiscoveryIssue[] = [];
   const identities = new Map<string, number>();
@@ -128,6 +146,15 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
         : {}),
     };
   };
+  // Unsupported devices and rejected accessories also report the received model and type.
+  const received = (item: Record<string, unknown>) => ({
+    ...(diagnosticModel(item.device_model) ? { deviceModel: item.device_model } : {}),
+    ...(Number.isInteger(item.device_type) &&
+    (item.device_type as number) >= 0 &&
+    (item.device_type as number) <= 65535
+      ? { deviceType: item.device_type as number }
+      : {}),
+  });
   const reject = (index: number, deviceId: string | null, code: DiscoveryIssue['code']) =>
     issues.push({
       index,
@@ -160,6 +187,11 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
       return;
     }
     if (!exactDeviceProfile(item)) {
+      // ha-eufy-cam#275: an exact accessory pair is decided after the owners below.
+      if (exactAccessoryProfile(item as WireDevice)) {
+        accessoryRows.set(item.device_sn, index);
+        return;
+      }
       // These bounds restrict diagnostics only, never recognition. Do not trim,
       // truncate or coerce values: a serial prefix is not a received model code.
       issues.push({
@@ -167,10 +199,7 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
         deviceId: item.device_sn,
         code: 'unsupported_device',
         context: context(item),
-        ...(diagnosticModel(item.device_model) ? { deviceModel: item.device_model } : {}),
-        ...(Number.isInteger(item.device_type) && item.device_type >= 0 && item.device_type <= 65535
-          ? { deviceType: item.device_type }
-          : {}),
+        ...received(item),
       });
       return;
     }
@@ -222,6 +251,33 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
         : { kind: 'unsupported', reason: 'unsupported_station' },
     );
   }
+  // ha-eufy-cam#275: an accessory never becomes an owner or a relationship. An
+  // entry sensor or keypad needs an admitted HomeBase 3 as its parent. A chime
+  // must be its own parent. Rejections keep the received model and type.
+  const accessories = new Map<string, AccessoryRow>();
+  for (const [id, index] of accessoryRows) {
+    const row = items[index] as WireDevice;
+    const profile = exactAccessoryProfile(row)!;
+    const owner = owners.get(row.parent_sn);
+    let stationId: string | null = null,
+      code: DiscoveryIssue['code'] | undefined;
+    if (profile.topology === 'self') {
+      if (row.parent_sn !== id)
+        code = row.parent_sn === '' ? 'invalid_device_relationship' : 'unsupported_station';
+    } else if (row.parent_sn === '' || row.parent_sn === id) code = 'invalid_device_relationship';
+    else if (
+      owner?.kind === 'station' &&
+      owner.transport === 'h3-lan' &&
+      raw.get(owner.id)?.device_model === 'T8030'
+    )
+      stationId = owner.id;
+    else code = 'unsupported_station';
+    if (code) {
+      issues.push({ index, deviceId: id, code, context: context(row), ...received(row) });
+      continue;
+    }
+    accessories.set(id, { raw: row, index, profile, stationId });
+  }
   const devices: Device[] = [];
   for (const [id, device] of raw) {
     const relationship = relationships.get(id)!;
@@ -253,10 +309,38 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
         ...relationship,
       })),
       issues: issues.sort((a, b) => a.index - b.index),
+      accessories: [...accessories].map(([id, { raw: row, index, profile, stationId }]) =>
+        publicAccessory(id, index, row, profile, stationId),
+      ),
     },
     raw,
     accountRows,
     owners,
     relationships,
+    accessories,
   };
 }
+
+const publicAccessory = (
+  id: string,
+  index: number,
+  row: WireDevice,
+  profile: AccessoryProfile,
+  stationId: string | null,
+): Accessory => ({
+  id,
+  index,
+  stationId,
+  category: profile.category,
+  model: row.device_model,
+  deviceType: profile.type,
+  name:
+    typeof row.device_alias_name === 'string'
+      ? row.device_alias_name
+      : typeof row.device_name === 'string'
+        ? row.device_name
+        : '',
+  firmware:
+    typeof row.main_sw_version === 'string' && row.main_sw_version ? row.main_sw_version : null,
+  hardware: typeof row.main_hw_version === 'string' ? row.main_hw_version : null,
+});
