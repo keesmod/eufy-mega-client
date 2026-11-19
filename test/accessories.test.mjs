@@ -692,11 +692,11 @@ test('push order uses push times, and P2P receipt times with an allowance', () =
   // A P2P confirmation of a pushed value makes an untimed difference a conflict.
   const before = store.snapshot().conflicts;
   assert.equal(store.observe(SENSORS[3], 'open', true, 'push', L, L + 500), 'changed');
-  assert.equal(store.observe(SENSORS[3], 'open', true, 'p2p', undefined, L + 1000), 'same');
-  // A clock stepping back never lowers the P2P reference.
+  assert.equal(store.observe(SENSORS[3], 'open', true, 'p2p', undefined, L + 10000), 'same');
+  // A clock stepping back never lowers the P2P reference, so a close pushed at L+5 s is late.
   assert.equal(store.observe(SENSORS[3], 'open', true, 'p2p', undefined, L - 60000), 'same');
-  assert.equal(store.observe(SENSORS[3], 'open', false, 'push', L - 1000, L + 2000), 'late');
-  assert.equal(store.observe(SENSORS[3], 'open', false, 'push', undefined, L + 3000), 'changed');
+  assert.equal(store.observe(SENSORS[3], 'open', false, 'push', L + 5000, L + 11000), 'late');
+  assert.equal(store.observe(SENSORS[3], 'open', false, 'push', undefined, L + 12000), 'changed');
   assert.equal(store.snapshot().conflicts, before + 1);
 });
 

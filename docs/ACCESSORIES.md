@@ -95,7 +95,7 @@ older than the newest report of the current value never replaces it. Push event
 times are compared with push event times. A P2P report counts at its local
 receipt time less 2 seconds, because the push clock differs and often has
 one-second resolution. A push without an event time, or with one more than five
-minutes ahead of local time, applies, and a difference from a P2P reading is
+minutes ahead of local time, applies, and a difference from a value that P2P reported is
 counted. Nothing is discarded because of elapsed time alone. When the
 HomeBase session closes, every reading of its accessories keeps its value and
 becomes not live, with one event per changed accessory.
