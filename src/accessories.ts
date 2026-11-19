@@ -72,6 +72,11 @@ const channelOf = (raw: WireDevice): number | null =>
     ? raw.device_channel
     : null;
 
+/**
+ * Push event times come from another clock than local receipt and often have
+ * one-second resolution (ha-eufy-cam#275).
+ */
+const PUSH_CLOCK_ALLOWANCE_MS = 2000;
 export class AccessoryStore {
   private records = new Map<string, Entry>();
   private readonly counts: AccessoryObservation = {
@@ -200,16 +205,17 @@ export class AccessoryStore {
     const timed = eventTime !== undefined && Number.isFinite(eventTime) && eventTime > 0;
     if (source === 'push' && current && current.source !== 'cloud' && current.value !== value) {
       if (timed) {
-        const reference =
-          current.source === 'push'
-            ? (record.pushTimes[name] ?? Date.parse(current.observedAt))
-            : Date.parse(current.observedAt);
+        // Push to push compares one clock. Otherwise the reference is the local
+        // receipt time, less an allowance for the push clock and its resolution.
+        const pushed = current.source === 'push' ? record.pushTimes[name] : undefined;
+        const reference = pushed ?? Date.parse(current.observedAt) - PUSH_CLOCK_ALLOWANCE_MS;
         if (eventTime < reference) return 'late';
       } else if (current.source === 'p2p') this.counts.conflicts++;
     }
     const at = new Date(now).toISOString();
     if (source === 'push') {
-      if (timed) record.pushTimes[name] = eventTime;
+      // An older push of the same value never moves the reference back.
+      if (timed) record.pushTimes[name] = Math.max(record.pushTimes[name] ?? eventTime, eventTime);
       else delete record.pushTimes[name];
     }
     if (current && current.source !== 'cloud' && current.value === value) {

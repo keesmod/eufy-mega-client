@@ -287,6 +287,8 @@ export class DeviceTransport extends EventEmitter {
         this.sessionAddresses.delete(id);
         this.encryption.delete(id);
         this.observedModes.delete(id);
+        // The close handler is gone with the listeners, so end the live readings here.
+        for (const accessory of this.accessories.close(id)) this.emitAccessory(accessory);
       }
     for (const device of raw.values())
       if (!isStation(device)) {
@@ -383,6 +385,8 @@ export class DeviceTransport extends EventEmitter {
           this.sessionAddresses.delete(device.device_sn);
           this.encryption.delete(device.device_sn);
           this.observedModes.delete(device.device_sn);
+          for (const accessory of this.accessories.close(device.device_sn))
+            this.emitAccessory(accessory);
           this.failures.set(
             device.device_sn,
             error instanceof EufyError && error.code === 'invalid_connection_credentials'

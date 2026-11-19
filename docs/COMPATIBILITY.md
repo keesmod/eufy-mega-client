@@ -28,7 +28,8 @@ T8960 and Guard Mode Off with a keypad on a HomeBase 3, read-only, and recognize
 the doorbell chime T8026. This is software evidence on a reported-shaped
 synthetic inventory. Which delivery path a HomeBase 3 uses, the channel mapping,
 the value polarity and writing Off are not yet confirmed on hardware. A HomeBase
-without these accessories keeps its discovery result and station wire.
+without these accessories keeps its station wire, and its discovery result only
+gains an empty `accessories` list.
 
 ## Combined camera candidate, 0.12.0
 

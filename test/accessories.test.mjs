@@ -581,7 +581,7 @@ test('an older push never replaces a newer P2P reading, and an untimed one is co
     const before = Date.now();
     r.hub([param(CHANNELS[SENSORS[0]], 1550, '0')]);
     // The push of the earlier open arrives after the P2P close.
-    r.push({ sensor_open: true, event_time: before - 2000 });
+    r.push({ sensor_open: true, event_time: before - 5000 });
     let open = r.transport.accessoryState(SENSORS[0]).readings.open;
     assert.deepEqual([open.value, open.source], [false, 'p2p']);
     // A push of the same value confirms it without an event.
@@ -612,6 +612,56 @@ test('an older push never replaces a newer P2P reading, and an untimed one is co
         [false, 'p2p'],
         [true, 'push'],
       ],
+    );
+  } finally {
+    await r.done();
+  }
+});
+
+test('an older push of the same value never moves the push reference back', async () => {
+  const r = await rig();
+  try {
+    const t = Date.now() + 10000;
+    // Open at t+200, then the older open at t+100, then the close at t+150.
+    r.push({ sensor_open: true, event_time: t + 200 });
+    r.push({ sensor_open: true, event_time: t + 100 });
+    r.push({ sensor_open: false, event_time: t + 150 });
+    const open = r.transport.accessoryState(SENSORS[0]).readings.open;
+    assert.deepEqual([open.value, open.source], [true, 'push']);
+    assert.equal(r.transport.accessoryObservation().conflicts, 1);
+  } finally {
+    await r.done();
+  }
+});
+
+test('a push with a whole-second time just before the P2P receipt still applies', async () => {
+  const r = await rig();
+  try {
+    r.hub([param(CHANNELS[SENSORS[0]], 1550, '1')]);
+    // The close missed over P2P arrives as a push timed on another clock.
+    r.push({ sensor_open: false, event_time: Math.floor(Date.now() / 1000) * 1000 - 500 });
+    const open = r.transport.accessoryState(SENSORS[0]).readings.open;
+    assert.deepEqual([open.value, open.source], [false, 'push']);
+  } finally {
+    await r.done();
+  }
+});
+
+test('a HomeBase replaced by a new discovery ends the live readings of its accessories', async () => {
+  const r = await rig();
+  try {
+    r.hub([param(CHANNELS[SENSORS[0]], 1550, '1')]);
+    r.events.length = 0;
+    const rows = reportedInventory().map((row) =>
+      row.device_sn === HB ? { ...row, p2p_did: 'SYNTHETIC-000275-FGHIJ' } : row,
+    );
+    const again = discover(rows);
+    await r.transport.load(again.raw, again);
+    const open = r.transport.accessoryState(SENSORS[0]).readings.open;
+    assert.deepEqual([open.value, open.source, open.live], [true, 'p2p', false]);
+    assert.deepEqual(
+      r.events.map((e) => [e.id, e.readings.open.live]),
+      [[SENSORS[0], false]],
     );
   } finally {
     await r.done();
