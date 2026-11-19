@@ -27,9 +27,9 @@ also passed, with the same fifteen entity identities and one controlling bridge.
 T8960 and Guard Mode Off with a keypad on a HomeBase 3, read-only, and recognizes
 the doorbell chime T8026. It was built on software evidence. A reporter has
 since seen entry sensor changes with the right polarity, the keypad charging
-state and the Off option on a HomeBase 3 with firmware 3.8.8.0, as recorded in
-the [model matrix](MODEL_MATRIX.md). The battery readings and writing Off are
-not yet confirmed on hardware. A HomeBase
+state and setting Off work on a HomeBase 3 with firmware 3.8.8.0, as recorded in
+the [model matrix](MODEL_MATRIX.md). The battery readings are not yet confirmed
+on hardware. A HomeBase
 without these accessories keeps its station wire, and its discovery result only
 gains an empty `accessories` list.
 
