@@ -5,7 +5,15 @@ import { PropertyName } from './vendor/http/types.js';
 import { awaitEvent } from './operations.js';
 import { EufyError } from './types.js';
 
+/** Modes every HomeBase accepts as a command. */
 export const guardModes = new Set([0, 1, 2, 3, 4, 5, 47, 63]);
+/**
+ * ha-eufy-cam#275: modes read from a HomeBase. 6 is Off, which a keypad sets.
+ * The client sends 6 only to a HomeBase with an admitted keypad.
+ */
+export const observedGuardModes = new Set([...guardModes, 6]);
+/** ha-eufy-cam#275: Off, accepted as a command only with an admitted keypad. */
+export const KEYPAD_GUARD_MODE = 6;
 
 /** Repeated P2P values count as observations; cached cloud values never do. */
 export async function readGuardMode(station: Station, signal: AbortSignal): Promise<number> {
@@ -15,7 +23,7 @@ export async function readGuardMode(station: Station, signal: AbortSignal): Prom
     () => station.getCameraInfo(),
     (_s, type, value, source) => {
       const mode = Number(value);
-      return type === CommandType.CMD_SET_ARMING && source === 'p2p' && guardModes.has(mode)
+      return type === CommandType.CMD_SET_ARMING && source === 'p2p' && observedGuardModes.has(mode)
         ? mode
         : undefined;
     },

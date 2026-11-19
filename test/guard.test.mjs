@@ -58,3 +58,10 @@ test('explicit state refresh accepts a repeated value from the device', async ()
   assert.equal(await p, 1);
   assert.equal(f.queries(), 1);
 });
+test('ha-eufy-cam#275: a state read accepts Off (6), which a keypad sets', async () => {
+  const f = fixture(),
+    p = readGuardMode(f.station, new AbortController().signal);
+  f.observe(7);
+  f.observe(6);
+  assert.equal(await p, 6);
+});

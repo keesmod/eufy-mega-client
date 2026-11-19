@@ -3,6 +3,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import * as NodeRSA from "node-rsa";
 import { Readable } from "stream";
 import { recordFrameTiming } from "./frame-timing";
+import { parseParamReports } from "./param-report";
 import { SortedMap } from "sweet-collections";
 const { parse } = require("date-and-time");
 
@@ -4039,6 +4040,8 @@ export class P2PClientProtocol extends TypedEmitter<P2PClientProtocolEvents> {
                   }
                 );
                 this.emit("hub notify update");
+                // Client addition, 0.31.0 (ha-eufy-cam#275): pass on the reported parameters.
+                this.emit("param report", parseParamReports(json.payload));
               } else if (json.cmd === CommandType.CMD_CAMERA_PUSH_NOTIFY) {
                 // P2P camera push notification from HB3 station (motion, person detection, etc.)
                 // The outer payload is a JSON string that must be parsed separately.

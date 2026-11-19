@@ -1,7 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { format } from 'prettier';
-import { deviceProfiles, h3MediaOwner, profileEvidence } from '../dist/device-profiles.js';
+import {
+  accessoryEvidence,
+  accessoryProfiles,
+  deviceProfiles,
+  h3MediaOwner,
+  profileEvidence,
+} from '../dist/device-profiles.js';
 
 const document = new URL('../docs/DEVICE_PROFILES.md', import.meta.url);
 const start = '<!-- generated device profiles: start -->';
@@ -55,6 +61,18 @@ export async function renderDeviceProfiles(text) {
           'See [API.md](API.md#experimental-standalone-cameras).',
         ];
       }),
+    // ha-eufy-cam#275: accessories are listed apart, they are no camera or station profile.
+    '',
+    'HomeBase accessories are not devices of the table above. They never offer media, never own',
+    'a connection and accept no command. Topology `h3` admits them only under an admitted',
+    `${h3MediaOwner.model} HomeBase 3, \`self\` only as their own parent.`,
+    '',
+    '| Model | Type | Category | Discovery topology | Software evidence |',
+    '| --- | --- | --- | --- | --- |',
+    ...Object.entries(accessoryProfiles).map(
+      ([model, { type, category, topology }]) =>
+        `| ${model} | ${type} | ${category} | ${topology} | [Evidence](${accessoryEvidence}) |`,
+    ),
   ].join('\n');
   const sections = text.split(start);
   if (sections.length !== 2 || sections[1].split(end).length !== 2)

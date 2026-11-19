@@ -11,7 +11,17 @@ import {
 } from './discovery.js';
 import { hostSubnetContains, lanAddress } from './network.js';
 import { RecordingAccess } from './recordings.js';
-import { guardModes, readGuardMode, changeGuardMode } from './guard.js';
+import {
+  guardModes,
+  observedGuardModes,
+  readGuardMode,
+  changeGuardMode,
+  KEYPAD_GUARD_MODE,
+} from './guard.js';
+import { AccessoryStore, readingName, readingValue } from './accessories.js';
+import type { AccessoryRow } from './discovery.js';
+import type { ParamReport } from './vendor/p2p/param-report.js';
+import { CusPushEvent } from './vendor/push/types.js';
 import { movePreset } from './preset.js';
 import { awaitEvent } from './operations.js';
 import { EventEmitter } from 'node:events';
@@ -30,6 +40,7 @@ import {
   PropertyName,
 } from './vendor/http/index.js';
 import type { Device as ProtocolDevice } from './vendor/http/device.js';
+import type { RawValues } from './vendor/http/interfaces.js';
 import type { CloudProvider } from './vendor/http/api.js';
 import type { DeviceListResponse, StationListResponse } from './vendor/http/models.js';
 import { P2PConnectionType, VideoCodec, AudioCodec, CommandType } from './vendor/p2p/types.js';
@@ -60,6 +71,8 @@ import {
   type MediaMetadata,
   type StandalonePushObservation,
   type PresetMoveResult,
+  type AccessoryObservation,
+  type AccessoryState,
 } from './types.js';
 import { LiveStartObserver } from './live-start.js';
 import { tapLiveFrames } from './live-frames.js';
@@ -126,6 +139,9 @@ export class DeviceTransport extends EventEmitter {
   private refreshTimers = new Map<string, NodeJS.Timeout>();
   /** ha-eufy-cam#185: numbers-only counts of pushes naming a standalone owner. */
   private readonly standalonePushes = new StandalonePushCounter();
+  /** ha-eufy-cam#275: admitted accessories, their readings and delivery counts. */
+  private readonly accessories = new AccessoryStore();
+  private accessoryRows = new Map<string, AccessoryRow>();
   private readonly lifetime = new AbortController();
   readonly recordings = new RecordingAccess(
     {
@@ -251,6 +267,9 @@ export class DeviceTransport extends EventEmitter {
     this.raw = raw;
     this.accountRows = accountRows;
     this.standalone = standalone;
+    // ha-eufy-cam#275: before the stations, because an admitted keypad joins its station wire.
+    this.accessoryRows = new Map(inventory?.accessories ?? []);
+    this.accessories.load(this.accessoryRows);
     for (const [id, camera] of this.cameras)
       if (changed(id)) {
         camera.destroy();
@@ -410,7 +429,112 @@ export class DeviceTransport extends EventEmitter {
       alarmDelay: (alarmState && number(PropertyName.StationAlarmDelay)) || 0,
       armDelay: (alarmState && number(PropertyName.StationAlarmArmDelay)) || 0,
       commandEncryption: this.encryption.get(id) ?? null,
+      availableModes: alarmState ? this.guardModesFor(id) : [],
     };
+  }
+  /** ha-eufy-cam#275: Off (6) only on a HomeBase with an admitted keypad. */
+  private guardModesFor(id: string): number[] {
+    return [
+      ...guardModes,
+      ...(this.accessories.keypads(id).length ? [KEYPAD_GUARD_MODE] : []),
+    ].sort((a, b) => a - b);
+  }
+  /** ha-eufy-cam#275: synchronous, no I/O. A failed HomeBase keeps its accessories' last values. */
+  accessoryState(id: string): AccessoryState {
+    const failure = this.failures.get(id);
+    if (failure) throw new EufyError(failure);
+    const state = this.accessories.state(id);
+    if (!state) throw new EufyError('unknown_device');
+    return state;
+  }
+  /** ha-eufy-cam#275: synchronous, no I/O. Counts since this transport was created. */
+  accessoryObservation(): AccessoryObservation {
+    return this.accessories.snapshot();
+  }
+  private emitAccessory(id: string): void {
+    const state = this.accessories.state(id);
+    if (state) this.emit('accessory', state);
+  }
+  /** Channels of this owner's cameras. An accessory on such a channel is ambiguous. */
+  private cameraChannels(stationId: string): Set<number> {
+    return new Set(
+      [...this.raw.values()]
+        .filter((d) => d.device_sn !== stationId && this.ownerOf(d) === stationId)
+        .map((d) => d.device_channel),
+    );
+  }
+  /** ha-eufy-cam#275: the parameters of a hub notify update (1829). */
+  private paramReport(stationId: string, reports: ParamReport[]): void {
+    if (!this.accessories.hasStation(stationId)) return;
+    const taken = this.cameraChannels(stationId),
+      changed = new Set<string>();
+    for (const report of reports) {
+      const id = this.accessories.byChannel(stationId, report.channel, taken);
+      if (id === undefined || id === 'ambiguous') {
+        this.accessories.count('unknown_channel');
+        continue;
+      }
+      const name = readingName(this.accessories.category(id)!, report.type);
+      const value = name && readingValue(name, report.value);
+      if (!name || value === undefined) continue;
+      this.accessories.count('hub_notify');
+      if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
+    }
+    for (const id of changed) this.emitAccessory(id);
+  }
+  /** ha-eufy-cam#275: the legacy entry sensor notification (1550), keyed by channel. */
+  private sensorStatus(stationId: string, channel: number, status: unknown): void {
+    if (!this.accessories.hasStation(stationId)) return;
+    const id = this.accessories.byChannel(stationId, channel, this.cameraChannels(stationId));
+    if (id === undefined || id === 'ambiguous' || this.accessories.category(id) !== 'entry_sensor')
+      return this.accessories.count('unknown_channel');
+    const value = readingValue('open', status);
+    if (value === undefined) return;
+    this.accessories.count('sensor_status');
+    if (this.accessories.observe(id, 'open', value, 'p2p') === 'changed') this.emitAccessory(id);
+  }
+  /** ha-eufy-cam#275: device information for an admitted keypad in this station's wire. */
+  private deviceParams(stationId: string, id: string, params: RawValues): void {
+    if (this.accessories.stationOf(id) !== stationId) return;
+    const category = this.accessories.category(id)!;
+    let changed = false;
+    for (const [type, param] of Object.entries(params)) {
+      const name = readingName(category, Number(type));
+      if (!name || param?.source !== 'p2p') continue;
+      const value = readingValue(name, param.value);
+      if (value === undefined) continue;
+      this.accessories.count('camera_info');
+      if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed = true;
+    }
+    if (changed) this.emitAccessory(id);
+  }
+  /**
+   * ha-eufy-cam#275: a push that names an admitted accessory never reaches
+   * detections or the vendored handlers. Only a door sensor push for an entry
+   * sensor from its own, available HomeBase sets a reading.
+   */
+  private accessoryPush(message: PushMessage): void {
+    const id = message.device_sn,
+      stationId = this.accessories.stationOf(id);
+    if (
+      this.accessories.category(id) !== 'entry_sensor' ||
+      message.event_type !== CusPushEvent.DOOR_SENSOR ||
+      !stationId ||
+      message.station_sn !== stationId ||
+      !this.stations.has(stationId) ||
+      this.failures.has(stationId) ||
+      typeof message.sensor_open !== 'boolean'
+    )
+      return;
+    const outcome = this.accessories.observe(
+      id,
+      'open',
+      message.sensor_open,
+      'push',
+      message.event_time,
+    );
+    this.accessories.count(outcome === 'late' ? 'conflicts' : 'push_door_sensor');
+    if (outcome === 'changed') this.emitAccessory(id);
   }
   private station(id: string): Station {
     const failure = this.failures.get(id);
@@ -518,6 +642,10 @@ export class DeviceTransport extends EventEmitter {
    * Detections. Every other push gets acceptPush, uncounted.
    */
   filterPush(message: PushMessage, source: PushSource): boolean {
+    if (typeof message.device_sn === 'string' && this.accessories.has(message.device_sn)) {
+      this.accessoryPush(message);
+      return false;
+    }
     const owner = this.standaloneOwner(message);
     if (!owner) return this.acceptPush(message);
     const decision = decideStandalonePush(owner, message);
@@ -560,6 +688,7 @@ export class DeviceTransport extends EventEmitter {
       this.encryption.delete(id);
       this.finishLive(id, { confirmed: false, reason: 'connection_lost' });
       this.emit('station', this.state(id));
+      for (const accessory of this.accessories.close(id)) this.emitAccessory(accessory);
     });
     station.on('connection error', () =>
       this.emit('fault', new EufyError('device_connection_failed')),
@@ -568,15 +697,25 @@ export class DeviceTransport extends EventEmitter {
     station.on('parameter observed', (_s, type, value, source) => {
       // A standalone camera's own arming state is not admitted on its route.
       if (this.standalone.has(id)) return;
-      if (source !== 'p2p' || !guardModes.has(Number(value))) return;
-      const state = this.observedModes.get(id) ?? {};
-      if (type === CommandType.CMD_SET_ARMING) state.guard = Number(value);
-      else if (type === CommandType.CMD_GET_ALARM_MODE) state.current = Number(value);
-      else return;
+      // ha-eufy-cam#275: 6 (Off) is read on every HomeBase.
+      if (source !== 'p2p' || !observedGuardModes.has(Number(value))) return;
+      const state = this.observedModes.get(id) ?? {},
+        mode = Number(value);
+      const field =
+        type === CommandType.CMD_SET_ARMING
+          ? 'guard'
+          : type === CommandType.CMD_GET_ALARM_MODE
+            ? 'current'
+            : undefined;
+      if (!field || state[field] === mode) return;
+      state[field] = mode;
       this.observedModes.set(id, state);
       this.emit('station', this.state(id));
     });
+    station.on('param report', (_s, reports) => this.paramReport(id, reports));
+    station.on('sensor status', (_s, channel, status) => this.sensorStatus(id, channel, status));
     station.on('raw device property changed', (serial, params) => {
+      if (this.accessories.has(serial)) return this.deviceParams(id, serial, params);
       const camera = this.cameras.get(serial);
       if (camera?.getStationSerial() === id)
         for (const [type, p] of Object.entries(params))
@@ -1071,9 +1210,16 @@ export class DeviceTransport extends EventEmitter {
       station_sn: device.device_sn,
       station_name: device.device_name,
       station_model: device.device_model,
-      devices: [...this.raw.values()]
-        .filter((d) => this.cameras.has(d.device_sn) && this.ownerOf(d) === device.device_sn)
-        .map((d) => this.cameraWire(d)),
+      devices: [
+        ...[...this.raw.values()]
+          .filter((d) => this.cameras.has(d.device_sn) && this.ownerOf(d) === device.device_sn)
+          .map((d) => this.cameraWire(d)),
+        // ha-eufy-cam#275: only an admitted keypad joins the wire, so the vendored
+        // Station accepts guard mode 6. Entry sensors and chimes never do.
+        ...this.accessories
+          .keypads(device.device_sn)
+          .map((id) => ({ ...this.accessoryRows.get(id)!.raw, station_sn: device.device_sn })),
+      ],
     } as unknown as StationListResponse;
   }
   /** One additional station object gives one additional P2P session with its own socket. */
@@ -1337,7 +1483,8 @@ export class DeviceTransport extends EventEmitter {
     signal?: AbortSignal,
   ): Promise<{ confirmed: true; commandSent: boolean; state: StationState }> {
     this.homeBaseOnly(id);
-    if (!guardModes.has(mode)) throw new EufyError('invalid_guard_mode');
+    if (!Number.isInteger(mode) || !this.guardModesFor(id).includes(mode))
+      throw new EufyError('invalid_guard_mode');
     // Streams on extra sessions leave the primary session free for this command.
     if (
       this.commands.has(id) ||
@@ -1425,6 +1572,8 @@ export class DeviceTransport extends EventEmitter {
     this.cameras.clear();
     this.raw.clear();
     this.accountRows = [];
+    this.accessories.clear();
+    this.accessoryRows.clear();
     this.snapshots.clear();
     this.removeAllListeners();
   }

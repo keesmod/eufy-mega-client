@@ -46,6 +46,13 @@ export type {
   StandalonePushRefusal,
   StandalonePushSource,
   StandalonePushObservation,
+  Accessory,
+  AccessoryCategory,
+  AccessoryObservation,
+  AccessoryReading,
+  AccessoryReadings,
+  AccessorySource,
+  AccessoryState,
 } from './types.js';
 export { EufyClient } from './eufy-client.js';
 export type {

@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { EventTransport } from './event-transport.js';
 import { DeviceTransport } from './device-transport.js';
 import { StandalonePushCounter } from './standalone-events.js';
+import { AccessoryStore } from './accessories.js';
 import { MegaCloud, responseObject } from './cloud.js';
 import {
   EufyError,
@@ -24,6 +25,9 @@ import {
   type StreamStop,
   type StandalonePushObservation,
   type PresetMoveResult,
+  type Accessory,
+  type AccessoryObservation,
+  type AccessoryState,
 } from './types.js';
 
 export class EufyMegaClient extends EventEmitter<ClientEvents> {
@@ -71,6 +75,14 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   get standalonePushStatus(): StandalonePushObservation {
     return this.transport?.standalonePushStatus() ?? new StandalonePushCounter().snapshot();
   }
+  /**
+   * ha-eufy-cam#275: numbers-only counts of how accessory state arrived.
+   * Synchronous, no I/O, zero before the device transport exists. See
+   * docs/ACCESSORIES.md, delivery observation.
+   */
+  get accessoryObservation(): AccessoryObservation {
+    return this.transport?.accessoryObservation() ?? new AccessoryStore().snapshot();
+  }
   connect(answer?: AuthAnswer, signal?: AbortSignal): Promise<AuthState> {
     if (this.closed) return Promise.reject(new EufyError('client_closed'));
     if (this.authOperation) return Promise.reject(new EufyError('authentication_busy'));
@@ -85,6 +97,13 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   }
   async listDevices(signal?: AbortSignal): Promise<Device[]> {
     return (await this.discoverDevices(signal)).devices;
+  }
+  /**
+   * ha-eufy-cam#275: the admitted HomeBase accessories of a new discovery, in
+   * inventory order. `listDevices` never contains them. Since 0.31.0.
+   */
+  async listAccessories(signal?: AbortSignal): Promise<Accessory[]> {
+    return (await this.discoverDevices(signal)).accessories ?? [];
   }
   async discoverDevices(signal?: AbortSignal): Promise<DiscoveryResult> {
     const result = responseObject(
@@ -130,7 +149,14 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
       this.transport.on('detection', (d) => this.events?.device(d.id, d.type, d.name, d.stranger));
       // Camera push notifications over an open device session.
       this.transport.on('push', (message) => this.events?.push(message, 'local'));
-      for (const event of ['device', 'station', 'snapshot', 'live-stop', 'fault'] as const)
+      for (const event of [
+        'device',
+        'station',
+        'snapshot',
+        'live-stop',
+        'fault',
+        'accessory',
+      ] as const)
         this.transport.on(event, (value) => this.emit(event, value));
     }
     if (this.loaded !== this.devices) {
@@ -192,6 +218,14 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
   /** Inspect the current software guards without opening a device connection. */
   async getCameraCapabilities(id: string) {
     return (await this.deviceTransport()).cameraCapabilities(id);
+  }
+  /**
+   * ha-eufy-cam#275: the readings of an admitted accessory, without I/O. Fails
+   * with the row's discovery code for a rejected accessory, else
+   * `unknown_device` for an ID that is no accessory. Since 0.31.0.
+   */
+  async getAccessoryState(id: string): Promise<AccessoryState> {
+    return (await this.deviceTransport()).accessoryState(id);
   }
   async getStationState(id: string): Promise<StationState> {
     return (await this.deviceTransport()).state(id);

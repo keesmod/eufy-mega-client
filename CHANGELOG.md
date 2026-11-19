@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.0 - Unreleased
+
+- Added the Entry Sensor `T8900` and the Keypad `T8960` on a HomeBase 3 as read-only accessories ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.
+- Guard mode Off (6) is now read on every HomeBase 3 and can be set on one with a keypad ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.
+- The doorbell chime `T8026` is recognized as an accessory without functions ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)).
+
+Upgrade: discovery also returns `accessories`, and `Device` and `listDevices()` are unchanged. Rollback: 0.30.5.
+
 ## 0.30.5 - 2026-11-18
 
 - A late second copy of one ring or detection is no longer delivered as a second event ([ha-eufy-cam#252](https://github.com/keesmod/ha-eufy-cam/issues/252)), reported working for a press on a `T8215`.

@@ -140,6 +140,16 @@ local owner with experimental snapshot and live, and recordings unavailable with
 `standalone_recordings_unverified`. Its blocked cells above apply without that option.
 See [API.md](API.md#experimental-standalone-cameras).
 
+HomeBase accessories are not devices of the table above. They never offer media, never own
+a connection and accept no command. Topology `h3` admits them only under an admitted
+T8030 HomeBase 3, `self` only as their own parent.
+
+| Model | Type | Category     | Discovery topology | Software evidence          |
+| ----- | ---- | ------------ | ------------------ | -------------------------- |
+| T8900 | 2    | entry_sensor | h3                 | [Evidence](ACCESSORIES.md) |
+| T8960 | 11   | keypad       | h3                 | [Evidence](ACCESSORIES.md) |
+| T8026 | 600  | chime        | self               | [Evidence](ACCESSORIES.md) |
+
 <!-- generated device profiles: end -->
 
 ## Reviewing a known-family addition
