@@ -175,7 +175,7 @@ import {
 } from "./error";
 import { getError, validValue } from "../utils";
 import { TalkbackStream } from "../p2p/talkback";
-import type { ParamReport } from "../p2p/param-report";
+import { cameraInfoReports, type ParamReport } from "../p2p/param-report";
 import { start } from "repl";
 import { rootHTTPLogger } from "../logging";
 
@@ -1529,6 +1529,9 @@ export class Station extends TypedEmitter<StationEvents> {
     Object.keys(devices).forEach((device) => {
       this.emit("raw device property changed", device, devices[device]);
     });
+    // Client addition, 0.31.1 (ha-eufy-cam#275): every channel's parameters,
+    // including channels of devices that are not in this station's wire.
+    this.emit("camera info params", this, cameraInfoReports(cameraInfo.params));
   }
 
   private onCommandResponse(result: CommandResult): void {

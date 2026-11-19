@@ -486,6 +486,30 @@ export class DeviceTransport extends EventEmitter {
     }
     for (const id of changed) this.emitAccessory(id);
   }
+  /**
+   * ha-eufy-cam#275: entry sensor parameters of a CMD_CAMERA_INFO reply, which
+   * the client already requests when a session opens. Entry sensors stay out of
+   * the station wire, so the vendored Station cannot name them itself. The
+   * keypad is in the wire and arrives through deviceParams. Other channels are
+   * cameras, the HomeBase itself or unknown and are skipped without a count,
+   * because one reply carries many parameters per channel.
+   */
+  private cameraInfoReport(stationId: string, reports: ParamReport[]): void {
+    if (!this.accessories.hasStation(stationId)) return;
+    const taken = this.cameraChannels(stationId),
+      changed = new Set<string>();
+    for (const report of reports) {
+      const id = this.accessories.byChannel(stationId, report.channel, taken);
+      if (id === undefined || id === 'ambiguous') continue;
+      if (this.accessories.category(id) !== 'entry_sensor') continue;
+      const name = readingName('entry_sensor', report.type);
+      const value = name && readingValue(name, report.value);
+      if (!name || value === undefined) continue;
+      this.accessories.count('camera_info');
+      if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
+    }
+    for (const id of changed) this.emitAccessory(id);
+  }
   /** ha-eufy-cam#275: the legacy entry sensor notification (1550), keyed by channel. */
   private sensorStatus(stationId: string, channel: number, status: unknown): void {
     if (!this.accessories.hasStation(stationId)) return;
@@ -717,6 +741,7 @@ export class DeviceTransport extends EventEmitter {
       this.emit('station', this.state(id));
     });
     station.on('param report', (_s, reports) => this.paramReport(id, reports));
+    station.on('camera info params', (_s, reports) => this.cameraInfoReport(id, reports));
     station.on('sensor status', (_s, channel, status) => this.sensorStatus(id, channel, status));
     station.on('raw device property changed', (serial, params) => {
       if (this.accessories.has(serial)) return this.deviceParams(id, serial, params);

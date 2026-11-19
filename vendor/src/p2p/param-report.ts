@@ -32,10 +32,25 @@ export function parseParamReports(payload: unknown): ParamReport[] {
       return [];
     }
   }
-  const params = (body as { params?: unknown } | null | undefined)?.params;
+  return reportsOf((body as { params?: unknown } | null | undefined)?.params, MAX_PARAM_REPORTS);
+}
+
+/** A CMD_CAMERA_INFO reply lists every channel's parameters. More are dropped. */
+export const MAX_CAMERA_INFO_REPORTS = 2048;
+
+/**
+ * Client addition, 0.31.1 (ha-eufy-cam#275). The `params` of a CMD_CAMERA_INFO
+ * reply in the same shape and with the same checks, at most
+ * MAX_CAMERA_INFO_REPORTS. Anything else yields an empty list, never an error.
+ */
+export function cameraInfoReports(params: unknown): ParamReport[] {
+  return reportsOf(params, MAX_CAMERA_INFO_REPORTS);
+}
+
+function reportsOf(params: unknown, limit: number): ParamReport[] {
   if (!Array.isArray(params)) return [];
   const reports: ParamReport[] = [];
-  for (const entry of params.slice(0, MAX_PARAM_REPORTS)) {
+  for (const entry of params.slice(0, limit)) {
     if (!entry || typeof entry !== "object") continue;
     const { dev_type: channel, param_type: type, param_value: raw } = entry as Record<string, unknown>;
     if (!integer(channel) || !integer(type)) continue;

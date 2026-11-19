@@ -75,8 +75,13 @@ upstream library does through legacy routes, and it does not poll.
 2. P2P sensor status (1550), the legacy entry sensor notification, keyed by the
    message channel.
 3. The HomeBase's device information (CMD_CAMERA_INFO), which the client already
-   requests after every connect. It maps only devices in the station wire, so it
-   reaches the keypad but never an entry sensor.
+   requests after every connect. The vendored Station maps only devices in the
+   station wire, which reaches the keypad. Since 0.31.1 the Station also passes
+   on every channel's parameters as `camera info params`, and the client maps an
+   entry sensor's channel itself, as for 1829. An entry sensor therefore gets
+   its starting values when a session opens, if the HomeBase lists them. Whether
+   a HomeBase 3 does is not yet confirmed. Other channels are skipped without a
+   count.
 4. The door sensor push (event type 3) with `sensor_open`, only for an entry
    sensor whose own, available HomeBase sent it. Eufy sends it only while the
    app's notifications for that sensor are on. Every push that names an
@@ -111,7 +116,7 @@ forwards these keys unchanged.
 | `hub_notify`       | Known, valid accessory parameters in hub notify updates (1829)                                                |
 | `sensor_status`    | Valid legacy sensor status notifications (1550) for an entry sensor                                           |
 | `push_door_sensor` | Door sensor pushes that set or confirmed an entry sensor reading                                              |
-| `camera_info`      | Known, valid keypad parameters from device information                                                        |
+| `camera_info`      | Known, valid keypad and entry sensor parameters from device information                                       |
 | `cloud_seeded`     | Readings that discovery seeded from inventory values                                                          |
 | `conflicts`        | Dropped older pushes, plus applied pushes without a usable event time that differed from a P2P-reported value |
 | `unknown_channel`  | Reports whose channel is no single admitted accessory of that HomeBase                                        |

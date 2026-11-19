@@ -13,7 +13,7 @@ import {
   exactDeviceProfile,
 } from '../dist/device-profiles.js';
 import { AccessoryStore, readingValue } from '../dist/accessories.js';
-import { parseParamReports } from '../dist/vendor/p2p/param-report.js';
+import { cameraInfoReports, parseParamReports } from '../dist/vendor/p2p/param-report.js';
 import { Station } from '../dist/vendor/http/index.js';
 import { DeviceType } from '../dist/vendor/http/types.js';
 import { CommandType, P2PDataType } from '../dist/vendor/p2p/types.js';
@@ -240,6 +240,25 @@ test('param reports parse defensively and keep at most 32 entries', () => {
   assert.equal(parseParamReports({ params: many }).length, 32);
 });
 
+test('session reply parameters use the same checks with a larger bound', () => {
+  const entry = (channel, type, value) => ({
+    dev_type: channel,
+    param_type: type,
+    param_value: value,
+  });
+  assert.deepEqual(
+    cameraInfoReports([entry(16, 1550, '1'), entry(17, 1552, 0), entry(-1, 1550, '1')]),
+    [
+      { channel: 16, type: 1550, value: '1' },
+      { channel: 17, type: 1552, value: '0' },
+    ],
+  );
+  for (const bad of [undefined, null, 'x', {}, { params: [] }])
+    assert.deepEqual(cameraInfoReports(bad), []);
+  const many = Array.from({ length: 3000 }, (_, i) => entry(i % 60000, 1550, '1'));
+  assert.equal(cameraInfoReports(many).length, 2048);
+});
+
 test('reading values are strict', () => {
   assert.deepEqual(
     ['0', '1', 0, 1].map((v) => readingValue('open', v)),
@@ -441,7 +460,7 @@ test('the legacy sensor status notification sets the entry sensor on its channel
   }
 });
 
-test('keypad device information arrives through its place in the station wire', async () => {
+test('keypad device information arrives through the wire, an entry sensor value by its channel', async () => {
   const r = await rig();
   try {
     r.cameraInfo([
@@ -452,19 +471,87 @@ test('keypad device information arrives through its place in the station wire', 
     ]);
     assert.deepEqual(
       r.events.map((e) => e.id),
-      [KEYPAD],
+      [KEYPAD, SENSORS[0]],
     );
     const { batteryLow, charging } = r.transport.accessoryState(KEYPAD).readings;
     assert.deepEqual(
       [batteryLow.value, batteryLow.source, charging.value, charging.source],
       [false, 'p2p', false, 'p2p'],
     );
-    // Entry sensors are not in the wire, so device information never maps them.
-    assert.equal(r.transport.accessoryState(SENSORS[0]).readings.open, null);
-    assert.deepEqual(r.transport.accessoryObservation(), { ...zero, camera_info: 2 });
+    // Entry sensors are not in the wire. Their values come from the reply's channels.
+    const open = r.transport.accessoryState(SENSORS[0]).readings.open;
+    assert.deepEqual([open.value, open.source, open.live], [true, 'p2p', true]);
+    assert.deepEqual(r.transport.accessoryObservation(), { ...zero, camera_info: 3 });
   } finally {
     await r.done();
   }
+});
+
+test('a session reply gives entry sensors their starting values without other counts', async () => {
+  const r = await rig();
+  try {
+    const camera = r.inventory.result.devices.find((d) => d.kind === 'camera');
+    const cameraChannel = r.inventory.raw.get(camera.id).device_channel;
+    r.cameraInfo([
+      param(0, 1176, '1'),
+      param(cameraChannel, 1550, '1'),
+      param(CHANNELS[SENSORS[1]], 1550, '1'),
+      param(CHANNELS[SENSORS[1]], 1552, '0'),
+      param(CHANNELS[SENSORS[1]], 1550, 'x'),
+      param(CHANNELS[SENSORS[2]], 1550, '0'),
+      param(99, 1550, '1'),
+    ]);
+    assert.deepEqual(
+      r.events.map((e) => e.id),
+      [SENSORS[1], SENSORS[2]],
+    );
+    const { open, batteryLow } = r.transport.accessoryState(SENSORS[1]).readings;
+    assert.deepEqual(
+      [open.value, open.source, batteryLow.value, batteryLow.source],
+      [true, 'p2p', false, 'p2p'],
+    );
+    assert.equal(r.transport.accessoryState(SENSORS[2]).readings.open.value, false);
+    // A camera channel, the HomeBase channel and an unknown channel count nothing.
+    assert.deepEqual(r.transport.accessoryObservation(), { ...zero, camera_info: 3 });
+    // The same reply again changes nothing and sends no event.
+    r.cameraInfo([param(CHANNELS[SENSORS[1]], 1550, '1')]);
+    assert.equal(r.events.length, 2);
+  } finally {
+    await r.done();
+  }
+});
+
+test('a HomeBase without accessories ignores the session reply for accessories', async () => {
+  const r = await rig(withoutAccessories(reportedInventory()));
+  try {
+    r.cameraInfo([param(16, 1550, '1'), param(17, 1552, '1')]);
+    assert.deepEqual(r.events, []);
+    assert.deepEqual(r.transport.accessoryObservation(), zero);
+  } finally {
+    await r.done();
+  }
+});
+
+test('names prefer a non-empty alias, then the device name', () => {
+  const rows = reportedInventory().map((row) =>
+    row.device_sn === SENSORS[0]
+      ? { ...row, device_alias_name: '', device_name: 'Synthetic hall' }
+      : row.device_sn === SENSORS[1]
+        ? { ...row, device_alias_name: 'Synthetic alias' }
+        : row.device_sn === SENSORS[2]
+          ? { ...row, device_alias_name: '', device_name: '' }
+          : row.device_model === 'T8170'
+            ? { ...row, device_alias_name: '' }
+            : row,
+  );
+  const { result } = discover(rows);
+  const name = (id) => result.accessories.find((a) => a.id === id).name;
+  assert.equal(name(SENSORS[0]), 'Synthetic hall');
+  assert.equal(name(SENSORS[1]), 'Synthetic alias');
+  assert.equal(name(SENSORS[2]), '');
+  assert.equal(name(SENSORS[3]), 'Synthetic T8900');
+  for (const device of result.devices.filter((d) => d.model === 'T8170'))
+    assert.equal(device.name, 'Synthetic T8170');
 });
 
 test('a channel shared with a camera or another accessory matches nothing', async () => {

@@ -285,6 +285,8 @@ export interface StationEvents {
   "hub notify update": (station: Station) => void;
   /** Client addition, 0.31.0: the parameters of a CMD_HUB_NOTIFY_UPDATE notification. */
   "param report": (station: Station, reports: ParamReport[]) => void;
+  /** Client addition, 0.31.1: the parameters of a CMD_CAMERA_INFO reply, every channel. */
+  "camera info params": (station: Station, reports: ParamReport[]) => void;
   "push notification": (station: Station, message: PushMessage) => void;
 }
 
