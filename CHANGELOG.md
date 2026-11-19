@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.2 - Unreleased
+
+- Accessories name the text fields of their inventory row, without the values, to find where the eufy app keeps their names ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)).
+
+Upgrade: no changes needed. Rollback: 0.31.1.
+
 ## 0.31.1 - 2026-11-19
 
 - Device and accessory names fall back to the device name when the alias is empty ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.

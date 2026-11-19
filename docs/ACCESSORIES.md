@@ -53,6 +53,8 @@ lookup, session or command is ever sent to a chime.
   its value, its source or `live`. A repeated equal value refreshes
   `observedAt` without an event.
 - `accessoryObservation` holds the delivery counts below, synchronously.
+- Since 0.31.2 each accessory also carries three diagnostics fields, described
+  under [Diagnostics](#diagnostics).
 
 Each reading is `null` until a value is known, else
 `{ value, source, observedAt, live }`. `source` is `p2p`, `push` or `cloud`.
@@ -124,6 +126,24 @@ forwards these keys unchanged.
 
 A HomeBase without an admitted entry sensor or keypad counts nothing and gets
 no new handling.
+
+## Diagnostics
+
+The reported accessories showed no eufy app name in the alias or the device
+name, while cameras of the same account did ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)). To find where the inventory
+keeps that name, each accessory from 0.31.2 names the fields of its inventory
+row, never their contents.
+
+- `stringFields` lists the sorted keys whose value is a non-empty string, at the
+  top level and one level into plain objects as `parent.child`. `member` and
+  `params` are skipped. Keys outside `[A-Za-z0-9_.]` or longer than 64
+  characters are dropped. At most 48 keys.
+- `textParams` lists the sorted parameter types, 0 to 100000, whose value is
+  non-empty text that is not a plain number. At most 32 types.
+- `nameSource` is `alias` or `device_name` for the field that supplied `name`,
+  or `null` when neither holds text.
+
+These fields are for diagnostics only and change nothing else.
 
 ## Guard mode Off
 

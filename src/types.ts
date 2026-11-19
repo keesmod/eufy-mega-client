@@ -167,6 +167,25 @@ export interface Accessory {
   name: string;
   firmware: string | null;
   hardware: string | null;
+  /**
+   * Diagnostics only, since 0.31.2 (ha-eufy-cam#275): the sorted keys of the
+   * inventory row that hold a non-empty string, at the top level and one level
+   * into plain objects as `parent.child`, without `member` and `params`. Keys
+   * only, never values. At most 48. This client always sets it.
+   */
+  stringFields?: string[];
+  /**
+   * Diagnostics only, since 0.31.2: the sorted parameter types whose value is
+   * non-empty text that is not a plain number. Types only, never values. At
+   * most 32. This client always sets it.
+   */
+  textParams?: number[];
+  /**
+   * Diagnostics only, since 0.31.2: the field that supplied `name`, the alias
+   * or the device name, or `null` when neither holds text. This client always
+   * sets it.
+   */
+  nameSource?: 'alias' | 'device_name' | null;
 }
 /**
  * `p2p`: reported on the HomeBase's local session. `push`: an Eufy push

@@ -1229,9 +1229,12 @@ doorbell chime T8026. They are read-only and not yet confirmed on hardware.
 - The `accessory` event carries the new state when a reading changes its value,
   source or `live`.
 - `accessoryObservation` counts how the state arrived, numbers only.
+- Since 0.31.2 each accessory carries the diagnostics fields `stringFields`,
+  `textParams` and `nameSource`. They name inventory keys and parameter types,
+  never their values.
 
-See [HomeBase accessories](ACCESSORIES.md) for admission, delivery and the
-observation keys.
+See [HomeBase accessories](ACCESSORIES.md) for admission, delivery, the
+observation keys and the diagnostics fields.
 
 ## Discovery relationships
 

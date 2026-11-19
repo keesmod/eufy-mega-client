@@ -1,3 +1,4 @@
+import { accessoryFieldDiagnostics } from './accessory-fields.js';
 import {
   exactAccessoryProfile,
   exactDeviceProfile,
@@ -342,4 +343,5 @@ const publicAccessory = (
   firmware:
     typeof row.main_sw_version === 'string' && row.main_sw_version ? row.main_sw_version : null,
   hardware: typeof row.main_hw_version === 'string' ? row.main_hw_version : null,
+  ...accessoryFieldDiagnostics(row),
 });
