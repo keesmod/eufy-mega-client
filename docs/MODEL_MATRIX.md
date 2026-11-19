@@ -377,13 +377,17 @@ second report the reporter confirmed that open and closed are the right way
 round, that the keypad shows its charging state and that Guard Mode offers Off.
 The keypad battery shows unknown ([275-hw2]). In a third report the reporter set
 Guard Mode to Off from Home Assistant and the eufy app followed ([275-hw3]). The
-battery readings are not yet confirmed. The same report showed the sensors and chimes without
-a name, which 0.31.1 addresses.
+first report showed the sensors and chimes without a name. With bridge 0.8.45
+and client 0.31.1 they show their eufy app names ([275-hw4]), and one entry
+sensor reports its battery as normal ([275-hw5]). The keypad battery is not yet
+confirmed.
 
 [275-report]: https://github.com/keesmod/ha-eufy-cam/issues/275
 [275-hw]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7011685186
 [275-hw2]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7012460116
 [275-hw3]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7014332148
+[275-hw4]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7016266715
+[275-hw5]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7016932101
 [T8026-EU]: https://service.eufy.com/article-description/T8026-Doorbell-Chime-EU-Declaration
 [T8026-camera]: https://github.com/mega-yfue/eufy-sdk/issues/371
 [Sensor-1829]: https://github.com/mega-yfue/eufy-sdk/issues/594
@@ -1752,10 +1756,10 @@ cameras or stations, as described in [ACCESSORIES.md](ACCESSORIES.md). Status
 uses the [community evidence terms](COMMUNITY_VALIDATION.md). No accessory
 accepts a command.
 
-| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                                                                        | Evidence and remaining work                                                                        |
-| ------------- | -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes, with the right polarity, on a T8030 on 3.8.8.0. Battery low is an Unconfirmed implementation.                                            | [275-report], [275-hw], [275-hw2], [Sensor-1829]. Battery low and starting values on a HomeBase 3. |
-| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Reported working for the charging state, the Off option and writing Off on a T8030 on 3.8.8.0. Battery low shows unknown and is an Unconfirmed implementation. | [275-report], [275-hw2], [275-hw3]. Battery low on a HomeBase 3.                                   |
+| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                                                                        | Evidence and remaining work                                                                                     |
+| ------------- | -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes, with the right polarity, and for a normal battery reading on a T8030 on 3.8.8.0.                                                         | [275-report], [275-hw], [275-hw2], [275-hw5], [Sensor-1829]. Starting values and a low battery on a HomeBase 3. |
+| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Reported working for the charging state, the Off option and writing Off on a T8030 on 3.8.8.0. Battery low shows unknown and is an Unconfirmed implementation. | [275-report], [275-hw2], [275-hw3]. Battery low on a HomeBase 3.                                                |
 
 ## Accessories outside the catalogue
 
