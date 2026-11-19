@@ -317,6 +317,36 @@ independently reproduced. The type 97 feature row and its cells are unchanged.
 [252-sound]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6972373625
 [269]: https://github.com/keesmod/ha-eufy-cam/issues/269
 
+## Reported E340 and S340 on a routed HomeBase 3, 2026-11-18
+
+On 2026-11-18 the [reporter of ha-eufy-cam#261][261-report] ran HA 2026.11.2,
+integration 0.8.52 and the bridge app 0.8.43 with client 0.30.5. The reporter's
+T8030 on firmware 3.8.8.0 is in a different VLAN than the Home Assistant host.
+The bridge log kept showing `device_request_timeout` until the reporter's
+router passed UDP between the VLANs. In the diagnostics taken after a bridge
+restart, the HomeBase answered the first lookup at its inventory
+address, which is outside the host's subnet (`inventory_address_on_subnet=false`,
+`lookup_inventory_reply=own`, `lookup_own_round=0`). The session opened after
+279 ms. Discovery then listed a Video Doorbell E340 received as `T8214` on
+firmware 3.2.7.2 and two SoloCam S340 received as `T8170` on firmware 3.3.5.4,
+all three online under that T8030. Home Assistant had a battery value and a
+received snapshot for each of them. One live view was answered, and the browser
+reported decoded audio samples. Which camera it showed and whether the audio
+was audible are not recorded. Events and recordings were not reported, and the
+file does not cover the earlier failures.
+
+The T8170 and T8030 firmware match the
+[reported preset moves](#reported-s340-preset-moves-2026-11-07), on a different
+installation. The report shows that the local-only H3 path can reach a HomeBase
+3 in a routed VLAN when the router passes UDP between the VLANs. It does not
+establish other routers or firewall rules. [#25] and [#26] admitted `T8214`/94
+under a HomeBase 3, as the battery doorbell sections above record, so the B1/U
+cells of the type 94 row are historical for that tuple. This is a reported
+result, not independently reproduced. The type 48 and type 94 feature rows and
+their cells are unchanged.
+
+[261-report]: https://github.com/keesmod/ha-eufy-cam/issues/261#issuecomment-6992087875
+
 ## Reported T8113-Z and T8424, 0.26.0
 
 A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
