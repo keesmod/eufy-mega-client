@@ -214,7 +214,7 @@ export interface AccessoryObservation {
   sensor_status: number;
   /** Door sensor pushes that set or confirmed an entry sensor reading. */
   push_door_sensor: number;
-  /** Known, valid keypad parameters from the HomeBase's device information (CMD_CAMERA_INFO). */
+  /** Known, valid keypad and entry sensor parameters from the HomeBase's device information (CMD_CAMERA_INFO). */
   camera_info: number;
   /** Readings that discovery seeded from inventory values, labelled `cloud`. */
   cloud_seeded: number;

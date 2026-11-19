@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.1 - Unreleased
+
+- Device and accessory names fall back to the device name when the alias is empty ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)).
+- Entry sensors get their starting values from the HomeBase when a session opens ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.
+
+Upgrade: no changes needed. Rollback: 0.31.0.
+
 ## 0.31.0 - 2026-11-19
 
 - Added the Entry Sensor `T8900` and the Keypad `T8960` on a HomeBase 3 as read-only accessories ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.

@@ -83,6 +83,10 @@ as channel, key and text value, at most 32. The client-written
 `vendor/src/p2p/param-report.ts` parses them and drops malformed entries. The
 Station forwards the event. The existing `hub notify update` event is
 unchanged, as described in [ACCESSORIES.md](docs/ACCESSORIES.md#delivery).
+Version 0.31.1 makes the Station also emit `camera info params` for a
+CMD_CAMERA_INFO reply, with every channel's parameters in the same shape, at
+most 2048, parsed by the same client-written file. The existing
+`raw device property changed` events are unchanged.
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

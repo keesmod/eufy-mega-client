@@ -29,6 +29,15 @@ export const isStation = (raw: WireDevice): boolean =>
   modelProfile(raw.device_model)?.kind === 'station';
 export const isIntegratedCamera = (raw: WireDevice): boolean =>
   exactDeviceProfile(raw)?.family === 'integrated';
+/**
+ * The first non-empty of the alias and the device name, as the transport state
+ * uses. An empty alias must not hide a real name (ha-eufy-cam#275).
+ */
+export const deviceName = (row: WireDevice): string => {
+  for (const value of [row.device_alias_name, row.device_name])
+    if (typeof value === 'string' && value !== '') return value;
+  return '';
+};
 export interface ConnectionOwner {
   kind: 'station' | 'standalone';
   id: string;
@@ -287,12 +296,7 @@ export function discover(items: unknown, options: DiscoveryOptions = {}): Invent
       stationId: device.parent_sn || id,
       kind: modelProfile(device.device_model)!.kind,
       model: device.device_model,
-      name:
-        typeof device.device_alias_name === 'string'
-          ? device.device_alias_name
-          : typeof device.device_name === 'string'
-            ? device.device_name
-            : '',
+      name: deviceName(device),
       firmware:
         typeof device.main_sw_version === 'string' && device.main_sw_version
           ? device.main_sw_version
@@ -334,12 +338,7 @@ const publicAccessory = (
   category: profile.category,
   model: row.device_model,
   deviceType: profile.type,
-  name:
-    typeof row.device_alias_name === 'string'
-      ? row.device_alias_name
-      : typeof row.device_name === 'string'
-        ? row.device_name
-        : '',
+  name: deviceName(row),
   firmware:
     typeof row.main_sw_version === 'string' && row.main_sw_version ? row.main_sw_version : null,
   hardware: typeof row.main_hw_version === 'string' ? row.main_hw_version : null,
