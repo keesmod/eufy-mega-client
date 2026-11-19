@@ -170,7 +170,8 @@ export interface Accessory {
   /**
    * Diagnostics only, since 0.31.2 (ha-eufy-cam#275): the sorted top-level
    * keys of the inventory row that hold a non-empty string, and `parent.*` for a
-   * nested plain object that holds one, without `member` and `params`. Only
+   * nested plain object that holds one directly (one level, deeper objects are
+   * not inspected), without `member` and `params`. Only
    * schema-like keys, never values. At most 48. This client always sets it.
    */
   stringFields?: string[];

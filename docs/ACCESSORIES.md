@@ -135,8 +135,8 @@ keeps that name, each accessory from 0.31.2 names the fields of its inventory
 row, never their contents.
 
 - `stringFields` lists the sorted top-level keys whose value is a non-empty
-  string. A nested plain object that holds a non-empty string shows as
-  `parent.*`, never with its own keys, because those keys may be serials, ids or
+  string. A nested plain object that holds a non-empty string directly (one
+  level, deeper objects are not inspected) shows as `parent.*`, never with its own keys, because those keys may be serials, ids or
   names. `member` and `params` are skipped. Only schema-like keys appear:
   lowercase snake_case, at most 32 characters, no run of four or more digits and
   not 12 or more hex characters. Other top-level keys are dropped. At most 48

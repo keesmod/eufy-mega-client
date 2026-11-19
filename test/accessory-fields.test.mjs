@@ -31,6 +31,10 @@ test('string fields list top-level keys of non-empty strings, sorted, and nested
   assert.deepEqual(stringFields(row), ['alpha', 'device_name', 'device_sn', 'extra.*', 'zeta']);
 });
 
+test('a string two levels deep is not inspected', () => {
+  assert.deepEqual(stringFields({ outer: { inner: { name: SECRET } } }), []);
+});
+
 test('member and params are skipped, and keys outside the safe pattern are dropped', () => {
   const row = {
     member: { nick_name: SECRET, admin_user_id: 'SYNTH_ADMIN' },

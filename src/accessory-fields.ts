@@ -49,7 +49,8 @@ const paramType = (value: unknown): number | undefined => {
 
 /**
  * The sorted top-level keys of non-empty strings. A nested plain object that
- * holds a non-empty string is reported as `parent.*` only. Its own keys never
+ * holds a non-empty string directly (one level, deeper objects are not
+ * inspected) is reported as `parent.*` only. Its own keys never
  * appear, because a map keyed by data could name a room, a person or a device.
  * Only schema-like top-level keys appear.
  */
