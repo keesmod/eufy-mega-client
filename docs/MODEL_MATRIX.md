@@ -344,6 +344,33 @@ independently reproduced. It changes no feature cells.
 
 [261-report]: https://github.com/keesmod/ha-eufy-cam/issues/261#issuecomment-6992087875
 
+## Reported HomeBase 3 accessories, 0.31.0
+
+The same diagnostics of [ha-eufy-cam#261][261-report] listed seven rows under
+that installation as `unsupported_device`, which the reporter then raised as
+[ha-eufy-cam#275][275-report]. Four Entry Sensors were received as `T8900` with
+type 2, hardware 0.0.1 and empty firmware, parent the T8030 on 3.8.8.0. One
+Keypad was received as `T8960` with type 11, firmware 0.0.1.7, under the same
+T8030. Two rows were received as `T8026` with type 600, firmware 1.0.2.7 and
+hardware 1.0.0.0, each its own parent. Eufy's [T8026 declaration][T8026-EU]
+names the T8026 a doorbell chime. Type 600 is absent from the pinned catalogue.
+A third-party report says another integration classified a T8026 as a camera
+and that a session attempt to it delayed startup ([T8026-camera]).
+
+0.31.0 admits exactly `T8900`/2 and `T8960`/11 under an admitted T8030 and
+recognizes `T8026`/600 as its own parent, in a table apart from the camera
+profiles, as described in [ACCESSORIES.md](ACCESSORIES.md). It also reads guard
+mode 6 (Off) and writes it only with an admitted keypad. A third-party report
+observed the contact state in the hub notify update (1829) of a HomeBase 2
+([Sensor-1829]). Whether a HomeBase 3 sends it, how its channels map, the value
+polarity and writing Off are unconfirmed implementation. The bench has none of
+these accessories. The rows below are software evidence only.
+
+[275-report]: https://github.com/keesmod/ha-eufy-cam/issues/275
+[T8026-EU]: https://service.eufy.com/article-description/T8026-Doorbell-Chime-EU-Declaration
+[T8026-camera]: https://github.com/mega-yfue/eufy-sdk/issues/371
+[Sensor-1829]: https://github.com/mega-yfue/eufy-sdk/issues/594
+
 ## Reported T8113-Z and T8424, 0.26.0
 
 A reporter on [ha-eufy-cam#129](https://github.com/keesmod/ha-eufy-cam/issues/129),
@@ -1363,8 +1390,8 @@ commit `d75e7996d4cbce3839a6075bed95b752ccc3ee43`, under MIT, as recorded in
 transport versions. Do not infer wire compatibility from a shared product name.
 
 All 98 enum entries are accounted for below. Camera rows include integrated
-products and unresolved candidates. The owner and exclusion tables account for
-the rest. The check compares exact names and numeric values, not just a count.
+products and unresolved candidates. The owner, accessory and exclusion tables
+account for the rest. The check compares exact names and numeric values, not just a count.
 `Device.isCamera()` alone is insufficient. In this revision it omits
 `LOCK_8530`, `LOCK_8531`, `CAMERA_GUN`, `CAMERA_SNAIL` and
 `INDOOR_PT_CAMERA_C220_V3`. The first two are camera-bearing products in Eufy's
@@ -1693,12 +1720,34 @@ rows. Station status and media ownership remain in scope where applicable.
 T8020 Wi-Fi Chime and T8021 Wi-Fi Bridge appear in [Display] but have no dedicated
 enum name here. Preserve their exact inventory-type question, first recorded in
 [#35]/[#17]. Do not fabricate a HomeBase entity for a standalone device or
-sound-only chime.
+sound-only chime. The doorbell chime T8026 is recognized as an accessory, not as
+an owner, see [accessories outside the catalogue](#accessories-outside-the-catalogue).
 
 The [standalone and older-owner investigation](research/CAMERA_TRANSPORTS_2026-09-11.md)
 records the pinned Mega and P2P evidence, an offline descriptor inspection tool
 and the exact authentication/media gaps that [#143] and [#142] now track.
 Descriptor field presence does not establish a working connection.
+
+## HomeBase accessories
+
+These catalogue types are admitted as HomeBase accessories since 0.31.0, never as
+cameras or stations, as described in [ACCESSORIES.md](ACCESSORIES.md). Status
+uses the [community evidence terms](COMMUNITY_VALIDATION.md). No accessory
+accepts a command.
+
+| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                    | Evidence and remaining work                                                               |
+| ------------- | -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Unconfirmed implementation, not yet confirmed on hardware.                 | [275-report], [Sensor-1829]. Delivery path, channel mapping and polarity on a HomeBase 3. |
+| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Unconfirmed implementation, not yet confirmed on hardware. | [275-report]. Readings, polarity and writing Off on a HomeBase 3.                         |
+
+## Accessories outside the catalogue
+
+These model and type pairs are absent from the pinned catalogue. The client
+recognizes them from a reported inventory and offers nothing else.
+
+| Model | Type | Category | Status                                                                                | Evidence                 |
+| ----- | ---- | -------- | ------------------------------------------------------------------------------------- | ------------------------ |
+| T8026 | 600  | `chime`  | Recognized only, its own parent, never contacted. Not implemented beyond recognition. | [275-report], [T8026-EU] |
 
 ## Explicit non-camera exclusions
 
@@ -1710,9 +1759,7 @@ variants require reclassification, not inheritance from this exclusion list.
 
 | Protocol type | Enum                       | Reason                                                                             |
 | ------------- | -------------------------- | ---------------------------------------------------------------------------------- |
-| 2             | `SENSOR`                   | Sensor branch in [Predicates], not a camera.                                       |
 | 10            | `MOTION_SENSOR`            | Sensor branch in [Predicates], not a camera.                                       |
-| 11            | `KEYPAD`                   | Keypad in [Predicates], not a camera.                                              |
 | 20            | `WATER_FREEZE_SENSOR_8920` | Sensor branch in [Predicates], not a camera.                                       |
 | 50            | `LOCK_BLE`                 | Non-video lock branch in [Predicates]. No camera evidence in the pinned catalogue. |
 | 51            | `LOCK_WIFI`                | Non-video lock branch in [Predicates]. No camera evidence in the pinned catalogue. |

@@ -26,6 +26,16 @@ records decisions and working rules, not a second backlog.
   selected preset moves for the exact `T8170` behind a HomeBase 3 through
   [ha-eufy-cam#229](https://github.com/keesmod/ha-eufy-cam/issues/229). Other
   PTZ remains outside.
+- On 2026-11-19 the owner accepted the HomeBase 3 accessories of
+  [ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275) in
+  their own categories, never as camera or station: the Entry Sensor T8900 and
+  the Keypad T8960, read-only, and the doorbell chime T8026, recognized only.
+  Guard mode Off (6) is read on every HomeBase and written only with an
+  admitted keypad. Accessory settings, keypad codes and chime control stay
+  outside. For this run only, the owner released the new protocol paths
+  straight to stable once the software gates passed, instead of the beta that
+  the release guides ask for. The unproven paths are recorded in
+  [ACCESSORIES.md](ACCESSORIES.md) and the release acceptance summary.
 - Cover the full known camera catalogue, including eufyCam, SoloCam, indoor,
   battery and wired doorbells, floodlight, wall-light, garage, integrated camera
   products, 4G and PoE/NVR topologies. Camera-bearing locks or parcel boxes do not

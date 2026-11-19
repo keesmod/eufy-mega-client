@@ -9,6 +9,11 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX = ROOT / "docs/MODEL_MATRIX.md"
+# The community evidence terms of COMMUNITY_VALIDATION.md.
+STATUSES = [
+    "Unconfirmed implementation", "Reported working", "Confirmed behavior",
+    "Known problem", "Not implemented",
+]
 FEATURES = [
     "Type", "Model / evaluated topology", "Discovery", "Available state",
     "Battery", "Stored snapshot", "Live video", "Live audio", "Events",
@@ -30,13 +35,55 @@ def table(text, section):
     ]
 
 
+def accessory_profiles():
+    """Model, type and category of every accessory profile in the client source."""
+    source = (ROOT / "src/device-profiles.ts").read_text()
+    block = source.split("export const accessoryProfiles", 1)[1].split("\n});", 1)[0]
+    return {
+        model: (number, category)
+        for model, number, category in re.findall(
+            r"^\s*(\w+): accessory\((\d+), '(\w+)', '\w+'\),", block, re.M)
+    }
+
+
+def check_accessories(text, expected):
+    """Every accessory profile has exactly one row with its type, category and a status."""
+    profiles = accessory_profiles()
+    require(profiles, "No accessory profiles found")
+    seen = {}
+    for row in table(text, "HomeBase accessories")[2:]:
+        require(len(row) == 5 and all(row), f"Incomplete accessory row: {row}")
+        number, name = row[0], row[1].strip("`")
+        model = row[2].split()[0]
+        require(expected.get(name) == number, f"Accessory row is no enum entry: {name}={number}")
+        seen[model] = (number, row[2], row[3], row[4])
+    for row in table(text, "Accessories outside the catalogue")[2:]:
+        require(len(row) == 5 and all(row), f"Incomplete accessory row: {row}")
+        model, number = row[0], row[1]
+        require(number not in expected.values(), f"Catalogue type outside the catalogue: {number}")
+        require(model not in seen, f"Duplicate accessory row: {model}")
+        seen[model] = (number, row[2], row[3], row[4])
+    require(seen.keys() == profiles.keys(),
+            f"Accessory rows differ from the profiles: {sorted(seen.keys() ^ profiles.keys())}")
+    for model, (number, category) in profiles.items():
+        row_number, described, status, evidence = seen[model]
+        require(row_number == number, f"Accessory type differs from its profile: {model}")
+        require(f"`{category}`" in described, f"Accessory category differs from its profile: {model}")
+        require(any(term in status for term in STATUSES), f"Accessory status term missing: {model}")
+        require("[" in evidence, f"Missing accessory evidence: {model}")
+    return len(profiles)
+
+
 def check(text):
     source = (ROOT / "vendor/src/http/types.ts").read_bytes()
     digest = hashlib.sha256(source).hexdigest()
     require(f"`{digest}`" in text, "Catalogue digest changed. Review and repin the matrix.")
     enum = source.decode().split("export enum DeviceType {", 1)[1].split("\n}", 1)[0]
     expected = dict(re.findall(r"^\s*(\w+)\s*=\s*(\d+)", enum, re.M))
-    sections = ["Catalogue rows", "Connection owners in the catalogue", "Explicit non-camera exclusions"]
+    sections = [
+        "Catalogue rows", "Connection owners in the catalogue", "HomeBase accessories",
+        "Explicit non-camera exclusions",
+    ]
     accounted = {}
     cameras = {}
     for section in sections:
@@ -48,6 +95,8 @@ def check(text):
             require(name not in accounted, f"Duplicate enum row: {name}")
             require(expected.get(name) == number, f"Unknown enum or wrong number: {name}={number}")
             accounted[name] = number
+            if section == "HomeBase accessories":
+                require(len(row) == 5, f"Incomplete accessory row: {name}")
             if section == "Catalogue rows":
                 require(len(row) == 8, f"Incomplete catalogue row: {name}")
                 require("[" in row[6], f"Missing identity evidence: {name}")
@@ -82,6 +131,7 @@ def check(text):
                 require("[R1]" in row[-2], f"Reporter claim without reporter evidence: {number}")
         covered.add(number)
     require(covered == cameras.keys(), f"Missing feature rows: {sorted(cameras.keys() - covered)}")
+    accessories = check_accessories(text, expected)
 
     definitions = re.findall(r"^\[([^\]]+)\]:\s+(\S+)", text, re.M)
     refs = dict(definitions)
@@ -112,7 +162,8 @@ def check(text):
         elif parsed.path:
             require((MATRIX.parent / unquote(parsed.path)).is_file(), f"Missing local link: {target}")
     require(";" not in text, "Semicolons are not used in project prose")
-    return f"Matrix valid: {len(cameras)} camera types, {len(expected)} enum entries, {len(covered)} feature rows, {len(refs)} references"
+    return (f"Matrix valid: {len(cameras)} camera types, {len(expected)} enum entries, "
+            f"{len(covered)} feature rows, {accessories} accessory profiles, {len(refs)} references")
 
 
 if __name__ == "__main__":
