@@ -138,8 +138,8 @@ accepts 6 only when a keypad is among its devices, so the station wire of a
 HomeBase with an admitted keypad also lists that keypad. Entry sensors and
 chimes never join the wire, and a HomeBase without an admitted keypad keeps an
 identical wire. Confirmation is unchanged: an acknowledgement and a fresh P2P
-read of the same mode. Writing Off is not yet confirmed on hardware, and no
-automatic retry exists.
+read of the same mode. A reporter set Off on a HomeBase 3 with firmware 3.8.8.0
+and the eufy app followed. No automatic retry exists.
 
 ## Not included
 
