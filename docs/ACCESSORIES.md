@@ -93,7 +93,8 @@ Keys follow the vendored property tables: contact 1550 (1 open, 0 closed),
 entry sensor battery low 1552, keypad battery low 1653 (0 or 1) and keypad
 charging 1655 (0 and 2 not charging, 1 and 3 charging). Any other value is
 dropped. On a HomeBase 3 with firmware 3.8.8.0 a reporter confirmed the entry
-sensor polarity. The battery and charging polarity is not yet confirmed.
+sensor polarity, and an entry sensor battery reads normal there. The keypad
+battery and charging polarity are not yet confirmed.
 
 A channel maps to an accessory only when exactly one admitted accessory of that
 HomeBase uses it and no camera of that HomeBase does. A push with an event time
