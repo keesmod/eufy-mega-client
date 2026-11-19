@@ -4,7 +4,6 @@
 
 - Device and accessory names fall back to the device name when the alias is empty ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.
 - Entry sensors get their starting values from the HomeBase when a session opens ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275)), not yet confirmed on hardware.
-- Entry Sensor `T8900` state changes are reported working on a HomeBase 3 ([ha-eufy-cam#275](https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7011685186)), polarity not yet confirmed.
 
 Upgrade: no changes needed. Rollback: 0.31.0.
 

@@ -368,12 +368,13 @@ these accessories.
 
 On 2026-11-19 the same reporter ran HA 2026.11.2 with integration 0.8.53, bridge
 0.8.44 and client 0.31.0 on that T8030 on 3.8.8.0. The diagnostics counted four
-hub notify updates (1829), each mapped to an admitted Entry Sensor, three keypad
-parameters from the device information and no unknown channel. Three of the
-four sensors had only an inventory value at startup. The reporter saw the
-sensor entities change after opening a door or window ([275-hw]). The value
+known parameters in hub notify updates (1829), all mapped to an admitted
+accessory, three keypad parameters from the device information and no unknown
+channel. One sensor had a contact value over P2P. When the diagnostics were
+taken, the other three still had only an inventory value. The reporter then saw
+the sensor entities change after opening a door or window ([275-hw]). The value
 polarity, the battery readings and writing Off are not yet confirmed. The same
-report showed every accessory without a name, which 0.31.1 fixes.
+report showed the sensors and chimes without a name, which 0.31.1 addresses.
 
 [275-report]: https://github.com/keesmod/ha-eufy-cam/issues/275
 [275-hw]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7011685186
@@ -1745,10 +1746,10 @@ cameras or stations, as described in [ACCESSORIES.md](ACCESSORIES.md). Status
 uses the [community evidence terms](COMMUNITY_VALIDATION.md). No accessory
 accepts a command.
 
-| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                | Evidence and remaining work                                                                       |
-| ------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes through 1829 on a T8030 on 3.8.8.0. Battery low is an Unconfirmed implementation. | [275-report], [275-hw], [Sensor-1829]. Polarity, battery low and starting values on a HomeBase 3. |
-| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Unconfirmed implementation, not yet confirmed on hardware.                                             | [275-report]. Readings, polarity and writing Off on a HomeBase 3.                                 |
+| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                   | Evidence and remaining work                                                                       |
+| ------------- | -------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes on a T8030 on 3.8.8.0. Battery low is an Unconfirmed implementation. | [275-report], [275-hw], [Sensor-1829]. Polarity, battery low and starting values on a HomeBase 3. |
+| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Unconfirmed implementation, not yet confirmed on hardware.                                | [275-report]. Readings, polarity and writing Off on a HomeBase 3.                                 |
 
 ## Accessories outside the catalogue
 
