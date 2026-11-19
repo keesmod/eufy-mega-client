@@ -59,8 +59,13 @@ interface Entry {
   /** Integer device channel on its HomeBase, `null` when the row has none. */
   channel: number | null;
   readings: Partial<Record<ReadingName, AccessoryReading<boolean>>>;
-  /** Event time in milliseconds of the push that set each reading, if any. */
+  /**
+   * When each reading's current value was last asserted. `pushTimes` holds the
+   * newest push event time (push clock), `p2pTimes` the newest local P2P receipt
+   * time. Each source only sets its own time. A change of value clears the other.
+   */
   pushTimes: Partial<Record<ReadingName, number>>;
+  p2pTimes: Partial<Record<ReadingName, number>>;
 }
 
 export type Observed = 'changed' | 'same' | 'late';
@@ -77,6 +82,8 @@ const channelOf = (raw: WireDevice): number | null =>
  * one-second resolution (ha-eufy-cam#275).
  */
 const PUSH_CLOCK_ALLOWANCE_MS = 2000;
+/** A push event time further ahead of local time than this gives no order. */
+const PUSH_FUTURE_LIMIT_MS = 5 * 60 * 1000;
 export class AccessoryStore {
   private records = new Map<string, Entry>();
   private readonly counts: AccessoryObservation = {
@@ -117,6 +124,7 @@ export class AccessoryStore {
               channel: channelOf(raw),
               readings: {},
               pushTimes: {},
+              p2pTimes: {},
             };
       const params = Array.isArray(raw.params) ? raw.params : [];
       for (const name of NAMES[record.category]) {
@@ -187,9 +195,9 @@ export class AccessoryStore {
     return { id, stationId: record.stationId, category: record.category, readings };
   }
   /**
-   * One P2P or push value. A push with an event time that is older than the
-   * current reading never replaces a different value. The time of a P2P reading
-   * is when it arrived, the time of a push reading its own event time.
+   * One P2P or push value. A timed push older than the newest assertion of the
+   * current value never replaces it. Push times compare with push times, and a
+   * local P2P receipt time with an allowance for the push clock.
    */
   observe(
     id: string,
@@ -202,23 +210,41 @@ export class AccessoryStore {
     const record = this.records.get(id);
     if (!record || !NAMES[record.category].includes(name)) return 'same';
     const current = record.readings[name];
-    const timed = eventTime !== undefined && Number.isFinite(eventTime) && eventTime > 0;
-    if (source === 'push' && current && current.source !== 'cloud' && current.value !== value) {
+    const timed =
+      eventTime !== undefined &&
+      Number.isFinite(eventTime) &&
+      eventTime > 0 &&
+      eventTime <= now + PUSH_FUTURE_LIMIT_MS;
+    const changes = !current || current.source === 'cloud' || current.value !== value;
+    if (source === 'push' && changes && current && current.source !== 'cloud') {
       if (timed) {
-        // Push to push compares one clock. Otherwise the reference is the local
-        // receipt time, less an allowance for the push clock and its resolution.
-        const pushed = current.source === 'push' ? record.pushTimes[name] : undefined;
-        const reference = pushed ?? Date.parse(current.observedAt) - PUSH_CLOCK_ALLOWANCE_MS;
+        // Push to push compares one clock. A P2P receipt is local time, so it
+        // gets an allowance for the push clock and its resolution.
+        const pushed = record.pushTimes[name] ?? -Infinity;
+        const received = record.p2pTimes[name];
+        const reference = Math.max(
+          pushed,
+          received === undefined ? -Infinity : received - PUSH_CLOCK_ALLOWANCE_MS,
+        );
         if (eventTime < reference) return 'late';
       } else if (current.source === 'p2p') this.counts.conflicts++;
     }
-    const at = new Date(now).toISOString();
-    if (source === 'push') {
+    if (source === 'p2p') {
+      record.p2pTimes[name] = now;
+      if (changes) delete record.pushTimes[name];
+    } else if (timed) {
       // An older push of the same value never moves the reference back.
-      if (timed) record.pushTimes[name] = Math.max(record.pushTimes[name] ?? eventTime, eventTime);
-      else delete record.pushTimes[name];
+      record.pushTimes[name] = changes
+        ? eventTime
+        : Math.max(record.pushTimes[name] ?? eventTime, eventTime);
+      if (changes) delete record.p2pTimes[name];
+    } else if (changes) {
+      // An untimed change has no order, so the next timed push applies.
+      delete record.pushTimes[name];
+      delete record.p2pTimes[name];
     }
-    if (current && current.source !== 'cloud' && current.value === value) {
+    const at = new Date(now).toISOString();
+    if (!changes && current) {
       const wasLive = current.live;
       current.observedAt = at;
       current.live = true;

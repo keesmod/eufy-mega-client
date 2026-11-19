@@ -668,6 +668,50 @@ test('a HomeBase replaced by a new discovery ends the live readings of its acces
   }
 });
 
+test('push order uses push times, and P2P receipt times with an allowance', () => {
+  const store = new AccessoryStore();
+  store.load(discover(reportedInventory()).accessories);
+  const L = 1_800_000_000_000;
+  const value = (id) => store.state(id).readings.open.value;
+  // P2P open at L. Its delayed push confirms it at L+6 s. The close at L+3 s still applies.
+  assert.equal(store.observe(SENSORS[0], 'open', true, 'p2p', undefined, L), 'changed');
+  assert.equal(store.observe(SENSORS[0], 'open', true, 'push', L, L + 6000), 'same');
+  assert.equal(store.observe(SENSORS[0], 'open', false, 'push', L + 3000, L + 7000), 'changed');
+  assert.equal(value(SENSORS[0]), false);
+  // A push open at L, confirmed over P2P at L+60 s. A close pushed at L+30 s is late.
+  assert.equal(store.observe(SENSORS[1], 'open', true, 'push', L, L + 500), 'changed');
+  assert.equal(store.observe(SENSORS[1], 'open', true, 'p2p', undefined, L + 60000), 'same');
+  assert.equal(store.observe(SENSORS[1], 'open', false, 'push', L + 30000, L + 61000), 'late');
+  assert.equal(value(SENSORS[1]), true);
+  // A push time an hour ahead gives no order and never blocks later changes.
+  assert.equal(store.observe(SENSORS[2], 'open', true, 'push', L + 3600000, L), 'changed');
+  assert.equal(store.observe(SENSORS[2], 'open', false, 'p2p', undefined, L + 10000), 'changed');
+  assert.equal(store.observe(SENSORS[2], 'open', true, 'push', L + 40000, L + 41000), 'changed');
+  assert.equal(store.observe(SENSORS[2], 'open', false, 'push', L + 50000, L + 51000), 'changed');
+  assert.equal(value(SENSORS[2]), false);
+});
+
+test('a HomeBase that fails a later load ends the live readings of its accessories', async () => {
+  const r = await rig();
+  try {
+    r.hub([param(CHANNELS[SENSORS[0]], 1550, '1')]);
+    r.events.length = 0;
+    r.station.update = () => {
+      throw new Error('synthetic update failure');
+    };
+    await r.transport.load(r.inventory.raw, r.inventory);
+    assert.equal(r.transport.failures.get(HB), 'device_initialization_failed');
+    const open = r.transport.accessoryState(SENSORS[0]).readings.open;
+    assert.deepEqual([open.value, open.source, open.live], [true, 'p2p', false]);
+    assert.deepEqual(
+      r.events.map((e) => [e.id, e.readings.open.live]),
+      [[SENSORS[0], false]],
+    );
+  } finally {
+    await r.done();
+  }
+});
+
 test('a push for an accessory of a failed HomeBase is refused', async () => {
   const r = await rig();
   try {
