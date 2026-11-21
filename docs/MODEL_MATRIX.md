@@ -1435,7 +1435,7 @@ commit `d75e7996d4cbce3839a6075bed95b752ccc3ee43`, under MIT, as recorded in
 [NOTICE.md](../NOTICE.md). Protocol types are numeric Eufy identifiers, not network
 transport versions. Do not infer wire compatibility from a shared product name.
 
-All 98 enum entries are accounted for below. Camera rows include integrated
+All 99 enum entries are accounted for below. Camera rows include integrated
 products and unresolved candidates. The owner, accessory and exclusion tables
 account for the rest. The check compares exact names and numeric values, not just a count.
 `Device.isCamera()` alone is insufficient. In this revision it omits

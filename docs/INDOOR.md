@@ -451,10 +451,10 @@ source. All are listed in [NOTICE](../NOTICE.md):
 
 No vendored live predicate is added, so the E10 takes the generic HomeBase 3
 `CMD_SET_PAYLOAD` branch in the [table below](#h3-media-profile). According to
-the same project, the eufy app opens T8404 and the Video Doorbell S4 T8215 with
-the same multi-camera live handler
-([PR #148](https://github.com/alaraun/python-eufy-home-security/pull/148)) and
-streams both over WebRTC behind a HomeBase 3 on firmware 3.8.8.0
+the same project, the eufy app's handlers for T8404 and the Video Doorbell S4
+T8215 send the same multi-camera live open
+([PR #148](https://github.com/alaraun/python-eufy-home-security/pull/148)), and
+the app streams both over WebRTC behind a HomeBase 3 on firmware 3.8.8.0
 ([routing data](https://github.com/alaraun/python-eufy-home-security/blob/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/src/eufy_home_security/devices/_webrtc_routing_data.py#L71-L135),
 [media notes](https://github.com/alaraun/python-eufy-home-security/blob/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/docs/protocol/media.md#L414)).
 This client nevertheless streamed a T8215 through the generic branch under a
@@ -496,7 +496,8 @@ the conservative additional-H3 profile already used by the client, not a newly
 observed Indoor firmware minimum. Camera firmware 1.2.3 and owner 3.8.6.0 in
 the other fixtures are synthetic. The T8410C fixture uses camera firmware 3.3.4.4
 and owner firmware 3.8.7.4 from the ha-eufy-cam#149 type 31 rows, whose model is
-unconfirmed. Admission is also checked at 2.0.9.7. Unknown, malformed
+unconfirmed. The T8404 fixture uses camera firmware 1.0.5.4 and owner firmware
+3.8.8.0 from ha-eufy-cam#283. Admission is also checked at 2.0.9.7. Unknown, malformed
 or earlier owner firmware returns `camera_media_unverified` before media starts.
 
 The existing attributed `vendor/src/http/station.ts` at commit
