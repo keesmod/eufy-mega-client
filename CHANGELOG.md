@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.31.2 - Unreleased
+## 0.31.2 - 2026-11-21
 
 - Added the Window Camera E10 `T8404` on a HomeBase 3 ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), not yet confirmed on hardware.
 
