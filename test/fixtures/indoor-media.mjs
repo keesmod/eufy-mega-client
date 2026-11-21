@@ -1,6 +1,7 @@
 // Independently authored exact tuples and branch expectations. Sources: docs/INDOOR.md.
 // T8410C uses the firmware of the ha-eufy-cam#149 type 31 rows, whose model is unconfirmed.
-const reported = { T8410C: ['3.3.4.4', '3.8.7.4'] };
+// T8404 uses the camera and owner firmware reported in ha-eufy-cam#283.
+const reported = { T8410C: ['3.3.4.4', '3.8.7.4'], T8404: ['1.0.5.4', '3.8.8.0'] };
 export const indoorMedia = [
   ['T8400', 30, 'doorbell'],
   ['T8410', 31, 'indoor-h3'],
@@ -13,6 +14,8 @@ export const indoorMedia = [
   ['T8416', 104, 'indoor-h3'],
   ['T8417', 105, 'doorbell'],
   ['T817L', 10031, 'indoor-h3'],
+  // No vendored Indoor live predicate, so the generic HomeBase 3 payload branch.
+  ['T8404', 314, 'payload'],
 ].map(([model, type, liveEnvelope]) => ({
   id: `indoor-${model}-h3`,
   family: 'indoor',

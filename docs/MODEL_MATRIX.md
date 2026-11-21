@@ -1316,6 +1316,30 @@ playback, and a person event working. Motion, pet, vehicle, sound and crying
 events were not reported. This is a reported result, not independently
 reproduced. The feature row and its cells are unchanged.
 
+## Reported T8404 Window Camera E10, 0.31.2
+
+On 2026-11-21 the [reporter of ha-eufy-cam#283][283-report] ran HA 2026.11.2
+and bridge 0.8.45/client 0.31.1 with a T8030 on firmware 3.8.8.0. A Window
+Camera E10 was rejected as `unsupported_device` with parent status `present`.
+It was received as `T8404` with type 314 and firmware 1.0.5.4. Type 314 was
+absent from the pinned catalogue. 0.31.2 adds `WINDOW_CAMERA_E10` to the
+vendored catalogue and admits exactly `T8404`/314 in the indoor family with the
+additional-H3 media policy, as described in
+[INDOOR.md](INDOOR.md#window-camera-e10-0312). [E10] describes a plug-in camera
+that works on its own or with HomeBase S380, HomeBase Mini and HomeBase
+Professional, and asks for HomeBase S380 firmware 3.8.8.0 or later.
+[E10-1524] and [E10-627] show the same pair as its own station. [E10-app] lists
+it from the eufy app's model data. No public report covers an E10 paired to a
+HomeBase. These are a reported inventory tuple and third-party reports, not
+observations through this client. The new type 314 rows below are software
+evidence only.
+
+[283-report]: https://github.com/keesmod/ha-eufy-cam/issues/283
+[E10]: https://www.eufy.com/products/t8404121
+[E10-1524]: https://github.com/fuatakgun/eufy_security/issues/1524
+[E10-627]: https://github.com/mscodemonkey/eufy-mega-security/issues/627
+[E10-app]: https://github.com/alaraun/python-eufy-home-security/tree/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/docs/reference
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)
@@ -1402,15 +1426,16 @@ and [#35].
 
 The catalogue is `DeviceType` in [vendor/src/http/types.ts][Catalogue] at client
 commit `e69624d79cd43e810a216602cc39eff70a27d046`, plus `WIRED_CAM_C31` added in
-0.28.0 and `VIDEO_DOORBELL_S4` added in 0.30.4, each with its label, property map
-and commands. The complete file SHA-256 including those additions is
-`9565569a1991b74d34d7778abf1b0dbf478661d0c6ac8b1ae21b8e30c2314d24`.
+0.28.0, `VIDEO_DOORBELL_S4` added in 0.30.4 and `WINDOW_CAMERA_E10` added in
+0.31.2, each with its label, property map and commands. The complete file SHA-256
+including those additions is
+`32dc26cbe4e22189897df3e63331f31bce3c5715905a37b582c4ca02af18df27`.
 Its attributed upstream is bropat/eufy-security-client 4.1.1-1,
 commit `d75e7996d4cbce3839a6075bed95b752ccc3ee43`, under MIT, as recorded in
 [NOTICE.md](../NOTICE.md). Protocol types are numeric Eufy identifiers, not network
 transport versions. Do not infer wire compatibility from a shared product name.
 
-All 98 enum entries are accounted for below. Camera rows include integrated
+All 99 enum entries are accounted for below. Camera rows include integrated
 products and unresolved candidates. The owner, accessory and exclusion tables
 account for the rest. The check compares exact names and numeric values, not just a count.
 `Device.isCamera()` alone is insufficient. In this revision it omits
@@ -1544,6 +1569,7 @@ evidence section. Every row also has a separate feature row below.
 | 189           | `LOCK_8531`                            | T8531                                        | Video Smart Lock E330                                                         | integrated | W candidate, H3, HM candidate               | [HB-guide]                                                  | C           |
 | 203           | `LOCK_85V0`                            | T85V0. E85V0 bundle mapping unresolved       | FamiLock S3 Max / S3                                                          | integrated | W candidate, H3, HM variant candidate       | [HB-guide], [Display]                                       | R           |
 | 301           | `CAMERA_POE_S4`                        | T8E00                                        | PoE Cam S4 / Bullet-PTZ Cam                                                   | nvr        | N. H2/H3 excluded                           | [NVR-setup], [NVR-HB], [Display]                            | C           |
+| 314           | `WINDOW_CAMERA_E10`                    | T8404                                        | Window Camera E10, plug-in                                                    | indoor     | W, H3. HM and T9000 candidates              | [E10], [283-report], [E10-1524], [E10-627]                  | R           |
 | 10005         | `WALL_LIGHT_CAM_81A0`                  | T81A0                                        | Solar Wall Light Cam S120                                                     | wall       | W candidate, H3, HM candidate               | [Catalogue], [Display], [HB-guide]                          | R           |
 | 10008         | `INDOOR_PT_CAMERA_C220`                | T8W11C candidate                             | Indoor Cam C220. Subtype mapping unresolved                                   | indoor     | W candidate, H3. HM disputed                | [Catalogue], [Display], [HB-guide], [HB-DE]                 | C           |
 | 10009         | `INDOOR_PT_CAMERA_C210`                | T8419 / T8W11P candidate                     | Indoor Cam C210. T8W11P alias unverified                                      | indoor     | W candidate, H3. HM disputed                | [Catalogue], [Display], [HB-guide], [HB-DE]                 | C           |
@@ -1649,6 +1675,7 @@ battery lifetime claim is made.
 | 189   | T8531 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [Integrated-software]            | [#39], [E2], [E6]                               |
 | 203   | T85V0 / exact H3 profile                             | X         | X                   | X         | X               | X          | X          | X               | X             | [Integrated-software]                               | [#39], [#35], [#36], [E2], [E6]                 |
 | 301   | T8E00 / listed topologies                            | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue], [NVR-research]                   | [#38], [E2], [E6]                               |
+| 314   | T8404 / actual H3 owner only                         | X         | X identity/firmware | U         | X               | X          | X          | X motion/person | X             | [Indoor-software], [283-report]                     | [283-report], [#142], [#143]                    |
 | 10005 | T81A0 / H3 media, W descriptor                       | X         | X                   | X         | X               | X          | X          | X               | X             | [Wall-software], [Catalogue]                        | [#32], [#35], [#36], [#61]                      |
 | 10008 | T8W11C candidate / listed topologies                 | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]                             |
 | 10009 | T8419 / T8W11P candidate / listed topologies         | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#23], [#24], [#57]                             |

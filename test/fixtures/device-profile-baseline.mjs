@@ -71,4 +71,6 @@ export const profileBaseline = [
   ['T8142-Z', 15, 'camera', '', false, true, 'h3'],
   // Reported in ha-eufy-cam#252 on 2026-11-10. Type 97 added to the vendored catalogue.
   ['T8215', 97, 'camera', '', false, true, 'h3'],
+  // Reported in ha-eufy-cam#283 on 2026-11-21. Type 314 added to the vendored catalogue.
+  ['T8404', 314, 'camera', 'indoor', true, true, 'h3'],
 ];

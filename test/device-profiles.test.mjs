@@ -10,7 +10,7 @@ import {
 import { discover } from '../dist/discovery.js';
 import { hasCameraMedia } from '../dist/camera-media.js';
 import { EufyError } from '../dist/index.js';
-import { BatteryDoorbellCamera, CommandName } from '../dist/vendor/http/index.js';
+import { BatteryDoorbellCamera, CommandName, IndoorCamera } from '../dist/vendor/http/index.js';
 import { renderDeviceProfiles } from '../scripts/device-profiles.mjs';
 import { profileBaseline } from './fixtures/device-profile-baseline.mjs';
 import { mediaFixture } from './fixtures/media.mjs';
@@ -603,6 +603,103 @@ test('T817L admits only the reported Wired Cam C31 pair, with media commands onl
       CommandName.DeviceStartDownload,
       CommandName.DeviceCancelDownload,
     ]);
+  } finally {
+    await f.close();
+  }
+});
+
+// ha-eufy-cam#283: a Window Camera E10 reported as T8404/314 under a T8030 on 2026-11-21.
+test('T8404 admits only the reported Window Camera E10 pair, with media commands only', async () => {
+  const profile = deviceProfiles.T8404;
+  assert.deepEqual(
+    { ...profile, features: { ...profile?.features } },
+    {
+      type: 314,
+      kind: 'camera',
+      family: 'indoor',
+      topology: 'h3-or-standalone',
+      features: h3Policy,
+    },
+  );
+  assert.equal(exactDeviceProfile({ device_model: 'T8404', device_type: 314 }), profile);
+  for (const [device_model, device_type] of [
+    ['T8404', 31],
+    ['T8404', 313],
+    ['T8404', 315],
+    ['T8404', 10031],
+    ['T8404', '314'],
+    ['t8404', 314],
+    ['T8404C', 314],
+    ['T8404-Z', 314],
+    ['T8404121', 314],
+    ['T8404 ', 314],
+    [' T8404', 314],
+    ['T8405', 314],
+    ['T8400', 314],
+    ['T817L', 314],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  // The reported owner, camera firmware and hardware from ha-eufy-cam#283.
+  const owner = { ...reportedOwner, main_sw_version: '3.8.8.0' };
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8404',
+    device_type: 314,
+    parent_sn: owner.device_sn,
+    main_sw_version: '1.0.5.4',
+    main_hw_version: '255.255.255.208',
+  };
+  const result = discover([owner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), { kind: 'station', ownerId: owner.device_sn });
+  assert.equal(result.result.devices[1].model, 'T8404');
+  assert.equal(result.result.devices[1].firmware, '1.0.5.4');
+  assert.deepEqual(result.result.issues, []);
+  assertH3OwnerGates(camera, owner);
+  for (const parent_sn of ['', 'CAM'])
+    assert.deepEqual(discover([owner, { ...camera, parent_sn }]).relationships.get('CAM'), {
+      kind: 'standalone',
+      ownerId: 'CAM',
+      reason: 'standalone_transport_unverified',
+      descriptor: { did: false, license: false, adminUser: false, lanAddress: false },
+    });
+  // Every event kind the transport maps. The E10 lists human, pet and vehicle detection.
+  const kinds = [
+    'motion',
+    'person',
+    'ring',
+    'vehicle',
+    'pet',
+    'crying',
+    'sound',
+    'package_delivered',
+    'package_stranded',
+    'package_taken',
+    'loitering',
+    'radar_motion',
+    'dog',
+    'dog_lick',
+    'dog_poop',
+  ];
+  const f = await mediaFixture(indoorMedia.find((p) => p.model === 'T8404'));
+  try {
+    const sdk = f.transport.cameras.get(f.camera.device_sn);
+    assert.equal(sdk.constructor, IndoorCamera);
+    assert.equal(sdk.isCamera(), true);
+    assert.equal(sdk.isIndoorCamera(), false);
+    assert.equal(sdk.isWiredCamC31(), false);
+    assert.equal(sdk.hasBattery(), false);
+    assert.deepEqual(sdk.getCommands(), [
+      CommandName.DeviceStartLivestream,
+      CommandName.DeviceStopLivestream,
+      CommandName.DeviceStartDownload,
+      CommandName.DeviceCancelDownload,
+    ]);
+    assert.deepEqual(
+      kinds.filter((kind) => f.transport.supportsEvent(f.camera.device_sn, kind)),
+      ['motion', 'person', 'vehicle', 'pet'],
+    );
+    assert.equal(f.transport.supportsEvent(f.camera.device_sn, 'notification'), true);
   } finally {
     await f.close();
   }

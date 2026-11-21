@@ -20,6 +20,7 @@ camera was used for these changes.
 | T8416  | 104           | Indoor Cam S350                         |
 | T8417  | 105           | Indoor Cam E30                          |
 | T817L  | 10031         | Wired Cam C31, added in 0.28.0          |
+| T8404  | 314           | Window Camera E10, added in 0.31.2      |
 
 Identity and possible topology sources are recorded in the
 [model matrix](MODEL_MATRIX.md). H3 compatibility alone does not establish
@@ -65,7 +66,8 @@ suppression. The actual owner must match. False resets do not produce detections
 and a ring code cannot create a doorbell feature. The existing owner-aware H3 metadata adds pet, sound, crying and other H3
 detection properties to the base model maps. The existing public event API
 routes supported properties. Tests also exercise native Indoor pet/sound/crying
-pushes for every profile, including the C31 below. No new event types are introduced.
+pushes for every profile, including the C31 below. The E10 below has no sound or
+crying property, so only its pet push produces an event. No new event types are introduced.
 Owner changes replace the private object and clean its observations/listeners.
 Unsupported tuples or one failed initialization leave other families usable.
 
@@ -411,6 +413,67 @@ reported unavailable since 0.30.1.
 [standalone-results]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6208097780
 [continuous]: https://github.com/keesmod/ha-eufy-cam/issues/152#issuecomment-6195646642
 
+## Window Camera E10, 0.31.2
+
+[ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283) reports a
+Window Camera E10 received as exactly `T8404` with type 314, camera firmware
+1.0.5.4, under a T8030 owner on firmware 3.8.8.0. Earlier clients rejected it as
+`unsupported_device`. Type 314 is absent from the pinned catalogue and from
+upstream eufy-security-client, so a profile alone would have created a camera
+without commands or detection properties. Eufy's
+[product page](https://www.eufy.com/products/t8404121) describes a plug-in
+Wi-Fi camera with H.264 video and human, vehicle and pet detection. It works on
+its own or with a HomeBase S380 (HomeBase 3) on firmware 3.8.8.0 or later,
+HomeBase Mini or HomeBase Professional, and not with HomeBase S280. The
+MIT-licensed python-eufy-home-security project lists `T8404`/314 from the eufy
+app's own model data under the app category IndoorCamera, WiredCamera, the same
+as the C31
+([device list](https://github.com/alaraun/python-eufy-home-security/blob/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/docs/reference/devices.md#L109),
+[model data](https://github.com/alaraun/python-eufy-home-security/blob/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/src/eufy_home_security/devices/data/models/T8404.json)).
+That model data lists the same detection types and no sound or crying
+detection. Standalone reports in
+[fuatakgun/eufy_security#1524](https://github.com/fuatakgun/eufy_security/issues/1524)
+and [eufy-mega-security#627](https://github.com/mscodemonkey/eufy-mega-security/issues/627)
+show the same pair. The profile is therefore `h3-or-standalone` in the indoor
+family. A standalone E10 keeps `standalone_transport_unverified`.
+
+Each addition except the one-line type label carries a 0.31.2 marker in the
+source. All are listed in [NOTICE](../NOTICE.md):
+
+- `DeviceType.WINDOW_CAMERA_E10 = 314` and its type label.
+- A property map with `GenericDeviceProperties` and the motion, person, person
+  name, pet and vehicle detection states. No setting, battery, device state,
+  sound or crying detection is claimed, so battery and availability stay null.
+- `DeviceStartLivestream`, `DeviceStopLivestream`, `DeviceStartDownload` and
+  `DeviceCancelDownload` only. Talkback and settings are not registered.
+- Type 314 in `Device.isCamera()`, so a push relayed by a T8030 is read by the
+  same HomeBase camera branch as the other Indoor cameras.
+
+No vendored live predicate is added, so the E10 takes the generic HomeBase 3
+`CMD_SET_PAYLOAD` branch in the [table below](#h3-media-profile). According to
+the same project, the eufy app's handlers for T8404 and the Video Doorbell S4
+T8215 send the same multi-camera live open
+([PR #148](https://github.com/alaraun/python-eufy-home-security/pull/148)), and
+the app streams both over WebRTC behind a HomeBase 3 on firmware 3.8.8.0
+([routing data](https://github.com/alaraun/python-eufy-home-security/blob/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/src/eufy_home_security/devices/_webrtc_routing_data.py#L71-L135),
+[media notes](https://github.com/alaraun/python-eufy-home-security/blob/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/docs/protocol/media.md#L414)).
+This client nevertheless streamed a T8215 through the generic branch under a
+T8030 on firmware 3.8.8.0,
+as [reported](https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6946575850)
+on 2026-11-17. Whether the HomeBase accepts the same start for an E10 is
+unknown. No public report covers an E10 paired to a HomeBase, and standalone
+reports describe live view only over eufy's WebRTC service, which this client
+does not implement.
+
+Stop, stored snapshots, recording lists, downloads and cancellation use the
+unchanged H3 paths below. The [Indoor tests](../test/indoor.test.mjs), the
+[media profile](../test/fixtures/indoor-media.mjs) and a focused
+[profile test](../test/device-profiles.test.mjs) cover the exact pair, rejected
+variants such as `T8404C`, `t8404` and type 313, the H3 and standalone
+relationships, the complete H.264 and H.265 start envelopes, stop, recordings,
+the four registered commands, the detection events and the normalization of a
+relayed push. No physical E10 was used for the change.
+
 ## Remaining obligations
 
 [#143](https://github.com/keesmod/eufy-mega-client/issues/143) tracks other HomeBase
@@ -433,28 +496,33 @@ the conservative additional-H3 profile already used by the client, not a newly
 observed Indoor firmware minimum. Camera firmware 1.2.3 and owner 3.8.6.0 in
 the other fixtures are synthetic. The T8410C fixture uses camera firmware 3.3.4.4
 and owner firmware 3.8.7.4 from the ha-eufy-cam#149 type 31 rows, whose model is
-unconfirmed. Admission is also checked at 2.0.9.7. Unknown, malformed
+unconfirmed. The T8404 fixture uses camera firmware 1.0.5.4 and owner firmware
+3.8.8.0 from ha-eufy-cam#283. Admission is also checked at 2.0.9.7. Unknown, malformed
 or earlier owner firmware returns `camera_media_unverified` before media starts.
 
 The existing attributed `vendor/src/http/station.ts` at commit
 `34863d81eb3bc50dbc095ff537fe156640f7042e` supplies all commands. No vendor source
 or protocol was changed for the nine original models. The C31 joins the second
 branch through the 0.28.0 addition described above. T8410C has type 31 and
-selects the second branch like T8410, without a vendor change.
+selects the second branch like T8410, without a vendor change. The E10 has no
+Indoor live predicate and takes the generic HomeBase 3 branch.
 
-| Models                            | Existing live branch                | Full envelope distinction                                                                                                                                             |
-| --------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T8400, T8417                      | HomeBase-controlled Indoor base/E30 | `CMD_DOORBELL_SET_PAYLOAD`, `commandType=1000`, `accountId`, `camera_type=0`, `entrytype=0`, public `encryptkey`, codec 0/1                                           |
-| T8410, T8410C, T8416, T817L       | HomeBase-controlled type 31/S350    | `CMD_SET_PAYLOAD`, `CMD_START_REALTIME_MEDIA`, actual `mChannel`, `mValue3`, `ClientOS`, both account fields, `camera_type=0`, `entrytype=0`, public `key`, codec 1/2 |
-| T8401, T8411, T8441, T8442, T8414 | Existing generic Indoor branch      | `CMD_DOORBELL_SET_PAYLOAD`, `commandType=1000`, `account_id`, public `encryptkey`, codec 0/1                                                                          |
+| Models                            | Existing live branch                | Full envelope distinction                                                                                                                                                  |
+| --------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T8400, T8417                      | HomeBase-controlled Indoor base/E30 | `CMD_DOORBELL_SET_PAYLOAD`, `commandType=1000`, `accountId`, `camera_type=0`, `entrytype=0`, public `encryptkey`, codec 0/1                                                |
+| T8410, T8410C, T8416, T817L       | HomeBase-controlled type 31/S350    | `CMD_SET_PAYLOAD`, `CMD_START_REALTIME_MEDIA`, actual `mChannel`, `mValue3`, `ClientOS`, both account fields, `camera_type=0`, `entrytype=0`, public `key`, codec 1/2      |
+| T8401, T8411, T8441, T8442, T8414 | Existing generic Indoor branch      | `CMD_DOORBELL_SET_PAYLOAD`, `commandType=1000`, `account_id`, public `encryptkey`, codec 0/1                                                                               |
+| T8404                             | Generic HomeBase 3 branch           | `CMD_SET_PAYLOAD`, `CMD_START_REALTIME_MEDIA`, `mValue3`, `ClientOS`, `account_id`, public `key`, codec 1/2, without `mChannel`, `camera_type`, `entrytype` or `accountId` |
 
 The vendor predicate `isIndoorCamC24` in the second branch means protocol type
 31, T8410 and T8410C in this matrix. It does not mean marketing-name C24, T8441/type45.
 Fixtures assert the exact complete envelopes for H.264 and H.265 per model, using
 real Station methods and the real camera class. Each uses the actual channel.
-Only the first two source branches explicitly test HomeBase control. The last
+Only the first two source branches explicitly test HomeBase control. The third
 branch is generic Indoor behavior exercised with an H3 owner in software. Its
-physical route remains unverified along with the other added profiles.
+physical route remains unverified along with the other added profiles. The
+fourth is the generic branch the eufyCams use under an owner on firmware 2.0.9.7
+or later. For the E10 it is unverified on hardware.
 
 Stored snapshots reuse `databaseQueryLatestInfo` and `downloadImage`, including
 `CMD_DATABASE_IMAGE`. They return stored covers, not newly captured images.

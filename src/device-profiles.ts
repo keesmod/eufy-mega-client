@@ -91,6 +91,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8417: camera(105, 'indoor', 'h3-or-standalone', h3Media),
   // ha-eufy-cam#136: Wired Cam C31, reported as T817L/10031 under a T8030. Only this exact pair.
   T817L: camera(10031, 'indoor', 'h3-or-standalone', h3Media),
+  // ha-eufy-cam#283: T8404/type 314 under a T8030, reported on 2026-11-21. Only this exact pair.
+  T8404: camera(314, 'indoor', 'h3-or-standalone', h3Media),
   T8030: Object.freeze({
     type: 18,
     kind: 'station',
