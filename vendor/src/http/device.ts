@@ -1916,6 +1916,7 @@ export class Device extends TypedEmitter<DeviceEvents> {
       type == DeviceType.CAMERA_S4 ||
       type == DeviceType.CAMERA_C35 ||
       type == DeviceType.WIRED_CAM_C31 || // eufy-mega-client 0.28.0
+      type == DeviceType.WINDOW_CAMERA_E10 || // eufy-mega-client 0.31.2
       type == DeviceType.LOCK_85V0 ||
       type == DeviceType.INDOOR_OUTDOOR_CAMERA_1080P ||
       type == DeviceType.INDOOR_OUTDOOR_CAMERA_1080P_NO_LIGHT ||

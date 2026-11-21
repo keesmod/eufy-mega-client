@@ -25,7 +25,11 @@ const models = [
   ['T8416', 104],
   ['T8417', 105],
   ['T817L', 10031],
+  // ha-eufy-cam#283: Window Camera E10 under a T8030.
+  ['T8404', 314],
 ];
+// ha-eufy-cam#283: the E10 lists human, pet, vehicle and other motion, without sound or crying.
+const withoutSound = new Set(['T8404']);
 const owner = (id = 'T8030_OWNER') => ({
   category: 'eufy_security',
   device_sn: id,
@@ -159,13 +163,14 @@ for (const [model, type] of models) {
     await fixture([owner(), raw], async (t) => {
       const received = [];
       t.on('detection', (e) => received.push(e.type));
-      assert.equal(t.supportsEvent(raw.device_sn, 'sound'), true);
+      const sound = !withoutSound.has(model);
+      assert.equal(t.supportsEvent(raw.device_sn, 'sound'), sound);
       assert.equal(t.supportsEvent(raw.device_sn, 'pet'), true);
-      assert.equal(t.supportsEvent(raw.device_sn, 'crying'), true);
+      assert.equal(t.supportsEvent(raw.device_sn, 'crying'), sound);
       assert.equal(t.supportsEvent(raw.device_sn, 'vehicle'), true);
       for (const event_type of [3106, 3105, 3104, 3107])
         t.processPush({ device_sn: raw.device_sn, station_sn: raw.parent_sn, type, event_type });
-      assert.deepEqual(received, ['pet', 'sound', 'crying']);
+      assert.deepEqual(received, sound ? ['pet', 'sound', 'crying'] : ['pet']);
     });
   });
 
@@ -292,7 +297,7 @@ test('Indoor rejects unresolved aliases, mismatched types and unsupported owners
   );
 });
 
-test('T817L pushes relayed by a HomeBase 3 normalize like the other Indoor cameras', () => {
+test('T817L and T8404 pushes relayed by a HomeBase 3 normalize like the other Indoor cameras', () => {
   const service = Object.create(PushNotificationService.prototype);
   const raw = (type) => ({
     payload: {
@@ -321,12 +326,14 @@ test('T817L pushes relayed by a HomeBase 3 normalize like the other Indoor camer
     const { type, ...rest } = message;
     return rest;
   };
-  const c31 = service._normalizePushMessage(raw(10031));
-  assert.equal(c31.type, 10031);
-  assert.equal(c31.event_type, 3102);
-  assert.equal(c31.msg_type, 18);
-  assert.equal(c31.channel, 2);
-  assert.equal(c31.person_name, 'Synthetic person');
-  assert.equal(c31.file_path, '/synthetic/path');
-  assert.deepEqual(fields(c31), fields(service._normalizePushMessage(raw(104))));
+  for (const type of [10031, 314]) {
+    const message = service._normalizePushMessage(raw(type));
+    assert.equal(message.type, type);
+    assert.equal(message.event_type, 3102);
+    assert.equal(message.msg_type, 18);
+    assert.equal(message.channel, 2);
+    assert.equal(message.person_name, 'Synthetic person');
+    assert.equal(message.file_path, '/synthetic/path');
+    assert.deepEqual(fields(message), fields(service._normalizePushMessage(raw(104))));
+  }
 });

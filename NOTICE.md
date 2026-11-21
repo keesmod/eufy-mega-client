@@ -86,7 +86,10 @@ unchanged, as described in [ACCESSORIES.md](docs/ACCESSORIES.md#delivery).
 Version 0.31.1 makes the Station also emit `camera info params` for a
 CMD_CAMERA_INFO reply, with every channel's parameters in the same shape, at
 most 2048, parsed by the same client-written file. The existing
-`raw device property changed` events are unchanged.
+`raw device property changed` events are unchanged. Version 0.31.2 adds the
+Window Camera E10 as `DeviceType.WINDOW_CAMERA_E10` (314, T8404), with
+detection states, four media commands and camera push normalization, as
+described in [INDOOR.md](docs/INDOOR.md#window-camera-e10-0312).
 Those changes must not be attributed to the original upstream release.
 
 ## Home and Tuya adapter

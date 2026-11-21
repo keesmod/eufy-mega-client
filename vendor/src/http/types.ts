@@ -105,6 +105,7 @@ export enum DeviceType {
   LOCK_85P0 = 209, //T85P0
   NVR_S4_MAX = 300, //T8N00
   CAMERA_POE_S4 = 301, //T8E00
+  WINDOW_CAMERA_E10 = 314, // T8404, added by eufy-mega-client 0.31.2
   WALL_LIGHT_CAM_81A0 = 10005,
   INDOOR_PT_CAMERA_C220 = 10008, // T8W11C
   INDOOR_PT_CAMERA_C210 = 10009, // T8419 / T8W11P?
@@ -1079,6 +1080,7 @@ export const GenericTypeProperty: PropertyMetadataNumeric = {
     209: "FamiLock E34 (T85P0)",
     300: "NVR S4 Max (T8N00)",
     301: "PoE Bullet-PTZ Cam S4 (T8E00)",
+    314: "Window Camera E10 (T8404)",
     10005: "Solar Wall Light Cam S120 (T81A0)",
     10008: "Indoor Cam C220 (T8W11C)",
     10009: "Indoor Cam C210 (T8419)",
@@ -8757,6 +8759,15 @@ export const DeviceProperties: Properties = {
     [PropertyName.DeviceSoundDetected]: DeviceSoundDetectedProperty,
     [PropertyName.DeviceCryingDetected]: DeviceCryingDetectedProperty,
   },
+  // eufy-mega-client 0.31.2: detection states only. No setting, battery or wire parameter is claimed for T8404.
+  [DeviceType.WINDOW_CAMERA_E10]: {
+    ...GenericDeviceProperties,
+    [PropertyName.DeviceMotionDetected]: DeviceMotionDetectedProperty,
+    [PropertyName.DevicePersonDetected]: DevicePersonDetectedProperty,
+    [PropertyName.DevicePersonName]: DevicePersonNameProperty,
+    [PropertyName.DevicePetDetected]: DevicePetDetectedProperty,
+    [PropertyName.DeviceVehicleDetected]: DeviceVehicleDetectedProperty,
+  },
   [DeviceType.ENTRY_SENSOR_E20]: {
     ...GenericDeviceProperties,
     [PropertyName.DeviceSnooze]: DeviceSnoozeProperty,
@@ -10879,6 +10890,13 @@ export const DeviceCommands: Commands = {
   ],
   // eufy-mega-client 0.28.0: media commands only. PTZ, talkback and settings stay out of scope.
   [DeviceType.WIRED_CAM_C31]: [
+    CommandName.DeviceStartLivestream,
+    CommandName.DeviceStopLivestream,
+    CommandName.DeviceStartDownload,
+    CommandName.DeviceCancelDownload,
+  ],
+  // eufy-mega-client 0.31.2: media commands only. Talkback and settings stay out of scope.
+  [DeviceType.WINDOW_CAMERA_E10]: [
     CommandName.DeviceStartLivestream,
     CommandName.DeviceStopLivestream,
     CommandName.DeviceStartDownload,
