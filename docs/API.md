@@ -1229,6 +1229,8 @@ doorbell chime T8026. They are read-only and not yet confirmed on hardware.
 - The `accessory` event carries the new state when a reading changes its value,
   source or `live`.
 - `accessoryObservation` counts how the state arrived, numbers only.
+- `accessoryParameters(id)` lists the parameters a keypad reported by route,
+  with the raw values of its battery keys only. Since 0.31.3.
 
 See [HomeBase accessories](ACCESSORIES.md) for admission, delivery and the
 observation keys.

@@ -317,7 +317,7 @@ async function rig(rows = reportedInventory()) {
     hub: (params) => control(CommandType.CMD_NOTIFY_PAYLOAD, { cmd: 1829, payload: { params } }),
     sensorStatus: (channel, status) =>
       control(CommandType.CMD_NOTIFY_PAYLOAD, { cmd: 1550, payload: { status } }, channel),
-    cameraInfo: (params) => control(CommandType.CMD_CAMERA_INFO, { params }),
+    cameraInfo: (params, extra = {}) => control(CommandType.CMD_CAMERA_INFO, { params, ...extra }),
     push: (fields) =>
       transport.filterPush(
         {
@@ -609,6 +609,132 @@ test('inventory values are labelled cloud, never live, and any observation repla
       ],
       [true, 'p2p'],
     );
+  } finally {
+    await r.done();
+  }
+});
+
+const noParameters = Object.freeze({ types: [], codes: {} });
+
+test('a keypad keeps the parameter types of each route and only its battery codes', async () => {
+  const rows = reportedInventory();
+  const keypadRow = rows.findIndex((row) => row.device_sn === KEYPAD);
+  rows[keypadRow] = {
+    ...rows[keypadRow],
+    params: [
+      { param_type: 1653, param_value: '3' },
+      { param_type: 1655, param_value: 2 },
+      { param_type: 1101, param_value: '100' },
+      { param_type: 1657, param_value: '123456' },
+      { param_type: 1141, param_value: '-61' },
+      { param_type: '1654', param_value: 'x' },
+      { param_type: 'name', param_value: '1' },
+      null,
+    ],
+  };
+  const r = await rig(rows);
+  try {
+    assert.deepEqual(r.transport.accessoryParameters(KEYPAD), {
+      cloud: {
+        types: [1101, 1141, 1653, 1654, 1655, 1657],
+        codes: { 1101: '100', 1653: '3', 1654: 'other', 1655: '2' },
+      },
+      camera_info: noParameters,
+      hub_notify: noParameters,
+    });
+    // A battery state other than 0 or 1 sets no reading, but stays visible as evidence.
+    assert.equal(r.transport.accessoryState(KEYPAD).readings.batteryLow, null);
+    r.cameraInfo([
+      param(CHANNELS[KEYPAD], 1653, '4'),
+      param(CHANNELS[KEYPAD], 1655, '2'),
+      param(CHANNELS[KEYPAD], 1657, '0000'),
+      param(CHANNELS[KEYPAD], 1101, '1234567'),
+      param(CHANNELS[SENSORS[0]], 1101, '90'),
+      param(CHANNELS[SENSORS[0]], 1550, '1'),
+    ]);
+    r.hub([param(CHANNELS[KEYPAD], 1655, '1'), param(CHANNELS[KEYPAD], 1655, '3')]);
+    const parameters = r.transport.accessoryParameters(KEYPAD);
+    assert.deepEqual(parameters.camera_info, {
+      types: [1101, 1653, 1655, 1657],
+      codes: { 1101: 'other', 1653: '4', 1655: '2' },
+    });
+    assert.deepEqual(parameters.hub_notify, { types: [1655], codes: { 1655: '3' } });
+    // Only a keypad keeps evidence. The counts are unchanged.
+    assert.equal(r.transport.accessoryParameters(SENSORS[0]), null);
+    assert.equal(r.transport.accessoryParameters(CHIMES[0]), null);
+    assert.equal(r.transport.accessoryParameters(HB), null);
+    assert.equal(r.transport.accessoryParameters('SYNTH_UNKNOWN'), null);
+    assert.deepEqual(r.transport.accessoryObservation(), {
+      ...zero,
+      hub_notify: 2,
+      camera_info: 2,
+      cloud_seeded: 1,
+    });
+    // A later discovery replaces the inventory evidence and keeps the P2P routes.
+    const again = discover(
+      rows.map((row, i) =>
+        i === keypadRow ? { ...row, params: [{ param_type: 1655, param_value: '0' }] } : row,
+      ),
+    );
+    await r.transport.load(again.raw, again);
+    assert.deepEqual(r.transport.accessoryParameters(KEYPAD), {
+      cloud: { types: [1655], codes: { 1655: '0' } },
+      camera_info: parameters.camera_info,
+      hub_notify: parameters.hub_notify,
+    });
+    // The result is a copy.
+    r.transport.accessoryParameters(KEYPAD).cloud.types.push(1);
+    assert.deepEqual(r.transport.accessoryParameters(KEYPAD).cloud.types, [1655]);
+  } finally {
+    await r.done();
+  }
+});
+
+test('keypad evidence keeps at most 64 other parameter types per route, and always the battery keys', () => {
+  const store = new AccessoryStore();
+  const inventory = discover(reportedInventory());
+  store.load(inventory.accessories);
+  for (let type = 2000; type < 2070; type++) store.parameter(KEYPAD, 'camera_info', type, '1');
+  store.parameter(KEYPAD, 'camera_info', 1655, '1');
+  store.parameter(KEYPAD, 'camera_info', 1653, 0);
+  store.parameter(KEYPAD, 'camera_info', 2000, '1');
+  store.parameter(KEYPAD, 'camera_info', 3000, '1');
+  for (const type of [-1, 65536, 1.5, NaN, '01x', null])
+    store.parameter(KEYPAD, 'hub_notify', type, '1');
+  const parameters = store.parameters(KEYPAD);
+  assert.equal(parameters.camera_info.types.length, 66);
+  assert.deepEqual(parameters.camera_info.types.slice(0, 2), [1653, 1655]);
+  assert.equal(parameters.camera_info.types.at(-1), 2063);
+  assert.deepEqual(parameters.camera_info.codes, { 1653: '0', 1655: '1' });
+  assert.deepEqual(parameters.hub_notify, noParameters);
+});
+
+test('encoded device information entries reach the keypad evidence like their readings', async () => {
+  const r = await rig();
+  try {
+    const encoded = (type, value) => ({
+      channel: CHANNELS[KEYPAD],
+      param_type: type,
+      param_value: Buffer.from(value).toString('base64'),
+    });
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1101, '100')], {
+      db_bypass_str: [encoded(1655, '1'), encoded(1653, '0'), encoded(1657, '4321')],
+    });
+    const { batteryLow, charging } = r.transport.accessoryState(KEYPAD).readings;
+    assert.deepEqual([batteryLow.value, charging.value], [false, true]);
+    assert.deepEqual(r.transport.accessoryParameters(KEYPAD).camera_info, {
+      types: [1101, 1653, 1655, 1657],
+      codes: { 1101: '100', 1653: '0', 1655: '1' },
+    });
+    // An encoded entry overrides a plain one of the same type, in the reading and the code.
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '0')], {
+      db_bypass_str: [encoded(1655, '1')],
+    });
+    assert.equal(r.transport.accessoryState(KEYPAD).readings.charging.value, true);
+    assert.equal(r.transport.accessoryParameters(KEYPAD).camera_info.codes[1655], '1');
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '2')]);
+    assert.equal(r.transport.accessoryState(KEYPAD).readings.charging.value, false);
+    assert.equal(r.transport.accessoryParameters(KEYPAD).camera_info.codes[1655], '2');
   } finally {
     await r.done();
   }
@@ -963,6 +1089,7 @@ test('the public client lists accessories, reports their state and forwards acce
   const client = new EufyMegaClient(fixture.options);
   try {
     assert.deepEqual(client.accessoryObservation, zero);
+    assert.equal(client.accessoryParameters(KEYPAD), null);
     await client.connect();
     const result = await client.discoverDevices();
     assert.equal(result.accessories.length, 7);
@@ -999,6 +1126,12 @@ test('the public client lists accessories, reports their state and forwards acce
       [[SENSORS[0], true]],
     );
     assert.equal(client.accessoryObservation.push_door_sensor, 1);
+    assert.deepEqual(client.accessoryParameters(KEYPAD), {
+      cloud: { types: [], codes: {} },
+      camera_info: { types: [], codes: {} },
+      hub_notify: { types: [], codes: {} },
+    });
+    assert.equal(client.accessoryParameters(SENSORS[0]), null);
     assert.deepEqual(
       (await client.getStationState(HB)).availableModes,
       [0, 1, 2, 3, 4, 5, 6, 47, 63],

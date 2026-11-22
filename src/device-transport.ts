@@ -72,6 +72,7 @@ import {
   type StandalonePushObservation,
   type PresetMoveResult,
   type AccessoryObservation,
+  type AccessoryParameters,
   type AccessoryState,
 } from './types.js';
 import { LiveStartObserver } from './live-start.js';
@@ -455,6 +456,10 @@ export class DeviceTransport extends EventEmitter {
   accessoryObservation(): AccessoryObservation {
     return this.accessories.snapshot();
   }
+  /** ha-eufy-cam#286: synchronous, no I/O. Null for an ID that is no admitted keypad. */
+  accessoryParameters(id: string): AccessoryParameters | null {
+    return this.accessories.parameters(id) ?? null;
+  }
   private emitAccessory(id: string): void {
     const state = this.accessories.state(id);
     if (state) this.emit('accessory', state);
@@ -478,6 +483,7 @@ export class DeviceTransport extends EventEmitter {
         this.accessories.count('unknown_channel');
         continue;
       }
+      this.accessories.parameter(id, 'hub_notify', report.type, report.value);
       const name = readingName(this.accessories.category(id)!, report.type);
       const value = name && readingValue(name, report.value);
       if (!name || value === undefined) continue;
@@ -501,6 +507,9 @@ export class DeviceTransport extends EventEmitter {
     for (const report of reports) {
       const id = this.accessories.byChannel(stationId, report.channel, taken);
       if (id === undefined || id === 'ambiguous') continue;
+      // ha-eufy-cam#286: only the types of a keypad. Its values and readings
+      // arrive through deviceParams, where an encoded entry overrides a plain one.
+      this.accessories.parameterType(id, 'camera_info', report.type);
       if (this.accessories.category(id) !== 'entry_sensor') continue;
       const name = readingName('entry_sensor', report.type);
       const value = name && readingValue(name, report.value);
@@ -527,6 +536,9 @@ export class DeviceTransport extends EventEmitter {
     const category = this.accessories.category(id)!;
     let changed = false;
     for (const [type, param] of Object.entries(params)) {
+      // ha-eufy-cam#286: this path also carries the reply's encoded entries
+      // and single parameter notifications, which cameraInfoReport never sees.
+      if (param?.source === 'p2p') this.accessories.parameter(id, 'camera_info', type, param.value);
       const name = readingName(category, Number(type));
       if (!name || param?.source !== 'p2p') continue;
       const value = readingValue(name, param.value);
