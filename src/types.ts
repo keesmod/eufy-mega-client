@@ -786,6 +786,74 @@ export interface UnroutedPush {
   msgType: number | null;
 }
 
+/**
+ * Since 0.31.3, ha-eufy-cam#293: what asked the HomeBase for its latest event
+ * rows. `push`: the refresh 2 seconds after an accepted push. `request`:
+ * `snapshot()` without a stored picture. `connect`: the query the protocol layer
+ * sends itself when a session opens, and any reply without a waiting query.
+ */
+export type SnapshotQueryTrigger = 'push' | 'request' | 'connect';
+/** Since 0.31.3, ha-eufy-cam#293: how one latest-info reply treated one camera. */
+export type SnapshotRowOutcome =
+  /** The reply carried no row for the camera. */
+  | 'no_row'
+  /** A HomeBase path other than the one shown. Its picture is requested. */
+  | 'homebase_path'
+  /** The HomeBase path of the picture already shown. Nothing is requested. */
+  | 'unchanged_path'
+  /** No HomeBase path, only a cloud path, which the client does not fetch. */
+  | 'cloud_path_only'
+  /** Neither a HomeBase nor a cloud path. */
+  | 'no_path'
+  /** The row has no HomeBase path field. The protocol layer then keeps no cloud path either. */
+  | 'path_absent'
+  /** A HomeBase path that is not a string or longer than 2048 characters. */
+  | 'invalid_path';
+/**
+ * Since 0.31.3, ha-eufy-cam#293: how a row's `event_count` compares with the
+ * previous row of the same camera. `first`: no earlier row. `unavailable`: not a
+ * non-negative integer.
+ */
+export type SnapshotEventCount = 'first' | 'increased' | 'unchanged' | 'decreased' | 'unavailable';
+/** Since 0.31.3, ha-eufy-cam#293: how one requested picture download ended. */
+export type SnapshotDownloadOutcome =
+  /** A JPEG of at most 5 MB for the camera's current path. It became the snapshot. */
+  | 'kept'
+  /** The reply was not a JPEG. */
+  | 'not_jpeg'
+  /** The reply was larger than 5 MB. */
+  | 'too_large'
+  /** A newer path was requested for the camera before this reply arrived. */
+  | 'superseded'
+  /** No reply for the path within 15 seconds. */
+  | 'no_reply';
+/** Since 0.31.3, ha-eufy-cam#293: the counts of one camera model. */
+export interface SnapshotRefreshCounts {
+  /** Latest-info rows by trigger and outcome. Every key is always present. */
+  rows: Record<SnapshotQueryTrigger, Record<SnapshotRowOutcome, number>>;
+  /** Rows other than `no_row`, by trigger and `event_count` change. Every key is always present. */
+  eventCounts: Record<SnapshotQueryTrigger, Record<SnapshotEventCount, number>>;
+  /** Requested picture downloads by outcome. Every key is always present. */
+  downloads: Record<SnapshotDownloadOutcome, number>;
+}
+/**
+ * Since 0.31.3, ha-eufy-cam#293: numbers-only counts of how the client refreshes
+ * stored snapshots from a HomeBase's latest event rows. Only admitted cameras
+ * with snapshot media are counted. It carries no serial, DID, address, name,
+ * path, timestamp or image.
+ */
+export interface SnapshotRefreshObservation {
+  /** Replies with result 0, by the query that asked for them. */
+  replies: Record<SnapshotQueryTrigger, number>;
+  /** Replies with another result. Their rows are not read. */
+  failedReplies: number;
+  /**
+   * Counts by the camera's inventory model, such as `T8404`. At most 16 models,
+   * then `other`. An absent model is `unknown`.
+   */
+  models: Record<string, SnapshotRefreshCounts>;
+}
+
 /** Private opaque FCM registration. This is secret session material. */
 export interface EventSession {
   version: 1;

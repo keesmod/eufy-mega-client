@@ -4,6 +4,7 @@ import { EventTransport } from './event-transport.js';
 import { DeviceTransport } from './device-transport.js';
 import { StandalonePushCounter } from './standalone-events.js';
 import { AccessoryStore } from './accessories.js';
+import { SnapshotRefreshCounter } from './snapshot-refresh.js';
 import { MegaCloud, responseObject } from './cloud.js';
 import {
   EufyError,
@@ -27,6 +28,7 @@ import {
   type PresetMoveResult,
   type Accessory,
   type AccessoryObservation,
+  type SnapshotRefreshObservation,
   type AccessoryParameters,
   type AccessoryState,
 } from './types.js';
@@ -83,6 +85,14 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
    */
   get accessoryObservation(): AccessoryObservation {
     return this.transport?.accessoryObservation() ?? new AccessoryStore().snapshot();
+  }
+  /**
+   * ha-eufy-cam#293: numbers-only counts of how stored snapshots are refreshed
+   * from a HomeBase's latest event rows, by camera model. Synchronous, no I/O,
+   * zero before the device transport exists. See docs/API.md, snapshot refresh.
+   */
+  get snapshotRefreshStatus(): SnapshotRefreshObservation {
+    return this.transport?.snapshotRefreshStatus() ?? new SnapshotRefreshCounter().snapshot();
   }
   /**
    * ha-eufy-cam#286: which parameters an admitted keypad reported, by route,

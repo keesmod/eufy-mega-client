@@ -7,6 +7,7 @@
 - Window Camera E10 `T8404` events also arrive when the camera sends them as if it had no HomeBase ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), not yet confirmed on hardware.
 - Known problem: a Window Camera E10 `T8404` event does not bring its event picture ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), reported, not reproduced.
 - Added the `push-unrouted` event, which reports a push that produced no event, without serials ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)).
+- Added `snapshotRefreshStatus`, which counts by camera model how event pictures are found and fetched ([ha-eufy-cam#293](https://github.com/keesmod/ha-eufy-cam/issues/293)), not yet confirmed on hardware.
 
 Upgrade: no changes needed. Rollback: 0.31.2.
 

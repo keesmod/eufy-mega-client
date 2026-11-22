@@ -530,7 +530,11 @@ and downloads the picture at the row's HomeBase path, `crop_local_path`. A row
 without a HomeBase path carries only a cloud path, which the client does not
 fetch, so the snapshot keeps its last picture. Nothing shows yet whether the
 E10 row lacks the HomeBase path, keeps an older path or is missing, or whether
-its picture download fails.
+its picture download fails. Since 0.31.3 the
+[snapshot refresh observation](API.md#snapshot-refresh-observation-0313) counts
+each of these cases by model
+([ha-eufy-cam#293](https://github.com/keesmod/ha-eufy-cam/issues/293)). No
+physical E10 was used for it.
 
 ## Remaining obligations
 
