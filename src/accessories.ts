@@ -166,7 +166,7 @@ export class AccessoryStore {
         record.parameters.cloud = { types: new Set(), codes: new Map() };
         for (const p of params)
           if (p && typeof p === 'object')
-            this.noteParameter(record, 'cloud', p.param_type, p.param_value);
+            this.noteParameter(record, 'cloud', p.param_type, p.param_value, true);
       }
       for (const name of NAMES[record.category]) {
         const current = record.readings[name];
@@ -233,13 +233,19 @@ export class AccessoryStore {
    */
   parameter(id: string, route: AccessoryParameterRoute, type: unknown, value: unknown): void {
     const record = this.records.get(id);
-    if (record) this.noteParameter(record, route, type, value);
+    if (record) this.noteParameter(record, route, type, value, true);
+  }
+  /** ha-eufy-cam#286: a parameter type a route carried, without its value. */
+  parameterType(id: string, route: AccessoryParameterRoute, type: unknown): void {
+    const record = this.records.get(id);
+    if (record) this.noteParameter(record, route, type, undefined, false);
   }
   private noteParameter(
     record: Entry,
     route: AccessoryParameterRoute,
     type: unknown,
     value: unknown,
+    withCode: boolean,
   ): void {
     if (record.category !== 'keypad') return;
     if (typeof type === 'string' && /^[0-9]{1,5}$/.test(type)) type = Number(type);
@@ -250,7 +256,7 @@ export class AccessoryStore {
     if (!evidence.types.has(type) && !KEYPAD_CODE_KEYS.has(type) && kept >= PARAMETER_TYPE_LIMIT)
       return;
     evidence.types.add(type);
-    if (KEYPAD_CODE_KEYS.has(type)) evidence.codes.set(type, parameterCode(value));
+    if (withCode && KEYPAD_CODE_KEYS.has(type)) evidence.codes.set(type, parameterCode(value));
   }
   /**
    * ha-eufy-cam#286: the parameters of an admitted keypad by route, with the

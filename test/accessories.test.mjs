@@ -726,6 +726,15 @@ test('encoded device information entries reach the keypad evidence like their re
       types: [1101, 1653, 1655, 1657],
       codes: { 1101: '100', 1653: '0', 1655: '1' },
     });
+    // An encoded entry overrides a plain one of the same type, in the reading and the code.
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '0')], {
+      db_bypass_str: [encoded(1655, '1')],
+    });
+    assert.equal(r.transport.accessoryState(KEYPAD).readings.charging.value, true);
+    assert.equal(r.transport.accessoryParameters(KEYPAD).camera_info.codes[1655], '1');
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '2')]);
+    assert.equal(r.transport.accessoryState(KEYPAD).readings.charging.value, false);
+    assert.equal(r.transport.accessoryParameters(KEYPAD).camera_info.codes[1655], '2');
   } finally {
     await r.done();
   }

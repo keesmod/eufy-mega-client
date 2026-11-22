@@ -507,9 +507,9 @@ export class DeviceTransport extends EventEmitter {
     for (const report of reports) {
       const id = this.accessories.byChannel(stationId, report.channel, taken);
       if (id === undefined || id === 'ambiguous') continue;
-      // ha-eufy-cam#286: a keypad's parameters are evidence only. Its readings
-      // arrive through deviceParams.
-      this.accessories.parameter(id, 'camera_info', report.type, report.value);
+      // ha-eufy-cam#286: only the types of a keypad. Its values and readings
+      // arrive through deviceParams, where an encoded entry overrides a plain one.
+      this.accessories.parameterType(id, 'camera_info', report.type);
       if (this.accessories.category(id) !== 'entry_sensor') continue;
       const name = readingName('entry_sensor', report.type);
       const value = name && readingValue(name, report.value);
