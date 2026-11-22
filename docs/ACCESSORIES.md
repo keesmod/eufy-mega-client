@@ -134,19 +134,22 @@ no new handling.
 Since 0.31.3, [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286).
 A reporter's keypad showed not charging while it charged, and its battery stayed
 unknown while the eufy app showed it full. No value decode above is confirmed
-for the keypad, and no permitted source gives one for 1653.
+for the keypad. The vendored table gives 1653 only as a boolean, and no
+permitted source explains other values.
 `accessoryParameters(id)` returns the evidence that settles it, synchronously
 and without I/O, or `null` for an ID that is no admitted keypad.
 
 It holds one entry per route: `cloud` for the inventory row of the latest
-discovery, `camera_info` for the device information and `hub_notify` for hub
+discovery, `camera_info` for the device information with its encoded entries and
+the session's other parameter reports for the keypad, and `hub_notify` for hub
 notify updates (1829). Each entry lists the parameter types that route carried
-for the keypad, at most 64, and in `codes` the newest raw value of the battery
-keys only: 1101 battery level, 1653 battery state, 1654 battery temperature
-state and 1655 charger state. A value that is not an integer of at most six
-digits is `other`. No other parameter value is kept, so keypad codes and
-settings never leave the client. Every value arrives as before, also one that
-no reading accepts.
+for the keypad, at most 64 besides the battery keys, and in `codes` the newest
+raw value of the battery keys only: 1101 battery level, 1653 battery state, 1654
+battery temperature state and 1655 charger state. A value that is not an integer
+of at most six digits is `other`. No other parameter value is kept, so keypad
+codes and settings never leave the client. Readings, counts and events are
+unchanged. A value that no reading accepts still sets no reading, but shows in
+`codes`.
 
 ## Guard mode Off
 

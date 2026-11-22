@@ -2,7 +2,7 @@
 
 ## 0.31.3 - Unreleased
 
-- Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)).
+- Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), not yet confirmed on hardware.
 - Known problem: a keypad that charges can show not charging, and its battery can stay unknown ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), reported, not reproduced.
 
 Upgrade: no changes needed. Rollback: 0.31.2.

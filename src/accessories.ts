@@ -37,7 +37,7 @@ const NAMES: Readonly<Record<AccessoryCategory, readonly ReadingName[]>> = {
  * settings never leave the store.
  */
 const KEYPAD_CODE_KEYS: ReadonlySet<number> = new Set([1101, 1653, 1654, 1655]);
-/** At most this many parameter types per route and keypad. */
+/** At most this many parameter types per route and keypad, besides the battery keys. */
 const PARAMETER_TYPE_LIMIT = 64;
 const ROUTES: readonly AccessoryParameterRoute[] = ['cloud', 'camera_info', 'hub_notify'];
 
@@ -246,7 +246,9 @@ export class AccessoryStore {
     if (typeof type !== 'number' || !Number.isSafeInteger(type) || type < 0 || type > 65535) return;
     record.parameters ??= emptyEvidence();
     const evidence = record.parameters[route];
-    if (!evidence.types.has(type) && evidence.types.size >= PARAMETER_TYPE_LIMIT) return;
+    const kept = [...evidence.types].filter((t) => !KEYPAD_CODE_KEYS.has(t)).length;
+    if (!evidence.types.has(type) && !KEYPAD_CODE_KEYS.has(type) && kept >= PARAMETER_TYPE_LIMIT)
+      return;
     evidence.types.add(type);
     if (KEYPAD_CODE_KEYS.has(type)) evidence.codes.set(type, parameterCode(value));
   }

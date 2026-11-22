@@ -230,13 +230,14 @@ export interface AccessoryObservation {
 /**
  * Since 0.31.3, ha-eufy-cam#286: the route a keypad parameter arrived on.
  * `cloud` is the inventory row that discovery read, `camera_info` the
- * HomeBase's device information (CMD_CAMERA_INFO) and `hub_notify` a hub
+ * HomeBase's device information (CMD_CAMERA_INFO) with its encoded entries and
+ * the session's other parameter reports for the keypad, and `hub_notify` a hub
  * notify update (P2P 1829).
  */
 export type AccessoryParameterRoute = 'cloud' | 'camera_info' | 'hub_notify';
 /** Since 0.31.3, ha-eufy-cam#286: what one route carried for a keypad. */
 export interface AccessoryParameterReport {
-  /** Each parameter type once, ascending, at most 64. */
+  /** Each parameter type once, ascending. At most 64 besides the battery keys. */
   types: number[];
   /**
    * The newest raw value of each battery key the route carried, keyed by type:

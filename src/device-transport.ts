@@ -536,6 +536,9 @@ export class DeviceTransport extends EventEmitter {
     const category = this.accessories.category(id)!;
     let changed = false;
     for (const [type, param] of Object.entries(params)) {
+      // ha-eufy-cam#286: this path also carries the reply's encoded entries
+      // and single parameter notifications, which cameraInfoReport never sees.
+      if (param?.source === 'p2p') this.accessories.parameter(id, 'camera_info', type, param.value);
       const name = readingName(category, Number(type));
       if (!name || param?.source !== 'p2p') continue;
       const value = readingValue(name, param.value);
