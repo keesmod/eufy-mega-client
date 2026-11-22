@@ -508,10 +508,10 @@ check without a fault or a log line. This is a candidate, not an observation.
   HomeBase. A routed copy counts as another transport, so a relayed copy of the
   same detection that agrees in time becomes the same event. No other profile
   sets the flag, and a push that names another station is unchanged.
-- The `push-unrouted` event reports every push that produced no detection
-  event, with a reason, the admitted model and push numbers only, as
-  [API.md](API.md#unrouted-pushes-0313) describes. A consumer can log it, so a
-  report shows which case applies.
+- The `push-unrouted` event reports a push that produced no detection event,
+  apart from the pushes [API.md](API.md#unrouted-pushes-0313) leaves out, with
+  a reason, the admitted model and push numbers only. A consumer can log it, so
+  a report shows which case applies.
 
 If no push for the E10 reaches the client at all, neither change helps and no
 `push-unrouted` record appears for it. The [Indoor tests](../test/indoor.test.mjs)
