@@ -4,7 +4,7 @@
 
 - Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), not yet confirmed on hardware.
 - Known problem: a keypad that charges can show not charging, and its battery can stay unknown ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), reported, not reproduced.
-- Window Camera E10 `T8404` detection pushes that name the camera as its own station become events ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), not yet confirmed on hardware.
+- Window Camera E10 `T8404` events also arrive when the camera sends them as if it had no HomeBase ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), not yet confirmed on hardware.
 - Known problem: a Window Camera E10 `T8404` event does not bring its event picture ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), reported, not reproduced.
 - Added the `push-unrouted` event, which reports a push that produced no event, without serials ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)).
 

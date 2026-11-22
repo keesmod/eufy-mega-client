@@ -529,7 +529,8 @@ HomeBase for the latest event row of each camera with `databaseQueryLatestInfo`,
 and downloads the picture at the row's HomeBase path, `crop_local_path`. A row
 without a HomeBase path carries only a cloud path, which the client does not
 fetch, so the snapshot keeps its last picture. Nothing shows yet whether the
-E10 row lacks the HomeBase path, keeps an older path or is missing.
+E10 row lacks the HomeBase path, keeps an older path or is missing, or whether
+its picture download fails.
 
 ## Remaining obligations
 
