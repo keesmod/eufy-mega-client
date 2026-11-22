@@ -337,3 +337,242 @@ test('T817L and T8404 pushes relayed by a HomeBase 3 normalize like the other In
     assert.deepEqual(fields(message), fields(service._normalizePushMessage(raw(104))));
   }
 });
+
+// ha-eufy-cam#283: on a HomeBase 3 the E10 delivered no event. A push that names
+// the camera as its own station is the unconfirmed candidate shape.
+test('a T8404 push that names the camera as its own station keeps its event code', () => {
+  const service = Object.create(PushNotificationService.prototype);
+  // No HomeBase serial, so the vendored generic camera branch reads the inner payload.
+  const message = service._normalizePushMessage({
+    payload: {
+      type: '314',
+      station_sn: 'CAMERA_FIXTURE',
+      device_sn: 'CAMERA_FIXTURE',
+      event_time: '1759651200',
+      push_time: '1759651200',
+      payload: {
+        event_type: 3102,
+        msg_type: 18,
+        session_id: 'session',
+        unique_id: 'one',
+        notification_style: 1,
+        name: 'Synthetic Indoor',
+      },
+    },
+  });
+  assert.deepEqual(
+    [
+      message.type,
+      message.station_sn,
+      message.device_sn,
+      message.event_type,
+      message.event_session,
+      message.unique_id,
+    ],
+    [314, 'CAMERA_FIXTURE', 'CAMERA_FIXTURE', 3102, 'session', 'one'],
+  );
+});
+
+test('T8404 pushes that name the camera as its own station reach its HomeBase 3 owner', async () => {
+  const e10 = camera('T8404', 314);
+  const c31 = camera('T817L', 10031);
+  await fixture([owner(), e10, c31], async (t) => {
+    const received = [];
+    const unrouted = [];
+    const events = new EventTransport(
+      {},
+      (id) => t.supportsEvent(id, 'notification'),
+      (message) => t.processPush(message),
+      (message, source) => t.filterPush(message, source),
+      (message) => t.routePush(message),
+      (message, source) => unrouted.push(t.unroutedPush(message, source)),
+    );
+    events.on('event', (event) => received.push(event));
+    const push = (raw, type, extra = {}) => ({
+      device_sn: raw.device_sn,
+      station_sn: raw.device_sn,
+      type,
+      event_type: 3102,
+      event_time: Date.now(),
+      unique_id: raw.device_model,
+      ...extra,
+    });
+    try {
+      assert.equal(t.routePush(push(e10, 314)).station_sn, 'T8030_OWNER');
+      // Only the exact profile opts in, and a push naming the real owner is unchanged.
+      assert.equal(t.routePush(push(c31, 10031)).station_sn, c31.device_sn);
+      const owned = push(e10, 314, { station_sn: 'T8030_OWNER' });
+      assert.equal(t.routePush(owned), owned);
+      events.push(push(e10, 314));
+      assert.equal(t.cameras.get(e10.device_sn).isPersonDetected(), true);
+      events.push(push(c31, 10031));
+      await delay(550);
+      assert.deepEqual(
+        received.map((event) => [event.deviceId, event.type]),
+        [[e10.device_sn, 'person']],
+      );
+      assert.deepEqual(unrouted, [
+        {
+          reason: 'owner_mismatch',
+          source: 'cloud',
+          model: 'T817L',
+          station: 'device',
+          pushType: 10031,
+          eventCode: 3102,
+          msgType: null,
+        },
+      ]);
+    } finally {
+      await events.close();
+    }
+  });
+});
+
+test('unrouted pushes carry only a reason, the admitted model and push numbers', async () => {
+  const e10 = camera('T8404', 314);
+  await fixture([owner(), owner('T8030_WRONG'), e10], async (t) => {
+    const record = (message, source = 'cloud') => t.unroutedPush(message, source);
+    const base = { device_sn: e10.device_sn, station_sn: 'T8030_OWNER', type: 314 };
+    assert.deepEqual(record({ device_sn: '', station_sn: '', type: -1 }), {
+      reason: 'no_serial',
+      source: 'cloud',
+      model: null,
+      station: 'missing',
+      pushType: -1,
+      eventCode: null,
+      msgType: null,
+    });
+    assert.deepEqual(
+      record({
+        device_sn: 'T9999_UNKNOWN',
+        station_sn: 'T8030_OWNER',
+        type: 999,
+        event_type: 3101,
+      }),
+      {
+        reason: 'unknown_device',
+        source: 'cloud',
+        model: null,
+        station: 'station',
+        pushType: 999,
+        eventCode: 3101,
+        msgType: null,
+      },
+    );
+    assert.equal(
+      record({ device_sn: 'T9999_UNKNOWN', station_sn: 'T9999_UNKNOWN' }).station,
+      'device',
+    );
+    assert.equal(record({ device_sn: 'T9999_UNKNOWN', station_sn: 'OTHER' }).station, 'unknown');
+    // A station push is reported only with a camera detection code.
+    assert.equal(record({ device_sn: '', station_sn: 'T8030_OWNER', event_type: 9 }), undefined);
+    assert.deepEqual(
+      record(
+        { device_sn: 'T8030_OWNER', station_sn: 'T8030_OWNER', event_type: 3101, msg_type: 18 },
+        'local',
+      ),
+      {
+        reason: 'station_detection',
+        source: 'local',
+        model: null,
+        station: 'device',
+        pushType: null,
+        eventCode: 3101,
+        msgType: 18,
+      },
+    );
+    assert.deepEqual(
+      [
+        record({ ...base, station_sn: 'T8030_WRONG' }).reason,
+        record({ ...base, station_sn: 'T8030_WRONG' }).station,
+      ],
+      ['owner_mismatch', 'station'],
+    );
+    assert.deepEqual(record({ ...base, event_type: 3103, msg_type: 18 }), {
+      reason: 'unsupported_event',
+      source: 'cloud',
+      model: 'T8404',
+      station: 'owner',
+      pushType: 314,
+      eventCode: 3103,
+      msgType: 18,
+    });
+    for (const value of [1.5, '314', 100000, -2, NaN])
+      assert.equal(record({ ...base, type: value, event_type: value }).pushType, null);
+    t.failures.set(e10.device_sn, 'device_initialization_failed');
+    assert.equal(record(base).reason, 'camera_unavailable');
+    t.failures.delete(e10.device_sn);
+    t.failures.set('T8030_OWNER', 'connection_failed');
+    assert.equal(record(base).reason, 'camera_unavailable');
+  });
+});
+
+test('only T8404 detections are routed, and a relayed and a routed copy are one event', async () => {
+  const e10 = camera('T8404', 314);
+  await fixture([owner(), e10], async (t) => {
+    const received = [];
+    const unrouted = [];
+    const station = t.stations.get('T8030_OWNER');
+    const stationPushes = [];
+    station.processPushNotification = (message) => stationPushes.push(message.event_type);
+    const events = new EventTransport(
+      {},
+      (id) => t.supportsEvent(id, 'notification'),
+      (message) => t.processPush(message),
+      (message, source) => t.filterPush(message, source),
+      (message) => t.routePush(message),
+      (message, source) => unrouted.push(t.unroutedPush(message, source)),
+    );
+    events.on('event', (event) => received.push([event.deviceId, event.type]));
+    const self = {
+      device_sn: e10.device_sn,
+      station_sn: e10.device_sn,
+      type: 314,
+      event_time: Date.now(),
+    };
+    try {
+      // The camera's own mode and microSD pushes never reach the HomeBase.
+      for (const message of [
+        { ...self, event_type: 9, station_guard_mode: 0, station_current_mode: 0 },
+        { ...self, msg_type: 2, tfcard_status: 3 },
+      ]) {
+        assert.equal(t.routePush(message), message);
+        events.push(message);
+      }
+      assert.deepEqual(stationPushes, []);
+      assert.deepEqual(
+        unrouted.map((record) => [record.reason, record.station, record.eventCode, record.msgType]),
+        [
+          ['owner_mismatch', 'device', 9, null],
+          ['owner_mismatch', 'device', null, 2],
+        ],
+      );
+      // A relayed copy with the event session and a self-named copy with its unique_id.
+      events.push({ ...self, station_sn: 'T8030_OWNER', event_type: 3102, event_session: 'S' });
+      events.push({ ...self, event_type: 3102, event_session: 'S', unique_id: 'U' });
+      await delay(550);
+      assert.deepEqual(received, [[e10.device_sn, 'person']]);
+      assert.deepEqual(stationPushes, [3102, 3102]);
+      assert.equal(unrouted.length, 2);
+      // Not routed without a HomeBase the client set up.
+      t.stations.delete('T8030_OWNER');
+      const detection = { ...self, event_type: 3101 };
+      assert.equal(t.routePush(detection), detection);
+      t.stations.set('T8030_OWNER', station);
+    } finally {
+      await events.close();
+    }
+  });
+  // A T8404 that is its own station is not admitted, so nothing is routed.
+  const own = camera('T8404', 314, { parent_sn: '' });
+  await fixture([owner(), own], async (t) => {
+    const detection = {
+      device_sn: own.device_sn,
+      station_sn: own.device_sn,
+      type: 314,
+      event_type: 3101,
+    };
+    assert.equal(t.routePush(detection), detection);
+    assert.equal(t.unroutedPush(detection, 'cloud').reason, 'unknown_device');
+  });
+});

@@ -619,9 +619,18 @@ test('T8404 admits only the reported Window Camera E10 pair, with media commands
       family: 'indoor',
       topology: 'h3-or-standalone',
       features: h3Policy,
+      // ha-eufy-cam#283: since 0.31.3.
+      selfNamedPushes: true,
     },
   );
   assert.equal(exactDeviceProfile({ device_model: 'T8404', device_type: 314 }), profile);
+  // No other profile routes a push that names the camera as its own station.
+  assert.deepEqual(
+    Object.entries(deviceProfiles)
+      .filter(([, p]) => p.selfNamedPushes)
+      .map(([model]) => model),
+    ['T8404'],
+  );
   for (const [device_model, device_type] of [
     ['T8404', 31],
     ['T8404', 313],

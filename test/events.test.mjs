@@ -733,3 +733,36 @@ test('EventTransport passes the push source, so standalone copies typed 151 are 
   assert.equal(events[0].type, 'motion');
   return transport.close();
 });
+test('EventTransport routes before filtering and reports unrouted pushes without changing delivery', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 1789052400000 });
+  const seen = [];
+  const reported = [];
+  const known = new Set(['CAMERA']);
+  const transport = new EventTransport(
+    { getEventSession: () => undefined },
+    (id) => known.has(id),
+    (message) => seen.push(message.station_sn),
+    (message) => message.station_sn !== 'REFUSED',
+    (message) => (message.station_sn === 'SELF' ? { ...message, station_sn: 'OWNER' } : message),
+    (message, source) => {
+      reported.push([message.device_sn, message.station_sn, source]);
+      throw new Error('a failing diagnostic');
+    },
+  );
+  const faults = [];
+  const events = [];
+  transport.on('fault', (error) => faults.push(error.code));
+  transport.on('event', (event) => events.push(event.deviceId));
+  transport.push({ device_sn: 'CAMERA', station_sn: 'SELF', event_type: 3101, unique_id: 'a' });
+  transport.push({ device_sn: 'CAMERA', station_sn: 'REFUSED', event_type: 3101, unique_id: 'b' });
+  transport.push({ device_sn: 'OTHER', station_sn: 'OWNER', event_type: 3101 }, 'local');
+  t.mock.timers.tick(600);
+  assert.deepEqual(events, ['CAMERA']);
+  assert.deepEqual(seen, ['OWNER', 'OWNER']);
+  assert.deepEqual(reported, [
+    ['CAMERA', 'REFUSED', 'cloud'],
+    ['OTHER', 'OWNER', 'local'],
+  ]);
+  assert.deepEqual(faults, []);
+  return transport.close();
+});

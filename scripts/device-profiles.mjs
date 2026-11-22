@@ -41,6 +41,13 @@ export async function renderDeviceProfiles(text) {
         'admission above. See [API.md](API.md#preset-moves-0303).',
       ]),
     ...Object.entries(deviceProfiles)
+      .filter(([, profile]) => profile.selfNamedPushes)
+      .flatMap(([model]) => [
+        '',
+        `${model} detection pushes that name the camera as its own station go to its HomeBase 3.`,
+        'See [INDOOR.md](INDOOR.md#e10-events-0313).',
+      ]),
+    ...Object.entries(deviceProfiles)
       .filter(([, profile]) => profile.experimentalStandalone)
       .flatMap(([model, { features, standaloneEvents }]) => {
         // Blocked cells apply without the option. H3 cells apply only under a HomeBase.

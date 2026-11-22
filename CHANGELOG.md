@@ -4,6 +4,8 @@
 
 - Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), not yet confirmed on hardware.
 - Known problem: a keypad that charges can show not charging, and its battery can stay unknown ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), reported, not reproduced.
+- Possible fix for missing Window Camera E10 `T8404` events on a HomeBase 3 ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), not yet confirmed on hardware.
+- Added the `push-unrouted` event, which reports a push that produced no event, without serials ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)).
 
 Upgrade: no changes needed. Rollback: 0.31.2.
 

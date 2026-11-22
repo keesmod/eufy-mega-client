@@ -70,6 +70,9 @@ import {
   type StreamStop,
   type MediaMetadata,
   type StandalonePushObservation,
+  type StandalonePushSource,
+  type UnroutedPush,
+  type UnroutedPushReason,
   type PresetMoveResult,
   type AccessoryObservation,
   type AccessoryParameters,
@@ -104,6 +107,12 @@ const fail = (): never => {
 const DEFAULT_LIVE_BOUND_MS = 120000;
 const MAX_LIVE_BOUND_MS = 3_600_000;
 const MIN_LIVE_BOUND_MS = 1000;
+/** A push field for the unrouted-push record: an integer in -1..99999, else null. */
+const pushInteger = (value: unknown): number | null =>
+  Number.isSafeInteger(value) && (value as number) >= -1 && (value as number) <= 99999
+    ? (value as number)
+    : null;
+const serial = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 /** Private adapter: protocol objects never cross the public library boundary. */
 export class DeviceTransport extends EventEmitter {
@@ -716,6 +725,82 @@ export class DeviceTransport extends EventEmitter {
       this.stations.has(message.station_sn) &&
       this.supportsEvent(message.device_sn, pushEventType(message))
     );
+  }
+  /**
+   * ha-eufy-cam#283: a camera detection push that names an admitted HomeBase
+   * camera as its own station is routed to that camera's HomeBase, when the
+   * camera's exact profile allows it. Every other push is returned unchanged,
+   * so a camera's own mode or microSD push never reaches the HomeBase.
+   */
+  routePush(message: PushMessage): PushMessage {
+    const id = serial(message.device_sn);
+    if (
+      id === '' ||
+      message.station_sn !== id ||
+      this.standalone.has(id) ||
+      pushEventType(message) === 'notification'
+    )
+      return message;
+    const raw = this.raw.get(id);
+    const owner = this.ownerOf(raw);
+    if (
+      !raw ||
+      isStation(raw) ||
+      exactDeviceProfile(raw)?.selfNamedPushes !== true ||
+      owner === undefined ||
+      owner === id ||
+      !this.stations.has(owner)
+    )
+      return message;
+    return { ...message, station_sn: owner };
+  }
+  /**
+   * ha-eufy-cam#283: the numbers-only record of a push that produced no
+   * detection event. Undefined for a push that needs none: an accessory or
+   * standalone push, which its own path reports, and a station push without a
+   * camera detection code, such as a Guard Mode change.
+   */
+  unroutedPush(message: PushMessage, source: StandalonePushSource): UnroutedPush | undefined {
+    const device = serial(message.device_sn),
+      station = serial(message.station_sn);
+    if (this.accessories.has(device) || this.standaloneOwner(message)) return undefined;
+    const raw = device === '' ? undefined : this.raw.get(device);
+    const camera = raw && !isStation(raw) ? raw : undefined;
+    const owner = this.ownerOf(camera);
+    let reason: UnroutedPushReason;
+    if (device === '' && station === '') reason = 'no_serial';
+    else if (camera) {
+      if (
+        !this.cameras.has(device) ||
+        this.failures.has(device) ||
+        !owner ||
+        this.failures.has(owner) ||
+        !this.stations.has(owner)
+      )
+        reason = 'camera_unavailable';
+      else reason = owner === station ? 'unsupported_event' : 'owner_mismatch';
+    } else if ((device === '' || device === station) && this.stations.has(station)) {
+      if (pushEventType(message) === 'notification') return undefined;
+      reason = 'station_detection';
+    } else reason = 'unknown_device';
+    return {
+      reason,
+      source,
+      model: camera?.device_model ?? null,
+      station:
+        station === ''
+          ? 'missing'
+          : camera && station === owner
+            ? 'owner'
+            : station === device
+              ? 'device'
+              : this.stations.has(station)
+                ? 'station'
+                : 'unknown',
+      pushType: pushInteger(message.type),
+      eventCode: pushInteger(message.event_type),
+      msgType: pushInteger(message.msg_type),
+    };
   }
   private bind(station: Station): void {
     const id = station.getSerial();

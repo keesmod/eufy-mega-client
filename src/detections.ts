@@ -158,10 +158,15 @@ export class Detections {
     private companionMs = 2000,
   ) {}
 
-  /** `source` tells a cloud push from a push over an open device session. */
-  push(message: PushMessage, source: PushSource = 'cloud'): void {
+  /**
+   * `source` tells a cloud push from a push over an open device session.
+   * `routed` marks a push whose owner the client set (ha-eufy-cam#283), so it
+   * is another transport than a relayed copy of the same detection. False when
+   * the push names no known camera, true when it was queued or merged.
+   */
+  push(message: PushMessage, source: PushSource = 'cloud', routed = false): boolean {
     const serial = message.device_sn || message.station_sn;
-    if (!this.known(serial)) return;
+    if (!this.known(serial)) return false;
     const now = Date.now();
     for (const [key, expires] of this.seen) if (expires <= now) this.seen.delete(key);
     const type = pushEventType(message);
@@ -175,7 +180,7 @@ export class Detections {
         : undefined;
     if (key && this.seen.has(key)) {
       this.metrics.duplicates++;
-      return;
+      return true;
     }
     const name = type === 'person' ? personName(message.person_name) : null;
     const event: Draft = {
@@ -195,7 +200,7 @@ export class Detections {
               : 'unidentified',
       ...(Number.isSafeInteger(message.event_type) ? { eufy_event_type: message.event_type } : {}),
     };
-    const transport = `${source}:${message.type ?? 'none'}`;
+    const transport = `${source}:${message.type ?? 'none'}${routed ? ':routed' : ''}`;
     const id = identity ? String(identity) : undefined;
     // Distinct IDs in the SAME format are distinct detections, even very close
     // together. Cross-format companions, and copies with the same raw identity,
@@ -224,7 +229,7 @@ export class Detections {
     if (!existing && this.lateCopy(event, transport, id, now)) {
       this.metrics.duplicates++;
       if (key) this.remember([key]);
-      return;
+      return true;
     }
     existing ??= candidates[0];
     if (existing) {
@@ -255,6 +260,7 @@ export class Detections {
       if (id) existing.ids.add(id);
       existing.transports.add(transport);
     } else this.queue(event, key, transport, id);
+    return true;
   }
 
   /**

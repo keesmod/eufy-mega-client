@@ -19,6 +19,10 @@ export class EventTransport extends EventEmitter {
     known: (id: string) => boolean,
     private readonly devicePush: (message: PushMessage) => void,
     private readonly acceptPush: (message: PushMessage, source: PushSource) => boolean = () => true,
+    /** ha-eufy-cam#283: runs before acceptPush and may name the push's actual owner. */
+    private readonly route: (message: PushMessage) => PushMessage = (message) => message,
+    /** ha-eufy-cam#283: a push that acceptPush refused or that named no known camera. */
+    private readonly unrouted: (message: PushMessage, source: PushSource) => void = () => {},
   ) {
     super();
     this.detections = new Detections(
@@ -63,11 +67,23 @@ export class EventTransport extends EventEmitter {
   push(message: PushMessage, source: PushSource = 'cloud'): void {
     if (this.closed) return;
     try {
-      if (!this.acceptPush(message, source)) return;
-      this.detections.push(message, source);
-      this.devicePush(message);
+      const routed = this.route(message);
+      if (!this.acceptPush(routed, source)) {
+        this.report(routed, source);
+        return;
+      }
+      if (!this.detections.push(routed, source, routed !== message)) this.report(routed, source);
+      this.devicePush(routed);
     } catch {
       this.emit('fault', new EufyError('invalid_event'));
+    }
+  }
+  /** A diagnostic only. Its failure never changes how a push is handled. */
+  private report(message: PushMessage, source: PushSource): void {
+    try {
+      this.unrouted(message, source);
+    } catch {
+      /* ignored */
     }
   }
   private persist(): Promise<void> {

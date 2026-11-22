@@ -1486,3 +1486,86 @@ test('the client delivers standalone T84A1 events and reports its push observati
     await client.close();
   }
 });
+
+test('the client routes a self-named T8404 detection and emits push-unrouted only without an event', async (t) => {
+  const created = [];
+  t.mock.method(Station, 'getInstance', async (_provider, wire, address) =>
+    fakeStation(wire, address, created),
+  );
+  const service = Object.assign(new EventEmitter(), {
+    open: async () => {
+      setImmediate(() => service.emit('connect', 'synthetic-token'));
+      return { synthetic: true };
+    },
+    close() {},
+    getPersistentIds: () => [],
+    setCredentials() {},
+    setPersistentIds() {},
+  });
+  t.mock.method(PushNotificationService, 'initialize', async () => service);
+  // ha-eufy-cam#283: a Window Camera E10 under the same HomeBase 3.
+  const e10 = {
+    ...eufyCam,
+    device_sn: 'T8404_FIXTURE',
+    device_model: 'T8404',
+    device_type: 314,
+    device_channel: 2,
+  };
+  const fixture = cloudFixture({ inventory: [homeBase, eufyCam, e10] });
+  const client = new EufyMegaClient(fixture.options);
+  const received = [];
+  const unrouted = [];
+  client.on('event', (event) => received.push(event.deviceId));
+  client.on('push-unrouted', (push) => unrouted.push(push));
+  try {
+    await client.connect();
+    await client.discoverDevices();
+    await client.startEvents();
+    const push = (extra) => ({
+      device_sn: 'T8161_FIXTURE',
+      station_sn: 'T8030_OWNER',
+      type: 23,
+      event_type: 3101,
+      event_time: Date.now(),
+      ...extra,
+    });
+    service.emit('message', push({ unique_id: 'delivered' }));
+    // A eufyCam has no selfNamedPushes, so a push naming itself as station stays refused.
+    service.emit('message', push({ station_sn: 'T8161_FIXTURE', unique_id: 'self' }));
+    service.emit('message', push({ device_sn: 'T9999_UNKNOWN', unique_id: 'unknown' }));
+    // The E10 names itself as station. The client routes it to the HomeBase 3.
+    service.emit(
+      'message',
+      push({
+        device_sn: 'T8404_FIXTURE',
+        station_sn: 'T8404_FIXTURE',
+        type: 314,
+        unique_id: 'e10',
+      }),
+    );
+    await delay(550);
+    assert.deepEqual(received.sort(), ['T8161_FIXTURE', 'T8404_FIXTURE']);
+    assert.deepEqual(unrouted, [
+      {
+        reason: 'owner_mismatch',
+        source: 'cloud',
+        model: 'T8161',
+        station: 'device',
+        pushType: 23,
+        eventCode: 3101,
+        msgType: null,
+      },
+      {
+        reason: 'unknown_device',
+        source: 'cloud',
+        model: null,
+        station: 'station',
+        pushType: 23,
+        eventCode: 3101,
+        msgType: null,
+      },
+    ]);
+  } finally {
+    await client.close();
+  }
+});

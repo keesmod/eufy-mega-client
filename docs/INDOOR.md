@@ -474,6 +474,50 @@ relationships, the complete H.264 and H.265 start envelopes, stop, recordings,
 the four registered commands, the detection events and the normalization of a
 relayed push. No physical E10 was used for the change.
 
+### E10 events, 0.31.3
+
+The reporter of ha-eufy-cam#283 confirmed discovery, a snapshot, live view with
+and without sound, and recordings through the HomeBase 3 with client 0.31.2, as
+the [model matrix](MODEL_MATRIX.md#reported-t8404-results-2026-11-21) records.
+No event reached Home Assistant and the bridge log showed nothing for the E10,
+while other cameras on the same HomeBase delivered events.
+
+The bridge keeps the HomeBase session open, so a detection of a HomeBase camera
+can arrive twice: as a local copy over that session and as a cloud push. This
+client accepts either copy for the E10 when it names the camera as `device_sn`
+and its HomeBase as `station_sn`. Neither copy produced an event. The HomeBase
+apparently sent no local copy, and either eufy sent no cloud push to this client
+or the push named the E10 in another way. Nothing showed which, because the
+vendored protocol logger stays disabled: raw pushes carry keys and identities.
+
+The standalone E10 reports in
+[eufy-mega-security#627](https://github.com/mscodemonkey/eufy-mega-security/issues/627)
+show cloud pushes with event type 3102 and `msg_type` 18. A camera that runs on
+its own is its own station, so its push names the camera as both `device_sn`
+and `station_sn`. An E10 that keeps doing so under a HomeBase 3 fails the owner
+check without a fault or a log line. This is a candidate, not an observation.
+0.31.3 therefore makes two changes:
+
+- The exact `T8404`/314 profile sets `selfNamedPushes`. A camera detection
+  push whose `device_sn` and `station_sn` both name that admitted camera is
+  routed to the camera's HomeBase 3 before the existing filters, when the client
+  has set that admitted HomeBase up. It is then handled like a relayed
+  detection. The vendored generic camera branch already reads its event code,
+  session and `unique_id`. A push without a camera detection code, such as the
+  camera's own mode or microSD push, is not routed and never reaches the
+  HomeBase. A routed copy counts as another transport, so a relayed copy of the
+  same detection that agrees in time becomes the same event. No other profile
+  sets the flag, and a push that names another station is unchanged.
+- The `push-unrouted` event reports a push that produced no detection event,
+  apart from the pushes [API.md](API.md#unrouted-pushes-0313) leaves out, with
+  a reason, the admitted model and push numbers only. A consumer can log it, so
+  a report shows which case applies.
+
+If no push for the E10 reaches the client at all, neither change helps and no
+`push-unrouted` record appears for it. The [Indoor tests](../test/indoor.test.mjs)
+cover the routing, its exact scope and each reason. No physical E10 was used for
+the change.
+
 ## Remaining obligations
 
 [#143](https://github.com/keesmod/eufy-mega-client/issues/143) tracks other HomeBase
