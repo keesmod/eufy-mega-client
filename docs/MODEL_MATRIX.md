@@ -1349,6 +1349,21 @@ evidence only.
 [E10-627]: https://github.com/mscodemonkey/eufy-mega-security/issues/627
 [E10-app]: https://github.com/alaraun/python-eufy-home-security/tree/4a9e9488ca11e518ce8e3ef97e2cfe0d0969be43/docs/reference
 
+## Reported T8404 results, 2026-11-21
+
+Later that day the [same reporter][283-result] ran bridge 0.8.46 with client
+0.31.2 and integration 0.8.55 on the same E10 and T8030. The E10 appeared under
+the HomeBase 3, and a snapshot, live view with and without sound, the recording
+list and playback worked, without errors in the bridge log. No event reached
+Home Assistant. The eufy app showed motion and person events for the E10, the
+bridge log showed nothing for it, and other cameras on the same HomeBase
+delivered events. Client 0.31.3 adds a candidate route and a diagnostic for
+these pushes, described in [INDOOR.md](INDOOR.md#e10-events-0313). This is a
+reported result, not independently reproduced. The type 314 feature row and its
+cells are unchanged.
+
+[283-result]: https://github.com/keesmod/ha-eufy-cam/issues/283#issuecomment-7065383177
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)

@@ -119,6 +119,9 @@ See [MODEL_MATRIX.md](MODEL_MATRIX.md) for the report.
 T8170 also offers experimental moves to a saved preset, only with the H3 media owner
 admission above. See [API.md](API.md#preset-moves-0303).
 
+T8404 pushes that name the camera as its own station go to its HomeBase 3 owner.
+See [INDOOR.md](INDOOR.md#e10-events-0313).
+
 With the client option `experimentalStandalone`, a standalone T8410 becomes its own
 local owner with experimental snapshot and live, and recordings unavailable with
 `standalone_recordings_unverified`. Its H3 cells above apply only under a HomeBase.

@@ -631,8 +631,9 @@ stored delivery IDs. `eventStatus` reports connectivity and delivery counters.
 see [standalone events and push observation](#standalone-events-and-push-observation-0301).
 
 Typed events are `auth`, `device`, `station`, `snapshot`, `event`,
-`events-connection`, `live-stop`, `fault` and, since 0.31.0, `accessory`, see
-[HomeBase accessories](#homebase-accessories-0310). A `station` event follows a
+`events-connection`, `live-stop`, `fault`, since 0.31.0 `accessory`, see
+[HomeBase accessories](#homebase-accessories-0310), and since 0.31.3
+`push-unrouted`, see [unrouted pushes](#unrouted-pushes-0313). A `station` event follows a
 connection change, a station property change or a change of an observed mode. Detection events preserve supported
 motion/person/ring semantics and recognized names when supplied by the device.
 Deduplication correlates device/push copies and persists recent delivery hashes;
@@ -663,6 +664,32 @@ is false if a fresh read already matches. Rejection or timeout never causes an
 automatic retry. Read the device again before deciding what to do next. A
 failure after the connection was requested closes the session, except
 `connection_busy`, which leaves another caller's attempt alone.
+
+### Unrouted pushes, 0.31.3
+
+Since 0.31.3 ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283))
+the client emits `push-unrouted` for every push that produced no detection event,
+because the event filter refused it or it named no known camera. It leaves out
+pushes for HomeBase accessories and experimental standalone owners, which
+`accessoryObservation` and `standalonePushStatus` count, and a station push
+without a camera detection code, such as a Guard Mode change. The record carries
+no serial, DID, address, name, URL, path, timestamp or image:
+
+| Field                  | Meaning                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reason`               | `no_serial`, `unknown_device`, `camera_unavailable`, `owner_mismatch`, `unsupported_event` or `station_detection`, see `UnroutedPushReason` |
+| `source`               | `cloud` for the Eufy push service, `local` for a push over an open device session                                                           |
+| `model`                | the model code of the admitted camera that `device_sn` names, else null                                                                     |
+| `station`              | how `station_sn` relates: `owner` of that camera, `device` when it equals `device_sn`, another admitted `station`, `unknown` or `missing`   |
+| `pushType`             | the push `type`: the device type on a cloud push, the `msg_type` on a local push                                                            |
+| `eventCode`, `msgType` | the push's `event_type` and `msg_type`                                                                                                      |
+
+Each integer is null when absent, not an integer or outside -1..99999. The client
+emits one record per push without a rate limit, so a consumer that logs them
+should bound that. An exception in a listener never changes how the push is
+handled. Before the filters, a push that names an admitted `T8404` as its own
+station goes to that camera's HomeBase 3 owner, as
+[INDOOR.md](INDOOR.md#e10-events-0313) describes.
 
 ## Preset moves, 0.30.3
 

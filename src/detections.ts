@@ -158,10 +158,13 @@ export class Detections {
     private companionMs = 2000,
   ) {}
 
-  /** `source` tells a cloud push from a push over an open device session. */
-  push(message: PushMessage, source: PushSource = 'cloud'): void {
+  /**
+   * `source` tells a cloud push from a push over an open device session. False
+   * when the push names no known camera, true when it was queued or merged.
+   */
+  push(message: PushMessage, source: PushSource = 'cloud'): boolean {
     const serial = message.device_sn || message.station_sn;
-    if (!this.known(serial)) return;
+    if (!this.known(serial)) return false;
     const now = Date.now();
     for (const [key, expires] of this.seen) if (expires <= now) this.seen.delete(key);
     const type = pushEventType(message);
@@ -175,7 +178,7 @@ export class Detections {
         : undefined;
     if (key && this.seen.has(key)) {
       this.metrics.duplicates++;
-      return;
+      return true;
     }
     const name = type === 'person' ? personName(message.person_name) : null;
     const event: Draft = {
@@ -224,7 +227,7 @@ export class Detections {
     if (!existing && this.lateCopy(event, transport, id, now)) {
       this.metrics.duplicates++;
       if (key) this.remember([key]);
-      return;
+      return true;
     }
     existing ??= candidates[0];
     if (existing) {
@@ -255,6 +258,7 @@ export class Detections {
       if (id) existing.ids.add(id);
       existing.transports.add(transport);
     } else this.queue(event, key, transport, id);
+    return true;
   }
 
   /**

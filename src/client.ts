@@ -206,6 +206,11 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
       },
       (message) => transport.processPush(message),
       (message, source) => transport.filterPush(message, source),
+      (message) => transport.routePush(message),
+      (message, source) => {
+        const push = transport.unroutedPush(message, source);
+        if (push) this.emit('push-unrouted', push);
+      },
     ));
     for (const name of ['event', 'fault'] as const)
       events.on(name, (value) => this.emit(name, value));

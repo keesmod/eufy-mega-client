@@ -744,6 +744,48 @@ export interface StandalonePushObservation {
   pushTypes: Record<string, number>;
 }
 
+/**
+ * Since 0.31.3, ha-eufy-cam#283: why a push produced no detection event. Pushes
+ * for accessories and experimental standalone owners are left out, because
+ * their own paths report them.
+ */
+export type UnroutedPushReason =
+  /** Neither `device_sn` nor `station_sn` is set. */
+  | 'no_serial'
+  /** `device_sn` names no admitted camera, and the push is not a station push. */
+  | 'unknown_device'
+  /** `device_sn` is an admitted camera that is not initialised, or it or its owner failed. */
+  | 'camera_unavailable'
+  /** `device_sn` is an admitted camera, and `station_sn` is not its owner. */
+  | 'owner_mismatch'
+  /** The camera and owner match, and the camera has no such detection. */
+  | 'unsupported_event'
+  /** A station push without a camera that carries a camera detection code. */
+  | 'station_detection';
+/**
+ * How `station_sn` relates to the push. `owner`: the owner of the camera that
+ * `device_sn` names. `device`: the same value as `device_sn`. `station`: another
+ * admitted station. `unknown`: any other value. `missing`: empty or absent.
+ */
+export type UnroutedPushStation = 'owner' | 'device' | 'station' | 'unknown' | 'missing';
+/**
+ * Since 0.31.3, ha-eufy-cam#283: a numbers-only record of one push that produced
+ * no detection event. It carries no serial, DID, address, name, URL, path,
+ * timestamp or image. The integers are null when absent, not an integer or
+ * outside -1..99999.
+ */
+export interface UnroutedPush {
+  reason: UnroutedPushReason;
+  source: StandalonePushSource;
+  /** The model code of the admitted camera that `device_sn` names, else null. */
+  model: string | null;
+  station: UnroutedPushStation;
+  /** The push `type`: the device type on cloud pushes, the `msg_type` on local pushes. */
+  pushType: number | null;
+  eventCode: number | null;
+  msgType: number | null;
+}
+
 /** Private opaque FCM registration. This is secret session material. */
 export interface EventSession {
   version: 1;
@@ -775,4 +817,6 @@ export interface ClientEvents {
   fault: [error: EufyError];
   /** Since 0.31.0, ha-eufy-cam#275: an accessory reading changed its value, source or `live`. */
   accessory: [state: AccessoryState];
+  /** Since 0.31.3, ha-eufy-cam#283: a push produced no detection event. Every such push. */
+  'push-unrouted': [push: UnroutedPush];
 }

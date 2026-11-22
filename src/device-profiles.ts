@@ -30,6 +30,8 @@ export interface DeviceProfile {
   readonly standaloneEvents?: true;
   // ha-eufy-cam#229: moves to a saved preset, only under an admitted HomeBase 3.
   readonly presets?: true;
+  // ha-eufy-cam#283: a push that names the camera as its own station belongs to its HomeBase 3.
+  readonly selfNamedPushes?: true;
 }
 
 // Each feature is explicit. Shared policies avoid repeating identical admission rules.
@@ -92,7 +94,11 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   // ha-eufy-cam#136: Wired Cam C31, reported as T817L/10031 under a T8030. Only this exact pair.
   T817L: camera(10031, 'indoor', 'h3-or-standalone', h3Media),
   // ha-eufy-cam#283: T8404/type 314 under a T8030, reported on 2026-11-21. Only this exact pair.
-  T8404: camera(314, 'indoor', 'h3-or-standalone', h3Media),
+  // Its pushes reached no event on that HomeBase 3, see docs/INDOOR.md, E10 events.
+  T8404: Object.freeze({
+    ...camera(314, 'indoor', 'h3-or-standalone', h3Media),
+    selfNamedPushes: true,
+  }),
   T8030: Object.freeze({
     type: 18,
     kind: 'station',
