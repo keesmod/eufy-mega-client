@@ -2,6 +2,9 @@ import type { AccessoryRow } from './discovery.js';
 import type {
   AccessoryCategory,
   AccessoryObservation,
+  AccessoryParameterReport,
+  AccessoryParameterRoute,
+  AccessoryParameters,
   AccessoryReading,
   AccessoryState,
   WireDevice,
@@ -26,6 +29,34 @@ const NAMES: Readonly<Record<AccessoryCategory, readonly ReadingName[]>> = {
   keypad: ['batteryLow', 'charging'],
   chime: [],
 };
+
+/**
+ * ha-eufy-cam#286: the keypad battery keys whose raw codes are kept as evidence,
+ * battery level 1101 and the vendored keypad battery, temperature and charger
+ * states 1653, 1654 and 1655. No other value is kept, so keypad codes and
+ * settings never leave the store.
+ */
+const KEYPAD_CODE_KEYS: ReadonlySet<number> = new Set([1101, 1653, 1654, 1655]);
+/** At most this many parameter types per route and keypad. */
+const PARAMETER_TYPE_LIMIT = 64;
+const ROUTES: readonly AccessoryParameterRoute[] = ['cloud', 'camera_info', 'hub_notify'];
+
+/** A short integer as its decimal text, anything else `other`. */
+function parameterCode(value: unknown): string {
+  if (typeof value === 'number')
+    return Number.isSafeInteger(value) && Math.abs(value) < 1e6 ? String(value) : 'other';
+  return typeof value === 'string' && /^-?[0-9]{1,6}$/.test(value) ? value : 'other';
+}
+
+interface RouteEvidence {
+  types: Set<number>;
+  codes: Map<number, string>;
+}
+const emptyEvidence = (): Record<AccessoryParameterRoute, RouteEvidence> => ({
+  cloud: { types: new Set(), codes: new Map() },
+  camera_info: { types: new Set(), codes: new Map() },
+  hub_notify: { types: new Set(), codes: new Map() },
+});
 
 /** The reading a parameter key sets for this category, if any. */
 export function readingName(category: AccessoryCategory, key: number): ReadingName | undefined {
@@ -66,6 +97,8 @@ interface Entry {
    */
   pushTimes: Partial<Record<ReadingName, number>>;
   p2pTimes: Partial<Record<ReadingName, number>>;
+  /** ha-eufy-cam#286: keypads only, the parameters each route carried. */
+  parameters?: Record<AccessoryParameterRoute, RouteEvidence>;
 }
 
 export type Observed = 'changed' | 'same' | 'late';
@@ -127,6 +160,14 @@ export class AccessoryStore {
               p2pTimes: {},
             };
       const params = Array.isArray(raw.params) ? raw.params : [];
+      if (record.category === 'keypad') {
+        // The inventory is read anew each time, so its evidence is replaced.
+        record.parameters ??= emptyEvidence();
+        record.parameters.cloud = { types: new Set(), codes: new Map() };
+        for (const p of params)
+          if (p && typeof p === 'object')
+            this.noteParameter(record, 'cloud', p.param_type, p.param_value);
+      }
       for (const name of NAMES[record.category]) {
         const current = record.readings[name];
         if (current && current.source !== 'cloud') continue;
@@ -185,6 +226,47 @@ export class AccessoryStore {
     );
     if (matches.length === 0) return undefined;
     return matches.length > 1 || taken.has(channel) ? 'ambiguous' : matches[0]!.id;
+  }
+  /**
+   * ha-eufy-cam#286: one parameter a route carried for this accessory. Only a
+   * keypad keeps it. Its type is always kept, its value only for a battery key.
+   */
+  parameter(id: string, route: AccessoryParameterRoute, type: unknown, value: unknown): void {
+    const record = this.records.get(id);
+    if (record) this.noteParameter(record, route, type, value);
+  }
+  private noteParameter(
+    record: Entry,
+    route: AccessoryParameterRoute,
+    type: unknown,
+    value: unknown,
+  ): void {
+    if (record.category !== 'keypad') return;
+    if (typeof type === 'string' && /^[0-9]{1,5}$/.test(type)) type = Number(type);
+    if (typeof type !== 'number' || !Number.isSafeInteger(type) || type < 0 || type > 65535) return;
+    record.parameters ??= emptyEvidence();
+    const evidence = record.parameters[route];
+    if (!evidence.types.has(type) && evidence.types.size >= PARAMETER_TYPE_LIMIT) return;
+    evidence.types.add(type);
+    if (KEYPAD_CODE_KEYS.has(type)) evidence.codes.set(type, parameterCode(value));
+  }
+  /**
+   * ha-eufy-cam#286: the parameters of an admitted keypad by route, with the
+   * newest raw code of each battery key. Undefined for any other ID.
+   */
+  parameters(id: string): AccessoryParameters | undefined {
+    const record = this.records.get(id);
+    if (!record || record.category !== 'keypad') return undefined;
+    const evidence = record.parameters ?? emptyEvidence();
+    const report = (route: AccessoryParameterRoute): AccessoryParameterReport => ({
+      types: [...evidence[route].types].sort((a, b) => a - b),
+      codes: Object.fromEntries(
+        [...evidence[route].codes]
+          .sort(([a], [b]) => a - b)
+          .map(([type, code]) => [String(type), code]),
+      ),
+    });
+    return Object.fromEntries(ROUTES.map((route) => [route, report(route)])) as AccessoryParameters;
   }
   state(id: string): AccessoryState | undefined {
     const record = this.records.get(id);

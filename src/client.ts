@@ -27,6 +27,7 @@ import {
   type PresetMoveResult,
   type Accessory,
   type AccessoryObservation,
+  type AccessoryParameters,
   type AccessoryState,
 } from './types.js';
 
@@ -82,6 +83,15 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
    */
   get accessoryObservation(): AccessoryObservation {
     return this.transport?.accessoryObservation() ?? new AccessoryStore().snapshot();
+  }
+  /**
+   * ha-eufy-cam#286: which parameters an admitted keypad reported, by route,
+   * with the raw values of its battery keys only. Synchronous, no I/O. Null for
+   * an ID that is no admitted keypad and before the device transport exists.
+   * See docs/ACCESSORIES.md, keypad parameters. Since 0.31.3.
+   */
+  accessoryParameters(id: string): AccessoryParameters | null {
+    return this.transport?.accessoryParameters(id) ?? null;
   }
   connect(answer?: AuthAnswer, signal?: AbortSignal): Promise<AuthState> {
     if (this.closed) return Promise.reject(new EufyError('client_closed'));
