@@ -317,6 +317,22 @@ independently reproduced. The type 97 feature row and its cells are unchanged.
 [252-sound]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-6972373625
 [269]: https://github.com/keesmod/ha-eufy-cam/issues/269
 
+## Reported T8215 live view sound, 2026-11-22
+
+The [same reporter][252-live-log] then tested live view on the same T8215. Its
+`eld_decode` log line shows 440 units of the type 7 live audio decoded without
+errors, 30 ms per unit. That first test still played as JPEG without sound,
+because Home Assistant's go2rtc was not set up on the reporter's HA Core
+installation. After setting it up, the reporter
+[heard sound in live view][252-live-sound] and called the sync of sound and
+picture mediocre, but no better in the Eufy app. The bridge, client and
+integration versions were not stated. The camera bridge decodes live AAC-ELD
+from 0.8.44 ([ha-eufy-cam#269][269]). This is a reported result, not
+independently reproduced. The type 97 feature row and its cells are unchanged.
+
+[252-live-log]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-7037483555
+[252-live-sound]: https://github.com/keesmod/ha-eufy-cam/issues/252#issuecomment-7079188914
+
 ## Reported E340 and S340 on a routed HomeBase 3, 2026-11-18
 
 On 2026-11-18 the [reporter of ha-eufy-cam#261][261-report] ran HA 2026.11.2,
