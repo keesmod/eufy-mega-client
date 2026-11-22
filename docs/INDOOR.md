@@ -518,6 +518,20 @@ If no push for the E10 reaches the client at all, neither change helps and no
 cover the routing, its exact scope and each reason. No physical E10 was used for
 the change.
 
+The next morning the reporter power-cycled the E10, and with client 0.31.2 its
+motion and person events then reached Home Assistant, as the
+[model matrix](MODEL_MATRIX.md#reported-t8404-results-2026-11-22) records. Those
+events needed neither change. The route stays for a camera that names itself as
+its station, which no report has shown under a HomeBase 3.
+
+An E10 event did not bring its event picture. After a push the client asks the
+HomeBase for the latest event row of each camera with `databaseQueryLatestInfo`,
+and downloads the picture at the row's HomeBase path, `crop_local_path`. A row
+without a HomeBase path carries only a cloud path, which the client does not
+fetch, so the snapshot keeps its last picture. Nothing shows yet whether the
+E10 row lacks the HomeBase path, keeps an older path or is missing, or whether
+its picture download fails.
+
 ## Remaining obligations
 
 [#143](https://github.com/keesmod/eufy-mega-client/issues/143) tracks other HomeBase

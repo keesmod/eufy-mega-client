@@ -1364,6 +1364,18 @@ cells are unchanged.
 
 [283-result]: https://github.com/keesmod/ha-eufy-cam/issues/283#issuecomment-7065383177
 
+## Reported T8404 results, 2026-11-22
+
+The next morning the [same reporter][283-events] power-cycled the E10. With the
+same bridge 0.8.46 and client 0.31.2, its motion and person events then reached
+Home Assistant. An E10 event did not replace the snapshot with the event
+picture, as events of the other cameras on that HomeBase do. The snapshot kept
+the last refreshed picture. See [INDOOR.md](INDOOR.md#e10-events-0313). This is
+a reported result, not independently reproduced. The type 314 feature row and
+its cells are unchanged.
+
+[283-events]: https://github.com/keesmod/ha-eufy-cam/issues/283#issuecomment-7080211793
+
 ## SoloCam software evidence, 0.11.0
 
 [Story #21][#21] adds [exact SoloCam discovery/state/event evidence](SOLOCAM.md)
