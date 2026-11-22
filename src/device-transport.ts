@@ -727,13 +727,20 @@ export class DeviceTransport extends EventEmitter {
     );
   }
   /**
-   * ha-eufy-cam#283: a push that names an admitted HomeBase camera as its own
-   * station is routed to that camera's HomeBase, when the camera's exact profile
-   * allows it. Every other push is returned unchanged.
+   * ha-eufy-cam#283: a camera detection push that names an admitted HomeBase
+   * camera as its own station is routed to that camera's HomeBase, when the
+   * camera's exact profile allows it. Every other push is returned unchanged,
+   * so a camera's own mode or microSD push never reaches the HomeBase.
    */
   routePush(message: PushMessage): PushMessage {
     const id = serial(message.device_sn);
-    if (id === '' || message.station_sn !== id || this.standalone.has(id)) return message;
+    if (
+      id === '' ||
+      message.station_sn !== id ||
+      this.standalone.has(id) ||
+      pushEventType(message) === 'notification'
+    )
+      return message;
     const raw = this.raw.get(id);
     const owner = this.ownerOf(raw);
     if (

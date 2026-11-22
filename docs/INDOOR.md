@@ -498,12 +498,16 @@ and `station_sn`. An E10 that keeps doing so under a HomeBase 3 fails the owner
 check without a fault or a log line. This is a candidate, not an observation.
 0.31.3 therefore makes two changes:
 
-- The exact `T8404`/314 profile sets `selfNamedPushes`. A push whose
-  `device_sn` and `station_sn` both name that admitted camera, under an
-  admitted HomeBase 3 owner, is routed to that owner before the existing
-  filters and is then handled like a relayed push. The vendored generic camera
-  branch already reads its event code, session and `unique_id`. No other
-  profile sets the flag, and a push that names another station is unchanged.
+- The exact `T8404`/314 profile sets `selfNamedPushes`. A camera detection
+  push whose `device_sn` and `station_sn` both name that admitted camera is
+  routed to the camera's HomeBase 3 before the existing filters, when the client
+  has set that admitted HomeBase up. It is then handled like a relayed
+  detection. The vendored generic camera branch already reads its event code,
+  session and `unique_id`. A push without a camera detection code, such as the
+  camera's own mode or microSD push, is not routed and never reaches the
+  HomeBase. A routed copy counts as another transport, so a relayed copy of the
+  same detection that agrees in time becomes the same event. No other profile
+  sets the flag, and a push that names another station is unchanged.
 - The `push-unrouted` event reports every push that produced no detection
   event, with a reason, the admitted model and push numbers only, as
   [API.md](API.md#unrouted-pushes-0313) describes. A consumer can log it, so a

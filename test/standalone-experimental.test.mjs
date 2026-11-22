@@ -1486,3 +1486,68 @@ test('the client delivers standalone T84A1 events and reports its push observati
     await client.close();
   }
 });
+
+test('the client emits push-unrouted for a push without an event, never for a delivered one', async (t) => {
+  const created = [];
+  t.mock.method(Station, 'getInstance', async (_provider, wire, address) =>
+    fakeStation(wire, address, created),
+  );
+  const service = Object.assign(new EventEmitter(), {
+    open: async () => {
+      setImmediate(() => service.emit('connect', 'synthetic-token'));
+      return { synthetic: true };
+    },
+    close() {},
+    getPersistentIds: () => [],
+    setCredentials() {},
+    setPersistentIds() {},
+  });
+  t.mock.method(PushNotificationService, 'initialize', async () => service);
+  const fixture = cloudFixture({ inventory: [homeBase, eufyCam] });
+  const client = new EufyMegaClient(fixture.options);
+  const received = [];
+  const unrouted = [];
+  client.on('event', (event) => received.push(event.deviceId));
+  client.on('push-unrouted', (push) => unrouted.push(push));
+  try {
+    await client.connect();
+    await client.discoverDevices();
+    await client.startEvents();
+    const push = (extra) => ({
+      device_sn: 'T8161_FIXTURE',
+      station_sn: 'T8030_OWNER',
+      type: 23,
+      event_type: 3101,
+      event_time: Date.now(),
+      ...extra,
+    });
+    service.emit('message', push({ unique_id: 'delivered' }));
+    // A eufyCam has no selfNamedPushes, so a push naming itself as station stays refused.
+    service.emit('message', push({ station_sn: 'T8161_FIXTURE', unique_id: 'self' }));
+    service.emit('message', push({ device_sn: 'T9999_UNKNOWN', unique_id: 'unknown' }));
+    await delay(550);
+    assert.deepEqual(received, ['T8161_FIXTURE']);
+    assert.deepEqual(unrouted, [
+      {
+        reason: 'owner_mismatch',
+        source: 'cloud',
+        model: 'T8161',
+        station: 'device',
+        pushType: 23,
+        eventCode: 3101,
+        msgType: null,
+      },
+      {
+        reason: 'unknown_device',
+        source: 'cloud',
+        model: null,
+        station: 'station',
+        pushType: 23,
+        eventCode: 3101,
+        msgType: null,
+      },
+    ]);
+  } finally {
+    await client.close();
+  }
+});

@@ -817,6 +817,6 @@ export interface ClientEvents {
   fault: [error: EufyError];
   /** Since 0.31.0, ha-eufy-cam#275: an accessory reading changed its value, source or `live`. */
   accessory: [state: AccessoryState];
-  /** Since 0.31.3, ha-eufy-cam#283: a push produced no detection event. Every such push. */
+  /** Since 0.31.3, ha-eufy-cam#283: a push produced no detection event. See docs/API.md for the pushes left out. */
   'push-unrouted': [push: UnroutedPush];
 }

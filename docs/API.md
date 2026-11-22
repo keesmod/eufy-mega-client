@@ -644,7 +644,8 @@ copy is the same occurrence when it has the same type and either arrives over
 another transport or carries the same identity (the `unique_id`, else the
 event session), and both
 event times, when present, agree within a second. A transport is the push
-source, `local` or `cloud`, with the payload `type`. This holds while the first
+source, `local` or `cloud`, with the payload `type` and, since 0.31.3, whether
+the client routed the push, see [unrouted pushes](#unrouted-pushes-0313). This holds while the first
 copy is pending and up to 2 s after the first copy arrived. A copy with the
 same key or identity is matched before a copy linked only by its transport.
 When only the transport links a copy to an earlier copy without event time,
@@ -687,9 +688,10 @@ no serial, DID, address, name, URL, path, timestamp or image:
 Each integer is null when absent, not an integer or outside -1..99999. The client
 emits one record per push without a rate limit, so a consumer that logs them
 should bound that. An exception in a listener never changes how the push is
-handled. Before the filters, a push that names an admitted `T8404` as its own
-station goes to that camera's HomeBase 3 owner, as
-[INDOOR.md](INDOOR.md#e10-events-0313) describes.
+handled. Before the filters, a camera detection push that names an admitted
+`T8404` as its own station goes to that camera's HomeBase 3 owner, as
+[INDOOR.md](INDOOR.md#e10-events-0313) describes. The record shows the push
+after that routing.
 
 ## Preset moves, 0.30.3
 
