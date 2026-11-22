@@ -693,6 +693,35 @@ handled. Before the filters, a camera detection push that names an admitted
 [INDOOR.md](INDOOR.md#e10-events-0313) describes. The record shows the push
 after that routing.
 
+### Snapshot refresh observation, 0.31.3
+
+The stored snapshot of a HomeBase camera comes from the HomeBase's latest event
+rows. The client asks for them when `snapshot()` has no stored picture, 2
+seconds after an accepted push, and the protocol layer asks once when a session
+opens. For each row of an admitted camera with snapshot media, the client
+downloads the picture at the row's HomeBase path, unless it already shows that
+path. It never fetches a cloud path. A reply that is a JPEG of at most 5 MB for
+the camera's current path becomes its snapshot.
+
+Since 0.31.3 ([ha-eufy-cam#293](https://github.com/keesmod/ha-eufy-cam/issues/293))
+`client.snapshotRefreshStatus` counts each step, by the camera's inventory
+model. It is synchronous, does no I/O, counts since the device transport was
+created and is zero before. It carries no serial, DID, address, name, path,
+timestamp or image. Counting never changes what the client queries, fetches or
+shows.
+
+| Field                                | Meaning                                                                                                                                                           |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `replies`                            | Replies with result 0, by the query that asked: `push`, `request` (`snapshot()`) or `connect` (the session's own query, and any reply the client did not ask for) |
+| `failedReplies`                      | Replies with another result. Their rows are not read                                                                                                              |
+| `models[model].rows[trigger]`        | Per reply and camera: `no_row`, `homebase_path` (fetched), `unchanged_path`, `cloud_path_only`, `no_path` or `invalid_path`                                       |
+| `models[model].eventCounts[trigger]` | Per row other than `no_row`, its `event_count` against the camera's previous row: `first`, `increased`, `unchanged`, `decreased` or `unavailable`                 |
+| `models[model].downloads`            | Per fetched path: `kept`, `not_jpeg`, `too_large`, `superseded` (a newer path was fetched first) or `no_reply` (nothing within 15 seconds)                        |
+
+Every key is always present. `models` has at most 16 models, then `other`, and
+names an absent model `unknown`. Replies are matched to queries in the order
+sent, at most four per station, and a closed session forgets its queries.
+
 ## Preset moves, 0.30.3
 
 `moveToPreset(cameraId, preset, signal?)` moves a camera to one of the four

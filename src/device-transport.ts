@@ -71,6 +71,9 @@ import {
   type MediaMetadata,
   type StandalonePushObservation,
   type StandalonePushSource,
+  type SnapshotDownloadOutcome,
+  type SnapshotQueryTrigger,
+  type SnapshotRefreshObservation,
   type UnroutedPush,
   type UnroutedPushReason,
   type PresetMoveResult,
@@ -79,6 +82,7 @@ import {
   type AccessoryState,
 } from './types.js';
 import { LiveStartObserver } from './live-start.js';
+import { SnapshotRefreshCounter, eventCountChange } from './snapshot-refresh.js';
 import { tapLiveFrames } from './live-frames.js';
 
 import { mediaMetadata } from './media.js';
@@ -105,6 +109,10 @@ const fail = (): never => {
 };
 /** Per-stream upper bound: 120 seconds unless a start asks for more, up to the ceiling. */
 const DEFAULT_LIVE_BOUND_MS = 120000;
+/** ha-eufy-cam#293: a requested snapshot picture without a reply by then counts as no_reply. */
+const IMAGE_REPLY_MS = 15000;
+/** ha-eufy-cam#293: latest-info queries remembered per station until their reply. */
+const LATEST_QUERIES = 4;
 const MAX_LIVE_BOUND_MS = 3_600_000;
 const MIN_LIVE_BOUND_MS = 1000;
 /** A push field for the unrouted-push record: an integer in -1..99999, else null. */
@@ -135,6 +143,14 @@ export class DeviceTransport extends EventEmitter {
   private connecting = new Map<string, Promise<void>>();
   private snapshots = new Map<string, Snapshot>();
   private covers = new Map<string, string>();
+  /** ha-eufy-cam#293: the picture download requested per camera and not answered yet. */
+  private pendingImages = new Map<string, { path: string; timer: NodeJS.Timeout }>();
+  /** ha-eufy-cam#293: each camera's last latest-info `event_count`. */
+  private eventCounts = new Map<string, number>();
+  /** ha-eufy-cam#293: the triggers of the latest-info queries sent per station, oldest first. */
+  private latestQueries = new Map<string, SnapshotQueryTrigger[]>();
+  /** ha-eufy-cam#293: numbers-only counts of the snapshot refresh. */
+  private readonly snapshotRefresh = new SnapshotRefreshCounter();
   private lives = new Map<string, ActiveLive>();
   /** Primary-session live starts in progress, station id to camera channel. */
   private starting = new Map<string, number>();
@@ -287,6 +303,8 @@ export class DeviceTransport extends EventEmitter {
         this.cameras.delete(id);
         this.snapshots.delete(id);
         this.covers.delete(id);
+        this.forgetImage(id);
+        this.eventCounts.delete(id);
       }
     for (const [id, station] of this.stations)
       if (changed(id)) {
@@ -296,6 +314,7 @@ export class DeviceTransport extends EventEmitter {
         this.stationAddresses.delete(id);
         this.sessionAddresses.delete(id);
         this.encryption.delete(id);
+        this.latestQueries.delete(id);
         this.observedModes.delete(id);
         // The close handler is gone with the listeners, so end the live readings here.
         for (const accessory of this.accessories.close(id)) this.emitAccessory(accessory);
@@ -811,6 +830,8 @@ export class DeviceTransport extends EventEmitter {
     });
     station.on('close', () => {
       this.encryption.delete(id);
+      // A query sent on a closed session gets no reply.
+      this.latestQueries.delete(id);
       this.finishLive(id, { confirmed: false, reason: 'connection_lost' });
       this.emit('station', this.state(id));
       for (const accessory of this.accessories.close(id)) this.emitAccessory(accessory);
@@ -855,9 +876,12 @@ export class DeviceTransport extends EventEmitter {
         camera.updateRawProperty(CommandType.CMD_GET_BATTERY, String(battery), 'p2p');
     });
     station.on('database query latest', (_s, code, rows) => {
-      if (code === 0) this.latest(id, rows);
+      const trigger = this.latestQueries.get(id)?.shift() ?? 'connect';
+      this.snapshotRefresh.reply(trigger, code === 0);
+      if (code === 0) this.latest(id, rows, trigger);
     });
     station.on('image download', (_s, path, data) => {
+      this.settleImages(id, path, data);
       if (
         data.length < 3 ||
         data.length > 5_000_000 ||
@@ -906,20 +930,113 @@ export class DeviceTransport extends EventEmitter {
     });
     station.on('push notification', (_s, message) => this.emit('push', message));
   }
-  private latest(stationId: string, rows: DatabaseQueryLatestInfo[]): void {
+  /** An admitted camera of this station with snapshot media, whose rows are read and counted. */
+  private refreshable(id: string, stationId: string): boolean {
+    return (
+      this.cameras.has(id) &&
+      this.ownerOf(this.raw.get(id)) === stationId &&
+      this.hasMedia(id, 'snapshot')
+    );
+  }
+  private latest(
+    stationId: string,
+    rows: DatabaseQueryLatestInfo[],
+    trigger: SnapshotQueryTrigger,
+  ): void {
+    const seen = new Set<string>();
     for (const row of rows) {
-      if (
-        !this.cameras.has(row.device_sn) ||
-        this.ownerOf(this.raw.get(row.device_sn)) !== stationId ||
-        !this.hasMedia(row.device_sn, 'snapshot') ||
-        !('crop_local_path' in row)
-      )
+      if (!this.refreshable(row.device_sn, stationId)) continue;
+      const id = row.device_sn,
+        model = this.raw.get(id)?.device_model;
+      seen.add(id);
+      // ha-eufy-cam#293: counted, never acted on. Only a HomeBase path is fetched.
+      const change = eventCountChange(this.eventCounts.get(id), row.event_count);
+      if (change !== 'unavailable') this.eventCounts.set(id, row.event_count);
+      if (!('crop_local_path' in row)) {
+        const cloud = typeof row.crop_cloud_path === 'string' && row.crop_cloud_path !== '';
+        this.snapshotRefresh.row(model, trigger, cloud ? 'cloud_path_only' : 'no_path', change);
         continue;
+      }
       const path = row.crop_local_path;
-      if (typeof path !== 'string' || !path || path.length > 2048) continue;
-      if (this.covers.get(row.device_sn) === path && this.snapshots.has(row.device_sn)) continue;
-      this.covers.set(row.device_sn, path);
-      this.station(stationId).downloadImage(path);
+      if (typeof path !== 'string' || !path || path.length > 2048) {
+        this.snapshotRefresh.row(model, trigger, 'invalid_path', change);
+        continue;
+      }
+      if (this.covers.get(id) === path && this.snapshots.has(id)) {
+        this.snapshotRefresh.row(model, trigger, 'unchanged_path', change);
+        continue;
+      }
+      this.snapshotRefresh.row(model, trigger, 'homebase_path', change);
+      this.covers.set(id, path);
+      // Before the request, because a reply may arrive while it is sent.
+      this.expectImage(id, path);
+      try {
+        this.station(stationId).downloadImage(path);
+      } catch (error) {
+        this.forgetImage(id);
+        throw error;
+      }
+    }
+    for (const id of this.cameras.keys())
+      if (!seen.has(id) && this.refreshable(id, stationId))
+        this.snapshotRefresh.row(this.raw.get(id)?.device_model, trigger, 'no_row', 'unavailable');
+  }
+  /** ha-eufy-cam#293: count the camera's picture download once, by reply or after 15 seconds. */
+  private expectImage(id: string, path: string): void {
+    const model = this.raw.get(id)?.device_model;
+    const current = this.pendingImages.get(id);
+    // A repeated request for the same path waits for the same reply.
+    if (current?.path === path) return;
+    if (current) {
+      this.forgetImage(id);
+      this.snapshotRefresh.download(model, 'superseded');
+    }
+    const pending = {
+      path,
+      timer: setTimeout(() => {
+        if (this.pendingImages.get(id) !== pending || this.lifetime.signal.aborted) return;
+        this.pendingImages.delete(id);
+        this.snapshotRefresh.download(model, 'no_reply');
+      }, IMAGE_REPLY_MS),
+    };
+    pending.timer.unref();
+    this.pendingImages.set(id, pending);
+  }
+  private forgetImage(id: string): void {
+    const pending = this.pendingImages.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.pendingImages.delete(id);
+  }
+  /** ha-eufy-cam#293: the outcome of each requested download this reply answers. Counts only. */
+  private settleImages(stationId: string, path: unknown, data: unknown): void {
+    for (const [id, pending] of this.pendingImages) {
+      if (pending.path !== path || this.ownerOf(this.raw.get(id)) !== stationId) continue;
+      this.forgetImage(id);
+      const image = Buffer.isBuffer(data) ? data : undefined;
+      let outcome: SnapshotDownloadOutcome;
+      if (!image || image.length < 3 || image[0] !== 255 || image[1] !== 216 || image[2] !== 255)
+        outcome = 'not_jpeg';
+      else if (image.length > 5_000_000) outcome = 'too_large';
+      else outcome = this.covers.get(id) === path ? 'kept' : 'superseded';
+      this.snapshotRefresh.download(this.raw.get(id)?.device_model, outcome);
+    }
+  }
+  /** ha-eufy-cam#293: synchronous, no I/O. Counts since this transport was created. */
+  snapshotRefreshStatus(): SnapshotRefreshObservation {
+    return this.snapshotRefresh.snapshot();
+  }
+  /** Ask a station for its latest event rows and remember why, for the reply's counts. */
+  private queryLatest(id: string, station: Station, trigger: SnapshotQueryTrigger): void {
+    const queue = this.latestQueries.get(id) ?? [];
+    queue.push(trigger);
+    if (queue.length > LATEST_QUERIES) queue.shift();
+    this.latestQueries.set(id, queue);
+    try {
+      station.databaseQueryLatestInfo();
+    } catch (error) {
+      queue.pop();
+      throw error;
     }
   }
   async connect(
@@ -1069,7 +1186,10 @@ export class DeviceTransport extends EventEmitter {
     return this.wait(
       this,
       'snapshot',
-      () => this.station(camera.getStationSerial()).databaseQueryLatestInfo(),
+      () => {
+        const owner = camera.getStationSerial();
+        this.queryLatest(owner, this.station(owner), 'request');
+      },
       (snapshot) => (snapshot.deviceId === id ? snapshot : undefined),
       signal,
       15000,
@@ -1585,7 +1705,7 @@ export class DeviceTransport extends EventEmitter {
         this.refreshSnapshots(id);
         return;
       }
-      station.databaseQueryLatestInfo();
+      this.queryLatest(id, station, 'push');
     }, 2000);
     timer.unref();
     this.refreshTimers.set(id, timer);
@@ -1683,6 +1803,8 @@ export class DeviceTransport extends EventEmitter {
     await Promise.allSettled([...this.pendingStarts]);
     for (const timer of this.refreshTimers.values()) clearTimeout(timer);
     this.refreshTimers.clear();
+    for (const id of [...this.pendingImages.keys()]) this.forgetImage(id);
+    this.latestQueries.clear();
     await Promise.allSettled([
       ...[...this.lives.values()].map((live) => this.stopLive(live.handle.deviceId)),
       ...[...this.extraLives.keys()].map((key) => this.stopExtraLive(key)),
