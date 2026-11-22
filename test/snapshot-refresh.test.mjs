@@ -17,6 +17,7 @@ const rowKeys = [
   'unchanged_path',
   'cloud_path_only',
   'no_path',
+  'path_absent',
   'invalid_path',
 ];
 const changeKeys = ['first', 'increased', 'unchanged', 'decreased', 'unavailable'];
@@ -97,12 +98,14 @@ test('push refreshes count each row outcome and event_count change, and fetch on
     push(t, f, [row(f, { event_count: 2, crop_cloud_path: '' })]);
     push(t, f, [row(f, { event_count: -1, crop_local_path: 'x'.repeat(2049) })]);
     push(t, f, [row(f, { crop_local_path: 7 })]);
+    // The protocol layer's row for a reply without a crop_hb3_path field.
+    push(t, f, [row(f, { event_count: 2, crop_local_path: undefined })]);
     push(t, f, []);
     push(t, f, [{ device_sn: 'UNADMITTED', event_count: 1, crop_local_path: '/synthetic/other' }]);
     assert.deepEqual(requested, ['/synthetic/one', '/synthetic/two']);
     assert.deepEqual(f.transport.snapshots.get(f.camera.device_sn).data, jpeg);
     const status = f.transport.snapshotRefreshStatus();
-    assert.deepEqual(status.replies, { push: 10, request: 0, connect: 0 });
+    assert.deepEqual(status.replies, { push: 11, request: 0, connect: 0 });
     const counts = status.models.T8404;
     assert.deepEqual(counts.rows.push, {
       no_row: 2,
@@ -110,12 +113,13 @@ test('push refreshes count each row outcome and event_count change, and fetch on
       unchanged_path: 2,
       cloud_path_only: 1,
       no_path: 1,
+      path_absent: 1,
       invalid_path: 2,
     });
     assert.deepEqual(counts.eventCounts.push, {
       first: 1,
       increased: 2,
-      unchanged: 2,
+      unchanged: 3,
       decreased: 1,
       unavailable: 2,
     });
@@ -250,4 +254,112 @@ test('the client reports zero counts before the device transport exists', () => 
       models: {},
     },
   );
+});
+
+test("the session's own query on connect is matched first, so a request reply keeps its trigger", async () => {
+  const f = await mediaFixture(e10);
+  try {
+    f.answers = station(f);
+    f.station.hasCommand = () => true;
+    f.station.emit('connect', f.station);
+    f.station.databaseQueryLatestInfo = () => {};
+    const asking = f.transport.snapshot(f.camera.device_sn);
+    await turn();
+    f.station.emit('database query latest', f.station, 0, [
+      row(f, { event_count: 1, crop_cloud_path: '/synthetic/cloud' }),
+    ]);
+    f.station.emit('database query latest', f.station, 0, [
+      row(f, { event_count: 2, crop_local_path: '/synthetic/request' }),
+    ]);
+    assert.deepEqual((await asking).data, jpeg);
+    const status = f.transport.snapshotRefreshStatus();
+    assert.deepEqual(status.replies, { push: 0, request: 1, connect: 1 });
+    assert.equal(status.models.T8404.rows.connect.cloud_path_only, 1);
+    assert.equal(status.models.T8404.rows.request.homebase_path, 1);
+    // A station without the command sends no query of its own on connect.
+    f.station.hasCommand = () => false;
+    f.station.emit('connect', f.station);
+    assert.equal(f.transport.latestQueries.get(f.camera.parent_sn).length, 0);
+  } finally {
+    await f.close();
+  }
+});
+
+test('the query queue: a closed session forgets it, it keeps four, a query 15 seconds old is dropped and a throw unqueues', async (t) => {
+  const f = await mediaFixture(e10);
+  try {
+    const id = f.camera.parent_sn;
+    f.answers = station(f);
+    f.station.databaseQueryLatestInfo = () => {};
+    f.transport.queryLatest(id, f.station, 'push');
+    f.station.emit('close', f.station);
+    assert.equal(f.transport.latestQueries.has(id), false);
+    f.transport.queryLatest(id, f.station, 'request');
+    for (let i = 0; i < 4; i++) f.transport.queryLatest(id, f.station, 'push');
+    assert.equal(f.transport.latestQueries.get(id).length, 4);
+    for (let i = 0; i < 4; i++) f.station.emit('database query latest', f.station, 0, []);
+    assert.deepEqual(f.transport.snapshotRefreshStatus().replies, {
+      push: 4,
+      request: 0,
+      connect: 0,
+    });
+    let now = 1000;
+    t.mock.method(performance, 'now', () => now);
+    f.transport.queryLatest(id, f.station, 'request');
+    now += 15_001;
+    f.transport.queryLatest(id, f.station, 'push');
+    f.station.emit('database query latest', f.station, 0, []);
+    assert.deepEqual(f.transport.snapshotRefreshStatus().replies, {
+      push: 5,
+      request: 0,
+      connect: 0,
+    });
+    f.station.databaseQueryLatestInfo = () => {
+      throw new Error('synthetic');
+    };
+    assert.throws(() => f.transport.queryLatest(id, f.station, 'push'), /synthetic/);
+    assert.equal(f.transport.latestQueries.get(id).length, 0);
+  } finally {
+    await f.close();
+  }
+});
+
+test('a throw from downloadImage still propagates and leaves nothing waiting', async () => {
+  const f = await mediaFixture(e10);
+  try {
+    f.answers = station(f);
+    f.station.downloadImage = () => {
+      throw new Error('synthetic');
+    };
+    assert.throws(
+      () =>
+        f.station.emit('database query latest', f.station, 0, [
+          row(f, { event_count: 1, crop_local_path: '/synthetic/throw' }),
+        ]),
+      /synthetic/,
+    );
+    assert.equal(f.transport.pendingImages.size, 0);
+    assert.equal(f.transport.snapshotRefreshStatus().models.T8404.rows.connect.homebase_path, 1);
+  } finally {
+    await f.close();
+  }
+});
+
+test('a repeated request for the same path waits 15 seconds from the last request', async (t) => {
+  const f = await mediaFixture(e10);
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    f.answers = station(f, () => undefined);
+    push(t, f, [row(f, { event_count: 1, crop_local_path: '/synthetic/slow' })]);
+    t.mock.timers.tick(8000);
+    push(t, f, [row(f, { event_count: 1, crop_local_path: '/synthetic/slow' })]);
+    // 15 seconds after the first request, 7 after the second.
+    t.mock.timers.tick(5000);
+    f.station.emit('image download', f.station, '/synthetic/slow', jpeg);
+    const downloads = f.transport.snapshotRefreshStatus().models.T8404.downloads;
+    assert.deepEqual(downloads, { ...zeros(downloadKeys), kept: 1 });
+    assert.deepEqual(f.transport.snapshots.get(f.camera.device_sn).data, jpeg);
+  } finally {
+    await f.close();
+  }
 });

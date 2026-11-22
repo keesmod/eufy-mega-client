@@ -710,17 +710,20 @@ created and is zero before. It carries no serial, DID, address, name, path,
 timestamp or image. Counting never changes what the client queries, fetches or
 shows.
 
-| Field                                | Meaning                                                                                                                                                           |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `replies`                            | Replies with result 0, by the query that asked: `push`, `request` (`snapshot()`) or `connect` (the session's own query, and any reply the client did not ask for) |
-| `failedReplies`                      | Replies with another result. Their rows are not read                                                                                                              |
-| `models[model].rows[trigger]`        | Per reply and camera: `no_row`, `homebase_path` (fetched), `unchanged_path`, `cloud_path_only`, `no_path` or `invalid_path`                                       |
-| `models[model].eventCounts[trigger]` | Per row other than `no_row`, its `event_count` against the camera's previous row: `first`, `increased`, `unchanged`, `decreased` or `unavailable`                 |
-| `models[model].downloads`            | Per fetched path: `kept`, `not_jpeg`, `too_large`, `superseded` (a newer path was fetched first) or `no_reply` (nothing within 15 seconds)                        |
+| Field                                | Meaning                                                                                                                                                                                                              |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `replies`                            | Replies with result 0, by the query that asked: `push`, `request` (`snapshot()`) or `connect` (the session's own query, and any reply the client did not ask for)                                                    |
+| `failedReplies`                      | Replies with another result. Their rows are not read                                                                                                                                                                 |
+| `models[model].rows[trigger]`        | Per reply and camera: `no_row`, `homebase_path` (fetched), `unchanged_path`, `cloud_path_only`, `no_path`, `path_absent` (no HomeBase path field, so the protocol layer also drops the cloud path) or `invalid_path` |
+| `models[model].eventCounts[trigger]` | Per row other than `no_row`, its `event_count` against the camera's previous row: `first`, `increased`, `unchanged`, `decreased` or `unavailable`                                                                    |
+| `models[model].downloads`            | Per fetched path: `kept`, `not_jpeg`, `too_large`, `superseded` (a newer path was fetched first) or `no_reply` (nothing within 15 seconds)                                                                           |
 
 Every key is always present. `models` has at most 16 models, then `other`, and
 names an absent model `unknown`. Replies are matched to queries in the order
-sent, at most four per station, and a closed session forgets its queries.
+sent, the session's own query on connect included, at most four per station. A
+query without a reply after 15 seconds is dropped, and a closed session forgets
+its queries. A repeated request for the same path waits for one reply, 15
+seconds from the last request.
 
 ## Preset moves, 0.30.3
 

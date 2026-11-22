@@ -38,6 +38,7 @@ import {
   DoorbellCamera,
   SmartDrop,
   PropertyName,
+  CommandName,
 } from './vendor/http/index.js';
 import type { Device as ProtocolDevice } from './vendor/http/device.js';
 import type { RawValues } from './vendor/http/interfaces.js';
@@ -113,6 +114,8 @@ const DEFAULT_LIVE_BOUND_MS = 120000;
 const IMAGE_REPLY_MS = 15000;
 /** ha-eufy-cam#293: latest-info queries remembered per station until their reply. */
 const LATEST_QUERIES = 4;
+/** ha-eufy-cam#293: a remembered query older than this got no reply and is dropped. */
+const LATEST_REPLY_MS = 15000;
 const MAX_LIVE_BOUND_MS = 3_600_000;
 const MIN_LIVE_BOUND_MS = 1000;
 /** A push field for the unrouted-push record: an integer in -1..99999, else null. */
@@ -144,11 +147,11 @@ export class DeviceTransport extends EventEmitter {
   private snapshots = new Map<string, Snapshot>();
   private covers = new Map<string, string>();
   /** ha-eufy-cam#293: the picture download requested per camera and not answered yet. */
-  private pendingImages = new Map<string, { path: string; timer: NodeJS.Timeout }>();
+  private pendingImages = new Map<string, { path: string; timer?: NodeJS.Timeout }>();
   /** ha-eufy-cam#293: each camera's last latest-info `event_count`. */
   private eventCounts = new Map<string, number>();
-  /** ha-eufy-cam#293: the triggers of the latest-info queries sent per station, oldest first. */
-  private latestQueries = new Map<string, SnapshotQueryTrigger[]>();
+  /** ha-eufy-cam#293: the latest-info queries sent per station, oldest first. */
+  private latestQueries = new Map<string, { trigger: SnapshotQueryTrigger; at: number }[]>();
   /** ha-eufy-cam#293: numbers-only counts of the snapshot refresh. */
   private readonly snapshotRefresh = new SnapshotRefreshCounter();
   private lives = new Map<string, ActiveLive>();
@@ -875,8 +878,18 @@ export class DeviceTransport extends EventEmitter {
       if (camera?.hasProperty(PropertyName.DeviceBattery) && observedInteger(battery, 100) !== null)
         camera.updateRawProperty(CommandType.CMD_GET_BATTERY, String(battery), 'p2p');
     });
+    // ha-eufy-cam#293: the protocol layer asks for the latest rows itself when a
+    // session opens. Counting only, so a failure here never touches the connection.
+    station.on('connect', () => {
+      try {
+        if (station.hasCommand(CommandName.StationDatabaseQueryLatestInfo))
+          this.rememberQuery(id, 'connect');
+      } catch {
+        /* ignored */
+      }
+    });
     station.on('database query latest', (_s, code, rows) => {
-      const trigger = this.latestQueries.get(id)?.shift() ?? 'connect';
+      const trigger = this.replyTrigger(id);
       this.snapshotRefresh.reply(trigger, code === 0);
       if (code === 0) this.latest(id, rows, trigger);
     });
@@ -957,7 +970,13 @@ export class DeviceTransport extends EventEmitter {
         this.snapshotRefresh.row(model, trigger, cloud ? 'cloud_path_only' : 'no_path', change);
         continue;
       }
-      const path = row.crop_local_path;
+      const path = row.crop_local_path as unknown;
+      // The protocol layer makes a row without a crop_hb3_path field a HomeBase
+      // row without a path, and drops its cloud path.
+      if (path === undefined || path === null) {
+        this.snapshotRefresh.row(model, trigger, 'path_absent', change);
+        continue;
+      }
       if (typeof path !== 'string' || !path || path.length > 2048) {
         this.snapshotRefresh.row(model, trigger, 'invalid_path', change);
         continue;
@@ -985,20 +1004,19 @@ export class DeviceTransport extends EventEmitter {
   private expectImage(id: string, path: string): void {
     const model = this.raw.get(id)?.device_model;
     const current = this.pendingImages.get(id);
-    // A repeated request for the same path waits for the same reply.
-    if (current?.path === path) return;
-    if (current) {
+    if (current && current.path !== path) {
       this.forgetImage(id);
       this.snapshotRefresh.download(model, 'superseded');
     }
-    const pending = {
-      path,
-      timer: setTimeout(() => {
-        if (this.pendingImages.get(id) !== pending || this.lifetime.signal.aborted) return;
-        this.pendingImages.delete(id);
-        this.snapshotRefresh.download(model, 'no_reply');
-      }, IMAGE_REPLY_MS),
-    };
+    // A repeated request for the same path waits for one reply, 15 seconds from the last request.
+    const pending: { path: string; timer?: NodeJS.Timeout } =
+      current?.path === path ? current : { path };
+    clearTimeout(pending.timer);
+    pending.timer = setTimeout(() => {
+      if (this.pendingImages.get(id) !== pending || this.lifetime.signal.aborted) return;
+      this.pendingImages.delete(id);
+      this.snapshotRefresh.download(model, 'no_reply');
+    }, IMAGE_REPLY_MS);
     pending.timer.unref();
     this.pendingImages.set(id, pending);
   }
@@ -1028,16 +1046,30 @@ export class DeviceTransport extends EventEmitter {
   }
   /** Ask a station for its latest event rows and remember why, for the reply's counts. */
   private queryLatest(id: string, station: Station, trigger: SnapshotQueryTrigger): void {
-    const queue = this.latestQueries.get(id) ?? [];
-    queue.push(trigger);
-    if (queue.length > LATEST_QUERIES) queue.shift();
-    this.latestQueries.set(id, queue);
+    const entry = this.rememberQuery(id, trigger);
     try {
       station.databaseQueryLatestInfo();
     } catch (error) {
-      queue.pop();
+      const queue = this.latestQueries.get(id);
+      queue?.splice(queue.indexOf(entry) >>> 0, 1);
       throw error;
     }
+  }
+  private rememberQuery(id: string, trigger: SnapshotQueryTrigger) {
+    const queue = this.latestQueries.get(id) ?? [];
+    const entry = { trigger, at: performance.now() };
+    queue.push(entry);
+    if (queue.length > LATEST_QUERIES) queue.shift();
+    this.latestQueries.set(id, queue);
+    return entry;
+  }
+  /** The oldest query still waiting for its reply. Queries without a reply after 15 seconds are dropped. */
+  private replyTrigger(id: string): SnapshotQueryTrigger {
+    const queue = this.latestQueries.get(id) ?? [];
+    const now = performance.now();
+    for (let head = queue[0]; head && now - head.at > LATEST_REPLY_MS; head = queue[0])
+      queue.shift();
+    return queue.shift()?.trigger ?? 'connect';
   }
   async connect(
     id: string,

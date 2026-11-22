@@ -14,6 +14,7 @@ const rowOutcomes: readonly SnapshotRowOutcome[] = [
   'unchanged_path',
   'cloud_path_only',
   'no_path',
+  'path_absent',
   'invalid_path',
 ];
 const eventCounts: readonly SnapshotEventCount[] = [

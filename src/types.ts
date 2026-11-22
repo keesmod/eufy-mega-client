@@ -790,7 +790,7 @@ export interface UnroutedPush {
  * Since 0.31.3, ha-eufy-cam#293: what asked the HomeBase for its latest event
  * rows. `push`: the refresh 2 seconds after an accepted push. `request`:
  * `snapshot()` without a stored picture. `connect`: the query the protocol layer
- * sends itself when a session opens, and any reply the client did not ask for.
+ * sends itself when a session opens, and any reply without a waiting query.
  */
 export type SnapshotQueryTrigger = 'push' | 'request' | 'connect';
 /** Since 0.31.3, ha-eufy-cam#293: how one latest-info reply treated one camera. */
@@ -805,6 +805,8 @@ export type SnapshotRowOutcome =
   | 'cloud_path_only'
   /** Neither a HomeBase nor a cloud path. */
   | 'no_path'
+  /** The row has no HomeBase path field. The protocol layer then keeps no cloud path either. */
+  | 'path_absent'
   /** A HomeBase path that is not a string or longer than 2048 characters. */
   | 'invalid_path';
 /**

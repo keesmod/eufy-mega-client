@@ -226,6 +226,8 @@ test('a silent station ends at the lookup stage and says the inventory had no ad
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const { t: transport, station } = connectionFixture({ answer: [] });
   const stages = [];
+  // The transport's own connect listener (ha-eufy-cam#293) stays. Stage listeners must not.
+  const bound = station.listenerCount('connect');
   try {
     const connecting = transport.connect('HB', undefined, (progress) => stages.push(progress));
     t.mock.timers.tick(20000);
@@ -235,7 +237,7 @@ test('a silent station ends at the lookup stage and says the inventory had no ad
       [{ stage: 'lookup', inventoryAddress: false }],
     );
     assert.equal(station.listenerCount('station found'), 0);
-    assert.equal(station.listenerCount('connect'), 0);
+    assert.equal(station.listenerCount('connect'), bound);
   } finally {
     t.mock.timers.reset();
     await transport.close();
@@ -278,10 +280,11 @@ test('a consumer cancelling at the lookup stage starts no session behind the clo
 
 test('a signal the runtime refuses leaves no stage listeners behind', async () => {
   const { t, station } = connectionFixture();
+  const bound = station.listenerCount('connect');
   try {
     for (let i = 0; i < 3; i++) await assert.rejects(t.connect('HB', { aborted: false }, () => {}));
     assert.equal(station.listenerCount('station found'), 0);
-    assert.equal(station.listenerCount('connect'), 0);
+    assert.equal(station.listenerCount('connect'), bound);
     assert.equal(t.connecting.size, 0);
   } finally {
     await t.close();
