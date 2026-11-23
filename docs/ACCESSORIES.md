@@ -65,9 +65,10 @@ the HomeBase session last closed. A `cloud` value is never live.
 ## Delivery
 
 State comes from the HomeBase's own local session and from the account's push
-notifications. The client sends no request for accessories beyond the existing
-discovery. It does not refresh the cloud after a notification, which the
-upstream library does through legacy routes, and it does not poll.
+notifications. Beyond the existing discovery, the client's only request for
+accessories is the device information below, which it repeats about every 5
+minutes since 0.31.3. It does not refresh the cloud after a notification, which
+the upstream library does through legacy routes.
 
 1. P2P hub notify update (1829). The vendored session now passes on the
    parameters of this notification as `param report`, at most 32 per frame.
@@ -77,13 +78,21 @@ upstream library does through legacy routes, and it does not poll.
 2. P2P sensor status (1550), the legacy entry sensor notification, keyed by the
    message channel.
 3. The HomeBase's device information (CMD_CAMERA_INFO), which the client already
-   requests after every connect. The vendored Station maps only devices in the
+   requests after every connect. Since 0.31.3 it requests it again about every
+   5 minutes while the session of a HomeBase with an admitted accessory is open.
+   A round is skipped while that session runs a live stream, a recording
+   operation or a command, and the next round follows 5 minutes later. Each
+   reply also refreshes that HomeBase's guard mode and camera values and adds
+   to the `camera_info` count. The vendored Station maps only devices in the
    station wire, which reaches the keypad. Since 0.31.1 the Station also passes
    on every channel's parameters as `camera info params`, and the client maps an
    entry sensor's channel itself, as for 1829. An entry sensor therefore gets
-   its starting values when a session opens, if the HomeBase lists them. Whether
-   a HomeBase 3 does is not yet confirmed. Other channels are skipped without a
-   count.
+   its starting values when a session opens, if the HomeBase lists them. A
+   T8030 on 3.8.8.0 does: in the four downloads for
+   [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286) taken
+   with a 0.31.3 beta while the HomeBase was connected, every entry sensor had
+   its contact value over P2P while no other P2P route counted. Other channels
+   are skipped without a count.
 4. The door sensor push (event type 3) with `sensor_open`, only for an entry
    sensor whose own, available HomeBase sent it. Eufy sends it only while the
    app's notifications for that sensor are on. Every push that names an
@@ -168,9 +177,17 @@ each after a bridge restart ([report](https://github.com/keesmod/ha-eufy-cam/iss
 information had 1655 = 1 while charging and 2 while unplugged, and 1653 = 2 in
 both. The inventory kept 1655 = 2 in both, so its value can be out of date. Home
 Assistant showed charging, then not charging, with a normal battery each time.
-No hub notify update arrived in either session. Whether a change while a session
-is open reaches the client is not yet known. The client reads the device
-information only when a session opens and when it reads the guard mode.
+No hub notify update arrived in either session.
+
+The reporter then plugged the keypad in while the session stayed open. Ten
+minutes later Home Assistant still showed not charging
+([report](https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7100742982)).
+The download held one device information reply, with 1655 = 2, and no hub
+notify update. The HomeBase therefore sent no update for the change, and the
+client read the device information only when the session opened. Since 0.31.3
+the client reads it again about every 5 minutes, so a change reaches it within
+about 5 minutes while the session is not busy. This is not yet confirmed on
+hardware.
 
 ## Guard mode Off
 

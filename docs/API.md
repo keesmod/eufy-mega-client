@@ -1292,6 +1292,9 @@ doorbell chime T8026. They are read-only and not yet confirmed on hardware.
 - `accessoryObservation` counts how the state arrived, numbers only.
 - `accessoryParameters(id)` lists the parameters a keypad reported by route,
   with the raw values of its battery keys only. Since 0.31.3.
+- Since 0.31.3 an open session of a HomeBase with an admitted accessory reads
+  the HomeBase's device information about every 5 minutes, skipped while that
+  session is busy, so a keypad's charging state follows while it stays open.
 
 See [HomeBase accessories](ACCESSORIES.md) for admission, delivery and the
 observation keys.
