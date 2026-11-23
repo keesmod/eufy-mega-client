@@ -1287,6 +1287,8 @@ doorbell chime T8026. They are read-only and not yet confirmed on hardware.
   without I/O. An entry sensor has `open` and `batteryLow`, a keypad
   `batteryLow` and `charging`, a chime none. Each reading is `null` or
   `{ value, source, observedAt, live }` with `source` `p2p`, `push` or `cloud`.
+  Since 0.31.4 an entry sensor whose inventory row has no battery state reads
+  `batteryLow` `false` with source `cloud`, the vendored default.
 - The `accessory` event carries the new state when a reading changes its value,
   source or `live`.
 - `accessoryObservation` counts how the state arrived, numbers only.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.4 - Unreleased
+
+- An entry sensor without a battery state in the Eufy account shows its battery as normal, as the eufy app does ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), not yet confirmed on hardware.
+
+Upgrade: no changes needed. Rollback: 0.31.3.
+
 ## 0.31.3 - 2026-11-23
 
 - Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad or an entry sensor sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286), [ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), not yet confirmed on hardware.

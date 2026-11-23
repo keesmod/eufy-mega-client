@@ -171,7 +171,11 @@ export interface Accessory {
 /**
  * `p2p`: reported on the HomeBase's local session. `push`: an Eufy push
  * notification. `cloud`: the inventory value that discovery read, which is not
- * an observation.
+ * an observation. Since 0.31.4 an entry sensor battery reads `cloud` `false`
+ * when its inventory row has no battery state, the vendored default.
+ * `accessoryParameters(id).cloud.codes` shows whether the latest inventory row
+ * had one. Without it the reading is that default or a value kept from an
+ * earlier row.
  */
 export type AccessorySource = 'p2p' | 'push' | 'cloud';
 export interface AccessoryReading<T> {

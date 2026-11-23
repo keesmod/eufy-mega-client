@@ -478,7 +478,8 @@ test('hub notify params set entry sensor and keypad readings by channel', async 
     const open = r.transport.accessoryState(SENSORS[0]).readings.open;
     assert.deepEqual([open.value, open.source, open.live], [true, 'p2p', true]);
     assert.ok(Date.parse(open.observedAt) > 0);
-    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow.value, false);
+    const battery = r.transport.accessoryState(SENSORS[1]).readings.batteryLow;
+    assert.deepEqual([battery.value, battery.source], [false, 'p2p']);
     assert.equal(r.transport.accessoryState(SENSORS[2]).readings.open, null);
     assert.deepEqual(Object.keys(r.transport.accessoryState(KEYPAD).readings), [
       'batteryLow',
@@ -678,6 +679,89 @@ test('inventory values are labelled cloud, never live, and any observation repla
   }
 });
 
+test('an entry sensor row without battery state reads battery normal, the vendored default', async () => {
+  // ha-eufy-cam#306: four T8900 under a T8030 on 3.8.8.0. The inventory had
+  // 1552 = 0 for one sensor, no other route carried 1552, and the eufy app
+  // showed every battery full.
+  const rows = reportedInventory();
+  const at = (id) => rows.findIndex((row) => row.device_sn === id);
+  rows[at(SENSORS[0])] = {
+    ...rows[at(SENSORS[0])],
+    params: [
+      { param_type: 1550, param_value: '0' },
+      { param_type: 1101, param_value: '30' },
+    ],
+  };
+  const { params: _omitted, ...withoutList } = rows[at(SENSORS[1])];
+  rows[at(SENSORS[1])] = withoutList;
+  rows[at(SENSORS[2])] = {
+    ...rows[at(SENSORS[2])],
+    params: [{ param_type: 1552, param_value: '0' }],
+  };
+  rows[at(SENSORS[3])] = {
+    ...rows[at(SENSORS[3])],
+    params: [{ param_type: 1552, param_value: '1' }],
+  };
+  rows[at(KEYPAD)] = { ...rows[at(KEYPAD)], params: [{ param_type: 1654, param_value: '1' }] };
+  const r = await rig(rows);
+  const reading = (id, name) => {
+    const value = r.transport.accessoryState(id).readings[name];
+    return value && [value.value, value.source, value.live];
+  };
+  try {
+    assert.deepEqual(reading(SENSORS[0], 'batteryLow'), [false, 'cloud', false]);
+    assert.deepEqual(reading(SENSORS[0], 'open'), [false, 'cloud', false]);
+    // A row without a parameter list gives no reading, and contact has no default.
+    assert.equal(reading(SENSORS[1], 'batteryLow'), null);
+    assert.equal(reading(SENSORS[1], 'open'), null);
+    assert.deepEqual(reading(SENSORS[2], 'batteryLow'), [false, 'cloud', false]);
+    assert.deepEqual(reading(SENSORS[3], 'batteryLow'), [true, 'cloud', false]);
+    // A keypad has no default.
+    assert.equal(reading(KEYPAD, 'batteryLow'), null);
+    assert.equal(reading(KEYPAD, 'charging'), null);
+    // A default is no inventory value, so only 1550 and the two 1552 count.
+    assert.equal(r.transport.accessoryObservation().cloud_seeded, 3);
+    // An observation replaces the default and a later discovery never restores it.
+    r.hub([param(CHANNELS[SENSORS[0]], 1552, '1')]);
+    assert.deepEqual(reading(SENSORS[0], 'batteryLow'), [true, 'p2p', true]);
+    assert.deepEqual(
+      r.events.map((e) => e.id),
+      [SENSORS[0]],
+    );
+    // Each later discovery reads its rows anew. Unlisted rows stay as reported.
+    const reload = async (changes) => {
+      const next = discover(
+        rows.map((row) => {
+          if (!Object.hasOwn(changes, row.device_sn)) return row;
+          const { params: _list, ...rest } = row;
+          return changes[row.device_sn] === undefined
+            ? rest
+            : { ...rest, params: changes[row.device_sn] };
+        }),
+      );
+      await r.transport.load(next.raw, next);
+    };
+    await reload({ [SENSORS[1]]: [], [SENSORS[3]]: [] });
+    assert.deepEqual(reading(SENSORS[0], 'batteryLow'), [true, 'p2p', true]);
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [false, 'cloud', false]);
+    // A default never replaces an earlier inventory value, so a low battery stays low.
+    assert.deepEqual(reading(SENSORS[3], 'batteryLow'), [true, 'cloud', false]);
+    // An inventory value replaces the default, and a row without a parameter list
+    // removes it.
+    await reload({ [SENSORS[1]]: [{ param_type: 1552, param_value: '1' }] });
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [true, 'cloud', false]);
+    await reload({ [SENSORS[1]]: [] });
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [true, 'cloud', false]);
+    await reload({ [SENSORS[1]]: undefined });
+    assert.equal(reading(SENSORS[1], 'batteryLow'), null);
+    await reload({ [SENSORS[1]]: [] });
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [false, 'cloud', false]);
+    assert.equal(r.events.length, 1);
+  } finally {
+    await r.done();
+  }
+});
+
 const noParameters = Object.freeze({ types: [], codes: {} });
 
 test('a keypad keeps the parameter types of each route and only its battery codes', async () => {
@@ -849,7 +933,9 @@ test('an entry sensor keeps the parameter types of each route and only its batte
       codes: { 1552: '2' },
     });
     assert.equal(r.transport.accessoryState(SENSORS[2]).readings.batteryLow, null);
-    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow, null);
+    // A row without battery state reads the vendored default.
+    const fallback = r.transport.accessoryState(SENSORS[1]).readings.batteryLow;
+    assert.deepEqual([fallback.value, fallback.source], [false, 'cloud']);
 
     // Encoded entries of the session reply reach an entry sensor like plain ones.
     r.cameraInfo([param(CHANNELS[SENSORS[1]], 1550, '1')], {
@@ -934,7 +1020,7 @@ test('entry sensor evidence keeps at most 64 other parameter types per route, an
   assert.equal(store.parameters(CHIMES[0]), undefined);
 });
 
-test('a keypad battery state 2 reads not low on every route, an entry sensor 2 stays unset', async () => {
+test('a keypad battery state 2 reads not low on every route, an entry sensor 2 changes nothing', async () => {
   // ha-eufy-cam#286: a T8960 under a T8030 on 3.8.8.0 sent 1653 = 2, 1654 = 1
   // and 1655 = 2 from the inventory and the HomeBase while the eufy app showed
   // its battery full.
@@ -970,9 +1056,11 @@ test('a keypad battery state 2 reads not low on every route, an entry sensor 2 s
       1654: '1',
       1655: '2',
     });
-    // A hub notify battery state 2 counts for the keypad. For an entry sensor it sets nothing.
+    // A hub notify battery state 2 counts for the keypad. For an entry sensor it
+    // changes nothing, so the default of its inventory row stays.
     r.hub([param(CHANNELS[KEYPAD], 1653, 2), param(CHANNELS[SENSORS[0]], 1552, '2')]);
-    assert.equal(r.transport.accessoryState(SENSORS[0]).readings.batteryLow, null);
+    const sensor = r.transport.accessoryState(SENSORS[0]).readings.batteryLow;
+    assert.deepEqual([sensor.value, sensor.source], [false, 'cloud']);
     assert.deepEqual(r.transport.accessoryObservation(), {
       ...zero,
       cloud_seeded: 2,
@@ -1411,7 +1499,11 @@ test('the public client lists accessories, reports their state and forwards acce
     const chime = await client.getAccessoryState(CHIMES[0]);
     assert.deepEqual(chime, { id: CHIMES[0], stationId: null, category: 'chime', readings: {} });
     const sensor = await client.getAccessoryState(SENSORS[0]);
-    assert.deepEqual(sensor.readings, { open: null, batteryLow: null });
+    assert.equal(sensor.readings.open, null);
+    assert.deepEqual(
+      [sensor.readings.batteryLow.value, sensor.readings.batteryLow.source],
+      [false, 'cloud'],
+    );
     await assert.rejects(client.getAccessoryState('SYNTH_T8170_1'), { code: 'unknown_device' });
     const states = [];
     client.on('accessory', (state) => states.push(state));
