@@ -423,8 +423,12 @@ The reporter then plugged the keypad in while the HomeBase session stayed open.
 Ten minutes later Home Assistant still showed not charging, and the download
 held no hub notify update and only the device information from when the session
 opened ([286-hw3]). Since client 0.31.3 an open session of a HomeBase with an
-admitted accessory reads the device information about every 5 minutes. Whether
-a charging change then arrives is not yet confirmed.
+admitted accessory reads the device information about every 5 minutes.
+
+With client 0.31.3-beta.5 the reporter plugged the keypad in and later unplugged
+it while the HomeBase session stayed open. Home Assistant followed both changes
+without a restart ([286-hw4]). The download held three device information
+replies in about 11 minutes and no hub notify update.
 
 [275-report]: https://github.com/keesmod/ha-eufy-cam/issues/275
 [275-hw]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7011685186
@@ -436,6 +440,7 @@ a charging change then arrives is not yet confirmed.
 [286-hw]: https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7094682299
 [286-hw2]: https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7096211834
 [286-hw3]: https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7100742982
+[286-hw4]: https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7103334111
 [T8026-EU]: https://service.eufy.com/article-description/T8026-Doorbell-Chime-EU-Declaration
 [T8026-camera]: https://github.com/mega-yfue/eufy-sdk/issues/371
 [Sensor-1829]: https://github.com/mega-yfue/eufy-sdk/issues/594
@@ -1858,10 +1863,10 @@ cameras or stations, as described in [ACCESSORIES.md](ACCESSORIES.md). Status
 uses the [community evidence terms](COMMUNITY_VALIDATION.md). No accessory
 accepts a command.
 
-| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Evidence and remaining work                                                                                                                                      |
-| ------------- | -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes, with the right polarity, and for a normal battery reading on a T8030 on 3.8.8.0. There the device information carried every entry sensor's contact state when the session opened.                                                                                                                                                                                                                                | [275-report], [275-hw], [275-hw2], [275-hw5], [Sensor-1829], [286-hw], [286-hw2], [286-hw3]. A low battery on a HomeBase 3.                                      |
-| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Reported working for the Off option and writing Off on a T8030 on 3.8.8.0. Reported working for a normal battery (state 2, since client 0.31.3) and for charging (1) and not charging (2) when the HomeBase session opens, on a T8030 on 3.8.8.0. A change while the session is open did not arrive with client 0.31.3-beta.4. The device information read about every 5 minutes since client 0.31.3 is an Unconfirmed implementation. | [275-report], [275-hw2], [275-hw3], [286-report], [286-hw], [286-hw2], [286-hw3]. Battery low, and a charging change while the session is open, on a HomeBase 3. |
+| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Evidence and remaining work                                                                                                 |
+| ------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes, with the right polarity, and for a normal battery reading on a T8030 on 3.8.8.0. There the device information carried every entry sensor's contact state when the session opened.                                                                                                                                                                                                                   | [275-report], [275-hw], [275-hw2], [275-hw5], [Sensor-1829], [286-hw], [286-hw2], [286-hw3]. A low battery on a HomeBase 3. |
+| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Reported working for the Off option and writing Off on a T8030 on 3.8.8.0. Reported working for a normal battery (state 2, since client 0.31.3) and for charging (1) and not charging (2) when the HomeBase session opens, on a T8030 on 3.8.8.0. Reported working for a charging change while the session stays open, with the device information read about every 5 minutes since client 0.31.3, on a T8030 on 3.8.8.0. | [275-report], [275-hw2], [275-hw3], [286-report], [286-hw], [286-hw2], [286-hw3], [286-hw4]. Battery low on a HomeBase 3.   |
 
 ## Accessories outside the catalogue
 

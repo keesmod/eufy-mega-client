@@ -186,8 +186,12 @@ The download held one device information reply, with 1655 = 2, and no hub
 notify update. The HomeBase therefore sent no update for the change, and the
 client read the device information only when the session opened. Since 0.31.3
 the client reads it again about every 5 minutes, so a change reaches it within
-about 5 minutes while the session is not busy. This is not yet confirmed on
-hardware.
+about 5 minutes while the session is not busy.
+
+With client 0.31.3-beta.5 the reporter plugged the keypad in and later unplugged
+it while the session stayed open. Home Assistant followed both changes without a
+restart ([report](https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7103334111)). The download held three device
+information replies in about 11 minutes and no hub notify update.
 
 ## Guard mode Off
 
