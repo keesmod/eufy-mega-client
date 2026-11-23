@@ -33,7 +33,8 @@ names work on a HomeBase 3 with firmware 3.8.8.0, as recorded in the
 hardware. A reporter there saw every entry sensor's battery as unknown
 ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)). Since
 0.31.4 an entry sensor without a battery state in its inventory row reads
-normal, the vendored default, not yet confirmed on hardware. A HomeBase
+normal, the vendored default. With 0.31.4-beta.1 that reporter saw every entry
+sensor's battery as normal. A HomeBase
 without these accessories keeps its station wire, and its discovery result only
 gains an empty `accessories` list.
 

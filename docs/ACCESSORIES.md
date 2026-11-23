@@ -245,6 +245,10 @@ still replaces it, and an inventory 1552 with another value still gives no
 reading. The default never replaces an earlier inventory value, so a low
 battery from the inventory stays low when a later row omits 1552.
 
+With client 0.31.4-beta.1 the reporter saw every sensor's battery as normal
+([report](https://github.com/keesmod/ha-eufy-cam/issues/306#issuecomment-7113118296)). A low battery on a `T8900` is not yet
+confirmed.
+
 The client applies only this default. The vendored contact default would show
 a door closed without evidence, and a keypad sends its battery state itself. A
 row without a parameter list gives no default, because it shows nothing about
