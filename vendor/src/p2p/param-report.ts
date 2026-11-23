@@ -38,13 +38,29 @@ export function parseParamReports(payload: unknown): ParamReport[] {
 /** A CMD_CAMERA_INFO reply lists every channel's parameters. More are dropped. */
 export const MAX_CAMERA_INFO_REPORTS = 2048;
 
+/** Base64 text longer than this decodes to more than 64 characters, so it is never decoded. */
+const MAX_ENCODED_LENGTH = 88;
+
 /**
  * Client addition, 0.31.1 (ha-eufy-cam#275). The `params` of a CMD_CAMERA_INFO
- * reply in the same shape and with the same checks, at most
- * MAX_CAMERA_INFO_REPORTS. Anything else yields an empty list, never an error.
+ * reply in the same shape and with the same checks. Since 0.31.3
+ * (ha-eufy-cam#306) the reply's encoded entries (`db_bypass_str`) follow, each
+ * `channel`, `param_type` and base64 `param_value` decoded as the vendored
+ * Station decodes them, so an encoded entry comes after a plain one of the same
+ * type. At most MAX_CAMERA_INFO_REPORTS in all. Anything else yields an empty
+ * list, never an error.
  */
-export function cameraInfoReports(params: unknown): ParamReport[] {
-  return reportsOf(params, MAX_CAMERA_INFO_REPORTS);
+export function cameraInfoReports(params: unknown, encoded?: unknown): ParamReport[] {
+  const reports = reportsOf(params, MAX_CAMERA_INFO_REPORTS);
+  if (!Array.isArray(encoded)) return reports;
+  const room = MAX_CAMERA_INFO_REPORTS - reports.length;
+  const decoded = encoded.slice(0, room).map((entry) => {
+    if (!entry || typeof entry !== "object") return undefined;
+    const { channel, param_type, param_value } = entry as Record<string, unknown>;
+    if (typeof param_value !== "string" || param_value.length > MAX_ENCODED_LENGTH) return undefined;
+    return { dev_type: channel, param_type, param_value: Buffer.from(param_value, "base64").toString() };
+  });
+  return reports.concat(reportsOf(decoded, room));
 }
 
 function reportsOf(params: unknown, limit: number): ParamReport[] {

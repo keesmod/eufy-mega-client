@@ -1290,8 +1290,9 @@ doorbell chime T8026. They are read-only and not yet confirmed on hardware.
 - The `accessory` event carries the new state when a reading changes its value,
   source or `live`.
 - `accessoryObservation` counts how the state arrived, numbers only.
-- `accessoryParameters(id)` lists the parameters a keypad reported by route,
-  with the raw values of its battery keys only. Since 0.31.3.
+- `accessoryParameters(id)` lists the parameters a keypad or an entry sensor
+  reported by route, with the raw values of its battery keys only. Since
+  0.31.3.
 - Since 0.31.3 an open session of a HomeBase with an admitted accessory reads
   the HomeBase's device information about every 5 minutes, skipped while that
   session is busy, so a keypad's charging state follows while it stays open.

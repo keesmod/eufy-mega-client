@@ -30,7 +30,8 @@ since seen entry sensor changes with the right polarity, an entry sensor
 battery, the keypad charging state, setting Off and, with 0.31.1, the eufy app
 names work on a HomeBase 3 with firmware 3.8.8.0, as recorded in the
 [model matrix](MODEL_MATRIX.md). The keypad battery is not yet confirmed on
-hardware. A HomeBase
+hardware. Three of four entry sensors there showed their battery as unknown
+([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)). A HomeBase
 without these accessories keeps its station wire, and its discovery result only
 gains an empty `accessories` list.
 

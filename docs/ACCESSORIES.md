@@ -53,8 +53,9 @@ lookup, session or command is ever sent to a chime.
   its value, its source or `live`. A repeated equal value refreshes
   `observedAt` without an event.
 - `accessoryObservation` holds the delivery counts below, synchronously.
-- `accessoryParameters(id)` returns which parameters a keypad reported, see
-  [keypad parameters](#keypad-parameters).
+- `accessoryParameters(id)` returns which parameters a keypad or an entry
+  sensor reported, see [keypad parameters](#keypad-parameters) and
+  [entry sensor parameters](#entry-sensor-parameters).
 
 Each reading is `null` until a value is known, else
 `{ value, source, observedAt, live }`. `source` is `p2p`, `push` or `cloud`.
@@ -86,7 +87,11 @@ the upstream library does through legacy routes.
    to the `camera_info` count. The vendored Station maps only devices in the
    station wire, which reaches the keypad. Since 0.31.1 the Station also passes
    on every channel's parameters as `camera info params`, and the client maps an
-   entry sensor's channel itself, as for 1829. An entry sensor therefore gets
+   entry sensor's channel itself, as for 1829. Since 0.31.3 the reply's encoded
+   entries (`db_bypass_str`) follow the plain ones in that event, decoded as the
+   Station decodes them for a device in the wire, so an encoded entry overrides
+   a plain one of the same type ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)).
+   An entry sensor therefore gets
    its starting values when a session opens, if the HomeBase lists them. A
    T8030 on 3.8.8.0 does: in the four downloads for
    [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286) taken
@@ -108,7 +113,9 @@ confirmed the entry sensor polarity, and an entry sensor battery reads normal
 there. A keypad there sends 1653 = 2 with a full battery, and 1655 = 1 while it
 charges and 2 while it is unplugged, as a reporter confirmed. Whether 1653 = 1
 means low and what 1655 = 0 or 3 means is not yet confirmed, see
-[keypad parameters](#keypad-parameters).
+[keypad parameters](#keypad-parameters). Three of four entry sensors there
+showed their battery as unknown, see
+[entry sensor parameters](#entry-sensor-parameters).
 
 A channel maps to an accessory only when exactly one admitted accessory of that
 HomeBase uses it and no camera of that HomeBase does. A push with an event time
@@ -146,7 +153,7 @@ Since 0.31.3, [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/28
 A reporter's keypad showed not charging while it charged, and its battery stayed
 unknown while the eufy app showed it full. The vendored table gives 1653 only as
 a boolean. `accessoryParameters(id)` returns the evidence, synchronously and
-without I/O, or `null` for an ID that is no admitted keypad.
+without I/O, or `null` for an ID that is no admitted keypad or entry sensor.
 
 It holds one entry per route: `cloud` for the inventory row of the latest
 discovery, `camera_info` for the device information with its encoded entries and
@@ -192,6 +199,26 @@ With client 0.31.3-beta.5 the reporter plugged the keypad in and later unplugged
 it while the session stayed open. Home Assistant followed both changes without a
 restart ([report](https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7103334111)). The download held three device
 information replies in about 11 minutes and no hub notify update.
+
+## Entry sensor parameters
+
+Since 0.31.3, [ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306).
+On 2026-11-23 a reporter with four `T8900` under a `T8030` on 3.8.8.0 saw the
+battery of every entry sensor as unknown while the eufy app showed them full.
+Only one sensor had a battery value, from the inventory. Two device information
+replies carried every sensor's contact state, but no battery state 1552 that the
+client reads. Whether the HomeBase sent no 1552, sent a value other than 0 or 1,
+or sent it in an encoded entry, which the client did not read for an entry
+sensor before 0.31.3, is unknown.
+
+Since 0.31.3 `accessoryParameters(id)` also returns this evidence for an entry
+sensor, with the routes and bounds of a keypad. `camera_info` holds the device
+information including its encoded entries, `hub_notify` the hub notify updates
+(1829) and `cloud` the inventory row. The legacy sensor status (1550) and the
+door sensor push carry only the contact state and add no evidence. `codes`
+keeps the raw value of battery level 1101 and battery state 1552 only. An
+encoded 1552 of 0 or 1 now sets the battery reading. A 1552 with another value
+still sets no reading, but shows in `codes`.
 
 ## Guard mode Off
 

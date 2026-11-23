@@ -2,7 +2,9 @@
 
 ## 0.31.3 - Unreleased
 
-- Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), not yet confirmed on hardware.
+- Added `accessoryParameters(id)`, which reports the parameters and battery values a keypad or an entry sensor sends ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286), [ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), not yet confirmed on hardware.
+- Entry sensor values in the encoded part of the HomeBase's device information are read too ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), not yet confirmed on hardware.
+- Known problem: an entry sensor battery can show unknown while the eufy app shows it full ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), reported, not reproduced.
 - A keypad battery that the eufy app shows as full reads normal instead of unknown ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), reported working on a `T8960`.
 - A keypad's charging state is read again about every 5 minutes while the HomeBase stays connected ([ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286)), reported working on a `T8960`.
 - Window Camera E10 `T8404` events also arrive when the camera sends them as if it had no HomeBase ([ha-eufy-cam#283](https://github.com/keesmod/ha-eufy-cam/issues/283)), not yet confirmed on hardware.

@@ -497,7 +497,10 @@ export class DeviceTransport extends EventEmitter {
   accessoryObservation(): AccessoryObservation {
     return this.accessories.snapshot();
   }
-  /** ha-eufy-cam#286: synchronous, no I/O. Null for an ID that is no admitted keypad. */
+  /**
+   * ha-eufy-cam#286, #306: synchronous, no I/O. Null for an ID that is no
+   * admitted keypad or entry sensor.
+   */
   accessoryParameters(id: string): AccessoryParameters | null {
     return this.accessories.parameters(id) ?? null;
   }
@@ -537,10 +540,11 @@ export class DeviceTransport extends EventEmitter {
   /**
    * ha-eufy-cam#275: entry sensor parameters of a CMD_CAMERA_INFO reply, which
    * the client already requests when a session opens. Entry sensors stay out of
-   * the station wire, so the vendored Station cannot name them itself. The
-   * keypad is in the wire and arrives through deviceParams. Other channels are
-   * cameras, the HomeBase itself or unknown and are skipped without a count,
-   * because one reply carries many parameters per channel.
+   * the station wire, so the vendored Station cannot name them itself. Since
+   * 0.31.3 the reply's encoded entries follow its plain ones (ha-eufy-cam#306).
+   * The keypad is in the wire and arrives through deviceParams. Other channels
+   * are cameras, the HomeBase itself or unknown and are skipped without a
+   * count, because one reply carries many parameters per channel.
    */
   private cameraInfoReport(stationId: string, reports: ParamReport[]): void {
     if (!this.accessories.hasStation(stationId)) return;
@@ -549,10 +553,14 @@ export class DeviceTransport extends EventEmitter {
     for (const report of reports) {
       const id = this.accessories.byChannel(stationId, report.channel, taken);
       if (id === undefined || id === 'ambiguous') continue;
-      // ha-eufy-cam#286: only the types of a keypad. Its values and readings
-      // arrive through deviceParams, where an encoded entry overrides a plain one.
-      this.accessories.parameterType(id, 'camera_info', report.type);
-      if (this.accessories.category(id) !== 'entry_sensor') continue;
+      if (this.accessories.category(id) !== 'entry_sensor') {
+        // ha-eufy-cam#286: only the types of a keypad. Its values and readings
+        // arrive through deviceParams, where an encoded entry overrides a plain one.
+        this.accessories.parameterType(id, 'camera_info', report.type);
+        continue;
+      }
+      // ha-eufy-cam#306: this reply is an entry sensor's only device information.
+      this.accessories.parameter(id, 'camera_info', report.type, report.value);
       const name = readingName('entry_sensor', report.type);
       const value = name && readingValue('entry_sensor', name, report.value);
       if (!name || value === undefined) continue;

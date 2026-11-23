@@ -228,30 +228,31 @@ export interface AccessoryObservation {
   unknown_channel: number;
 }
 /**
- * Since 0.31.3, ha-eufy-cam#286: the route a keypad parameter arrived on.
+ * Since 0.31.3, ha-eufy-cam#286: the route an accessory parameter arrived on.
  * `cloud` is the inventory row that discovery read, `camera_info` the
- * HomeBase's device information (CMD_CAMERA_INFO) with its encoded entries and
- * the session's other parameter reports for the keypad, and `hub_notify` a hub
+ * HomeBase's device information (CMD_CAMERA_INFO) with its encoded entries and,
+ * for a keypad, the session's other parameter reports, and `hub_notify` a hub
  * notify update (P2P 1829).
  */
 export type AccessoryParameterRoute = 'cloud' | 'camera_info' | 'hub_notify';
-/** Since 0.31.3, ha-eufy-cam#286: what one route carried for a keypad. */
+/** Since 0.31.3, ha-eufy-cam#286: what one route carried for a keypad or an entry sensor. */
 export interface AccessoryParameterReport {
   /** Each parameter type once, ascending. At most 64 besides the battery keys. */
   types: number[];
   /**
    * The newest raw value of each battery key the route carried, keyed by type:
-   * 1101 battery level, 1653 battery state, 1654 battery temperature state and
-   * 1655 charger state. A value that is not an integer of at most six digits is
+   * for a keypad 1101 battery level, 1653 battery state, 1654 battery
+   * temperature state and 1655 charger state, for an entry sensor 1101 and 1552
+   * battery state. A value that is not an integer of at most six digits is
    * `other`. No other parameter value is kept.
    */
   codes: Record<string, string>;
 }
 /**
- * Since 0.31.3, ha-eufy-cam#286: which parameters an admitted keypad reported,
- * by route, since its HomeBase was loaded. Evidence for the keypad battery and
- * charging decode, which is not yet confirmed on hardware. The inventory route
- * reflects the latest discovery.
+ * Since 0.31.3, ha-eufy-cam#286 and #306: which parameters an admitted keypad
+ * or entry sensor reported, by route, since its HomeBase was loaded. Evidence
+ * for the battery and charging decodes, which are not all confirmed on
+ * hardware. The inventory route reflects the latest discovery.
  */
 export type AccessoryParameters = Record<AccessoryParameterRoute, AccessoryParameterReport>;
 export interface Diagnostic {
