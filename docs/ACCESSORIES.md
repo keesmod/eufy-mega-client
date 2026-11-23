@@ -66,7 +66,7 @@ the HomeBase session last closed. A `cloud` value is never live.
 
 State comes from the HomeBase's own local session and from the account's push
 notifications. Beyond the existing discovery, the client's only request for
-accessories is the device information below, which it repeats every 5 minutes
+accessories is the device information below, which it repeats about every 5 minutes
 since 0.31.3. It does not refresh the cloud after a notification, which the
 upstream library does through legacy routes.
 
@@ -88,10 +88,10 @@ upstream library does through legacy routes.
    on every channel's parameters as `camera info params`, and the client maps an
    entry sensor's channel itself, as for 1829. An entry sensor therefore gets
    its starting values when a session opens, if the HomeBase lists them. A
-   T8030 on 3.8.8.0 does: in each download of
-   [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286) every
-   entry sensor had its contact value over P2P while no other P2P route
-   counted. Other channels are skipped without a count.
+   T8030 on 3.8.8.0 does: in the four downloads for
+   [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286) taken
+   with a 0.31.3 beta while the HomeBase was connected, every entry sensor had
+   its contact value over P2P while no other P2P route counted. Other channels are skipped without a count.
 4. The door sensor push (event type 3) with `sensor_open`, only for an entry
    sensor whose own, available HomeBase sent it. Eufy sends it only while the
    app's notifications for that sensor are on. Every push that names an
