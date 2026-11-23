@@ -97,8 +97,9 @@ entry sensor battery low 1552 (0 or 1), keypad battery low 1653 (0 and 2 normal,
 other value is dropped. On a HomeBase 3 with firmware 3.8.8.0 a reporter
 confirmed the entry sensor polarity, and an entry sensor battery reads normal
 there. A keypad there sends 1653 = 2 with a full battery. Whether 1653 = 1 means
-low and whether 1655 = 1 or 3 means charging is not yet confirmed. A keypad
-reported as charging sent 1655 = 2, see [keypad parameters](#keypad-parameters).
+low and whether 1655 = 1 or 3 means charging is not yet confirmed. The eufy app
+showed that keypad charging while it was plugged in, and its diagnostics had
+1655 = 2, see [keypad parameters](#keypad-parameters).
 
 A channel maps to an accessory only when exactly one admitted accessory of that
 HomeBase uses it and no camera of that HomeBase does. A push with an event time
@@ -146,19 +147,22 @@ for the keypad, at most 64 besides the battery keys, and in `codes` the newest
 raw value of the battery keys only: 1101 battery level, 1653 battery state, 1654
 battery temperature state and 1655 charger state. A value that is not an integer
 of at most six digits is `other`. No other parameter value is kept, so keypad
-codes and settings never leave the client. Readings, counts and events are
-unchanged. A value that no reading accepts still sets no reading, but shows in
-`codes`.
+codes and settings never leave the client. This evidence changes no reading,
+count or event. A value that no reading accepts still sets no reading, but shows
+in `codes`.
 
 On 2026-11-23 that keypad, a `T8960` under a `T8030` on 3.8.8.0, sent 1653 = 2,
 1654 = 1 and 1655 = 2 both in the inventory and in the device information, with
 no battery level 1101 and no hub notify update. The eufy app showed its battery
-full. Since 0.31.3 a keypad's 1653 = 2 therefore reads as battery normal. The
-keypad sends no battery level, so there is no percentage. 1655 = 2 is not
-charging in the eufy app's own decode too, and another `T8960` sent 2 while
-unplugged ([eufy-sdk#494](https://github.com/mega-yfue/eufy-sdk/issues/494)). A
-plugged-in keypad with a full battery may therefore report not charging. A value
-taken while the keypad visibly charges is still needed.
+full, with a charging symbol while the keypad was plugged in and without one
+while it was unplugged. Since 0.31.3 a keypad's 1653 = 2 therefore reads as
+battery normal. The keypad sends no battery level, so there is no percentage.
+The report does not say whether the keypad was plugged in when the diagnostics
+were taken. 1655 = 2 is not charging in the vendored conversion, and another
+`T8960` sent 2 while unplugged
+([eufy-sdk#494](https://github.com/mega-yfue/eufy-sdk/issues/494)). Diagnostics
+taken while the eufy app shows the keypad charging, and again while it does not,
+are still needed.
 
 ## Guard mode Off
 

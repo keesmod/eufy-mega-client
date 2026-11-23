@@ -409,9 +409,11 @@ its battery keys ([keypad parameters](ACCESSORIES.md#keypad-parameters)).
 On 2026-11-23 the same reporter ran integration 0.8.56-beta.2, bridge
 0.8.47-beta.3 and client 0.31.3-beta.3 ([286-hw]). The keypad sent battery state
 1653 = 2 and charger state 1655 = 2 in the inventory and from the HomeBase, and
-no battery level. Since client 0.31.3 a keypad's 1653 = 2 reads as battery
-normal. Charging keeps the eufy app's decode, so a plugged-in keypad with a full
-battery shows not charging.
+no battery level. The eufy app showed the battery full, with a charging symbol
+while the keypad was plugged in and without one while it was unplugged. The
+report does not say in which state the diagnostics were taken. Since client
+0.31.3 a keypad's 1653 = 2 reads as battery normal. The charging decode is
+unchanged.
 
 [275-report]: https://github.com/keesmod/ha-eufy-cam/issues/275
 [275-hw]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7011685186
@@ -1843,10 +1845,10 @@ cameras or stations, as described in [ACCESSORIES.md](ACCESSORIES.md). Status
 uses the [community evidence terms](COMMUNITY_VALIDATION.md). No accessory
 accepts a command.
 
-| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                                                                                                                      | Evidence and remaining work                                                                                     |
-| ------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes, with the right polarity, and for a normal battery reading on a T8030 on 3.8.8.0.                                                                                                       | [275-report], [275-hw], [275-hw2], [275-hw5], [Sensor-1829]. Starting values and a low battery on a HomeBase 3. |
-| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Reported working for the Off option and writing Off on a T8030 on 3.8.8.0. Battery state 2 reads normal since client 0.31.3. A plugged-in keypad shows not charging. Both are an Unconfirmed implementation. | [275-report], [275-hw2], [275-hw3], [286-report], [286-hw]. Battery low on a HomeBase 3.                        |
+| Protocol type | Enum     | Model and category                 | Readings and status                                                                                                                                                                                                                                                                                           | Evidence and remaining work                                                                                     |
+| ------------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 2             | `SENSOR` | T8900 Entry Sensor, `entry_sensor` | Contact open and battery low under a T8030. Reported working for contact changes, with the right polarity, and for a normal battery reading on a T8030 on 3.8.8.0.                                                                                                                                            | [275-report], [275-hw], [275-hw2], [275-hw5], [Sensor-1829]. Starting values and a low battery on a HomeBase 3. |
+| 11            | `KEYPAD` | T8960 Keypad, `keypad`             | Battery low and charging under a T8030, and guard mode Off. Reported working for the Off option and writing Off on a T8030 on 3.8.8.0. Battery state 2 reads normal since client 0.31.3. Charging can show not charging while the eufy app shows the keypad charging. Both are an Unconfirmed implementation. | [275-report], [275-hw2], [275-hw3], [286-report], [286-hw]. Battery low on a HomeBase 3.                        |
 
 ## Accessories outside the catalogue
 
