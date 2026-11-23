@@ -92,12 +92,14 @@ upstream library does through legacy routes, and it does not poll.
    without an observation and never replace a P2P or push value.
 
 Keys follow the vendored property tables: contact 1550 (1 open, 0 closed),
-entry sensor battery low 1552, keypad battery low 1653 (0 or 1) and keypad
-charging 1655 (0 and 2 not charging, 1 and 3 charging). Any other value is
-dropped. On a HomeBase 3 with firmware 3.8.8.0 a reporter confirmed the entry
-sensor polarity, and an entry sensor battery reads normal there. The keypad
-battery and charging decodes are not yet confirmed. A keypad that charged was
-reported as not charging, see [keypad parameters](#keypad-parameters).
+entry sensor battery low 1552 (0 or 1), keypad battery low 1653 (0 and 2 normal,
+1 low) and keypad charging 1655 (0 and 2 not charging, 1 and 3 charging). Any
+other value is dropped. On a HomeBase 3 with firmware 3.8.8.0 a reporter
+confirmed the entry sensor polarity, and an entry sensor battery reads normal
+there. A keypad there sends 1653 = 2 with a full battery. Whether 1653 = 1 means
+low and whether 1655 = 1 or 3 means charging is not yet confirmed. A keypad that
+the eufy app showed charging in one screenshot gave diagnostics with 1655 = 2,
+see [keypad parameters](#keypad-parameters).
 
 A channel maps to an accessory only when exactly one admitted accessory of that
 HomeBase uses it and no camera of that HomeBase does. A push with an event time
@@ -133,11 +135,9 @@ no new handling.
 
 Since 0.31.3, [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286).
 A reporter's keypad showed not charging while it charged, and its battery stayed
-unknown while the eufy app showed it full. No value decode above is confirmed
-for the keypad. The vendored table gives 1653 only as a boolean, and no
-permitted source explains other values.
-`accessoryParameters(id)` returns the evidence that settles it, synchronously
-and without I/O, or `null` for an ID that is no admitted keypad.
+unknown while the eufy app showed it full. The vendored table gives 1653 only as
+a boolean. `accessoryParameters(id)` returns the evidence, synchronously and
+without I/O, or `null` for an ID that is no admitted keypad.
 
 It holds one entry per route: `cloud` for the inventory row of the latest
 discovery, `camera_info` for the device information with its encoded entries and
@@ -147,9 +147,22 @@ for the keypad, at most 64 besides the battery keys, and in `codes` the newest
 raw value of the battery keys only: 1101 battery level, 1653 battery state, 1654
 battery temperature state and 1655 charger state. A value that is not an integer
 of at most six digits is `other`. No other parameter value is kept, so keypad
-codes and settings never leave the client. Readings, counts and events are
-unchanged. A value that no reading accepts still sets no reading, but shows in
-`codes`.
+codes and settings never leave the client. This evidence changes no reading,
+count or event. A value that no reading accepts still sets no reading, but shows
+in `codes`.
+
+On 2026-11-23 that keypad, a `T8960` under a `T8030` on 3.8.8.0, sent 1653 = 2,
+1654 = 1 and 1655 = 2 both in the inventory and in the device information, with
+no battery level 1101 and no hub notify update. The eufy app showed its battery
+full, with a charging symbol in one screenshot and without one in another.
+Since 0.31.3 a keypad's 1653 = 2 therefore reads as battery normal. The keypad
+sends no battery level, so there is no percentage.
+The report does not say whether the keypad was charging when the diagnostics
+were taken. 1655 = 2 is not charging in the vendored conversion, and another
+`T8960` sent 2 while unplugged
+([eufy-sdk#494](https://github.com/mega-yfue/eufy-sdk/issues/494)). Diagnostics
+taken while the eufy app shows the keypad charging, and again while it does not,
+are still needed.
 
 ## Guard mode Off
 

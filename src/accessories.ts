@@ -65,10 +65,16 @@ export function readingName(category: AccessoryCategory, key: number): ReadingNa
 
 /**
  * A strict boolean. Contact and battery low are 0 or 1. Charging follows the
- * vendored keypad conversion, 0 and 2 false, 1 and 3 true. Anything else,
- * including text such as "true" or "01", is invalid.
+ * vendored keypad conversion, 0 and 2 false, 1 and 3 true. A keypad also sends
+ * battery state 2 while the eufy app shows its battery full, so for a keypad 2
+ * is not low (ha-eufy-cam#286). Anything else, including text such as "true" or
+ * "01", is invalid.
  */
-export function readingValue(name: ReadingName, value: unknown): boolean | undefined {
+export function readingValue(
+  category: AccessoryCategory,
+  name: ReadingName,
+  value: unknown,
+): boolean | undefined {
   const n =
     typeof value === 'number'
       ? value
@@ -77,6 +83,7 @@ export function readingValue(name: ReadingName, value: unknown): boolean | undef
         : NaN;
   if (name === 'charging')
     return n === 0 || n === 2 ? false : n === 1 || n === 3 ? true : undefined;
+  if (category === 'keypad' && name === 'batteryLow' && n === 2) return false;
   return n === 0 ? false : n === 1 ? true : undefined;
 }
 
@@ -174,7 +181,7 @@ export class AccessoryStore {
         const param = params.findLast(
           (p) => p && typeof p === 'object' && readingName(record.category, p.param_type) === name,
         );
-        const value = param ? readingValue(name, param.param_value) : undefined;
+        const value = param ? readingValue(record.category, name, param.param_value) : undefined;
         if (value === undefined) delete record.readings[name];
         else {
           record.readings[name] = {

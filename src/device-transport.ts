@@ -515,8 +515,9 @@ export class DeviceTransport extends EventEmitter {
         continue;
       }
       this.accessories.parameter(id, 'hub_notify', report.type, report.value);
-      const name = readingName(this.accessories.category(id)!, report.type);
-      const value = name && readingValue(name, report.value);
+      const category = this.accessories.category(id)!;
+      const name = readingName(category, report.type);
+      const value = name && readingValue(category, name, report.value);
       if (!name || value === undefined) continue;
       this.accessories.count('hub_notify');
       if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
@@ -543,7 +544,7 @@ export class DeviceTransport extends EventEmitter {
       this.accessories.parameterType(id, 'camera_info', report.type);
       if (this.accessories.category(id) !== 'entry_sensor') continue;
       const name = readingName('entry_sensor', report.type);
-      const value = name && readingValue(name, report.value);
+      const value = name && readingValue('entry_sensor', name, report.value);
       if (!name || value === undefined) continue;
       this.accessories.count('camera_info');
       if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
@@ -556,7 +557,7 @@ export class DeviceTransport extends EventEmitter {
     const id = this.accessories.byChannel(stationId, channel, this.cameraChannels(stationId));
     if (id === undefined || id === 'ambiguous' || this.accessories.category(id) !== 'entry_sensor')
       return this.accessories.count('unknown_channel');
-    const value = readingValue('open', status);
+    const value = readingValue('entry_sensor', 'open', status);
     if (value === undefined) return;
     this.accessories.count('sensor_status');
     if (this.accessories.observe(id, 'open', value, 'p2p') === 'changed') this.emitAccessory(id);
@@ -572,7 +573,7 @@ export class DeviceTransport extends EventEmitter {
       if (param?.source === 'p2p') this.accessories.parameter(id, 'camera_info', type, param.value);
       const name = readingName(category, Number(type));
       if (!name || param?.source !== 'p2p') continue;
-      const value = readingValue(name, param.value);
+      const value = readingValue(category, name, param.value);
       if (value === undefined) continue;
       this.accessories.count('camera_info');
       if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed = true;
