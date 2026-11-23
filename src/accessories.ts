@@ -42,6 +42,21 @@ const CODE_KEYS: Readonly<Record<AccessoryCategory, ReadonlySet<number> | null>>
   keypad: new Set([1101, 1653, 1654, 1655]),
   chime: null,
 };
+/**
+ * ha-eufy-cam#306: the reading an inventory row with a parameter list but
+ * without the reading's key gives. The vendored Device sets a missing property
+ * to its default, and the entry sensor battery low default is false. On a
+ * HomeBase 3 the inventory had battery state 1552 for one of four entry
+ * sensors, no other route carried it, and the eufy app showed every battery
+ * full. No other reading has a default, and an invalid value still gives none.
+ */
+const INVENTORY_DEFAULTS: Readonly<
+  Record<AccessoryCategory, Readonly<Partial<Record<ReadingName, boolean>>>>
+> = {
+  entry_sensor: { batteryLow: false },
+  keypad: {},
+  chime: {},
+};
 /** At most this many parameter types per route and accessory, besides the battery keys. */
 const PARAMETER_TYPE_LIMIT = 64;
 const ROUTES: readonly AccessoryParameterRoute[] = ['cloud', 'camera_info', 'hub_notify'];
@@ -144,7 +159,8 @@ export class AccessoryStore {
   /**
    * Replaces the admitted set. A row with the same model, type, parent and
    * channel keeps its P2P and push readings. Inventory values fill only readings
-   * without one and are labelled `cloud`.
+   * without one and are labelled `cloud`. An entry sensor whose row lists no
+   * battery state reads battery normal, the vendored default (ha-eufy-cam#306).
    */
   load(rows: Iterable<[string, AccessoryRow]>, now = new Date()): void {
     const previous = this.records;
@@ -186,7 +202,11 @@ export class AccessoryStore {
         const param = params.findLast(
           (p) => p && typeof p === 'object' && readingName(record.category, p.param_type) === name,
         );
-        const value = param ? readingValue(record.category, name, param.param_value) : undefined;
+        const value = param
+          ? readingValue(record.category, name, param.param_value)
+          : Array.isArray(raw.params)
+            ? INVENTORY_DEFAULTS[record.category][name]
+            : undefined;
         if (value === undefined) delete record.readings[name];
         else {
           record.readings[name] = {
@@ -195,7 +215,7 @@ export class AccessoryStore {
             observedAt: now.toISOString(),
             live: false,
           };
-          this.counts.cloud_seeded++;
+          if (param) this.counts.cloud_seeded++;
         }
       }
       this.records.set(id, record);
