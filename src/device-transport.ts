@@ -108,6 +108,12 @@ interface ExtraLive extends ActiveLive {
 const fail = (): never => {
   throw new EufyError('operation_outside_hardware_scope');
 };
+/**
+ * ha-eufy-cam#286: how often an open HomeBase session with an admitted
+ * accessory asks for device information again. A keypad's charging state
+ * arrives only there, and the HomeBase sends no update when it changes.
+ */
+const ACCESSORY_REFRESH_MS = 300_000;
 /** Per-stream upper bound: 120 seconds unless a start asks for more, up to the ceiling. */
 const DEFAULT_LIVE_BOUND_MS = 120000;
 /** ha-eufy-cam#293: a requested snapshot picture without a reply by then counts as no_reply. */
@@ -171,6 +177,8 @@ export class DeviceTransport extends EventEmitter {
   /** ha-eufy-cam#275: admitted accessories, their readings and delivery counts. */
   private readonly accessories = new AccessoryStore();
   private accessoryRows = new Map<string, AccessoryRow>();
+  /** ha-eufy-cam#286: the device information round, see refreshAccessories. */
+  private readonly accessoryRefresh: NodeJS.Timeout;
   private readonly lifetime = new AbortController();
   readonly recordings = new RecordingAccess(
     {
@@ -227,6 +235,8 @@ export class DeviceTransport extends EventEmitter {
     if (!Number.isInteger(bound) || bound < DEFAULT_LIVE_BOUND_MS || bound > MAX_LIVE_BOUND_MS)
       throw new EufyError('invalid_live_bound');
     this.liveUpperBound = bound;
+    this.accessoryRefresh = setInterval(() => this.refreshAccessories(), ACCESSORY_REFRESH_MS);
+    this.accessoryRefresh.unref();
   }
   private liveBound(maxDurationMs?: number): number {
     if (maxDurationMs === undefined) return DEFAULT_LIVE_BOUND_MS;
@@ -1743,6 +1753,31 @@ export class DeviceTransport extends EventEmitter {
     timer.unref();
     this.refreshTimers.set(id, timer);
   }
+  /**
+   * ha-eufy-cam#286: one device information request per open HomeBase session
+   * with an admitted accessory. A busy session waits for the next round. The
+   * reply takes the same path as the one after connect.
+   */
+  private refreshAccessories(): void {
+    if (this.lifetime.signal.aborted) return;
+    for (const [id, station] of this.stations) {
+      if (
+        !this.accessories.hasStation(id) ||
+        !station.isConnected() ||
+        !this.encryption.has(id) ||
+        this.lives.has(id) ||
+        this.starting.has(id) ||
+        this.recordings.busy(id) ||
+        this.commands.has(id)
+      )
+        continue;
+      try {
+        station.getCameraInfo();
+      } catch {
+        /* the next round asks again */
+      }
+    }
+  }
   /** The experimental standalone route covers camera media only, never alarm state. */
   private homeBaseOnly(id: string): void {
     if (this.standalone.has(id)) throw new EufyError('operation_outside_hardware_scope');
@@ -1832,6 +1867,7 @@ export class DeviceTransport extends EventEmitter {
   }
   async close(): Promise<void> {
     this.lifetime.abort();
+    clearInterval(this.accessoryRefresh);
     await this.recordings.close();
     await Promise.allSettled([...this.pendingStarts]);
     for (const timer of this.refreshTimers.values()) clearTimeout(timer);

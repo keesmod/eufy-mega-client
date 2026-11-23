@@ -800,6 +800,57 @@ test('a keypad battery state 2 reads not low on every route, an entry sensor 2 s
   }
 });
 
+test('an open HomeBase session with accessories asks for device information every five minutes', async (t) => {
+  // ha-eufy-cam#286: the HomeBase sent no update when a keypad was plugged in
+  // during an open session. Only device information carries the charger state.
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const requests = (r) =>
+    r.sent.filter(
+      ({ command }) =>
+        command.commandType === CommandType.CMD_CAMERA_INFO &&
+        command.value === 255 &&
+        command.channel === Station.CHANNEL,
+    ).length;
+  const r = await rig();
+  try {
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '2')]);
+    r.events.length = 0;
+    t.mock.timers.tick(299_999);
+    assert.equal(requests(r), 0);
+    t.mock.timers.tick(1);
+    assert.equal(requests(r), 1);
+    // The reply takes the session reply's path, so the keypad follows the plug.
+    r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '1')]);
+    assert.deepEqual(
+      r.events.map((e) => [e.id, e.readings.charging.value, e.readings.charging.live]),
+      [[KEYPAD, true, true]],
+    );
+    // A busy session waits for the next round.
+    r.transport.commands.add(HB);
+    t.mock.timers.tick(300_000);
+    assert.equal(requests(r), 1);
+    r.transport.commands.delete(HB);
+    t.mock.timers.tick(300_000);
+    assert.equal(requests(r), 2);
+    // A closed session asks nothing.
+    r.station.emit('close', r.station);
+    t.mock.timers.tick(300_000);
+    assert.equal(requests(r), 2);
+  } finally {
+    await r.done();
+  }
+  t.mock.timers.tick(300_000);
+  assert.equal(requests(r), 2);
+  // A HomeBase without accessories gets no extra requests.
+  const plain = await rig(withoutAccessories(reportedInventory()));
+  try {
+    t.mock.timers.tick(300_000);
+    assert.equal(requests(plain), 0);
+  } finally {
+    await plain.done();
+  }
+});
+
 test('a closed HomeBase session keeps accessory values and marks them not live', async () => {
   const r = await rig();
   try {
