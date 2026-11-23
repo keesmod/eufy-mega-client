@@ -173,7 +173,9 @@ export interface Accessory {
  * notification. `cloud`: the inventory value that discovery read, which is not
  * an observation. Since 0.31.4 an entry sensor battery reads `cloud` `false`
  * when its inventory row has no battery state, the vendored default.
- * `accessoryParameters(id).cloud.codes` shows whether the inventory had one.
+ * `accessoryParameters(id).cloud.codes` shows whether the latest inventory row
+ * had one. Without it the reading is that default or a value kept from an
+ * earlier row.
  */
 export type AccessorySource = 'p2p' | 'push' | 'cloud';
 export interface AccessoryReading<T> {

@@ -248,8 +248,8 @@ battery from the inventory stays low when a later row omits 1552.
 The client applies only this default. The vendored contact default would show
 a door closed without evidence, and a keypad sends its battery state itself. A
 row without a parameter list gives no default, because it shows nothing about
-the sensor's parameters. A low battery that arrived only over P2P or push is not
-in the inventory. After a restart, before the HomeBase sends 1552 again, such a
+the sensor's parameters. A low battery that arrived only over P2P is not in the
+inventory. After a restart, before the HomeBase sends 1552 again, such a
 sensor reads normal where it read unknown before 0.31.4. What 1101 means for a
 `T8900` is unknown, so it sets no reading.
 
