@@ -280,6 +280,7 @@ test('encoded session reply entries follow the plain ones, decoded and with the 
         { channel: 16, param_type: 1552, param_value: 0 },
         encoded(16, 1552, 'x'.repeat(65)),
         encoded(16, 1552, 'x'.repeat(67)),
+        encoded(18, 1552, 'y'.repeat(64)),
         encoded(-1, 1552, '0'),
         { dev_type: 16, param_type: 1552, param_value: 'MA==' },
         null,
@@ -289,6 +290,8 @@ test('encoded session reply entries follow the plain ones, decoded and with the 
       { channel: 16, type: 1552, value: '1' },
       { channel: 16, type: 1552, value: '0' },
       { channel: 17, type: 1101, value: '90' },
+      // 64 characters, 88 in base64, are the longest value kept.
+      { channel: 18, type: 1552, value: 'y'.repeat(64) },
     ],
   );
   for (const bad of [undefined, null, 'x', {}])
@@ -297,9 +300,17 @@ test('encoded session reply entries follow the plain ones, decoded and with the 
     ]);
   // The bound covers both lists.
   const plain = Array.from({ length: 2040 }, (_, i) => entry(i, 1550, '1'));
-  const extra = Array.from({ length: 20 }, (_, i) => encoded(i, 1550, '1'));
-  assert.equal(cameraInfoReports(plain, extra).length, 2048);
-  assert.equal(cameraInfoReports([...plain, ...plain], extra).length, 2048);
+  const extra = Array.from({ length: 20 }, (_, i) => encoded(i, 1551, '1'));
+  const bounded = cameraInfoReports(plain, extra);
+  assert.equal(bounded.length, 2048);
+  assert.deepEqual(
+    bounded.slice(2040).map((r) => [r.channel, r.type]),
+    Array.from({ length: 8 }, (_, i) => [i, 1551]),
+  );
+  assert.equal(
+    cameraInfoReports([...plain, ...plain], extra).filter((r) => r.type === 1551).length,
+    0,
+  );
 });
 
 test('reading values are strict', () => {
@@ -869,13 +880,25 @@ test('an entry sensor keeps the parameter types of each route and only its batte
     assert.equal(r.transport.accessoryState(SENSORS[2]).readings.batteryLow, null);
     assert.deepEqual(r.transport.accessoryParameters(SENSORS[3]).camera_info, noParameters);
 
-    // An encoded entry overrides a plain one of the same type, in the reading and the code.
+    // An encoded entry overrides a plain one of the same type, in the reading and the code,
+    // without an intermediate change: the unchanged reading sends no event and counts once.
     r.cameraInfo([param(CHANNELS[SENSORS[1]], 1552, '1')], {
       db_bypass_str: [encoded(SENSORS[1], 1552, '0')],
     });
     ({ batteryLow } = r.transport.accessoryState(SENSORS[1]).readings);
     assert.equal(batteryLow.value, false);
+    assert.equal(r.events.length, 1);
     assert.equal(r.transport.accessoryParameters(SENSORS[1]).camera_info.codes[1552], '0');
+    // An encoded value that no reading accepts leaves the plain one in force.
+    r.cameraInfo([param(CHANNELS[SENSORS[1]], 1552, '1')], {
+      db_bypass_str: [encoded(SENSORS[1], 1552, '2')],
+    });
+    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow.value, true);
+    assert.equal(r.transport.accessoryParameters(SENSORS[1]).camera_info.codes[1552], '2');
+    assert.deepEqual(
+      r.events.map((e) => e.id),
+      [SENSORS[1], SENSORS[1]],
+    );
 
     // A hub notify battery state is kept as evidence and read.
     r.hub([param(CHANNELS[SENSORS[0]], 1552, '1')]);
@@ -894,6 +917,23 @@ test('an entry sensor keeps the parameter types of each route and only its batte
   } finally {
     await r.done();
   }
+});
+
+test('entry sensor evidence keeps at most 64 other parameter types per route, and always its battery keys', () => {
+  const store = new AccessoryStore();
+  const inventory = discover(reportedInventory());
+  store.load(inventory.accessories);
+  for (let type = 2000; type < 2070; type++) store.parameter(SENSORS[0], 'camera_info', type, '1');
+  store.parameter(SENSORS[0], 'camera_info', 1552, '0');
+  store.parameter(SENSORS[0], 'camera_info', 1101, 80);
+  store.parameter(SENSORS[0], 'camera_info', 1653, '1');
+  const parameters = store.parameters(SENSORS[0]);
+  assert.equal(parameters.camera_info.types.length, 66);
+  assert.deepEqual(parameters.camera_info.types.slice(0, 2), [1101, 1552]);
+  assert.equal(parameters.camera_info.types.at(-1), 2063);
+  // A keypad battery key is no entry sensor battery key, so it is neither exempt nor kept.
+  assert.deepEqual(parameters.camera_info.codes, { 1101: '80', 1552: '0' });
+  assert.equal(store.parameters(CHIMES[0]), undefined);
 });
 
 test('a keypad battery state 2 reads not low on every route, an entry sensor 2 stays unset', async () => {

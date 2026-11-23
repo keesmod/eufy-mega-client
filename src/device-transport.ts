@@ -18,7 +18,7 @@ import {
   changeGuardMode,
   KEYPAD_GUARD_MODE,
 } from './guard.js';
-import { AccessoryStore, readingName, readingValue } from './accessories.js';
+import { AccessoryStore, readingName, readingValue, type ReadingName } from './accessories.js';
 import type { AccessoryRow } from './discovery.js';
 import type { ParamReport } from './vendor/p2p/param-report.js';
 import { CusPushEvent } from './vendor/push/types.js';
@@ -549,6 +549,7 @@ export class DeviceTransport extends EventEmitter {
   private cameraInfoReport(stationId: string, reports: ParamReport[]): void {
     if (!this.accessories.hasStation(stationId)) return;
     const taken = this.cameraChannels(stationId),
+      latest = new Map<string, Map<ReadingName, boolean>>(),
       changed = new Set<string>();
     for (const report of reports) {
       const id = this.accessories.byChannel(stationId, report.channel, taken);
@@ -564,9 +565,16 @@ export class DeviceTransport extends EventEmitter {
       const name = readingName('entry_sensor', report.type);
       const value = name && readingValue('entry_sensor', name, report.value);
       if (!name || value === undefined) continue;
-      this.accessories.count('camera_info');
-      if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
+      // The last valid value of a reading wins, so a later encoded entry
+      // overrides a plain one without an intermediate change.
+      const readings = latest.get(id) ?? new Map<ReadingName, boolean>();
+      latest.set(id, readings.set(name, value));
     }
+    for (const [id, readings] of latest)
+      for (const [name, value] of readings) {
+        this.accessories.count('camera_info');
+        if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
+      }
     for (const id of changed) this.emitAccessory(id);
   }
   /** ha-eufy-cam#275: the legacy entry sensor notification (1550), keyed by channel. */

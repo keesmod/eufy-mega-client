@@ -89,11 +89,12 @@ the upstream library does through legacy routes.
    on every channel's parameters as `camera info params`, and the client maps an
    entry sensor's channel itself, as for 1829. Since 0.31.3 the reply's encoded
    entries (`db_bypass_str`) follow the plain ones in that event, decoded as the
-   Station decodes them for a device in the wire, so an encoded entry overrides
-   a plain one of the same type ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)).
-   An entry sensor therefore gets
-   its starting values when a session opens, if the HomeBase lists them. A
-   T8030 on 3.8.8.0 does: in the four downloads for
+   Station decodes them for a device in the wire. Each entry sensor reading
+   takes the last value in the reply that it accepts, once per reply, so an
+   encoded entry overrides a plain one of the same type
+   ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)). An
+   entry sensor therefore gets its starting values when a session opens, if the
+   HomeBase lists them. A T8030 on 3.8.8.0 does: in the four downloads for
    [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286) taken
    with a 0.31.3 beta while the HomeBase was connected, every entry sensor had
    its contact value over P2P while no other P2P route counted. Other channels
@@ -113,9 +114,9 @@ confirmed the entry sensor polarity, and an entry sensor battery reads normal
 there. A keypad there sends 1653 = 2 with a full battery, and 1655 = 1 while it
 charges and 2 while it is unplugged, as a reporter confirmed. Whether 1653 = 1
 means low and what 1655 = 0 or 3 means is not yet confirmed, see
-[keypad parameters](#keypad-parameters). Three of four entry sensors there
-showed their battery as unknown, see
-[entry sensor parameters](#entry-sensor-parameters).
+[keypad parameters](#keypad-parameters). A reporter there saw every entry
+sensor's battery as unknown, with an inventory battery value for one of four,
+see [entry sensor parameters](#entry-sensor-parameters).
 
 A channel maps to an accessory only when exactly one admitted accessory of that
 HomeBase uses it and no camera of that HomeBase does. A push with an event time
