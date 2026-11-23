@@ -410,10 +410,9 @@ On 2026-11-23 the same reporter ran integration 0.8.56-beta.2, bridge
 0.8.47-beta.3 and client 0.31.3-beta.3 ([286-hw]). The keypad sent battery state
 1653 = 2 and charger state 1655 = 2 in the inventory and from the HomeBase, and
 no battery level. The eufy app showed the battery full, with a charging symbol
-while the keypad was plugged in and without one while it was unplugged. The
-report does not say in which state the diagnostics were taken. Since client
-0.31.3 a keypad's 1653 = 2 reads as battery normal. The charging decode is
-unchanged.
+in one screenshot and without one in another. The report does not say in which
+state the diagnostics were taken. Since client 0.31.3 a keypad's 1653 = 2 reads
+as battery normal. The charging decode is unchanged.
 
 [275-report]: https://github.com/keesmod/ha-eufy-cam/issues/275
 [275-hw]: https://github.com/keesmod/ha-eufy-cam/issues/275#issuecomment-7011685186
