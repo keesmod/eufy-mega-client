@@ -1530,8 +1530,9 @@ export class Station extends TypedEmitter<StationEvents> {
       this.emit("raw device property changed", device, devices[device]);
     });
     // Client addition, 0.31.1 (ha-eufy-cam#275): every channel's parameters,
-    // including channels of devices that are not in this station's wire.
-    this.emit("camera info params", this, cameraInfoReports(cameraInfo.params));
+    // including channels of devices that are not in this station's wire. Since
+    // 0.31.3 (ha-eufy-cam#306) the encoded entries follow, as above.
+    this.emit("camera info params", this, cameraInfoReports(cameraInfo.params, cameraInfo.db_bypass_str));
   }
 
   private onCommandResponse(result: CommandResult): void {

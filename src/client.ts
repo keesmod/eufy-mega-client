@@ -95,10 +95,10 @@ export class EufyMegaClient extends EventEmitter<ClientEvents> {
     return this.transport?.snapshotRefreshStatus() ?? new SnapshotRefreshCounter().snapshot();
   }
   /**
-   * ha-eufy-cam#286: which parameters an admitted keypad reported, by route,
-   * with the raw values of its battery keys only. Synchronous, no I/O. Null for
-   * an ID that is no admitted keypad and before the device transport exists.
-   * See docs/ACCESSORIES.md, keypad parameters. Since 0.31.3.
+   * ha-eufy-cam#286, #306: which parameters an admitted keypad or entry sensor
+   * reported, by route, with the raw values of its battery keys only.
+   * Synchronous, no I/O. Null for any other ID and before the device transport
+   * exists. See docs/ACCESSORIES.md, accessory parameters. Since 0.31.3.
    */
   accessoryParameters(id: string): AccessoryParameters | null {
     return this.transport?.accessoryParameters(id) ?? null;

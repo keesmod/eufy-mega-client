@@ -497,7 +497,10 @@ export class DeviceTransport extends EventEmitter {
   accessoryObservation(): AccessoryObservation {
     return this.accessories.snapshot();
   }
-  /** ha-eufy-cam#286: synchronous, no I/O. Null for an ID that is no admitted keypad. */
+  /**
+   * ha-eufy-cam#286, #306: synchronous, no I/O. Null for an ID that is no
+   * admitted keypad or entry sensor.
+   */
   accessoryParameters(id: string): AccessoryParameters | null {
     return this.accessories.parameters(id) ?? null;
   }
@@ -537,28 +540,41 @@ export class DeviceTransport extends EventEmitter {
   /**
    * ha-eufy-cam#275: entry sensor parameters of a CMD_CAMERA_INFO reply, which
    * the client already requests when a session opens. Entry sensors stay out of
-   * the station wire, so the vendored Station cannot name them itself. The
-   * keypad is in the wire and arrives through deviceParams. Other channels are
-   * cameras, the HomeBase itself or unknown and are skipped without a count,
-   * because one reply carries many parameters per channel.
+   * the station wire, so the vendored Station cannot name them itself. Since
+   * 0.31.3 the reply's encoded entries follow its plain ones (ha-eufy-cam#306).
+   * The keypad is in the wire and arrives through deviceParams. Other channels
+   * are cameras, the HomeBase itself or unknown and are skipped without a
+   * count, because one reply carries many parameters per channel.
    */
   private cameraInfoReport(stationId: string, reports: ParamReport[]): void {
     if (!this.accessories.hasStation(stationId)) return;
     const taken = this.cameraChannels(stationId),
+      latest = new Map<string, Map<number, string>>(),
       changed = new Set<string>();
     for (const report of reports) {
       const id = this.accessories.byChannel(stationId, report.channel, taken);
       if (id === undefined || id === 'ambiguous') continue;
-      // ha-eufy-cam#286: only the types of a keypad. Its values and readings
-      // arrive through deviceParams, where an encoded entry overrides a plain one.
-      this.accessories.parameterType(id, 'camera_info', report.type);
-      if (this.accessories.category(id) !== 'entry_sensor') continue;
-      const name = readingName('entry_sensor', report.type);
-      const value = name && readingValue('entry_sensor', name, report.value);
-      if (!name || value === undefined) continue;
-      this.accessories.count('camera_info');
-      if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
+      if (this.accessories.category(id) !== 'entry_sensor') {
+        // ha-eufy-cam#286: only the types of a keypad. Its values and readings
+        // arrive through deviceParams, where an encoded entry overrides a plain one.
+        this.accessories.parameterType(id, 'camera_info', report.type);
+        continue;
+      }
+      // ha-eufy-cam#306: this reply is an entry sensor's only device information.
+      this.accessories.parameter(id, 'camera_info', report.type, report.value);
+      // The last value of each type wins, as the Station merges a device in the
+      // wire, so an encoded entry overrides a plain one without an intermediate change.
+      const values = latest.get(id) ?? new Map<number, string>();
+      latest.set(id, values.set(report.type, report.value));
     }
+    for (const [id, values] of latest)
+      for (const [type, raw] of values) {
+        const name = readingName('entry_sensor', type);
+        const value = name && readingValue('entry_sensor', name, raw);
+        if (!name || value === undefined) continue;
+        this.accessories.count('camera_info');
+        if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
+      }
     for (const id of changed) this.emitAccessory(id);
   }
   /** ha-eufy-cam#275: the legacy entry sensor notification (1550), keyed by channel. */

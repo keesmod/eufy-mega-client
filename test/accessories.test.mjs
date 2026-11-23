@@ -259,6 +259,60 @@ test('session reply parameters use the same checks with a larger bound', () => {
   assert.equal(cameraInfoReports(many).length, 2048);
 });
 
+test('encoded session reply entries follow the plain ones, decoded and with the same checks', () => {
+  // ha-eufy-cam#306: the reply's db_bypass_str, decoded as the vendored Station decodes it.
+  const entry = (channel, type, value) => ({
+    dev_type: channel,
+    param_type: type,
+    param_value: value,
+  });
+  const encoded = (channel, type, value) => ({
+    channel,
+    param_type: type,
+    param_value: Buffer.from(value).toString('base64'),
+  });
+  assert.deepEqual(
+    cameraInfoReports(
+      [entry(16, 1552, '1')],
+      [
+        encoded(16, 1552, '0'),
+        encoded(17, 1101, '90'),
+        { channel: 16, param_type: 1552, param_value: 0 },
+        encoded(16, 1552, 'x'.repeat(65)),
+        encoded(16, 1552, 'x'.repeat(67)),
+        encoded(18, 1552, 'y'.repeat(64)),
+        encoded(-1, 1552, '0'),
+        { dev_type: 16, param_type: 1552, param_value: 'MA==' },
+        null,
+      ],
+    ),
+    [
+      { channel: 16, type: 1552, value: '1' },
+      { channel: 16, type: 1552, value: '0' },
+      { channel: 17, type: 1101, value: '90' },
+      // 64 characters, 88 in base64, are the longest value kept.
+      { channel: 18, type: 1552, value: 'y'.repeat(64) },
+    ],
+  );
+  for (const bad of [undefined, null, 'x', {}])
+    assert.deepEqual(cameraInfoReports([entry(16, 1550, '1')], bad), [
+      { channel: 16, type: 1550, value: '1' },
+    ]);
+  // The bound covers both lists.
+  const plain = Array.from({ length: 2040 }, (_, i) => entry(i, 1550, '1'));
+  const extra = Array.from({ length: 20 }, (_, i) => encoded(i, 1551, '1'));
+  const bounded = cameraInfoReports(plain, extra);
+  assert.equal(bounded.length, 2048);
+  assert.deepEqual(
+    bounded.slice(2040).map((r) => [r.channel, r.type]),
+    Array.from({ length: 8 }, (_, i) => [i, 1551]),
+  );
+  assert.equal(
+    cameraInfoReports([...plain, ...plain], extra).filter((r) => r.type === 1551).length,
+    0,
+  );
+});
+
 test('reading values are strict', () => {
   assert.deepEqual(
     ['0', '1', 0, 1].map((v) => readingValue('entry_sensor', 'open', v)),
@@ -507,7 +561,7 @@ test('a session reply gives entry sensors their starting values without other co
       param(cameraChannel, 1550, '1'),
       param(CHANNELS[SENSORS[1]], 1550, '1'),
       param(CHANNELS[SENSORS[1]], 1552, '0'),
-      param(CHANNELS[SENSORS[1]], 1550, 'x'),
+      param(CHANNELS[SENSORS[3]], 1550, 'x'),
       param(CHANNELS[SENSORS[2]], 1550, '0'),
       param(99, 1550, '1'),
     ]);
@@ -669,8 +723,12 @@ test('a keypad keeps the parameter types of each route and only its battery code
       codes: { 1101: 'other', 1653: '4', 1655: '2' },
     });
     assert.deepEqual(parameters.hub_notify, { types: [1655], codes: { 1655: '3' } });
-    // Only a keypad keeps evidence. The counts are unchanged.
-    assert.equal(r.transport.accessoryParameters(SENSORS[0]), null);
+    // An entry sensor keeps only its own battery keys, a chime nothing. The counts are unchanged.
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[0]), {
+      cloud: noParameters,
+      camera_info: { types: [1101, 1550], codes: { 1101: '90' } },
+      hub_notify: noParameters,
+    });
     assert.equal(r.transport.accessoryParameters(CHIMES[0]), null);
     assert.equal(r.transport.accessoryParameters(HB), null);
     assert.equal(r.transport.accessoryParameters('SYNTH_UNKNOWN'), null);
@@ -748,6 +806,132 @@ test('encoded device information entries reach the keypad evidence like their re
   } finally {
     await r.done();
   }
+});
+
+test('an entry sensor keeps the parameter types of each route and only its battery codes', async () => {
+  // ha-eufy-cam#306: four T8900 under a T8030 on 3.8.8.0 showed battery unknown
+  // while the eufy app showed them full. Only one had a battery value, from the
+  // inventory. Values here are synthetic.
+  const rows = reportedInventory();
+  const sensorRow = (id) => rows.findIndex((row) => row.device_sn === id);
+  rows[sensorRow(SENSORS[0])] = {
+    ...rows[sensorRow(SENSORS[0])],
+    params: [
+      { param_type: 1550, param_value: '0' },
+      { param_type: 1551, param_value: '1700000000' },
+      { param_type: 1552, param_value: '0' },
+      { param_type: 1101, param_value: 95 },
+    ],
+  };
+  rows[sensorRow(SENSORS[2])] = {
+    ...rows[sensorRow(SENSORS[2])],
+    params: [{ param_type: 1552, param_value: '2' }],
+  };
+  const r = await rig(rows);
+  const encoded = (id, type, value) => ({
+    channel: CHANNELS[id],
+    param_type: type,
+    param_value: Buffer.from(value).toString('base64'),
+  });
+  try {
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[0]).cloud, {
+      types: [1101, 1550, 1551, 1552],
+      codes: { 1101: '95', 1552: '0' },
+    });
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[1]), {
+      cloud: noParameters,
+      camera_info: noParameters,
+      hub_notify: noParameters,
+    });
+    // A battery state other than 0 or 1 sets no reading, but stays visible as evidence.
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[2]).cloud, {
+      types: [1552],
+      codes: { 1552: '2' },
+    });
+    assert.equal(r.transport.accessoryState(SENSORS[2]).readings.batteryLow, null);
+    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow, null);
+
+    // Encoded entries of the session reply reach an entry sensor like plain ones.
+    r.cameraInfo([param(CHANNELS[SENSORS[1]], 1550, '1')], {
+      db_bypass_str: [
+        encoded(SENSORS[1], 1552, '0'),
+        encoded(SENSORS[1], 1560, '3'),
+        encoded(SENSORS[2], 1552, '2'),
+        encoded(SENSORS[3], 1552, 'x'.repeat(70)),
+      ],
+    });
+    assert.deepEqual(
+      r.events.map((e) => e.id),
+      [SENSORS[1]],
+    );
+    let { open, batteryLow } = r.transport.accessoryState(SENSORS[1]).readings;
+    assert.deepEqual(
+      [open.value, open.source, batteryLow.value, batteryLow.source, batteryLow.live],
+      [true, 'p2p', false, 'p2p', true],
+    );
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[1]).camera_info, {
+      types: [1550, 1552, 1560],
+      codes: { 1552: '0' },
+    });
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[2]).camera_info, {
+      types: [1552],
+      codes: { 1552: '2' },
+    });
+    assert.equal(r.transport.accessoryState(SENSORS[2]).readings.batteryLow, null);
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[3]).camera_info, noParameters);
+
+    // An encoded entry overrides a plain one of the same type, in the reading and the code,
+    // without an intermediate change: the unchanged reading sends no event and counts once.
+    r.cameraInfo([param(CHANNELS[SENSORS[1]], 1552, '1')], {
+      db_bypass_str: [encoded(SENSORS[1], 1552, '0')],
+    });
+    ({ batteryLow } = r.transport.accessoryState(SENSORS[1]).readings);
+    assert.equal(batteryLow.value, false);
+    assert.equal(r.events.length, 1);
+    assert.equal(r.transport.accessoryParameters(SENSORS[1]).camera_info.codes[1552], '0');
+    // An encoded value that no reading accepts wins over the plain one and
+    // leaves the reading unchanged, as for a device in the wire.
+    r.cameraInfo([param(CHANNELS[SENSORS[1]], 1552, '1')], {
+      db_bypass_str: [encoded(SENSORS[1], 1552, '2')],
+    });
+    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow.value, false);
+    assert.equal(r.transport.accessoryParameters(SENSORS[1]).camera_info.codes[1552], '2');
+    assert.equal(r.events.length, 1);
+
+    // A hub notify battery state is kept as evidence and read.
+    r.hub([param(CHANNELS[SENSORS[0]], 1552, '1')]);
+    ({ batteryLow } = r.transport.accessoryState(SENSORS[0]).readings);
+    assert.deepEqual([batteryLow.value, batteryLow.source], [true, 'p2p']);
+    assert.deepEqual(r.transport.accessoryParameters(SENSORS[0]).hub_notify, {
+      types: [1552],
+      codes: { 1552: '1' },
+    });
+    assert.deepEqual(r.transport.accessoryObservation(), {
+      ...zero,
+      cloud_seeded: 2,
+      camera_info: 3,
+      hub_notify: 1,
+    });
+  } finally {
+    await r.done();
+  }
+});
+
+test('entry sensor evidence keeps at most 64 other parameter types per route, and always its battery keys', () => {
+  const store = new AccessoryStore();
+  const inventory = discover(reportedInventory());
+  store.load(inventory.accessories);
+  for (let type = 2000; type < 2070; type++) store.parameter(SENSORS[0], 'camera_info', type, '1');
+  store.parameter(SENSORS[0], 'camera_info', 1552, '0');
+  store.parameter(SENSORS[0], 'camera_info', 1101, 80);
+  store.parameter(SENSORS[0], 'camera_info', 1653, '1');
+  const parameters = store.parameters(SENSORS[0]);
+  assert.equal(parameters.camera_info.types.length, 66);
+  assert.deepEqual(parameters.camera_info.types.slice(0, 2), [1101, 1552]);
+  assert.equal(parameters.camera_info.types.at(-1), 2063);
+  // A keypad battery key is no entry sensor battery key, so it is neither exempt nor kept.
+  assert.deepEqual(parameters.camera_info.codes, { 1101: '80', 1552: '0' });
+  assert.equal(store.parameters(CHIMES[0]), undefined);
 });
 
 test('a keypad battery state 2 reads not low on every route, an entry sensor 2 stays unset', async () => {
@@ -1249,12 +1433,13 @@ test('the public client lists accessories, reports their state and forwards acce
       [[SENSORS[0], true]],
     );
     assert.equal(client.accessoryObservation.push_door_sensor, 1);
-    assert.deepEqual(client.accessoryParameters(KEYPAD), {
-      cloud: { types: [], codes: {} },
-      camera_info: { types: [], codes: {} },
-      hub_notify: { types: [], codes: {} },
-    });
-    assert.equal(client.accessoryParameters(SENSORS[0]), null);
+    for (const id of [KEYPAD, SENSORS[0]])
+      assert.deepEqual(client.accessoryParameters(id), {
+        cloud: { types: [], codes: {} },
+        camera_info: { types: [], codes: {} },
+        hub_notify: { types: [], codes: {} },
+      });
+    assert.equal(client.accessoryParameters(CHIMES[0]), null);
     assert.deepEqual(
       (await client.getStationState(HB)).availableModes,
       [0, 1, 2, 3, 4, 5, 6, 47, 63],
