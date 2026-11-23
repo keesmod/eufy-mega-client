@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.31.4 - Unreleased
+## 0.31.4 - 2026-11-23
 
-- An entry sensor without a battery state in the Eufy account shows its battery as normal, as the eufy app does ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), not yet confirmed on hardware.
+- An entry sensor without a battery state in the Eufy account shows its battery as normal, as the eufy app does ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), reported working.
 
 Upgrade: no changes needed. Rollback: 0.31.3.
 
