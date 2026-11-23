@@ -96,10 +96,10 @@ entry sensor battery low 1552 (0 or 1), keypad battery low 1653 (0 and 2 normal,
 1 low) and keypad charging 1655 (0 and 2 not charging, 1 and 3 charging). Any
 other value is dropped. On a HomeBase 3 with firmware 3.8.8.0 a reporter
 confirmed the entry sensor polarity, and an entry sensor battery reads normal
-there. A keypad there sends 1653 = 2 with a full battery. Whether 1653 = 1 means
-low and whether 1655 = 1 or 3 means charging is not yet confirmed. A keypad that
-the eufy app showed charging in one screenshot gave diagnostics with 1655 = 2,
-see [keypad parameters](#keypad-parameters).
+there. A keypad there sends 1653 = 2 with a full battery, and 1655 = 1 while it
+charges and 2 while it is unplugged, as a reporter confirmed. Whether 1653 = 1
+means low and what 1655 = 0 or 3 means is not yet confirmed, see
+[keypad parameters](#keypad-parameters).
 
 A channel maps to an accessory only when exactly one admitted accessory of that
 HomeBase uses it and no camera of that HomeBase does. A push with an event time
@@ -160,9 +160,17 @@ sends no battery level, so there is no percentage.
 The report does not say whether the keypad was charging when the diagnostics
 were taken. 1655 = 2 is not charging in the vendored conversion, and another
 `T8960` sent 2 while unplugged
-([eufy-sdk#494](https://github.com/mega-yfue/eufy-sdk/issues/494)). Diagnostics
-taken while the eufy app shows the keypad charging, and again while it does not,
-are still needed.
+([eufy-sdk#494](https://github.com/mega-yfue/eufy-sdk/issues/494)).
+
+With client 0.31.3-beta.4 the reporter then took one download while the keypad
+was plugged in and the eufy app showed it charging, and one after unplugging it,
+each after a bridge restart ([report](https://github.com/keesmod/ha-eufy-cam/issues/286#issuecomment-7096211834)). The device
+information had 1655 = 1 while charging and 2 while unplugged, and 1653 = 2 in
+both. The inventory kept 1655 = 2 in both, so its value can be out of date. Home
+Assistant showed charging, then not charging, with a normal battery each time.
+No hub notify update arrived in either session. Whether a change while a session
+is open reaches the client is not yet known. The client reads the device
+information only when a session opens and when it reads the guard mode.
 
 ## Guard mode Off
 
