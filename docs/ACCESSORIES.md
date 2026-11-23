@@ -91,7 +91,8 @@ the upstream library does through legacy routes.
    T8030 on 3.8.8.0 does: in the four downloads for
    [ha-eufy-cam#286](https://github.com/keesmod/ha-eufy-cam/issues/286) taken
    with a 0.31.3 beta while the HomeBase was connected, every entry sensor had
-   its contact value over P2P while no other P2P route counted. Other channels are skipped without a count.
+   its contact value over P2P while no other P2P route counted. Other channels
+   are skipped without a count.
 4. The door sensor push (event type 3) with `sensor_open`, only for an entry
    sensor whose own, available HomeBase sent it. Eufy sends it only while the
    app's notifications for that sensor are on. Every push that names an
