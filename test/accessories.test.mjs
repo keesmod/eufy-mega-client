@@ -261,14 +261,24 @@ test('session reply parameters use the same checks with a larger bound', () => {
 
 test('reading values are strict', () => {
   assert.deepEqual(
-    ['0', '1', 0, 1].map((v) => readingValue('open', v)),
+    ['0', '1', 0, 1].map((v) => readingValue('entry_sensor', 'open', v)),
     [false, true, false, true],
   );
   for (const v of ['2', '01', 'true', '', ' 1', 1.5, null, undefined, -1, '1e0'])
-    assert.equal(readingValue('open', v), undefined, String(v));
+    assert.equal(readingValue('entry_sensor', 'open', v), undefined, String(v));
   assert.deepEqual(
-    ['0', '1', '2', '3', '4'].map((v) => readingValue('charging', v)),
+    ['0', '1', '2', '3', '4'].map((v) => readingValue('keypad', 'charging', v)),
     [false, true, false, true, undefined],
+  );
+  // ha-eufy-cam#286: a keypad sends battery state 2 with a full battery. An
+  // entry sensor's battery low stays 0 or 1.
+  assert.deepEqual(
+    ['0', '1', '2', 2, '3', '02', 'true'].map((v) => readingValue('keypad', 'batteryLow', v)),
+    [false, true, false, false, undefined, undefined, undefined],
+  );
+  assert.deepEqual(
+    ['0', '1', '2', 2].map((v) => readingValue('entry_sensor', 'batteryLow', v)),
+    [false, true, undefined, undefined],
   );
 });
 
@@ -642,7 +652,7 @@ test('a keypad keeps the parameter types of each route and only its battery code
       camera_info: noParameters,
       hub_notify: noParameters,
     });
-    // A battery state other than 0 or 1 sets no reading, but stays visible as evidence.
+    // A battery state other than 0, 1 or 2 sets no reading, but stays visible as evidence.
     assert.equal(r.transport.accessoryState(KEYPAD).readings.batteryLow, null);
     r.cameraInfo([
       param(CHANNELS[KEYPAD], 1653, '4'),
@@ -735,6 +745,56 @@ test('encoded device information entries reach the keypad evidence like their re
     r.cameraInfo([param(CHANNELS[KEYPAD], 1655, '2')]);
     assert.equal(r.transport.accessoryState(KEYPAD).readings.charging.value, false);
     assert.equal(r.transport.accessoryParameters(KEYPAD).camera_info.codes[1655], '2');
+  } finally {
+    await r.done();
+  }
+});
+
+test('a keypad battery state 2 reads not low on every route, an entry sensor 2 stays unset', async () => {
+  // ha-eufy-cam#286: a T8960 under a T8030 on 3.8.8.0 sent 1653 = 2, 1654 = 1
+  // and 1655 = 2 from the inventory and the HomeBase while the eufy app showed
+  // its battery full.
+  const rows = reportedInventory();
+  const keypadRow = rows.findIndex((row) => row.device_sn === KEYPAD);
+  rows[keypadRow] = {
+    ...rows[keypadRow],
+    params: [
+      { param_type: 1653, param_value: '2' },
+      { param_type: 1654, param_value: '1' },
+      { param_type: 1655, param_value: '2' },
+    ],
+  };
+  const r = await rig(rows);
+  try {
+    let { batteryLow, charging } = r.transport.accessoryState(KEYPAD).readings;
+    assert.deepEqual(
+      [batteryLow.value, batteryLow.source, charging.value, charging.source],
+      [false, 'cloud', false, 'cloud'],
+    );
+    r.cameraInfo([
+      param(CHANNELS[KEYPAD], 1653, '2'),
+      param(CHANNELS[KEYPAD], 1654, '1'),
+      param(CHANNELS[KEYPAD], 1655, '2'),
+    ]);
+    ({ batteryLow, charging } = r.transport.accessoryState(KEYPAD).readings);
+    assert.deepEqual(
+      [batteryLow.value, batteryLow.source, charging.value, charging.source],
+      [false, 'p2p', false, 'p2p'],
+    );
+    assert.deepEqual(r.transport.accessoryParameters(KEYPAD).camera_info.codes, {
+      1653: '2',
+      1654: '1',
+      1655: '2',
+    });
+    // A hub notify battery state 2 counts for the keypad. For an entry sensor it sets nothing.
+    r.hub([param(CHANNELS[KEYPAD], 1653, 2), param(CHANNELS[SENSORS[0]], 1552, '2')]);
+    assert.equal(r.transport.accessoryState(SENSORS[0]).readings.batteryLow, null);
+    assert.deepEqual(r.transport.accessoryObservation(), {
+      ...zero,
+      cloud_seeded: 2,
+      camera_info: 2,
+      hub_notify: 1,
+    });
   } finally {
     await r.done();
   }
