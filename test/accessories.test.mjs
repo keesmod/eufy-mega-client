@@ -825,11 +825,23 @@ test('an open HomeBase session with accessories asks for device information ever
       r.events.map((e) => [e.id, e.readings.charging.value, e.readings.charging.live]),
       [[KEYPAD, true, true]],
     );
-    // A busy session waits for the next round.
-    r.transport.commands.add(HB);
-    t.mock.timers.tick(300_000);
-    assert.equal(requests(r), 1);
-    r.transport.commands.delete(HB);
+    // A busy or disconnected session waits for the next round.
+    const holds = [
+      [() => r.transport.lives.set(HB, {}), () => r.transport.lives.delete(HB)],
+      [() => r.transport.starting.set(HB, 0), () => r.transport.starting.delete(HB)],
+      [
+        () => r.transport.recordings.operations.add(HB),
+        () => r.transport.recordings.operations.delete(HB),
+      ],
+      [() => r.transport.commands.add(HB), () => r.transport.commands.delete(HB)],
+      [() => (r.session.connected = false), () => (r.session.connected = true)],
+    ];
+    for (const [hold, release] of holds) {
+      hold();
+      t.mock.timers.tick(300_000);
+      release();
+      assert.equal(requests(r), 1);
+    }
     t.mock.timers.tick(300_000);
     assert.equal(requests(r), 2);
     // A closed session asks nothing.
