@@ -561,7 +561,7 @@ test('a session reply gives entry sensors their starting values without other co
       param(cameraChannel, 1550, '1'),
       param(CHANNELS[SENSORS[1]], 1550, '1'),
       param(CHANNELS[SENSORS[1]], 1552, '0'),
-      param(CHANNELS[SENSORS[1]], 1550, 'x'),
+      param(CHANNELS[SENSORS[3]], 1550, 'x'),
       param(CHANNELS[SENSORS[2]], 1550, '0'),
       param(99, 1550, '1'),
     ]);
@@ -889,16 +889,14 @@ test('an entry sensor keeps the parameter types of each route and only its batte
     assert.equal(batteryLow.value, false);
     assert.equal(r.events.length, 1);
     assert.equal(r.transport.accessoryParameters(SENSORS[1]).camera_info.codes[1552], '0');
-    // An encoded value that no reading accepts leaves the plain one in force.
+    // An encoded value that no reading accepts wins over the plain one and
+    // leaves the reading unchanged, as for a device in the wire.
     r.cameraInfo([param(CHANNELS[SENSORS[1]], 1552, '1')], {
       db_bypass_str: [encoded(SENSORS[1], 1552, '2')],
     });
-    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow.value, true);
+    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow.value, false);
     assert.equal(r.transport.accessoryParameters(SENSORS[1]).camera_info.codes[1552], '2');
-    assert.deepEqual(
-      r.events.map((e) => e.id),
-      [SENSORS[1], SENSORS[1]],
-    );
+    assert.equal(r.events.length, 1);
 
     // A hub notify battery state is kept as evidence and read.
     r.hub([param(CHANNELS[SENSORS[0]], 1552, '1')]);
@@ -911,7 +909,7 @@ test('an entry sensor keeps the parameter types of each route and only its batte
     assert.deepEqual(r.transport.accessoryObservation(), {
       ...zero,
       cloud_seeded: 2,
-      camera_info: 4,
+      camera_info: 3,
       hub_notify: 1,
     });
   } finally {

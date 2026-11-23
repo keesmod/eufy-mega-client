@@ -18,7 +18,7 @@ import {
   changeGuardMode,
   KEYPAD_GUARD_MODE,
 } from './guard.js';
-import { AccessoryStore, readingName, readingValue, type ReadingName } from './accessories.js';
+import { AccessoryStore, readingName, readingValue } from './accessories.js';
 import type { AccessoryRow } from './discovery.js';
 import type { ParamReport } from './vendor/p2p/param-report.js';
 import { CusPushEvent } from './vendor/push/types.js';
@@ -549,7 +549,7 @@ export class DeviceTransport extends EventEmitter {
   private cameraInfoReport(stationId: string, reports: ParamReport[]): void {
     if (!this.accessories.hasStation(stationId)) return;
     const taken = this.cameraChannels(stationId),
-      latest = new Map<string, Map<ReadingName, boolean>>(),
+      latest = new Map<string, Map<number, string>>(),
       changed = new Set<string>();
     for (const report of reports) {
       const id = this.accessories.byChannel(stationId, report.channel, taken);
@@ -562,16 +562,16 @@ export class DeviceTransport extends EventEmitter {
       }
       // ha-eufy-cam#306: this reply is an entry sensor's only device information.
       this.accessories.parameter(id, 'camera_info', report.type, report.value);
-      const name = readingName('entry_sensor', report.type);
-      const value = name && readingValue('entry_sensor', name, report.value);
-      if (!name || value === undefined) continue;
-      // The last valid value of a reading wins, so a later encoded entry
-      // overrides a plain one without an intermediate change.
-      const readings = latest.get(id) ?? new Map<ReadingName, boolean>();
-      latest.set(id, readings.set(name, value));
+      // The last value of each type wins, as the Station merges a device in the
+      // wire, so an encoded entry overrides a plain one without an intermediate change.
+      const values = latest.get(id) ?? new Map<number, string>();
+      latest.set(id, values.set(report.type, report.value));
     }
-    for (const [id, readings] of latest)
-      for (const [name, value] of readings) {
+    for (const [id, values] of latest)
+      for (const [type, raw] of values) {
+        const name = readingName('entry_sensor', type);
+        const value = name && readingValue('entry_sensor', name, raw);
+        if (!name || value === undefined) continue;
         this.accessories.count('camera_info');
         if (this.accessories.observe(id, name, value, 'p2p') === 'changed') changed.add(id);
       }

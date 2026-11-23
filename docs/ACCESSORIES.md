@@ -89,9 +89,10 @@ the upstream library does through legacy routes.
    on every channel's parameters as `camera info params`, and the client maps an
    entry sensor's channel itself, as for 1829. Since 0.31.3 the reply's encoded
    entries (`db_bypass_str`) follow the plain ones in that event, decoded as the
-   Station decodes them for a device in the wire. Each entry sensor reading
-   takes the last value in the reply that it accepts, once per reply, so an
-   encoded entry overrides a plain one of the same type
+   Station decodes them for a device in the wire. As the Station merges such a
+   device, the last value of each type in the reply wins and is read once, so
+   an encoded entry overrides a plain one of the same type. A last value that no
+   reading accepts leaves the reading unchanged
    ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)). An
    entry sensor therefore gets its starting values when a session opens, if the
    HomeBase lists them. A T8030 on 3.8.8.0 does: in the four downloads for
