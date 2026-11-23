@@ -43,12 +43,14 @@ const CODE_KEYS: Readonly<Record<AccessoryCategory, ReadonlySet<number> | null>>
   chime: null,
 };
 /**
- * ha-eufy-cam#306: the reading an inventory row with a parameter list but
+ * ha-eufy-cam#306: the reading a first inventory row with a parameter list but
  * without the reading's key gives. The vendored Device sets a missing property
- * to its default, and the entry sensor battery low default is false. On a
+ * to its default once, and the entry sensor battery low default is false. On a
  * HomeBase 3 the inventory had battery state 1552 for one of four entry
  * sensors, no other route carried it, and the eufy app showed every battery
- * full. No other reading has a default, and an invalid value still gives none.
+ * full. The client applies only this default. The vendored contact default
+ * would show a door closed without evidence, and a keypad sends its battery
+ * state itself. A row without a parameter list and an invalid value give none.
  */
 const INVENTORY_DEFAULTS: Readonly<
   Record<AccessoryCategory, Readonly<Partial<Record<ReadingName, boolean>>>>
@@ -202,11 +204,12 @@ export class AccessoryStore {
         const param = params.findLast(
           (p) => p && typeof p === 'object' && readingName(record.category, p.param_type) === name,
         );
-        const value = param
-          ? readingValue(record.category, name, param.param_value)
-          : Array.isArray(raw.params)
-            ? INVENTORY_DEFAULTS[record.category][name]
-            : undefined;
+        const fallback = Array.isArray(raw.params)
+          ? INVENTORY_DEFAULTS[record.category][name]
+          : undefined;
+        // Like the vendored Device, a default never replaces an earlier inventory value.
+        if (!param && fallback !== undefined && current) continue;
+        const value = param ? readingValue(record.category, name, param.param_value) : fallback;
         if (value === undefined) delete record.readings[name];
         else {
           record.readings[name] = {

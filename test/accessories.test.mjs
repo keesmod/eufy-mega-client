@@ -478,7 +478,8 @@ test('hub notify params set entry sensor and keypad readings by channel', async 
     const open = r.transport.accessoryState(SENSORS[0]).readings.open;
     assert.deepEqual([open.value, open.source, open.live], [true, 'p2p', true]);
     assert.ok(Date.parse(open.observedAt) > 0);
-    assert.equal(r.transport.accessoryState(SENSORS[1]).readings.batteryLow.value, false);
+    const battery = r.transport.accessoryState(SENSORS[1]).readings.batteryLow;
+    assert.deepEqual([battery.value, battery.source], [false, 'p2p']);
     assert.equal(r.transport.accessoryState(SENSORS[2]).readings.open, null);
     assert.deepEqual(Object.keys(r.transport.accessoryState(KEYPAD).readings), [
       'batteryLow',
@@ -727,12 +728,35 @@ test('an entry sensor row without battery state reads battery normal, the vendor
       r.events.map((e) => e.id),
       [SENSORS[0]],
     );
-    const again = discover(
-      rows.map((row, i) => (i === at(SENSORS[1]) ? { ...row, params: [] } : row)),
-    );
-    await r.transport.load(again.raw, again);
+    // Each later discovery reads its rows anew. Unlisted rows stay as reported.
+    const reload = async (changes) => {
+      const next = discover(
+        rows.map((row) => {
+          if (!Object.hasOwn(changes, row.device_sn)) return row;
+          const { params: _list, ...rest } = row;
+          return changes[row.device_sn] === undefined
+            ? rest
+            : { ...rest, params: changes[row.device_sn] };
+        }),
+      );
+      await r.transport.load(next.raw, next);
+    };
+    await reload({ [SENSORS[1]]: [], [SENSORS[3]]: [] });
     assert.deepEqual(reading(SENSORS[0], 'batteryLow'), [true, 'p2p', true]);
     assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [false, 'cloud', false]);
+    // A default never replaces an earlier inventory value, so a low battery stays low.
+    assert.deepEqual(reading(SENSORS[3], 'batteryLow'), [true, 'cloud', false]);
+    // An inventory value replaces the default, and a row without a parameter list
+    // removes it.
+    await reload({ [SENSORS[1]]: [{ param_type: 1552, param_value: '1' }] });
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [true, 'cloud', false]);
+    await reload({ [SENSORS[1]]: [] });
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [true, 'cloud', false]);
+    await reload({ [SENSORS[1]]: undefined });
+    assert.equal(reading(SENSORS[1], 'batteryLow'), null);
+    await reload({ [SENSORS[1]]: [] });
+    assert.deepEqual(reading(SENSORS[1], 'batteryLow'), [false, 'cloud', false]);
+    assert.equal(r.events.length, 1);
   } finally {
     await r.done();
   }

@@ -108,8 +108,8 @@ the upstream library does through legacy routes.
    without an observation and never replace a P2P or push value. Since 0.31.4
    an entry sensor whose inventory row lists its parameters without battery
    state 1552 reads battery normal, labelled `cloud`, the default of the
-   vendored property. That default is no inventory value and does not count in
-   `cloud_seeded`.
+   vendored property, unless an earlier inventory value exists. That default is
+   no inventory value and does not count in `cloud_seeded`.
 
 Keys follow the vendored property tables: contact 1550 (1 open, 0 closed),
 entry sensor battery low 1552 (0 or 1), keypad battery low 1653 (0 and 2 normal,
@@ -237,13 +237,21 @@ the device information. The sensor with the inventory battery state also sent
 Assistant showed that one sensor's battery as normal and the other three as
 unknown, while the eufy app showed every battery full.
 
-The vendored Device sets a missing property to its default, and the entry
-sensor battery low default is false. Since 0.31.4 an entry sensor whose
+The vendored Device sets a missing property to its default once, and the
+entry sensor battery low default is false. Since 0.31.4 an entry sensor whose
 inventory row lists its parameters without 1552 therefore reads battery normal,
 labelled `cloud`, as the eufy app shows it. A 1552 of 0 or 1 from any route
 still replaces it, and an inventory 1552 with another value still gives no
-reading. A row without a parameter list gives no default, and contact has none.
-What 1101 means for a `T8900` is unknown, so it sets no reading.
+reading. The default never replaces an earlier inventory value, so a low
+battery from the inventory stays low when a later row omits 1552.
+
+The client applies only this default. The vendored contact default would show
+a door closed without evidence, and a keypad sends its battery state itself. A
+row without a parameter list gives no default, because it shows nothing about
+the sensor's parameters. A low battery that arrived only over P2P or push is not
+in the inventory. After a restart, before the HomeBase sends 1552 again, such a
+sensor reads normal where it read unknown before 0.31.4. What 1101 means for a
+`T8900` is unknown, so it sets no reading.
 
 ## Guard mode Off
 
