@@ -66,9 +66,9 @@ the HomeBase session last closed. A `cloud` value is never live.
 
 State comes from the HomeBase's own local session and from the account's push
 notifications. Beyond the existing discovery, the client's only request for
-accessories is the device information below, which it repeats about every 5 minutes
-since 0.31.3. It does not refresh the cloud after a notification, which the
-upstream library does through legacy routes.
+accessories is the device information below, which it repeats about every 5
+minutes since 0.31.3. It does not refresh the cloud after a notification, which
+the upstream library does through legacy routes.
 
 1. P2P hub notify update (1829). The vendored session now passes on the
    parameters of this notification as `param report`, at most 32 per frame.
