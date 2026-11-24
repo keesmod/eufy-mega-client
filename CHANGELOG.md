@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.31.5 - Unreleased
+## 0.31.5 - 2026-11-24
 
 - Added the eufyCam 2C Pro `T8142-R` on a HomeBase 3 ([ha-eufy-cam#315](https://github.com/keesmod/ha-eufy-cam/issues/315)), not yet confirmed on hardware.
 
