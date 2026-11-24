@@ -1364,7 +1364,8 @@ additional-H3 media policy, not the established T8142 route, as described in
 tuple, not independently reproduced. The reporter of ha-eufy-cam#236 has not
 reported a result with the admission, and the type 15 rows below gain no H or P
 cells. A second installation reported four `T8142-Z` cameras discovered, see
-[Reported T8142-R, 0.31.5](#reported-t8142-r-0315).
+[Reported T8142-R, 0.31.5](#reported-t8142-r-0315), and later working, see
+[Reported T8142-R and T8142-Z results, 2026-11-24](#reported-t8142-r-and-t8142-z-results-2026-11-24).
 
 [236-report]: https://github.com/keesmod/ha-eufy-cam/issues/236
 
@@ -1378,16 +1379,33 @@ with type 15 and firmware 3.0.5.7. [HB-guide] lists the eufyCam 2C Pro as
 `T8142R` on HomeBase 3. 0.31.5 admits exactly `T8142-R`/15 with the T8142 type
 and Camera adapter but the additional-H3 media policy, as described in
 [EUFYCAM.md](EUFYCAM.md#reported-t8142-r-0315). This is a reported inventory
-tuple, not independently reproduced. No result with the admission is reported
-yet, and the type 15 rows below gain no H or P cells.
+tuple, not independently reproduced, and the type 15 rows below gain no H or P
+cells.
 
 The same report has four `T8142-Z` cameras on firmware 3.3.8 under that T8030,
 discovered and added to Home Assistant with bridge 0.8.48/client 0.31.4. This is
-a reported result, not independently reproduced. Snapshot, live view,
-recordings and events were not reported. The type 15 feature row and its cells
-are unchanged.
+a reported result, not independently reproduced. The type 15 feature row and its
+cells are unchanged.
 
 [315-report]: https://github.com/keesmod/ha-eufy-cam/issues/315
+
+## Reported T8142-R and T8142-Z results, 2026-11-24
+
+On 2026-11-24 the [reporter of ha-eufy-cam#315][315-result] ran integration
+0.8.58 and bridge 0.8.49 with client 0.31.5 on Home Assistant OS, with the same
+T8030 on firmware 3.8.8.0. The `T8142-R` on firmware 3.0.5.7 was discovered,
+and snapshots, live video, live audio, recording playback with audio and motion
+and person events worked. Events arrived only after the reporter enabled push
+notifications for the cameras in the Home and Away security modes of the Eufy
+app. A person event arrived from push with Eufy event type 3102. The reporter
+also reported snapshots, live view, recordings and push events working on the
+four `T8142-Z` cameras under the same T8030. The older Eufy Security
+integration ran on the same account at the same time and also received events.
+Confirmed stop/cancel and other event types were not reported. This is a
+reported result, not independently reproduced. The type 15 feature row and its
+cells are unchanged.
+
+[315-result]: https://github.com/keesmod/ha-eufy-cam/issues/315#issuecomment-7129792268
 
 ## Reported T817L Wired Cam C31, 0.28.0
 
