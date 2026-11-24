@@ -1361,8 +1361,10 @@ integration 0.8.49 and bridge 0.8.40/client 0.30.2 with a T8030 on firmware
 admits exactly `T8142-Z`/15 with the T8142 type and Camera adapter but the
 additional-H3 media policy, not the established T8142 route, as described in
 [EUFYCAM.md](EUFYCAM.md#reported-t8142-z-0303). This is a reported inventory
-tuple, not independently reproduced. No result with the admission is reported
-yet, and the type 15 rows below gain no H or P cells.
+tuple, not independently reproduced. The reporter of ha-eufy-cam#236 has not
+reported a result with the admission, and the type 15 rows below gain no H or P
+cells. A second installation reported four `T8142-Z` cameras discovered, see
+[Reported T8142-R, 0.31.5](#reported-t8142-r-0315).
 
 [236-report]: https://github.com/keesmod/ha-eufy-cam/issues/236
 

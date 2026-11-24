@@ -105,7 +105,8 @@ never created the cameras. 0.30.3 admits this exact pair with the T8142 type,
 the same generic Camera adapter and H3 topology. No prefix matching or
 standalone route is added. Other types, owners and unevidenced forms such as
 `T8142Z`, `T8142-V` or lower case retain their existing rejection. `T8142R`
-stays unresolved.
+stays unresolved. 0.31.5 admits the received `T8142-R`, see
+[Reported T8142-R, 0.31.5](#reported-t8142-r-0315).
 
 As with T8160-C, this row is not a copy of its base row. T8142 keeps the
 `established` model-only media check of the original four routes, which
@@ -121,9 +122,15 @@ livestream command and the shared media/lifecycle fixtures. They cover stored
 snapshots, both live codecs, video/audio, confirmed stop, recording
 metadata/download, cancellation and the owner and firmware rejections.
 Discovery and the media/lifecycle fixtures use the reported camera and owner
-firmware. The state/events tests use synthetic firmware. No result with this
-admission is reported yet. See
+firmware. The state/events tests use synthetic firmware. The reporter of
+ha-eufy-cam#236 has not reported a result with this admission. See
 [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-t8142-z-0303).
+
+On 2026-11-24 the [reporter of ha-eufy-cam#315][R-report] had four `T8142-Z`
+cameras on firmware 3.3.8 discovered and added to Home Assistant under a T8030
+on firmware 3.8.8.0 with bridge 0.8.48/client 0.31.4. Snapshot, live view,
+recordings and events were not reported. This is a reported result, not
+independently reproduced.
 
 [Z-report]: https://github.com/keesmod/ha-eufy-cam/issues/236
 
