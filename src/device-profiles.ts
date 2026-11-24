@@ -142,6 +142,8 @@ export const deviceProfiles: Readonly<Record<string, DeviceProfile>> = Object.fr
   T8142: camera(15, 'eufycam', 'h3', establishedMedia),
   // ha-eufy-cam#236: T8142-Z/type 15 under a T8030, reported on 2026-10-31. H3 media only.
   'T8142-Z': camera(15, 'eufycam', 'h3', h3Media),
+  // ha-eufy-cam#315: T8142-R/type 15 under a T8030, reported on 2026-11-24. H3 media only.
+  'T8142-R': camera(15, 'eufycam', 'h3', h3Media),
   T8130: camera(32, 'solo', 'h3-or-standalone', h3Media),
   T8131: camera(33, 'solo', 'h3-or-standalone', h3Media),
   // ha-eufy-cam#229: preset moves for the exact T8170 under an admitted HomeBase 3.

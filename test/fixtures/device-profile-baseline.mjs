@@ -69,6 +69,8 @@ export const profileBaseline = [
   ['T8210C', 7, 'camera', '', false, true, 'h3'],
   // Reported in ha-eufy-cam#236 on 2026-10-31. Additional-H3 media, not established.
   ['T8142-Z', 15, 'camera', '', false, true, 'h3'],
+  // Reported in ha-eufy-cam#315 on 2026-11-24. Additional-H3 media, not established.
+  ['T8142-R', 15, 'camera', '', false, true, 'h3'],
   // Reported in ha-eufy-cam#252 on 2026-11-10. Type 97 added to the vendored catalogue.
   ['T8215', 97, 'camera', '', false, true, 'h3'],
   // Reported in ha-eufy-cam#283 on 2026-11-21. Type 314 added to the vendored catalogue.

@@ -1366,6 +1366,27 @@ yet, and the type 15 rows below gain no H or P cells.
 
 [236-report]: https://github.com/keesmod/ha-eufy-cam/issues/236
 
+## Reported T8142-R, 0.31.5
+
+On 2026-11-24 the [reporter of ha-eufy-cam#315][315-report] ran integration
+0.8.57 and bridge 0.8.48/client 0.31.4 with a T8030 on firmware 3.8.8.0. A
+camera that the reporter names eufyCam 2C Pro was rejected as
+`unsupported_device` with parent status `present`. It was received as `T8142-R`
+with type 15 and firmware 3.0.5.7. [HB-guide] lists the eufyCam 2C Pro as
+`T8142R` on HomeBase 3. 0.31.5 admits exactly `T8142-R`/15 with the T8142 type
+and Camera adapter but the additional-H3 media policy, as described in
+[EUFYCAM.md](EUFYCAM.md#reported-t8142-r-0315). This is a reported inventory
+tuple, not independently reproduced. No result with the admission is reported
+yet, and the type 15 rows below gain no H or P cells.
+
+The same report has four `T8142-Z` cameras on firmware 3.3.8 under that T8030,
+discovered and added to Home Assistant with bridge 0.8.48/client 0.31.4. This is
+a reported result, not independently reproduced. Snapshot, live view,
+recordings and events were not reported. The type 15 feature row and its cells
+are unchanged.
+
+[315-report]: https://github.com/keesmod/ha-eufy-cam/issues/315
+
 ## Reported T817L Wired Cam C31, 0.28.0
 
 A reporter on [ha-eufy-cam#136][C31-report], on 2026-10-04 with bridge 0.8.29 and
@@ -1617,7 +1638,7 @@ evidence section. Every row also has a separate feature row below.
 | 8             | `CAMERA2C`                             | T8113                                        | eufyCam 2C                                                                    | cam        | H3, H1/E/2, HM candidate                    | [Cam], [HB-old], [HB-guide]                                 | R           |
 | 9             | `CAMERA2`                              | T8114                                        | eufyCam 2                                                                     | cam        | H3, H1/E/2                                  | [Cam], [HB-old]                                             | R           |
 | 14            | `CAMERA2_PRO`                          | T8140                                        | eufyCam 2 Pro                                                                 | cam        | H3, H1/E/2, HM candidate                    | [Cam], [HB-old], [HB-guide]                                 | R           |
-| 15            | `CAMERA2C_PRO`                         | T8142. T8142-Z in 0.30.3. T8142R unresolved  | eufyCam 2C Pro / eufyCam S220                                                 | cam        | H3, H1/E/2. HM for R candidate              | [Cam], [S220-Cam], [HB-guide], [236-report]                 | R           |
+| 15            | `CAMERA2C_PRO`                         | T8142. T8142-Z in 0.30.3. T8142-R in 0.31.5  | eufyCam 2C Pro / eufyCam S220                                                 | cam        | H3, H1/E/2. HM for R candidate              | [Cam], [S220-Cam], [HB-guide], [236-report], [315-report]   | R           |
 | 16            | `BATTERY_DOORBELL_2`                   | T8220 / T8221 / T8222 candidates             | Video Doorbell Slim / 2E / C210, 1080p                                        | battery    | H3, H1/E/2, chime variant unresolved        | [HB3], [HB-old], [HB-guide]                                 | C           |
 | 19            | `CAMERA3`                              | T8160. T8160-C admitted in 0.29.2            | eufyCam 3 / S330                                                              | cam        | H3. HM, H2 disputed                         | [Cam], [Tracking], [HB-guide], [149-report]                 | R           |
 | 23            | `CAMERA3C`                             | T8161                                        | eufyCam 3C / S300                                                             | cam        | H3. H2 disputed                             | [Cam], [Tracking], [HB-guide]                               | R           |
@@ -1723,7 +1744,7 @@ battery lifetime claim is made.
 | 8     | T8113 / T8113-Z / T8113-V / H3 only                  | X         | X                   | X         | X               | X          | X          | X motion/person | X             | [Eufycam-software], [Catalogue]                     | [#98]                                           |
 | 9     | T8114 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X motion/person | X             | [Eufycam-software], [Catalogue]                     | [#99]                                           |
 | 14    | T8140 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X motion/person | X             | [Eufycam-software], [Catalogue]                     | [#100]                                          |
-| 15    | T8142 and T8142-Z / H3 only                          | X         | X                   | X         | X               | X          | X          | X               | X             | [S1], [C0]                                          | [#101], [236-report]                            |
+| 15    | T8142, T8142-Z and T8142-R / H3 only                 | X         | X                   | X         | X               | X          | X          | X               | X             | [S1], [C0]                                          | [#101], [236-report], [315-report]              |
 | 16    | T8220 / T8221 / T8222 candidates / listed topologies | B1/U      | B1/U                | B1/U      | B1/U            | B1/U       | B1/U       | B1/U            | B1/U          | [C0], [Catalogue]                                   | [#110], [#111], [#112]                          |
 | 19    | T8160 / H3 only. T8160-C reported, no H              | H         | H                   | H         | H               | H          | H          | H person        | H             | [H55], [H0], [C0]                                   | [#19], [#20], [#55], [149-report]               |
 | 23    | T8161 / H3 only                                      | X         | X                   | X         | X               | X          | X          | X motion/person | X             | [Eufycam-software], [Catalogue]                     | [#102]                                          |
@@ -1796,12 +1817,12 @@ is reported evidence for a routed VLAN, not H. [C0] rejects unavailable
 credential paths.
 These are implementation boundaries, not proof that a product cannot use them.
 
-For T8142 and T8142-Z, X in the media/state/event columns denotes reachable shared code,
+For T8142, T8142-Z and T8142-R, X in the media/state/event columns denotes reachable shared code,
 not eight passing model-specific fixture suites. [Discovery-tests] proves the
-allowlist/parent rules. [S1] checks the existing live command choice. T8142 and
-T8142-Z use `CMD_SET_PAYLOAD`, T8134 uses `CMD_DOORBELL_SET_PAYLOAD` in that test.
+allowlist/parent rules. [S1] checks the existing live command choice. T8142,
+T8142-Z and T8142-R use `CMD_SET_PAYLOAD`, T8134 uses `CMD_DOORBELL_SET_PAYLOAD` in that test.
 Since 0.11.0 the adapter instantiates `SoloCamera` for T8134. It instantiates
-generic `Camera` for T8142 and T8142-Z and `BatteryDoorbellCamera` for T8213, T85V0/203,
+generic `Camera` for T8142, T8142-Z and T8142-R and `BatteryDoorbellCamera` for T8213, T85V0/203,
 T8210/7, T8210C/7 and the exact pairs in the 0.8.0 and 0.18.1 sections. Since 0.30.4 it also
 instantiates `BatteryDoorbellCamera` for T8215/97 through its exact battery-doorbell profile,
 because no vendored doorbell predicate includes type 97. [#21] added that SoloCam

@@ -224,7 +224,6 @@ test('T8142-Z has the T8142 type and adapter with the additional-H3 media policy
     ['T8142-Z', 14],
     ['T8142-Z', '15'],
     ['T8142R', 15],
-    ['T8142-R', 15],
     ['T8142-V', 15],
     ['T8142-ZZ', 15],
     ['T8142Z', 15],
@@ -263,6 +262,61 @@ test('T8142-Z has the T8142 type and adapter with the additional-H3 media policy
     });
   assert.equal(
     discover([reportedOwner, { ...camera, parent_sn: 'HB\n' }]).result.issues[0].code,
+    'invalid_device_relationship',
+  );
+});
+
+// ha-eufy-cam#315: a eufyCam 2C Pro reported as T8142-R/15 under a T8030 on 3.8.8.0.
+test('T8142-R has the T8142 type and adapter with the additional-H3 media policy', () => {
+  const profile = deviceProfiles['T8142-R'];
+  // Not a copy of the T8142 row: established media stays with the original four models.
+  assert.deepEqual(
+    { ...profile, features: { ...profile?.features } },
+    { type: 15, kind: 'camera', family: 'eufycam', topology: 'h3', features: h3Policy },
+  );
+  assert.equal(deviceProfiles.T8142.features.live, 'established');
+  assert.equal(exactDeviceProfile({ device_model: 'T8142-R', device_type: 15 }), profile);
+  for (const [device_model, device_type] of [
+    ['T8142-R', 8],
+    ['T8142-R', 14],
+    ['T8142-R', 19],
+    ['T8142-R', '15'],
+    ['T8142R', 15],
+    ['T8142-RR', 15],
+    ['T8142-R1', 15],
+    ['t8142-r', 15],
+    ['T8142-r', 15],
+    ['T8142-R ', 15],
+    [' T8142-R', 15],
+  ])
+    assert.equal(exactDeviceProfile({ device_model, device_type }), undefined, device_model);
+  const owner = { ...reportedOwner, main_sw_version: '3.8.8.0' };
+  const camera = {
+    category: 'eufy_security',
+    device_sn: 'CAM',
+    device_model: 'T8142-R',
+    device_type: 15,
+    parent_sn: owner.device_sn,
+    main_sw_version: '3.0.5.7',
+  };
+  const result = discover([owner, camera]);
+  assert.deepEqual(result.relationships.get('CAM'), { kind: 'station', ownerId: owner.device_sn });
+  assert.equal(result.result.devices[1].model, 'T8142-R');
+  assert.equal(result.result.devices[1].firmware, '3.0.5.7');
+  assert.deepEqual(result.result.issues, []);
+  assertH3OwnerGates(camera, owner);
+  // The original T8142 keeps its model-only check, so only T8142-R needs the owner.
+  for (const feature of ['snapshot', 'live', 'recordings']) {
+    assert.equal(hasCameraMedia({ ...camera, device_model: 'T8142' }, undefined, feature), true);
+    assert.equal(hasCameraMedia(camera, undefined, feature), false);
+  }
+  for (const parent_sn of ['', 'CAM'])
+    assert.deepEqual(discover([owner, { ...camera, parent_sn }]).relationships.get('CAM'), {
+      kind: 'unsupported',
+      reason: 'invalid_device_relationship',
+    });
+  assert.equal(
+    discover([owner, { ...camera, parent_sn: 'HB\n' }]).result.issues[0].code,
     'invalid_device_relationship',
   );
 });

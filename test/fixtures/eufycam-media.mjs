@@ -1,10 +1,11 @@
 // Independent exact model/type evidence, pinned command source in docs/EUFYCAM.md.
 // Reported camera and owner firmware: ha-eufy-cam#66 (T8113-V), ha-eufy-cam#149 (T8160-C)
-// and ha-eufy-cam#236 (T8142-Z).
+// ha-eufy-cam#236 (T8142-Z) and ha-eufy-cam#315 (T8142-R).
 const reported = {
   'T8113-V': ['3.0.7.8', '3.8.7.4'],
   'T8160-C': ['1.5.8.6', '3.8.7.4'],
   'T8142-Z': ['3.3.8', '3.8.7.4'],
+  'T8142-R': ['3.0.5.7', '3.8.8.0'],
 };
 export const eufycamMedia = [
   ['T8111', 1],
@@ -15,6 +16,7 @@ export const eufycamMedia = [
   ['T8140', 14],
   ['T8142', 15],
   ['T8142-Z', 15],
+  ['T8142-R', 15],
   ['T8160', 19],
   ['T8160-C', 19],
   ['T8161', 23],
