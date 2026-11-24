@@ -307,6 +307,8 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
   assert.equal(issue('T8113-V', 8).devices.length, 3);
   assert.equal(issue('T8160-C', 19).devices.length, 3);
   assert.equal(issue('T8142-Z', 15).devices.length, 3);
+  // ha-eufy-cam#315: only the reported T8142-R/15 pair.
+  assert.equal(issue('T8142-R', 15).devices.length, 3);
   assert.equal(issue('T8410C', 31).devices.length, 3);
   assert.equal(issue('T8410', 31).devices.length, 3);
   assert.equal(issue('T8210', 7).devices.length, 3);
@@ -318,6 +320,10 @@ test('unsupported discovery includes only bounded model and numeric type diagnos
   for (const [model, type] of [
     ['T8160-C', 23],
     ['T8142-Z', 14],
+    ['T8142-R', 14],
+    ['T8142-R', 19],
+    ['T8142R', 15],
+    ['T8142-RR', 15],
     ['T8410C', 30],
     ['T8210', 16],
     ['T8210C', 16],

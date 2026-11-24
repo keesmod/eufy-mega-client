@@ -105,7 +105,8 @@ never created the cameras. 0.30.3 admits this exact pair with the T8142 type,
 the same generic Camera adapter and H3 topology. No prefix matching or
 standalone route is added. Other types, owners and unevidenced forms such as
 `T8142Z`, `T8142-V` or lower case retain their existing rejection. `T8142R`
-stays unresolved.
+stays unresolved. 0.31.5 admits the received `T8142-R`, see
+[Reported T8142-R, 0.31.5](#reported-t8142-r-0315).
 
 As with T8160-C, this row is not a copy of its base row. T8142 keeps the
 `established` model-only media check of the original four routes, which
@@ -121,11 +122,46 @@ livestream command and the shared media/lifecycle fixtures. They cover stored
 snapshots, both live codecs, video/audio, confirmed stop, recording
 metadata/download, cancellation and the owner and firmware rejections.
 Discovery and the media/lifecycle fixtures use the reported camera and owner
-firmware. The state/events tests use synthetic firmware. No result with this
-admission is reported yet. See
+firmware. The state/events tests use synthetic firmware. The reporter of
+ha-eufy-cam#236 has not reported a result with this admission. See
 [MODEL_MATRIX.md](MODEL_MATRIX.md#reported-t8142-z-0303).
 
+On 2026-11-24 the [reporter of ha-eufy-cam#315][R-report] had four `T8142-Z`
+cameras on firmware 3.3.8 discovered and added to Home Assistant under a T8030
+on firmware 3.8.8.0 with bridge 0.8.48/client 0.31.4. Snapshot, live view,
+recordings and events were not reported. This is a reported result, not
+independently reproduced.
+
 [Z-report]: https://github.com/keesmod/ha-eufy-cam/issues/236
+
+## Reported T8142-R, 0.31.5
+
+The [2026-11-24 report on ha-eufy-cam#315][R-report] shows a eufyCam 2C Pro
+received as `T8142-R` with `device_type=15` and camera firmware 3.0.5.7 under a
+T8030 on firmware 3.8.8.0. Bridge 0.8.48/client 0.31.4 rejected this exact model
+as `unsupported_device` with parent status `present`. On the same HomeBase, four
+`T8142-Z` cameras on firmware 3.3.8 were discovered and added to Home
+Assistant. Eufy's [HomeBase compatibility guide][R-guide] lists the eufyCam 2C
+Pro as `T8142R` and supported on HomeBase 3. 0.31.5 admits exactly the received
+pair `T8142-R`/15 with the T8142 type, the generic Camera adapter and H3
+topology. No prefix matching or standalone route is added. `T8142R` without the
+hyphen, other types, longer suffixes and lower case retain their rejection.
+
+Like T8142-Z, this row uses the additional-H3 media policy, not the
+`established` model-only route of T8142. Snapshot, live and recordings require
+its actual T8030/type 18 parent with a T8030 serial prefix and four-part owner
+firmware at or above 2.0.9.7. The reporter's owner firmware 3.8.8.0 passes the
+firmware check. The T8030 serial-prefix check cannot be confirmed from the
+redacted report.
+
+The synthetic tests include T8142-R in discovery, state/events, the type 15
+livestream command and the shared media/lifecycle fixtures. Discovery and the
+media/lifecycle fixtures use the reported camera and owner firmware. No result
+with this admission is reported yet. See
+[MODEL_MATRIX.md](MODEL_MATRIX.md#reported-t8142-r-0315).
+
+[R-report]: https://github.com/keesmod/ha-eufy-cam/issues/315
+[R-guide]: https://service.eufy.com/article-description/eufy-Security-Complete-HomeBase-Compatibility-Guide
 
 ## Exact hardware validation
 
@@ -255,7 +291,8 @@ whose serial follows the existing T8030 branch, and a four-part numeric owner
 firmware at or above 2.0.9.7. This is the existing payload branch threshold,
 not a firmware-support claim. Fixtures use owner firmware 3.8.6.0 and camera
 firmware 1.2.3, except the reported T8113-V, T8160-C and T8142-Z fixtures,
-which use their reported camera firmware under owner firmware 3.8.7.4. Unknown,
+which use their reported camera firmware under owner firmware 3.8.7.4, and the
+reported T8142-R fixture, with its camera firmware under owner firmware 3.8.8.0. Unknown,
 malformed and earlier owner versions retain `EufyError` code `camera_media_unverified`.
 Existing baseline model behavior is preserved. Command credentials, connections
 and media stay with the actual owner.

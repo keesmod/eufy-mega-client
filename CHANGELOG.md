@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.5 - Unreleased
+
+- Added the eufyCam 2C Pro `T8142-R` on a HomeBase 3 ([ha-eufy-cam#315](https://github.com/keesmod/ha-eufy-cam/issues/315)), not yet confirmed on hardware.
+
+Upgrade: no changes needed. Rollback: 0.31.4.
+
 ## 0.31.4 - 2026-11-23
 
 - An entry sensor without a battery state in the Eufy account shows its battery as normal, as the eufy app does ([ha-eufy-cam#306](https://github.com/keesmod/ha-eufy-cam/issues/306)), reported working.

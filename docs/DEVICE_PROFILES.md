@@ -92,6 +92,7 @@ owner firmware at or above 2.0.9.7.
 | T8215   | 97    | camera  | battery-doorbell | h3                 | h3          | h3          | h3          | [Evidence](BATTERY_DOORBELLS.md)  |
 | T8142   | 15    | camera  | eufycam          | h3                 | established | established | established | [Evidence](EUFYCAM.md)            |
 | T8142-Z | 15    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
+| T8142-R | 15    | camera  | eufycam          | h3                 | h3          | h3          | h3          | [Evidence](EUFYCAM.md)            |
 | T8130   | 32    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
 | T8131   | 33    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
 | T8170   | 48    | camera  | solo             | h3-or-standalone   | h3          | h3          | h3          | [Evidence](SOLOCAM.md)            |
