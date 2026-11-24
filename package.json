@@ -37,11 +37,11 @@
     "@types/node": "^24.19.2",
     "@types/node-rsa": "^1.1.4",
     "@types/qs": "^6.9.16",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "date-and-time": "^4.7.1",
+    "date-and-time": "^4.7.2",
     "got": "^14.4.2",
     "image-type": "^6.1.0",
     "long": "^5.2.3",
